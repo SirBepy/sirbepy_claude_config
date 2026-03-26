@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(C:/Users/tecno/AppData/Local/Temp/traycer-epics/**)",
+      "Read(C:\\Users\\tecno\\AppData\\Local\\Temp\\traycer-epics\\**)",
+      "Read(~/AppData/Local/Temp/traycer-epics/**)",
+      "Read(~\\AppData\\Local\\Temp\\traycer-epics\\**)",
+      "Read(~\\AppData\\Local\\Temp\\traycer-epics/**)",
+      "Edit(C:/Users/tecno/Desktop/Projects/Web/video-script-assistant/**)",
+      "Edit(C:\\Users\\tecno\\Desktop\\Projects\\Web\\video-script-assistant\\**)",
+      "Write(C:/Users/tecno/Desktop/Projects/Web/video-script-assistant/**)",
+      "Write(C:\\Users\\tecno\\Desktop\\Projects\\Web\\video-script-assistant\\**)",
+      "Bash(mkdir*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(cd*)",
+      "Bash(npm*)",
+      "Bash(npx*)",
+      "Bash(dir*)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST http://127.0.0.1:27182/refresh"
+          }
+        ]
+      }
+    ]
+  },
+  "alwaysThinkingEnabled": true,
+  "effortLevel": "medium"
+}
