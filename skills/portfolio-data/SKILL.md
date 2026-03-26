@@ -30,9 +30,61 @@ Do not ask questions upfront. Make your best guesses and flag them.
 
 The only things you **may** ask before drafting:
 - **Live URL** — if none is obvious from docs/config, ask with exactly these options: "Do you have a live URL? Options: **github pages** (I'll use `https://sirbepy.github.io/[repo-name]`), paste a URL, or say none." If they say "github pages", construct the URL from the repo name. Otherwise assume `null`
-- **Images** — ask once if the user has any screenshots to add; if no answer, assume none
+- **Images** — use the AskUserQuestion tool with these two options: "Take screenshots automatically (recommended)" and "I'll add them manually". If they choose manually, ask them to drop the files into `.portfolio-data/` and tell you the filenames. If they choose automatically, follow the **Auto-Screenshot Workflow** below.
 
 If the project's purpose is genuinely ambiguous after reading the code, make a reasonable assumption and flag it.
+
+---
+
+### Auto-Screenshot Workflow
+
+#### 1. Detect project type
+
+Check the working directory for:
+- `vite.config.js` or `vite.config.ts` → **Vite** project. Default port: `5173`. Start command: `npm run dev`
+- `package.json` with a `dev` or `start` script and React/Next deps → **React** project. Default port: `3000`. Start command: `npm run dev` (prefer) or `npm start`
+- `index.html` with no `package.json` → **Static HTML**. Port: `8080`. Start command: `python -m http.server 8080`
+
+If `vite.config.*` specifies a port, use that instead of the default.
+
+#### 2. Start the dev server
+
+Run the start command using Bash with `run_in_background: true`. Do NOT chain commands — one Bash call only.
+
+Then poll for readiness: run `curl -s -o /dev/null -w "%{http_code}" http://localhost:PORT` in a loop (up to 15 tries, 1 second apart). Stop as soon as you get a non-zero HTTP response.
+
+#### 3. Take screenshots
+
+Run this command once for the main view (not full-page):
+```
+npx --yes playwright screenshot --browser chromium --viewport-size "1280,800" http://localhost:PORT .portfolio-data/screenshot-1.png
+```
+
+Then read `screenshot-1.png` back using the Read tool to view it. Based on what you see:
+- If the page has meaningful content below the fold, take a second full-page screenshot:
+  ```
+  npx --yes playwright screenshot --browser chromium --viewport-size "1280,800" --full-page http://localhost:PORT .portfolio-data/screenshot-2.png
+  ```
+- If the project has clearly distinct views or routes visible from the code (e.g. `/about`, a modal, a second tab), navigate to one and take a third screenshot. Only do this if it meaningfully showcases something the first two don't.
+- Cap at 3 screenshots total.
+
+Make sure `.portfolio-data/` exists before writing screenshots (create it with `mkdir -p .portfolio-data` if needed — one Bash call).
+
+#### 4. Stop the dev server
+
+Find the PID and kill it. For npm/vite processes on Windows, run:
+```
+npx kill-port PORT
+```
+(uses `npx --yes kill-port PORT` — no install needed)
+
+For static Python server, kill by port the same way.
+
+#### 5. Set image fields
+
+Set `mainImage` to `"screenshot-1.png"` and `images` to all screenshot filenames taken (e.g. `["screenshot-1.png", "screenshot-2.png"]`).
+
+---
 
 ### Step 3 — Draft and present both files
 
