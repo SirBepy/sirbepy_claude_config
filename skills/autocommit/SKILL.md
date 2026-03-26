@@ -1,54 +1,39 @@
 ---
 name: autocommit
-description: Enable, disable, or check auto-commit/push mode for the session. Triggers on /autocommit and all its subcommands.
+description: Enable, disable, or check auto-commit mode for the session. Triggers on /autocommit and all its subcommands.
 ---
 
-# Autocommit Skill
+# /autocommit
+
+> Toggle automatic committing after each completed task.
 
 ## `/autocommit` - Show State
 
-Print the current autocommit mode. Example output:
-```
-autocommit: ON (push + version bump)
-```
-Possible states: `OFF`, `ON (commit only)`, `ON (commit + push)`, `ON (commit + push + version bump)`
+Print current mode. Example: `autocommit: ON (commit + push)`
 
----
+Possible states:
+
+- `OFF`
+- `ON (commit only)`
+- `ON (commit + push)`
+- `ON (commit + push + version bump)`
 
 ## `/autocommit on`
 
-Enable autocommit mode. After each logical unit of work is completed, automatically commit using the standard flow (lint, stage by name, prefix). Do NOT push. Stay in this mode until `/autocommit off` is typed.
-
-## `/autocommit off`
-
-Disable all autocommit/autopush modes. Revert to waiting for Joe to ask manually.
+After each logical unit of work, automatically run `/commit`. Stay in this mode until `/autocommit off`.
 
 ## `/autocommit push`
 
-Enable autocommit + push mode. After each logical unit of work, automatically commit and push. No version bump. Stay in this mode until `/autocommit off` is typed.
+After each logical unit of work, automatically run `/commitpush`. Stay in this mode until `/autocommit off`.
 
 ## `/autocommit pushbump`
 
-Enable autocommit + push + version bump mode. After each logical unit of work:
+After each logical unit of work, automatically run `/commitpush v`. Stay in this mode until `/autocommit off`.
 
-1. Increment the patch version in `package.json` (e.g. 1.0.0 -> 1.0.1)
-2. Stage `package.json` with the other changed files
-3. Commit with the version mentioned in the message
-4. Push
+## `/autocommit off`
 
-If no `package.json` exists, skip the version bump and just commit + push. Stay in this mode until `/autocommit off` is typed.
+Disable all auto modes. Wait for manual commit requests.
 
----
+## Rules
 
-## Commit Rules (for all auto modes)
-
-**Prefixes:** FEAT, FIX, REFACTOR, CHORE, DOCS, TEST, STYLE, DATA
-
-**Style:**
-- One purpose per commit
-- Clear title, no body unless needed
-- Never add `Co-authored-by: Claude` or any AI attribution
-
-**Linting:** If a linter exists, run it and fix all issues before committing.
-
-**Shell:** Never chain commands. One command per Bash call. No `&&`, `;`, or `|`.
+Follow the `/commit` skill for all commit rules, prefixes, and shell rules.
