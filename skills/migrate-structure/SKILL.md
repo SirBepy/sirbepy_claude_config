@@ -20,6 +20,7 @@ Read the corresponding spec from this skill's `structure/` folder:
 - `html` - read `structure/html.md`
 - `vite` - read `structure/vite.md`
 - `react` - read `structure/react.md`
+- `electron` - read `structure/electron.md`
 - `roblox` - read `structure/roblox.md`
 - `flutter` - read `structure/flutter.md`
 
