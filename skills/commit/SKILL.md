@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Commit staged and unstaged changes into well-organized commits. Triggers on /commit, /commit v, /commit bump, /commit onlybump, and /commit onlyv.
+description: Triggers on /commit and its subcommands (v, bump, onlybump, onlyv, push, pushbump, pushnbump) to commit changes.
 ---
 
 # /commit
@@ -23,6 +23,18 @@ If nothing to commit, say so and stop.
 Same as `/commit` but also bumps the patch version in `package.json` before committing (e.g. 1.0.0 -> 1.0.1). Stage `package.json` with the other files. Commit message follows the normal style - no need to mention the version bump.
 
 If no `package.json` exists, skip the version step and commit normally.
+
+## `/commit push`
+
+Same as `/commit` but also runs `git push` after committing.
+
+Do not push if the commit failed or there was nothing to commit.
+
+## `/commit pushbump` / `/commit pushnbump`
+
+Same as `/commit v` but also runs `git push` after committing.
+
+Do not push if the commit failed or there was nothing to commit.
 
 ## `/commit onlyv` / `/commit onlybump`
 

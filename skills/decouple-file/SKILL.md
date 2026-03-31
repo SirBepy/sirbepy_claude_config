@@ -5,13 +5,14 @@ description: Triggers on /decouple-file only.
 
 # /decouple-file
 
-> Extract and split content out of files into properly structured, right-sized files.
+> Extract and split file content into properly structured, right-sized files.
 
 ## Command syntax
 
 ```
 /decouple-file                          - show suggestions and ask what to target
 /decouple-file index.html               - decouple a specific file
+/decouple-file index.html, src/scripts/script.js - decouple multiple files
 /decouple-file .html                    - decouple all files of that type
 /decouple-file .html .js .css           - multiple types at once
 ```
@@ -80,10 +81,3 @@ Carry out the plan. For each extraction:
 
 Print a summary of everything that was extracted and split. Flag anything that was too ambiguous to split automatically.
 Do not commit - the user handles that.
-
-## Notes
-
-- Always read the structure spec before deciding where to put things
-- Never split a file arbitrarily - only split at logical boundaries
-- When merging into an existing file, preserve the existing content and append or interleave thoughtfully
-- If a split point is genuinely ambiguous, flag it and ask rather than guessing

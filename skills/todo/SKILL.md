@@ -1,14 +1,12 @@
 ---
 name: todo
-description: Triggers on /todo only. Manages a per-repo TODO backlog with a mandatory planning gate before any work starts.
+description: Triggers on /todo only, managing a per-repo TODO backlog with a mandatory planning gate before any work starts.
 ---
 
 # /todo
 > Manage a persistent TODOs.md backlog per repo, with planning gate enforcement.
 
 Manages `TODOs.md` in the current repo root. No TODO can be worked on until it has a written plan.
-
----
 
 ## Commands
 

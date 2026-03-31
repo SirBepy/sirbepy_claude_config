@@ -5,7 +5,7 @@ description: Triggers on /favicon only.
 
 # /favicon
 
-> Check for and generate favicon.svg, favicon.png, and favicon.ico in assets/images/.
+> Check for and generate favicon files (svg, png, ico) in assets/images/.
 
 ## Scripts
 

@@ -1,6 +1,6 @@
 ---
 name: autocommit
-description: Enable, disable, or check auto-commit mode for the session. Triggers on /autocommit and all its subcommands (on, push, pushbump, pushnbump, off).
+description: Triggers on /autocommit and its subcommands (on, push, pushbump, pushnbump, off) to manage auto-commit mode.
 ---
 
 # /autocommit
@@ -24,11 +24,11 @@ After each logical unit of work, automatically run `/commit`. Stay in this mode 
 
 ## `/autocommit push`
 
-After each logical unit of work, automatically run `/commitpush`. Stay in this mode until `/autocommit off`.
+After each logical unit of work, automatically run `/commit push`. Stay in this mode until `/autocommit off`.
 
 ## `/autocommit pushbump` (alias: `pushnbump`)
 
-After each logical unit of work, automatically run `/commitpush v`. Stay in this mode until `/autocommit off`.
+After each logical unit of work, automatically run `/commit pushnbump`. Stay in this mode until `/autocommit off`.
 
 `pushnbump` is accepted as an alias and behaves identically.
 

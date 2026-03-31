@@ -5,7 +5,7 @@ description: Triggers on /bepy-skill-creator only.
 
 # /bepy-skill-creator
 
-> Create new skills or validate and improve existing ones following bepy conventions.
+> Create, validate, and improve skills following bepy conventions.
 
 ## Modes
 

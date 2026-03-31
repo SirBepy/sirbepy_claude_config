@@ -5,7 +5,7 @@ description: Triggers on /bepy-project-setup only.
 
 # /bepy-project-setup
 
-> Full project standardization flow. Runs all bepy skills in order.
+> Full project standardization flow - runs all bepy skills in order.
 
 ## Step 0 - Git init
 

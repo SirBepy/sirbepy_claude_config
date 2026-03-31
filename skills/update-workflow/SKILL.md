@@ -5,7 +5,7 @@ description: Triggers on /update-workflow only.
 
 # /update-workflow
 
-> Ensure the GitHub Actions deploy workflow matches the correct template for this project type.
+> Ensure the deploy workflow matches the correct template for this project type.
 
 ## Workflow
 

@@ -15,25 +15,13 @@ Run `uname` to detect the OS. If it fails, assume Windows. Keep this in mind for
 
 ### Step 0 - Check existing data
 
-If `.portfolio-data/metadata.json` exists:
+If `.portfolio-data/metadata.json` exists: read it, identify null/empty/0 fields, fill only those. Tell user if already complete and stop. Skip Step 1 unless core fields (title, description, type) look wrong.
 
-- Read it and read `PORTFOLIO.md` if it exists
-- Identify any fields that are null, empty, or 0
-- If nothing is missing, tell the user everything looks complete and stop
-- Otherwise, only run the steps needed to fill the gaps
-- Skip Step 1 unless fields like title, description, or type look wrong
-
-If `.portfolio-data/` does not exist at all, proceed to Step 1.
+If `.portfolio-data/` does not exist, proceed to Step 1.
 
 ### Step 1 - Explore the repo
 
-Before writing anything, explore the repository. Look at:
-
-- README, package.json / pubspec.yaml / Cargo.toml / go.mod / equivalent
-- Folder structure, source files, config files
-- Git history if available (for year)
-
-Infer from this: languages, frameworks, type, status, year, impressiveness, and what the project actually does and why it was built.
+Read: README, package.json/equivalent, folder structure, source/config files, git history (for year). Infer: languages, frameworks, type, status, year, impressiveness, purpose.
 
 ### Step 2 - Ask only what you cannot infer
 
@@ -41,57 +29,36 @@ Do not ask questions upfront. Make your best guesses and flag them.
 
 The only things you may ask before drafting:
 
-- **Live URL** - if none is obvious from docs/config, ask with exactly these options: "Do you have a live URL? Options: **github pages** (I'll use `https://sirbepy.github.io/[repo-name]`), paste a URL, or say none." If they say "github pages", construct the URL from the repo name. Otherwise assume `null`
+- **Live URL** - if none is obvious from docs/config, ask with exactly these options: "Do you have a live URL? Options: **github pages** (I'll use `https://sirbepy.github.io/[repo-name]`), paste a URL, or say none." If they say "github pages", construct the URL from the repo name. Otherwise assume `null`.
 - **Images** - use the AskUserQuestion tool with these two options: "Take screenshots automatically (recommended)" and "I'll add them manually". If they choose manually, ask them to drop the files into `.portfolio-data/` and tell you the filenames. If they choose automatically, follow the Auto-Screenshot Workflow below.
 
 If the project's purpose is genuinely ambiguous after reading the code, make a reasonable assumption and flag it.
 
 ### Auto-Screenshot Workflow
 
-#### 1. Detect project type
+**Detect type and start command:**
 
-Check the working directory for:
+| Check | Type | Port | Command |
+|---|---|---|---|
+| `vite.config.*` | Vite | 5173 | `npm run dev` |
+| `package.json` with React/Next deps | React | 3000 | `npm run dev` |
+| `index.html`, no `package.json` | Static | 8080 | `python -m http.server 8080` |
 
-- `vite.config.js` or `vite.config.ts` - **Vite** project. Default port: `5173`. Start command: `npm run dev`
-- `package.json` with a `dev` or `start` script and React/Next deps - **React** project. Default port: `3000`. Start command: `npm run dev` (prefer) or `npm start`
-- `index.html` with no `package.json` - **Static HTML**. Port: `8080`. Start command: `python -m http.server 8080`
+Use port from `vite.config.*` if specified. Run start command with `run_in_background: true` (one Bash call, no chaining).
 
-If `vite.config.*` specifies a port, use that instead of the default.
+Poll for readiness: `curl -s -o /dev/null -w "%{http_code}" http://localhost:PORT` - up to 15 tries, 1s apart.
 
-#### 2. Start the dev server
-
-Run the start command using Bash with `run_in_background: true`. Do NOT chain commands - one Bash call only.
-
-Then poll for readiness: run `curl -s -o /dev/null -w "%{http_code}" http://localhost:PORT` in a loop (up to 15 tries, 1 second apart). Stop as soon as you get a non-zero HTTP response.
-
-#### 3. Take screenshots
-
-Run this command once for the main view (not full-page):
+**Take screenshots:** Make sure `.portfolio-data/` exists first (`mkdir -p .portfolio-data`).
 
 ```
 npx --yes playwright screenshot --browser chromium --viewport-size "1280,800" http://localhost:PORT .portfolio-data/screenshot-1.png
 ```
 
-Then read `screenshot-1.png` back using the Read tool to view it. Based on what you see:
+Read `screenshot-1.png` back to view it. If content below the fold, take a full-page second shot (`--full-page`, `screenshot-2.png`). If distinct views exist in code, take a 3rd. Cap at 3 total.
 
-- If the page has meaningful content below the fold, take a second full-page screenshot:
+**Stop server:** `npx --yes kill-port PORT`
 
-```
-  npx --yes playwright screenshot --browser chromium --viewport-size "1280,800" --full-page http://localhost:PORT .portfolio-data/screenshot-2.png
-```
-
-- If the project has clearly distinct views or routes visible from the code (e.g. `/about`, a modal, a second tab), navigate to one and take a third screenshot. Only do this if it meaningfully showcases something the first two don't.
-- Cap at 3 screenshots total.
-
-Make sure `.portfolio-data/` exists before writing screenshots (`mkdir -p .portfolio-data` - one Bash call).
-
-#### 4. Stop the dev server
-
-Run: `npx --yes kill-port PORT`
-
-#### 5. Set image fields
-
-Set `mainImage` to `"screenshot-1.png"` and `images` to all screenshot filenames taken (e.g. `["screenshot-1.png", "screenshot-2.png"]`).
+Set `mainImage` to `"screenshot-1.png"` and `images` to all filenames taken.
 
 ### Step 3 - Draft and present both files
 
@@ -127,37 +94,37 @@ All fields are required.
 
 ### Field reference
 
-| Field              | Type           | Notes                                                                      |
-| ------------------ | -------------- | -------------------------------------------------------------------------- |
-| `title`            | string         | Display name - not necessarily the repo name                               |
-| `shortDescription` | string         | One punchy sentence, under 100 chars                                       |
-| `type`             | string         | e.g. Game, Web App, CLI Tool, Library, Bot, Mobile App, Script             |
-| `status`           | string         | Exactly one of: `"finished"`, `"in-progress"`, `"abandoned"`, `"archived"` |
-| `languages`        | string[]       | All languages used, e.g. `["TypeScript", "Lua"]`                           |
-| `frameworks`       | string[]       | Frameworks, libraries, platforms, e.g. `["React", "Tailwind"]`             |
-| `liveUrl`          | string or null | URL if deployed/live, otherwise `null`                                     |
-| `mainImage`        | string or null | Filename e.g. `"screenshot.png"`, or `null`                                |
-| `images`           | string[]       | All image filenames, `[]` if none                                          |
-| `year`             | integer        | Year started or primarily worked on                                        |
-| `impressiveness`   | integer 1-5    | See scale below                                                            |
-
-### Impressiveness scale
-
-Rate honestly based on scope, complexity, and polish found in the repo. Always flag this as an assumption.
-
-| Score | Meaning                                                |
-| ----- | ------------------------------------------------------ |
-| 1     | Throwaway script or tiny utility                       |
-| 2     | Simple but functional                                  |
-| 3     | Solid project with decent scope                        |
-| 4     | Technically interesting or well-executed               |
-| 5     | Flagship - complex, polished, something to be proud of |
+| Field | Type | Notes |
+|---|---|---|
+| `title` | string | Display name, not necessarily the repo name |
+| `shortDescription` | string | One punchy sentence, under 100 chars |
+| `type` | string | Game, Web App, CLI Tool, Library, Bot, Mobile App, Script |
+| `status` | string | `"finished"`, `"in-progress"`, `"abandoned"`, or `"archived"` |
+| `languages` | string[] | All languages used |
+| `frameworks` | string[] | Frameworks, libraries, platforms |
+| `liveUrl` | string or null | URL if deployed, else `null` |
+| `mainImage` | string or null | Filename e.g. `"screenshot.png"`, or `null` |
+| `images` | string[] | All image filenames, `[]` if none |
+| `year` | integer | Year started or primarily worked on |
+| `impressiveness` | integer 1-5 | See scale below |
 
 > `repoUrl` is intentionally absent. The portfolio ingestion script sets it automatically based on repo visibility.
 
+### Impressiveness scale
+
+| Score | Meaning |
+|---|---|
+| 1 | Throwaway script or tiny utility |
+| 2 | Simple but functional |
+| 3 | Solid project with decent scope |
+| 4 | Technically interesting or well-executed |
+| 5 | Flagship - complex, polished, something to be proud of |
+
+Rate honestly based on scope, complexity, and polish. Always flag as an assumption.
+
 ## File 2: `PORTFOLIO.md`
 
-Three short sections. Total target: 150-250 words. Do not pad - write as much as the project genuinely warrants and no more.
+Three short sections. Total target: 150-250 words. Do not pad.
 
 ### The What
 
@@ -169,10 +136,10 @@ Why it was built. What problem it solves. Why an existing tool didn't cover it.
 
 ### The How
 
-Interesting technical challenges or decisions worth calling out. Skip this section entirely if there's nothing genuinely interesting to say. Do not mention the tech stack here - that's already in `metadata.json`.
+Interesting technical challenges or decisions. Skip entirely if nothing genuinely interesting. Do not mention the tech stack here.
 
 ## Notes
 
 - Image files referenced in `metadata.json` should also live in `.portfolio-data/`
-- If updating, preserve any fields you have no reason to change
+- If updating, preserve fields you have no reason to change
 - To force a full refresh, delete `.portfolio-data/` and run again
