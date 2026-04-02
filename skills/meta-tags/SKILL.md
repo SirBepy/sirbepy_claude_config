@@ -9,6 +9,18 @@ description: Triggers on /meta-tags only.
 
 ## Workflow
 
+### Step 0 - Check if already done
+
+If the user passed `skipVerification`, skip this step entirely and proceed to Step 1.
+
+Read `index.html` and check if all 6 required meta tags already exist (description, og:title, og:description, og:image, og:url, twitter:card). If all present, print:
+
+```
+/meta-tags - already complete, skipping.
+```
+
+And stop.
+
 ### Step 1 - Gather context
 
 Check for the following:

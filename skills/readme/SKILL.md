@@ -9,6 +9,18 @@ description: Triggers on /readme only.
 
 ## Workflow
 
+### Step 0 - Check if already done
+
+If the user passed `skipVerification`, skip this step entirely and proceed to Step 1.
+
+If `README.md` exists and contains the expected structure (project icon, title, badges, About section, How to run section), print:
+
+```
+/readme - already complete, skipping.
+```
+
+And stop. Only proceed if README.md is missing or clearly outdated/malformed.
+
 ### Step 1 - Gather context
 
 Check for the following, in order. Use what exists, skip what doesn't:

@@ -9,6 +9,18 @@ description: Triggers on /migrate-structure only.
 
 ## Workflow
 
+### Step 0 - Check if already done
+
+If the user passed `skipVerification`, skip this step entirely and proceed to Step 1.
+
+After detecting the project type and reading the structure spec, scan the project. If all files are already in the correct locations, all boilerplate templates match, and no files need moving, print:
+
+```
+/migrate-structure - already complete, skipping.
+```
+
+And stop.
+
 ### Step 1 - Detect project type
 
 Read `CLAUDE.md` and check the `Type:` field. If missing, infer from project structure.

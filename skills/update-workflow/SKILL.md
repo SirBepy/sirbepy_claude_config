@@ -32,6 +32,8 @@ If no template exists for the detected type, tell the user and stop.
 
 ### Step 3 - Compare to existing workflow
 
+If the user passed `skipVerification`, skip the match check and rewrite the file from template.
+
 Check if `.github/workflows/deploy.yml` exists.
 
 If it does not exist:
@@ -43,7 +45,7 @@ If it does not exist:
 If it exists:
 
 - Read it and compare to the template
-- If it matches, tell the user and stop
+- If it matches and `skipVerification` was not passed, tell the user and stop
 - If it differs, use AI judgment to determine if the difference is intentional (e.g. a custom step the user added) or just outdated
 - If outdated, rewrite it to match the template exactly
 - If potentially intentional, show the user the diff and ask before overwriting

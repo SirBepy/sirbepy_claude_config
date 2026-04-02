@@ -7,6 +7,18 @@ description: Triggers on /pwa only.
 
 > Set up Progressive Web App support for the project.
 
+## Step 0 - Check if already done
+
+If the user passed `skipVerification`, skip this step entirely and proceed to Step 1.
+
+If `manifest.json` exists, `sw.js` exists, and `index.html` contains the manifest link + service worker registration script, print:
+
+```
+/pwa - already complete, skipping.
+```
+
+And stop.
+
 ## Step 1 - Gather context
 
 Read the following to fill manifest fields:

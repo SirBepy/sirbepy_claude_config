@@ -9,6 +9,18 @@ description: Triggers on /init-claude-md only.
 
 ## Workflow
 
+### Step 0 - Check if already done
+
+If the user passed `skipVerification`, skip this step entirely and proceed to Step 1.
+
+If `CLAUDE.md` exists and already has the correct structure (Project section with Type and Deploy, Structure section, Rules section), print:
+
+```
+/init-claude-md - already complete, skipping.
+```
+
+And stop. Only proceed if CLAUDE.md is missing or malformed.
+
 ### Step 1 - Check if CLAUDE.md exists
 
 If it exists, read it. The goal is to update it to match the standard structure below while preserving anything that looks intentional and project-specific.

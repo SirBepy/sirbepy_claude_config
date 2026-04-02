@@ -11,6 +11,8 @@ description: Triggers on /inject-widgets only.
 
 ### Step 1 - Check if already injected
 
+If the user passed `skipVerification`, skip this check and proceed to Step 2.
+
 Read `index.html`. If both script tags below already exist, tell the user and stop.
 
 ### Step 2 - Inject settings widget

@@ -14,6 +14,10 @@ description: Triggers on /favicon only.
 
 Both scripts live in the same folder as this SKILL.md.
 
+## Flags
+
+- `skipVerification` - if passed, skip early-out checks and regenerate everything from scratch (re-derive PNG from SVG, re-derive ICO from PNG, etc.)
+
 ## Step 1 - Detect what exists
 
 Search the entire project for any of these files:
@@ -49,7 +53,7 @@ Update references in `index.html` after moving.
   node png-to-ico.js assets/images/favicon.png favicon.ico
 ```
 
-- If both already exist, tell the user and stop.
+- If both already exist and `skipVerification` was not passed, tell the user and stop.
 
 ### Only PNG exists
 

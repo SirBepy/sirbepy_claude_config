@@ -15,6 +15,8 @@ Run `uname` to detect the OS. If it fails, assume Windows. Keep this in mind for
 
 ### Step 0 - Check existing data
 
+If the user passed `skipVerification`, skip this step entirely and proceed to Step 1.
+
 If `.portfolio-data/metadata.json` exists: read it, identify null/empty/0 fields, fill only those. Tell user if already complete and stop. Skip Step 1 unless core fields (title, description, type) look wrong.
 
 If `.portfolio-data/` does not exist, proceed to Step 1.
