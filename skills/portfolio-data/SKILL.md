@@ -49,13 +49,38 @@ Use port from `vite.config.*` if specified. Run start command with `run_in_backg
 
 Poll for readiness: `curl -s -o /dev/null -w "%{http_code}" http://localhost:PORT` - up to 15 tries, 1s apart.
 
+**Plan screenshots before taking them.** Before capturing anything, read the source code to understand what the app looks like and what would be worth showing. Look for:
+
+- **Routes/pages**: Check the router config (react-router, vue-router, file-based routing) for distinct pages worth capturing. Prioritize pages that show real functionality over empty shells.
+- **Hidden UI**: Look for modals, drawers, dropdowns, settings panels, or UI that only appears after interaction (button clicks, hover states, toggling a feature on). If important UI is hidden behind a click, use Playwright scripting to trigger it before screenshotting.
+- **States**: If the app has distinct visual states (empty vs populated, light vs dark, logged in vs out), pick the most visually interesting one.
+
+Based on this analysis, plan 1-3 screenshots that best represent the project. Prefer variety: don't take 3 shots of the same page at different scroll positions.
+
 **Take screenshots:** Make sure `.portfolio-data/` exists first (`mkdir -p .portfolio-data`).
 
+For simple captures:
 ```
 npx --yes playwright screenshot --browser chromium --viewport-size "1280,800" http://localhost:PORT .portfolio-data/screenshot-1.png
 ```
 
-Read `screenshot-1.png` back to view it. If content below the fold, take a full-page second shot (`--full-page`, `screenshot-2.png`). If distinct views exist in code, take a 3rd. Cap at 3 total.
+For captures that require interaction (clicking buttons, navigating, waiting for elements), write a short Playwright script inline and run it with `node -e`. Example:
+```
+node -e "
+const { chromium } = require('playwright');
+(async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await page.goto('http://localhost:PORT');
+  await page.click('button.open-settings');
+  await page.waitForSelector('.settings-panel');
+  await page.screenshot({ path: '.portfolio-data/screenshot-2.png' });
+  await browser.close();
+})();
+"
+```
+
+Read each screenshot back to verify it captured something useful. Cap at 3 total.
 
 **Stop server:** `npx --yes kill-port PORT`
 
@@ -77,6 +102,7 @@ All fields are required.
   "status": "",
   "languages": [],
   "frameworks": [],
+  "tools": [],
   "liveUrl": null,
   "mainImage": null,
   "images": [],
@@ -91,10 +117,11 @@ All fields are required.
 |---|---|---|
 | `title` | string | Display name, not necessarily the repo name |
 | `shortDescription` | string | One punchy sentence, under 100 chars |
-| `type` | string | Game, Web App, CLI Tool, Library, Bot, Mobile App, Script |
+| `type` | string | Game, Web App, Desktop App, Tray Tool, CLI Tool, Library, Bot, Mobile App, Script |
 | `status` | string | `"finished"`, `"in-progress"`, `"abandoned"`, or `"archived"` |
 | `languages` | string[] | All languages used |
-| `frameworks` | string[] | Frameworks, libraries, platforms |
+| `frameworks` | string[] | Actual frameworks and platforms (e.g. Electron, React, Next.js, Express) |
+| `tools` | string[] | Build tools, bundlers, utility libraries (e.g. electron-builder, Vite, sql.js, electron-updater) |
 | `liveUrl` | string or null | URL if deployed, else `null` |
 | `mainImage` | string or null | Filename e.g. `"screenshot.png"`, or `null` |
 | `images` | string[] | All image filenames, `[]` if none |
@@ -117,7 +144,7 @@ Rate honestly based on scope, complexity, and polish. Always flag as an assumpti
 
 ## File 2: `PORTFOLIO.md`
 
-Three short sections. Total target: 150-250 words. Do not pad.
+Three sections. Each can be one or more paragraphs as needed - don't force everything into a single paragraph if the content benefits from separation. Total target: 150-300 words. Do not pad.
 
 ### The What
 
@@ -133,6 +160,7 @@ Interesting technical challenges or decisions. Skip entirely if nothing genuinel
 
 ## Notes
 
+- **Never use em dashes anywhere in generated text.** Use commas, colons, or hyphens instead.
 - Image files referenced in `metadata.json` should also live in `.portfolio-data/`
 - If updating, preserve fields you have no reason to change
 - To force a full refresh, delete `.portfolio-data/` and run again

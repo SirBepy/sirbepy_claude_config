@@ -34,12 +34,12 @@ Options:
 - "/init-claude-md" - Generate or update CLAUDE.md
 - "/migrate-structure" - Normalize file structure, add missing boilerplate
 - "/readme" - Generate or update README.md
-- "/portfolio-data" - Generate or update portfolio metadata
 - "/favicon" - Check and generate favicon svg + png + ico
 - "/meta-tags" - Add missing meta tags to index.html
 - "/update-workflow" - Ensure deploy.yml matches the correct template
 - "/inject-widgets" - Inject settings widget and animated background
 - "/apply-styleguide" - Apply bepy styleguide and CSS vars
+- "/portfolio-data" - Generate or update portfolio metadata (runs after styleguide so screenshots reflect final look)
 
 ## Step 2 - Run skills in order
 
@@ -54,7 +54,7 @@ Do not stop between skills unless a skill requires user input. Handle the input 
 
 ## Step 3 - Suggest context compact
 
-After `/portfolio-data` and `/favicon` are done, print:
+After `/apply-styleguide` is done (right before `/portfolio-data`), print:
 
 ```
 Heavy context steps done. Consider running /compact before continuing if context feels large.
@@ -95,12 +95,12 @@ Done. Here's what ran:
 /init-claude-md     - created
 /migrate-structure  - moved script.js to src/scripts/, added .prettierrc
 /readme             - generated
-/portfolio-data     - updated, screenshots taken
 /favicon            - generated svg + png + ico
 /meta-tags          - added og:title, og:description, og:image
 /update-workflow    - already up to date, skipped
 /inject-widgets     - injected both scripts
 /apply-styleguide   - replaced 14 hardcoded values, applied .card to 3 elements
+/portfolio-data     - updated, screenshots taken
 
 Don't forget to review and commit when ready.
 ```
