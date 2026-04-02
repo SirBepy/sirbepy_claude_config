@@ -1,0 +1,80 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Detect package manager
+        id: detect-pm
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            echo "manager=pnpm" >> $GITHUB_OUTPUT
+            echo "install=pnpm install --frozen-lockfile" >> $GITHUB_OUTPUT
+          else
+            echo "manager=npm" >> $GITHUB_OUTPUT
+            echo "install=npm ci" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup pnpm
+        if: steps.detect-pm.outputs.manager == 'pnpm'
+        uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: ${{ steps.detect-pm.outputs.manager }}
+
+      - run: ${{ steps.detect-pm.outputs.install }}
+
+      - name: Bump version
+        run: npm version patch --no-git-tag-version
+
+      - name: Set homepage
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            pkg.homepage = 'https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}';
+            require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Inject build info
+        run: |
+          BUILD_TIME=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          PROJECT=$(basename "$GITHUB_REPOSITORY")
+          BUILD_INFO=$(find . -name "build-info.js" -not -path "./.git/*")
+          sed -i "s|BUILD_TIMESTAMP_PLACEHOLDER|$BUILD_TIME|g" $BUILD_INFO
+          sed -i "s|PROJECT_NAME_PLACEHOLDER|$PROJECT|g" $BUILD_INFO
+
+      - name: Build
+        run: |
+          if command -v pnpm &> /dev/null && [ -f pnpm-lock.yaml ]; then
+            pnpm run build
+          else
+            npm run build
+          fi
+
+      - name: Push version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json pnpm-lock.yaml 2>/dev/null || true
+          git commit -m "bump version [skip ci]" || true
+          git push
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build
+      - uses: actions/deploy-pages@v4
+        id: deployment
