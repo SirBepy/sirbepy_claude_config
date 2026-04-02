@@ -7,13 +7,26 @@ description: Triggers on /bepy-project-setup only.
 
 > Full project standardization flow - runs all bepy skills in order.
 
+## Flags
+
+- `auto` - Skip all prompts, run everything, auto-yes all questions (including PWA). No user interaction at all.
+
 ## Step 0 - Git init
 
 Run `/git-init` before anything else.
 
 ## Step 1 - Ask what to skip
 
-Use AskUserQuestion with multiSelect to ask:
+If `auto` flag is passed, skip nothing and proceed to Step 2.
+
+Otherwise, first ask using AskUserQuestion:
+
+- "Run everything"
+- "Let me pick what to skip"
+
+If the user picks "Run everything", skip nothing and proceed to Step 2.
+
+If the user picks "Let me pick what to skip", use AskUserQuestion with multiSelect to ask:
 
 "Which skills do you want to SKIP? (Everything else will run)"
 
@@ -27,8 +40,6 @@ Options:
 - "/update-workflow" - Ensure deploy.yml matches the correct template
 - "/inject-widgets" - Inject settings widget and animated background
 - "/apply-styleguide" - Apply bepy styleguide and CSS vars
-
-If the user selects nothing (or says "go" / "run all"), run everything.
 
 ## Step 2 - Run skills in order
 
@@ -53,7 +64,9 @@ Then continue automatically unless the user says to pause.
 
 ## Step 4 - Ask about PWA
 
-After all skills are done, ask using AskUserQuestion:
+If `auto` flag is passed, run `/pwa` without asking.
+
+Otherwise, ask using AskUserQuestion:
 
 - "Set this up as a PWA (adds manifest.json + service worker)"
 - "Skip PWA for now"
