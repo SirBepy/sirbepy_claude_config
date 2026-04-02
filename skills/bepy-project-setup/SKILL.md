@@ -7,24 +7,9 @@ description: Triggers on /bepy-project-setup only.
 
 > Full project standardization flow - runs all bepy skills in order.
 
-## Step 0 - Git init and .gitignore
+## Step 0 - Git init
 
-Before anything else:
-
-1. Check if a git repo exists (`git status`)
-2. If not, run `git init`
-3. Ensure `.gitignore` exists. If missing, create one with these defaults:
-   ```
-   .DS_Store
-   node_modules/
-   dist/
-   .env
-   ```
-   If it already exists, check it includes `.DS_Store` - if not, add it at the top.
-4. Check if there are any commits (`git log --oneline -1`)
-5. If no commits exist, stage all current files by name and commit:
-   `MAJOR: initial commit`
-6. If commits already exist, skip this step
+Run `/git-init` before anything else.
 
 ## Step 1 - Ask what to skip
 
@@ -75,11 +60,19 @@ After all skills are done, ask using AskUserQuestion:
 
 If yes, run `/pwa`.
 
-## Step 4.5 - Commit
+## Step 5 - Commit
 
-After everything is done (including PWA if selected), run `/commit` to commit all changes.
+After everything is done (including PWA if selected), run `/commit` with the message:
 
-## Step 5 - Summary
+```
+MAJOR: bepy project setup
+```
+
+## Step 6 - GitHub Pages (web projects only)
+
+Run `/github-pages-init`. It will skip automatically if not a web project.
+
+## Step 7 - Summary
 
 Print a summary of everything that ran:
 
