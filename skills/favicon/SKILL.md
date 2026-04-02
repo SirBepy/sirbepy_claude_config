@@ -63,18 +63,13 @@ Update references in `index.html` after moving.
 
 ### Only ICO exists
 
-- Warn the user: "Only favicon.ico was found. Cannot reverse-generate SVG or PNG from ICO."
-- Ask using AskUserQuestion with these options:
-  - "Generate a new set from scratch (AI designs SVG, generates PNG and ICO)"
-  - "I'll handle it myself"
-- If user chooses to generate, follow the "Nothing exists" flow below.
+- Print: "Only favicon.ico found. Generating new SVG + PNG + ICO from scratch."
+- Follow the generation flow below.
 
 ### Nothing exists
 
-- Ask using AskUserQuestion with these options:
-  - "Generate all 3 automatically (AI designs the icon)"
-  - "I'll add them myself"
-- If user chooses to generate, follow the generation flow below.
+- Print: "No favicon files found. Generating all 3 from scratch."
+- Follow the generation flow below.
 
 ## Generation flow - designing a new icon from scratch
 

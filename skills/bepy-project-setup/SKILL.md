@@ -7,42 +7,47 @@ description: Triggers on /bepy-project-setup only.
 
 > Full project standardization flow - runs all bepy skills in order.
 
-## Step 0 - Git init
+## Step 0 - Git init and .gitignore
 
 Before anything else:
 
 1. Check if a git repo exists (`git status`)
 2. If not, run `git init`
-3. Check if there are any commits (`git log --oneline -1`)
-4. If no commits exist, stage all current files by name and commit:
+3. Ensure `.gitignore` exists. If missing, create one with these defaults:
+   ```
+   .DS_Store
+   node_modules/
+   dist/
+   .env
+   ```
+   If it already exists, check it includes `.DS_Store` - if not, add it at the top.
+4. Check if there are any commits (`git log --oneline -1`)
+5. If no commits exist, stage all current files by name and commit:
    `MAJOR: initial commit`
-5. If commits already exist, skip this step
+6. If commits already exist, skip this step
 
-## Step 1 - Present checklist
+## Step 1 - Ask what to skip
 
-Print this checklist and ask the user to uncheck anything they want to skip:
+Use AskUserQuestion with multiSelect to ask:
 
-```
-About to run the following:
+"Which skills do you want to SKIP? (Everything else will run)"
 
-[x] /init-claude-md       - Generate or update CLAUDE.md
-[x] /migrate-structure    - Normalize file structure, add missing boilerplate
-[x] /readme               - Generate or update README.md
-[x] /portfolio-data       - Generate or update portfolio metadata
-[x] /favicon              - Check and generate favicon svg + png + ico
-[x] /meta-tags            - Add missing meta tags to index.html
-[x] /update-workflow      - Ensure deploy.yml matches the correct template
-[x] /inject-widgets       - Inject settings widget and animated background
-[x] /apply-styleguide     - Apply bepy styleguide and CSS vars
+Options:
+- "/init-claude-md" - Generate or update CLAUDE.md
+- "/migrate-structure" - Normalize file structure, add missing boilerplate
+- "/readme" - Generate or update README.md
+- "/portfolio-data" - Generate or update portfolio metadata
+- "/favicon" - Check and generate favicon svg + png + ico
+- "/meta-tags" - Add missing meta tags to index.html
+- "/update-workflow" - Ensure deploy.yml matches the correct template
+- "/inject-widgets" - Inject settings widget and animated background
+- "/apply-styleguide" - Apply bepy styleguide and CSS vars
 
-Uncheck anything you want to skip, or say go to run all.
-```
-
-Wait for the user to respond before doing anything.
+If the user selects nothing (or says "go" / "run all"), run everything.
 
 ## Step 2 - Run skills in order
 
-Run only the checked skills in the order listed. For each one:
+Run all non-skipped skills in the order listed. For each one:
 
 - Print `Running /skill-name...` before starting
 - Run the full skill as defined in its SKILL.md
@@ -70,6 +75,10 @@ After all skills are done, ask using AskUserQuestion:
 
 If yes, run `/pwa`.
 
+## Step 4.5 - Commit
+
+After everything is done (including PWA if selected), run `/commit` to commit all changes.
+
 ## Step 5 - Summary
 
 Print a summary of everything that ran:
@@ -92,6 +101,6 @@ Don't forget to review and commit when ready.
 
 ## Notes
 
-- Never auto-commit at the end. The user commits manually via /commit or /commitpush.
-- If a skill is skipped, note it as "skipped by user" in the summary.
+- Auto-commit at the end via /commit.
+- If a skill is skipped by user, note it as "skipped by user" in the summary.
 - If a skill has nothing to do, note it as "skipped - nothing to do" in the summary.

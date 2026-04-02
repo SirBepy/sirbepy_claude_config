@@ -23,16 +23,15 @@ If `.portfolio-data/` does not exist, proceed to Step 1.
 
 Read: README, package.json/equivalent, folder structure, source/config files, git history (for year). Infer: languages, frameworks, type, status, year, impressiveness, purpose.
 
-### Step 2 - Ask only what you cannot infer
+### Step 2 - Infer everything, ask only if genuinely unsure
 
-Do not ask questions upfront. Make your best guesses and flag them.
+Make best guesses for all fields. Do not ask routine questions.
 
-The only things you may ask before drafting:
+- **Live URL** - default to `https://sirbepy.github.io/[repo-name]/`. If deploy type is `none`, set to `null`.
+- **Images** - always take screenshots automatically using the Auto-Screenshot Workflow below.
+- **All other fields** - infer from the codebase. Flag significant assumptions in the summary but do not wait for confirmation.
 
-- **Live URL** - if none is obvious from docs/config, ask with exactly these options: "Do you have a live URL? Options: **github pages** (I'll use `https://sirbepy.github.io/[repo-name]`), paste a URL, or say none." If they say "github pages", construct the URL from the repo name. Otherwise assume `null`.
-- **Images** - use the AskUserQuestion tool with these two options: "Take screenshots automatically (recommended)" and "I'll add them manually". If they choose manually, ask them to drop the files into `.portfolio-data/` and tell you the filenames. If they choose automatically, follow the Auto-Screenshot Workflow below.
-
-If the project's purpose is genuinely ambiguous after reading the code, make a reasonable assumption and flag it.
+Only ask a question if something is genuinely confusing and you cannot make a reasonable guess (e.g. the project's purpose is truly ambiguous, or the type could reasonably be two very different things). Normal inference is fine - do not ask just to confirm.
 
 ### Auto-Screenshot Workflow
 
@@ -60,17 +59,9 @@ Read `screenshot-1.png` back to view it. If content below the fold, take a full-
 
 Set `mainImage` to `"screenshot-1.png"` and `images` to all filenames taken.
 
-### Step 3 - Draft and present both files
+### Step 3 - Write final files
 
-Present both files in separate code blocks. For any field where you made a significant assumption, add an inline note:
-
-> Assumed X - correct me if wrong
-
-Then wait for corrections.
-
-### Step 4 - Apply corrections and write final files
-
-Once confirmed, write the final files to `.portfolio-data/`.
+Write both files directly to `.portfolio-data/`. Do not present drafts or wait for confirmation. Print a short summary of what was written and flag any significant assumptions inline. The user will correct if needed.
 
 ## File 1: `metadata.json`
 
