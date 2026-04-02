@@ -26,7 +26,8 @@
 
 - If something requires manual action from Joe (web configs, credentials, cloud console, etc.), don't stop working.
 - Add it as a numbered step to `WORKFLOWS_FOR_SIRBEPY.md` and continue.
-- Never reset or clear that file. Joe manages it.
+- When Joe completes a manual task (or you have context that it's done), delete that line from the file.
+- If the file has no remaining tasks, delete the file entirely.
 
 ## Notes for Joe
 
