@@ -19,7 +19,53 @@
       "Bash(cd*)",
       "Bash(npm*)",
       "Bash(npx*)",
-      "Bash(dir*)"
+      "Bash(dir*)",
+      "Read(//Users/josipmuzic/.claude/skills/**)",
+      "Read(//Users/josipmuzic/.claude/skills/commit/**)",
+      "Bash(GIT_AUTHOR_DATE=\"2026-04-01T11:53:38\" GIT_COMMITTER_DATE=\"2026-04-01T11:53:38\" git commit --amend --no-edit --date=\"2026-04-01T11:53:38\")",
+      "Bash(GIT_AUTHOR_DATE=\"2026-04-01T11:57:22\" GIT_COMMITTER_DATE=\"2026-04-01T11:57:22\" git commit -m \"FIX: guard against null spotlight_count for new users\")",
+      "Bash(git reset:*)",
+      "Bash(GIT_AUTHOR_DATE=\"2026-04-01T22:54:17\" GIT_COMMITTER_DATE=\"2026-04-01T22:54:17\" git commit -m \"SAM-86: render system messages as centered neutral announcements in chat\")",
+      "Bash(GIT_AUTHOR_DATE=\"2026-04-01T23:17:44\" GIT_COMMITTER_DATE=\"2026-04-01T23:17:44\" git commit -m \"SAM-85: filter matched users from likes list and close overlay after connecting\")",
+      "Bash(GIT_AUTHOR_DATE=\"2026-04-01T23:21:09\" GIT_COMMITTER_DATE=\"2026-04-01T23:21:09\" git commit -m \"FEAT: refresh matches tab automatically after connecting with a user\")",
+      "Bash(GIT_AUTHOR_DATE=\"2026-04-01T23:29:51\" GIT_COMMITTER_DATE=\"2026-04-01T23:29:51\" git commit -m \"FIX: guard against null spotlight_count for new users\")",
+      "Read(//Users/josipmuzic/.claude/skills/migrate-structure/structure/**)",
+      "Read(//Users/josipmuzic/.claude/skills/migrate-structure/templates/**)",
+      "Bash(git mv:*)",
+      "Bash(git -C /Users/josipmuzic/Desktop/projects/codenames-generator remote get-url origin)",
+      "Bash(git -C /Users/josipmuzic/Desktop/projects/codenames-generator log --oneline --reverse -1)",
+      "Bash(python3 -m http.server 8080)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080)",
+      "Bash(node .portfolio-data/take-screenshot.mjs)",
+      "Bash(node /Users/josipmuzic/.claude/skills/favicon/svg-to-png.js assets/images/favicon.svg assets/images/favicon.png 256)",
+      "Read(//Users/josipmuzic/.claude/skills/favicon/**)",
+      "Bash(NODE_PATH=$\\(npm root -g\\) node /Users/josipmuzic/.claude/skills/favicon/svg-to-png.js assets/images/favicon.svg assets/images/favicon.png 256)",
+      "Bash(NODE_PATH=$\\(npm root -g\\) node /Users/josipmuzic/.claude/skills/favicon/png-to-ico.js assets/images/favicon.png favicon.ico)",
+      "Bash(NODE_PATH=$\\(npm root -g\\) node -e \"const m = require\\('png-to-ico'\\); console.log\\(typeof m, typeof m.default, Object.keys\\(m\\)\\)\")",
+      "Bash(node -e ':*)",
+      "Read(//Users/josipmuzic/.claude/skills/update-workflow/templates/**)",
+      "Read(//Users/josipmuzic/.claude/skills/bepy-project-setup/**)",
+      "Read(//Users/josipmuzic/.claude/skills/portfolio-data/**)",
+      "Edit(~/.claude/skills/bepy-project-setup/**)",
+      "Bash(git -C /Users/josipmuzic/Desktop/projects/codenames-generator log --oneline -1)",
+      "Read(//Users/josipmuzic/.claude/skills/init-claude-md/**)",
+      "Bash(ls /Users/josipmuzic/Desktop/projects/codenames-generator/*.json /Users/josipmuzic/Desktop/projects/codenames-generator/*.js)",
+      "Read(//Users/josipmuzic/.claude/skills/readme/**)",
+      "Bash(git -C /Users/josipmuzic/Desktop/projects/codenames-generator status)",
+      "Bash(git -C /Users/josipmuzic/Desktop/projects/codenames-generator diff)",
+      "Bash(git -C /Users/josipmuzic/Desktop/projects/codenames-generator add README.md)",
+      "Bash(git -C /Users/josipmuzic/Desktop/projects/codenames-generator add .github/workflows/deploy.yml)",
+      "Bash(git -C /Users/josipmuzic/Desktop/projects/codenames-generator add .gitignore)",
+      "Bash(git -C /Users/josipmuzic/Desktop/projects/codenames-generator commit -m \"CHORE: add project setup - deploy workflow, gitignore, README update\")",
+      "Bash(git remote:*)",
+      "Bash(gh repo:*)",
+      "Bash(gh api:*)",
+      "Read(//Users/josipmuzic/.claude/**)",
+      "WebFetch(domain:cdn.jsdelivr.net)",
+      "Edit(~/.claude/skills/update-workflow/**)"
+    ],
+    "additionalDirectories": [
+      "/Users/josipmuzic/.claude"
     ]
   },
   "hooks": {
@@ -34,6 +80,5 @@
       }
     ]
   },
-  "alwaysThinkingEnabled": true,
-  "effortLevel": "medium"
+  "alwaysThinkingEnabled": true
 }
