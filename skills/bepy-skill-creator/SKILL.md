@@ -36,7 +36,7 @@ Generate the skill following the conventions below, then show it to the user for
 
 ## Mode 2 - Validate and improve an existing skill
 
-Ask which skill to validate. Read its SKILL.md and run the full checklist below. Show a report with pass/fail for each rule, then ask:
+Ask which skill to validate. Read its SKILL.md and run the full checklist below. Show a report with FAIL/WARN/PASS for each rule, then ask:
 
 - "Apply all fixes automatically"
 - "Show me each fix and I'll approve"
@@ -49,10 +49,10 @@ Ask which skill to validate. Read its SKILL.md and run the full checklist below.
 Read every SKILL.md in `~/.claude/skills/`. Run the validation checklist on each one. Print a summary table:
 
 ```
-Skill                 Issues
-/commit               none
-/portfolio-data       missing one-liner
-/favicon              description too long
+Skill                 Fails  Warns
+/commit               0      0
+/portfolio-data       1      1
+/favicon              0      2
 ...
 ```
 
@@ -64,37 +64,34 @@ Then ask:
 
 ---
 
-## Bepy skill conventions
+## Validation checklist
 
-Every skill MUST follow these rules. These are the validation checklist:
+Rules are split into two severity levels. FAIL means the skill has a real problem that will hurt agent effectiveness or break conventions. WARN means it's worth flagging but might be intentional.
 
-### Structure
+### FAIL rules (must fix)
 
 - [ ] Frontmatter exists with `name` and `description` fields
-- [ ] `description` is one sentence, under 120 chars, starts with "Triggers on /skill-name only" for slash-command skills
 - [ ] First line after frontmatter is `# /skill-name`
-- [ ] Second line is `> one liner description of what the skill does`
-- [ ] One-liner is under 80 chars
-
-### Content
-
-- [ ] No em dashes anywhere - use commas, colons, or hyphens instead
-- [ ] No duplicate content that already exists in another skill - reference instead
-- [ ] No unnecessary examples of things that are obvious
+- [ ] Second line is `> one liner description`
+- [ ] No em dashes anywhere, use commas, colons, or hyphens instead
+- [ ] No true duplicate content (same info repeated in two places within the skill)
 - [ ] Steps are clearly numbered and named
 - [ ] Each step does one thing
-- [ ] No over-specification - if Claude can figure it out, don't spell it out
-
-### Length
-
-- [ ] Under 150 lines total
-- [ ] No section that could be cut without losing meaning
-- [ ] No repeated information across sections
-
-### References
-
 - [ ] If the skill depends on another skill's conventions, it references that skill by name instead of duplicating rules
+
+### WARN rules (flag but don't force)
+
+- [ ] `description` is ideally one sentence under 120 chars, but longer is fine if it improves agent triggering
+- [ ] Description ideally starts with "Triggers on /skill-name only" for slash-command skills, but alternative phrasing is fine if the trigger intent is clear
+- [ ] One-liner is ideally under 80 chars
+- [ ] Ideally under 150 lines total, but longer is fine if the extra detail helps the agent
+- [ ] Check for sections that could be cut, but don't flag sections that serve a distinct purpose even if they look similar to another section (e.g., a standalone planning gate that catches casual requests vs a gate check inside a command flow)
+- [ ] No unnecessary examples of things the agent can figure out, but detailed examples that ensure consistency (like hex colors, specific error messages) are fine
 - [ ] If the skill uses a script, the script path and usage is clearly stated
+
+### Report format
+
+Show the report as a table with three columns: Rule, Status (FAIL/WARN/PASS), Issue. Group by severity with FAILs first.
 
 ---
 
@@ -103,6 +100,6 @@ Every skill MUST follow these rules. These are the validation checklist:
 - Never use em dashes
 - Keep descriptions slash-command focused and trigger-specific
 - Prefer compact tables over bullet lists where possible
-- When in doubt, cut - a shorter skill is almost always better
+- When cutting for length, always ask: "does removing this make the agent less effective?" If yes, keep it.
 - Reference other skills rather than repeating their rules
 - Always show the result to the user before writing to disk
