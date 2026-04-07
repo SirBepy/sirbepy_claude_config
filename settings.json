@@ -1,14 +1,11 @@
 {
   "permissions": {
     "allow": [
-      // === macOS ===
       "Read(/Users/josipmuzic/.claude/**)",
 
-      // === Windows ===
       "Edit(C:/Users/tecno/Desktop/Projects/Web/video-script-assistant/**)",
       "Write(C:/Users/tecno/Desktop/Projects/Web/video-script-assistant/**)",
 
-      // === Cross-platform: Git ===
       "Bash(git add*)",
       "Bash(git commit*)",
       "Bash(git status*)",
@@ -23,7 +20,6 @@
       "Bash(git -C *)",
       "Bash(GIT_AUTHOR_DATE=*)",
 
-      // === Cross-platform: Shell ===
       "Bash(mkdir*)",
       "Bash(cd*)",
       "Bash(ls *)",
@@ -35,11 +31,9 @@
       "Bash(python3 -m http.server*)",
       "Bash(curl*)",
 
-      // === Cross-platform: GitHub CLI ===
       "Bash(gh repo*)",
       "Bash(gh api*)",
 
-      // === Cross-platform: Web ===
       "WebSearch",
       "WebFetch(domain:cdn.jsdelivr.net)",
       "WebFetch(domain:github.com)",
@@ -47,7 +41,6 @@
       "WebFetch(domain:ghchart.rshah.org)",
       "WebFetch(domain:github-contributions-api.jogruber.de)",
 
-      // === Cross-platform: Skills ===
       "Edit(~/.claude/skills/**)"
     ],
     "additionalDirectories": [
