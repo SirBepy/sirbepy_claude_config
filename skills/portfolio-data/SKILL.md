@@ -117,7 +117,7 @@ All fields are required.
 |---|---|---|
 | `title` | string | Display name, not necessarily the repo name |
 | `shortDescription` | string | One punchy sentence, under 100 chars |
-| `type` | string | Game, Web App, Desktop App, Tray Tool, CLI Tool, Library, Bot, Mobile App, Script |
+| `type` | string | `"Web"`, `"Mobile"`, `"Roblox"`, `"Game"`, `"Desktop"` |
 | `status` | string | `"finished"`, `"in-progress"`, `"abandoned"`, or `"archived"` |
 | `languages` | string[] | All languages used |
 | `frameworks` | string[] | Actual frameworks and platforms (e.g. Electron, React, Next.js, Express) |
