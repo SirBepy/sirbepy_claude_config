@@ -2,10 +2,8 @@
   "permissions": {
     "allow": [
       "Read(/Users/josipmuzic/.claude/**)",
-
       "Edit(C:/Users/tecno/Desktop/Projects/Web/video-script-assistant/**)",
       "Write(C:/Users/tecno/Desktop/Projects/Web/video-script-assistant/**)",
-
       "Bash(git add*)",
       "Bash(git commit*)",
       "Bash(git status*)",
@@ -19,7 +17,6 @@
       "Bash(git rebase*)",
       "Bash(git -C *)",
       "Bash(GIT_AUTHOR_DATE=*)",
-
       "Bash(mkdir*)",
       "Bash(cd*)",
       "Bash(ls *)",
@@ -30,18 +27,17 @@
       "Bash(npx*)",
       "Bash(python3 -m http.server*)",
       "Bash(curl*)",
-
       "Bash(gh repo*)",
       "Bash(gh api*)",
-
       "WebSearch",
       "WebFetch(domain:cdn.jsdelivr.net)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:ssr-contributions-svg.vercel.app)",
       "WebFetch(domain:ghchart.rshah.org)",
       "WebFetch(domain:github-contributions-api.jogruber.de)",
-
-      "Edit(~/.claude/skills/**)"
+      "Edit(~/.claude/skills/**)",
+      "Bash(xargs grep:*)",
+      "Read(//c/Users/tecno/AppData/Local/Temp/claude/c--Users-tecno-Desktop-Projects-Cinnamon-zirtue-zng-api/d4b516ee-0935-4213-b993-beeda6abeeea/tasks/**)"
     ],
     "additionalDirectories": [
       "/Users/josipmuzic/.claude",
