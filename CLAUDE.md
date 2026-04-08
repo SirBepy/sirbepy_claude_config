@@ -35,6 +35,13 @@
 - Never reset or clear that file. Joe manages it.
 - If the file doesn't exist, create it.
 
+## Icons
+
+- Always use Phosphor Icons for icons. Never create inline SVGs or custom icon markup.
+- HTML projects: load via CDN (`<script src="https://unpkg.com/@phosphor-icons/web"></script>`) and use `<i class="ph ph-icon-name">`.
+- React projects: use `@phosphor-icons/react` package.
+- Browse available icons at https://phosphoricons.com
+
 ## Specs
 
 - If given a spec file, read it fully before writing any code.
