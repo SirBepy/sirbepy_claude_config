@@ -37,12 +37,42 @@
       "WebFetch(domain:github-contributions-api.jogruber.de)",
       "Edit(~/.claude/skills/**)",
       "Bash(xargs grep:*)",
-      "Read(//c/Users/tecno/AppData/Local/Temp/claude/c--Users-tecno-Desktop-Projects-Cinnamon-zirtue-zng-api/d4b516ee-0935-4213-b993-beeda6abeeea/tasks/**)"
+      "Read(//c/Users/tecno/AppData/Local/Temp/claude/c--Users-tecno-Desktop-Projects-Cinnamon-zirtue-zng-api/d4b516ee-0935-4213-b993-beeda6abeeea/tasks/**)",
+      "Bash(docker compose:*)",
+      "Bash(flutter --version)",
+      "WebFetch(domain:api.flutter.dev)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter build:*)",
+      "Read(//Users/josipmuzic/.pub-cache/git/**)",
+      "Bash(flutter pub:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(md5)",
+      "Bash(grep -E \"Makefile|\\\\.sh$|\\\\.env\")",
+      "Bash(security find-identity:*)",
+      "Bash(python3 -c ':*)",
+      "Bash(python3)",
+      "Bash(find /Users/josipmuzic/projects/ssy-mobile -maxdepth 1 -type f -exec file {} \\\\;)",
+      "Bash(cat /Users/josipmuzic/projects/ssy-mobile/.env*)",
+      "Bash(ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new root@c0356.cloudnet.cloud echo \"connected\")",
+      "Bash(ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new root@ssyengine.c0356.cloudnet.cloud echo \"connected\")",
+      "Bash(ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new root@c0356.cloudnet.hosting echo \"connected\")",
+      "Bash(nslookup ssyengine.c0356.cloudnet.cloud)",
+      "Bash(nslookup c0356.cloudnet.se)",
+      "Bash(ssh -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@c0356.cloudnet.cloud echo \"connected\")",
+      "Bash(host c0356.cloudnet.cloud)",
+      "Read(//Users/josipmuzic/.ssh/**)",
+      "Bash(ssh -i ~/.ssh/id_ed25519_hosting -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@c0356.cloudnet.cloud echo \"connected\")",
+      "Bash(firebase deploy:*)",
+      "Bash(firebase --version)",
+      "Bash(ssh -i ~/.ssh/id_ed25519_hosting -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@c7327.cloudnet.cloud echo \"connected\")",
+      "Bash(firebase hosting:channel:deploy staging)"
     ],
     "additionalDirectories": [
       "/Users/josipmuzic/.claude",
       "/Users/josipmuzic/projects/tycoon_price_visualizer/assets/scripts",
-      "/Users/josipmuzic/projects/bepy-project-init/src"
+      "/Users/josipmuzic/projects/bepy-project-init/src",
+      "/Users/josipmuzic/.pub-cache/git/tiktok_sdk_v2-11e9f6bbd84704489d0da652224e76319e897b12/android/src/main/kotlin/com/tofinds/tiktok_sdk_v2",
+      "/Users/josipmuzic/projects/cinnamon/sampl-flutter/packages/tiktok_sdk_v2/.git"
     ]
   },
   "hooks": {
@@ -57,5 +87,6 @@
       }
     ]
   },
-  "alwaysThinkingEnabled": true
+  "alwaysThinkingEnabled": true,
+  "effortLevel": "medium"
 }
