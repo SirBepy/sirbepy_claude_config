@@ -2,11 +2,17 @@
 
 ## Communication
 
+- Always invoke `/caveman` at the start of every session before doing anything else.
 - Brevity over grammar. Always.
 - Ask ALL questions before starting work - trivial or not. Never assume.
 - Never ask questions mid-task. Front-load everything.
 - Never use the em dash character anywhere, ever. Use a comma, colon, or hyphen instead.
 - When asking any question, always use the AskUserQuestion tool with 2-4 options. Never type numbered options in plain text. Never ask a bare open-ended question.
+
+## Git Commits
+
+- NEVER commit directly. Always invoke the `/commit` skill first and follow its instructions.
+- This applies to every commit, no exceptions.
 
 ## Shell Commands
 
@@ -41,6 +47,11 @@
 - HTML projects: load via CDN (`<script src="https://unpkg.com/@phosphor-icons/web"></script>`) and use `<i class="ph ph-icon-name">`.
 - React projects: use `@phosphor-icons/react` package.
 - Browse available icons at https://phosphoricons.com
+
+## Code Style
+
+- Before writing or modifying code, detect the project's language/stack and check if `~/.claude/code-style/` has a matching file (e.g. `luau.md`, `react.md`). If it exists, read it and follow its preferences.
+- Only read the file once per session, and only when you actually need to write or change code.
 
 ## Specs
 
