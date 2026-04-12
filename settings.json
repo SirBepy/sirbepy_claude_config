@@ -37,12 +37,76 @@
       "WebFetch(domain:github-contributions-api.jogruber.de)",
       "Edit(~/.claude/skills/**)",
       "Bash(xargs grep:*)",
-      "Read(//c/Users/tecno/AppData/Local/Temp/claude/c--Users-tecno-Desktop-Projects-Cinnamon-zirtue-zng-api/d4b516ee-0935-4213-b993-beeda6abeeea/tasks/**)"
+      "Read(//c/Users/tecno/AppData/Local/Temp/claude/c--Users-tecno-Desktop-Projects-Cinnamon-zirtue-zng-api/d4b516ee-0935-4213-b993-beeda6abeeea/tasks/**)",
+      "WebFetch(domain:api.dev.ng.zirtue.com)",
+      "Bash(dart run:*)",
+      "Bash(dart analyze:*)",
+      "Bash(flutter build:*)",
+      "Bash(xxd \"c:\\\\Users\\\\tecno\\\\Desktop\\\\Projects\\\\Toolbar\\\\AIUsage\\\\TODOs.md\")",
+      "Read(//c/Users/tecno/.claude/**)",
+      "Read(//tmp/**)",
+      "Bash(python3 -c ':*)",
+      "Bash(flutter analyze:*)",
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(f\\\\\"{p['package']['name']} - {p['package']['description']}\\\\\"\\) for p in data.get\\('objects',[]\\)]\")",
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(f\\\\\"{r['full_name']} \\({r['stargazers_count']}*\\) - {r['description']}\\\\\"\\) for r in data.get\\('items',[]\\)]\")",
+      "Bash(claude mcp:*)",
+      "mcp__figma__get_figma_data",
+      "WebFetch(domain:purge.jsdelivr.net)",
+      "Bash(grep -o \"name: [a-zA-Z_-]*deeplink[a-zA-Z_-]*\\\\|name: [a-zA-Z_-]*empty[a-zA-Z_-]*\\\\|name: popup[^\\\\\\\\\\\\\\\\]*\" \"C:\\\\Users\\\\tecno\\\\.claude\\\\projects\\\\c--Users-tecno-Desktop-Projects-Cinnamon-zirtue-zng-admin\\\\f50c8662-5e82-43dc-8cbe-c6dce2748f4e\\\\tool-results\\\\mcp-figma-get_figma_data-1775650139465.txt\")",
+      "Bash(grep -o \"text: [A-Z][^\\\\\\\\\\\\\\\\]*\" \"C:\\\\Users\\\\tecno\\\\.claude\\\\projects\\\\c--Users-tecno-Desktop-Projects-Cinnamon-zirtue-zng-admin\\\\f50c8662-5e82-43dc-8cbe-c6dce2748f4e\\\\tool-results\\\\mcp-figma-get_figma_data-1775650139465.txt\")",
+      "Bash(grep -o \"text: [A-Z][^\\\\\\\\\\\\\\\\]*\\\\|text: [a-z][^\\\\\\\\\\\\\\\\]*\\\\|text: [*][^\\\\\\\\\\\\\\\\]*\\\\|text: [0-9][^\\\\\\\\\\\\\\\\]*\" \"C:\\\\Users\\\\tecno\\\\.claude\\\\projects\\\\c--Users-tecno-Desktop-Projects-Cinnamon-zirtue-zng-admin\\\\f50c8662-5e82-43dc-8cbe-c6dce2748f4e\\\\tool-results\\\\mcp-figma-get_figma_data-1775650139465.txt\")",
+      "Bash(grep -ob \"text: Biller Deeplink[^\\\\\\\\\\\\\\\\]*\" \"C:\\\\Users\\\\tecno\\\\.claude\\\\projects\\\\c--Users-tecno-Desktop-Projects-Cinnamon-zirtue-zng-admin\\\\f50c8662-5e82-43dc-8cbe-c6dce2748f4e\\\\tool-results\\\\mcp-figma-get_figma_data-1775650139465.txt\")",
+      "Bash(grep -o \"text: [^\\\\\\\\\\\\\\\\]*\")",
+      "Bash(grep -o \"text: [^\\\\\\\\\\\\\\\\]*150[^\\\\\\\\\\\\\\\\]*\\\\|text: [^\\\\\\\\\\\\\\\\]*82[^\\\\\\\\\\\\\\\\]*\\\\|text: [^\\\\\\\\\\\\\\\\]*Display size[^\\\\\\\\\\\\\\\\]*\" \"C:\\\\Users\\\\tecno\\\\.claude\\\\projects\\\\c--Users-tecno-Desktop-Projects-Cinnamon-zirtue-zng-admin\\\\f50c8662-5e82-43dc-8cbe-c6dce2748f4e\\\\tool-results\\\\mcp-figma-get_figma_data-1775650139465.txt\")",
+      "Read(//c/Users/tecno/.clone/projects/c--Users-tecno-Desktop-Projects-Cinnamon-zirtue-zng-admin/f50c8662-5e82-43dc-8cbe-c6dce2748f4e/tool-results/**)",
+      "Bash(grep -o \"text: [^\\\\\\\\\\\\\\\\]*\\\\|name: master / control / checkbox\\\\|state=selected\\\\|state=unselected\")",
+      "Read(//c/Users/tecno/Desktop/Projects/Web/no_sleep/**)",
+      "WebFetch(domain:zirtue-nk.sentry.io)",
+      "Bash(wc -l c/Users/tecno/Desktop/Projects/Toolbar/AIUsage/src/renderer/dashboard.html c/Users/tecno/Desktop/Projects/Toolbar/AIUsage/src/renderer/dashboard.js c/Users/tecno/Desktop/Projects/Toolbar/AIUsage/main.js c/Users/tecno/Desktop/Projects/Toolbar/AIUsage/src/core/*.js)",
+      "Bash(wc -l /c/Users/tecno/Desktop/Projects/Toolbar/AIUsage/src/renderer/dashboard.html /c/Users/tecno/Desktop/Projects/Toolbar/AIUsage/src/renderer/dashboard.js /c/Users/tecno/Desktop/Projects/Toolbar/AIUsage/main.js /c/Users/tecno/Desktop/Projects/Toolbar/AIUsage/src/core/*.js)",
+      "Bash(wc -l /c/Users/tecno/Desktop/Projects/Toolbar/AIUsage/src/renderer/dashboard.js /c/Users/tecno/Desktop/Projects/Toolbar/AIUsage/src/renderer/modules/*.js)",
+      "Bash(flutter --version)",
+      "Read(//c/Users/tecno/AppData/Local/Pub/Cache/**)",
+      "Bash(find /c/Users/tecno/Desktop/Projects/Cinnamon/zirtue/zng-admin/lib -type f -name \"*.dart\" -exec grep -l \"ListView.separated\\\\|Column.*SharedTableHeader\\\\|SizedBox.*height\" {} \\\\;)",
+      "Bash(grep -E \"\\\\.\\(dart\\)$\")",
+      "Read(//c/Users/tecno/Desktop/Projects/bepy_styleguide/**)",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(f\\\\\"{r['full_name']} \\({r['stargazers_count']}★\\) - {r['description'][:100] if r['description'] else 'No desc'} | {r['html_url']}\\\\\"\\) for r in data.get\\('items',[]\\)]\")",
+      "Bash(grep -E \"\\(\\\\.luau|\\\\.lua\\)$\")",
+      "Bash(aftman/bin/selene src/)",
+      "Bash(c:/Users/tecno/.aftman/bin/selene.exe packages/physical-leaderboards/src/)",
+      "Read(//c/Users/tecno/.aftman/bin//**)",
+      "Bash(/c/Users/tecno/.aftman/bin/rojo.exe build:*)",
+      "Read(//c/Users/tecno/.aftman/bin/**)",
+      "Bash(where selene:*)",
+      "Bash(where stylua:*)",
+      "Bash(c:/Users/tecno/.aftman/bin/rojo.exe build:*)",
+      "WebFetch(domain:jsdotlua.github.io)",
+      "Bash(aftman install:*)",
+      "Bash(aftman add:*)",
+      "Bash(wally install:*)",
+      "Bash(rojo sourcemap:*)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); rs=[c for c in d['children'] if c['name']=='ReplicatedStorage'][0]; print\\([c['name'] for c in rs['children']]\\)\")",
+      "Bash(xargs ls:*)",
+      "Bash(stylua src/ packages/)",
+      "Bash(~/.aftman/bin/stylua src/ packages/)",
+      "Read(//c/Users/tecno/AppData/Local/Aftman/**)",
+      "Bash(~/AppData/Local/Aftman/bin/stylua src/ packages/)",
+      "Bash(cmd.exe /c \"stylua src/ packages/\")",
+      "Edit(~/.claude/skills/jest-lua/**)",
+      "Bash(cmd.exe /c \"rojo build -o \\\\\"Save Sahur Obby.rbxlx\\\\\"\")",
+      "Bash(xargs -I {} dirname {})",
+      "Bash(xargs -I {} basename {})",
+      "Bash([ -f \"/c/Users/tecno/Desktop/Projects/sahur_starting_point/packages/$service/src/Main.luau\" ])"
     ],
     "additionalDirectories": [
       "/Users/josipmuzic/.claude",
       "/Users/josipmuzic/projects/tycoon_price_visualizer/assets/scripts",
-      "/Users/josipmuzic/projects/bepy-project-init/src"
+      "/Users/josipmuzic/projects/bepy-project-init/src",
+      "C:\\Users\\tecno\\.claude",
+      "C:\\Users\\tecno\\Desktop\\Projects\\Web\\no_sleep",
+      "C:\\Users\\tecno\\Desktop\\Projects\\Toolbar\\AIUsage\\src\\renderer",
+      "C:\\Users\\tecno\\Desktop\\Projects\\Cinnamon\\zirtue\\zng-admin\\lib\\api",
+      "C:\\Users\\tecno\\.claude\\skills"
     ]
   },
   "hooks": {
@@ -55,7 +119,33 @@
           }
         ]
       }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST http://127.0.0.1:27182/notify"
+          }
+        ]
+      }
     ]
   },
-  "alwaysThinkingEnabled": true
+  "statusLine": {
+    "type": "command",
+    "command": "powershell -ExecutionPolicy Bypass -File \"C:\\Users\\tecno\\.claude\\plugins\\cache\\caveman\\caveman\\24e6ee9ea827\\hooks\\caveman-statusline.ps1\""
+  },
+  "enabledPlugins": {
+    "caveman@caveman": true
+  },
+  "extraKnownMarketplaces": {
+    "caveman": {
+      "source": {
+        "source": "github",
+        "repo": "JuliusBrussee/caveman"
+      }
+    }
+  },
+  "alwaysThinkingEnabled": true,
+  "effortLevel": "medium"
 }
