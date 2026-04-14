@@ -96,7 +96,26 @@
       "Bash(cmd.exe /c \"rojo build -o \\\\\"Save Sahur Obby.rbxlx\\\\\"\")",
       "Bash(xargs -I {} dirname {})",
       "Bash(xargs -I {} basename {})",
-      "Bash([ -f \"/c/Users/tecno/Desktop/Projects/sahur_starting_point/packages/$service/src/Main.luau\" ])"
+      "Bash([ -f \"/c/Users/tecno/Desktop/Projects/sahur_starting_point/packages/$service/src/Main.luau\" ])",
+      "Read(//mnt/c/Users/tecno/Desktop/Projects/sahur_starting_point/testing/**)",
+      "Bash(python3 -c \" import json, sys data = json.load\\(sys.stdin\\) for item in data.get\\('items', []\\): print\\(f\\\\\"{item['full_name']} | stars:{item['stargazers_count']} | {item['description'] or 'No desc'} | {item['html_url']}\\\\\"\\) \")",
+      "Read(//c/Users/tecno/AppData/Local/Roblox/**)",
+      "WebFetch(domain:create.roblox.com)",
+      "WebFetch(domain:devforum.roblox.com)",
+      "Read(//c/Users/tecno/**)",
+      "mcp__Roblox_Studio__list_roblox_studios",
+      "mcp__Roblox_Studio__search_game_tree",
+      "mcp__Roblox_Studio__inspect_instance",
+      "mcp__Roblox_Studio__script_search",
+      "mcp__Roblox_Studio__script_grep",
+      "mcp__Roblox_Studio__execute_luau",
+      "Bash(grep -v \"\\\\.luau$\\\\|\\\\.json$\")",
+      "Bash(/c/Users/tecno/.aftman/bin/selene.exe src/ReplicatedStorage/UIScripts/Components/SpeedrunCategoryPicker.luau src/ReplicatedStorage/UIScripts/Views/Stopwatch.luau packages/inventory-service/server-storage/ServerEquippedItemsLogic.luau packages/inventory-service/src/AssetsToMove/ReplicatedStorage/InventoryClient.luau)",
+      "Bash(stylua \"c:/Users/tecno/Desktop/Projects/sahur_starting_point/src/ServerStorage/Tools/67/Client.client.luau\")",
+      "Bash(grep -o '\"[A-Za-z]:\\\\\\\\\\\\\\\\[^\"]*zng-admin[^\"]*\"' \"C:/Users/tecno/.claude.json\")",
+      "Bash(SHORTCUT_API_TOKEN=\"sct_ro_zirtue_NjAyZWVlZGUtZjYzYi00ZmI3LTg3MjAtM2RlY2Y5ZWE2NzA1OjY5OWM3NmZlLTkwNzYtNDQyNC1iYTIyLTJiYjM1MzRmNDE3ZTpmNGM1NzQ3YjcxZTE1ZWU0Mjg0MDEzNzg5NDVhMWUzNA\" npx -y @shortcut/mcp)",
+      "Edit(~/.claude/skills/test-flow/**)",
+      "Bash(timeout 8 ./node_modules/.bin/electron . --enable-logging)"
     ],
     "additionalDirectories": [
       "/Users/josipmuzic/.claude",
@@ -106,7 +125,11 @@
       "C:\\Users\\tecno\\Desktop\\Projects\\Web\\no_sleep",
       "C:\\Users\\tecno\\Desktop\\Projects\\Toolbar\\AIUsage\\src\\renderer",
       "C:\\Users\\tecno\\Desktop\\Projects\\Cinnamon\\zirtue\\zng-admin\\lib\\api",
-      "C:\\Users\\tecno\\.claude\\skills"
+      "C:\\Users\\tecno\\.claude\\skills",
+      "C:\\Users\\tecno",
+      "\\tmp",
+      "C:\\Users\\tecno\\.claude\\ide",
+      "c:\\Users\\tecno\\.claude"
     ]
   },
   "hooks": {
@@ -115,7 +138,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -X POST http://127.0.0.1:27182/refresh"
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"%USERPROFILE%\\.claude\\aiusage-hook.ps1\" refresh"
           }
         ]
       }
@@ -125,7 +148,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -X POST http://127.0.0.1:27182/notify"
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"%USERPROFILE%\\.claude\\aiusage-hook.ps1\" notify"
           }
         ]
       }
@@ -147,5 +170,9 @@
     }
   },
   "alwaysThinkingEnabled": true,
-  "effortLevel": "medium"
+  "voiceEnabled": true,
+  "voice": {
+    "enabled": true,
+    "mode": "hold"
+  }
 }
