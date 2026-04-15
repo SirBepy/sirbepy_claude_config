@@ -64,6 +64,34 @@ Before calling `stories-create`, search for an existing ticket that covers the s
 - If a plausible match shows up, stop and ask with AskUserQuestion whether to (a) use the existing ticket, (b) file a new one anyway because the scope differs, or (c) cancel. Include the existing story ID + title so it's trivially judgeable.
 - If nothing matches, proceed to step 3 and note in the reply that the check was performed ("No existing ticket found for X").
 
+### 2.8. Description structure (Airion's standard, 2026-04-14)
+
+Shortcut is the team's de-facto documentation. Non-engineers (PM, ops, UX) reference tickets too. Write descriptions so anyone on the team can pick them up cold.
+
+**Structure:**
+
+1. **`# CONTEXT`** — stupid simple. Plain-English explanation of what's changing and why, readable by someone who has never seen the code. No file paths, no function names, no jargon. 2-5 sentences is ideal. If you can't explain it without engineering terms, you don't understand the ticket yet.
+2. **`# ACTION ITEMS`** — the **what**, not the **how**. Short bullet list naming what needs to exist when the ticket is done (a field, a screen, a route, a redirect behavior). No file paths, no function names, no implementation steps, no "call X then Y". 3-6 bullets. If a bullet starts explaining *how* to build it, delete that half. The engineer figures out the how at PR time.
+3. **`# ACCEPTANCE CRITERIA (QA)`** — numbered, scenario-grouped, runnable by someone who has never seen the code. Group by flow/state ("Biller with custom URL configured", "Regression"), then list concrete click-through steps with expected outcomes. Avoid implementation language (no "calls X", "resolves Y"). Always include a **Regression** group listing what should keep working untouched.
+4. **Relationships** — do NOT add a `# RELATED` text block. Use native Shortcut story links instead (they show up in the "Relationships" panel and stay in sync). The MCP doesn't expose link creation, so call the REST API directly:
+
+    ```bash
+    source ~/.claude/.env && curl -s -X POST "https://api.app.shortcut.com/api/v3/story-links" \
+      -H "Content-Type: application/json" \
+      -H "Shortcut-Token: $SHORTCUT_API_TOKEN" \
+      -d '{"subject_id":<new_story_id>,"object_id":<related_story_id>,"verb":"relates to"}'
+    ```
+
+    Verbs: `relates to` (default), `blocks`, `duplicates`. Token lives in `~/.claude/.env` as `SHORTCUT_API_TOKEN`. Create a link for every BE/paired-FE ticket the new story depends on or pairs with.
+
+**Sizing:**
+
+- Prefer smaller tickets. If a ticket covers two independently shippable chunks (e.g. admin side + app side), split it.
+- If Joe is in a rush, one bigger ticket is fine — trust his judgment.
+- If the approach feels like it needs breakdown, break it down.
+
+**Reason this exists:** Airion 2026-04-14 — "CONTEXT stupid simple, everything else as eng-oriented as you want. Referencing old SC tickets of past engineers has come in handy multiple times." Keep the signal high for both audiences.
+
 ### 3. Build the create payload
 
 From the reference, inherit: `team`, `epic`, `iteration`, `owner` (always Joe, regardless of reference), `type: feature` (unless Joe said bug/chore).
@@ -79,7 +107,7 @@ Call `stories-update` with:
   - Priority: `6260361c-cc5f-475f-9758-ea5b740e5b81` — values vary (High `6260361c-8f25-4cfd-941c-d32094abaca0`, others to be discovered via `custom-fields-list`)
   - ZNG: Product Area: `6881002d-700f-4bb7-b919-6cf8880ccdb9`
   - Technical Area: `6216069e-ae53-4892-a4f2-d9cc796f1484` — Web App: `6881029c-3921-4900-ad9a-197d3755d25f`
-  - Release: `68f8e559-4a18-4a6e-be1c-fa2f5aaa4fdb`
+  - Release: `68f8e559-4a18-4a6e-be1c-fa2f5aaa4fdb` — ALWAYS set to **Next release** (`698b4bce-ecd7-44c3-b62a-2b49b2506c1d`) regardless of what the reference ticket had. Joe adjusts release numbers manually in the UI afterward.
 - `estimate`: the point value Joe chose
 - `workflow_state_id`: `500018254` ("To Do") unless Joe specifies otherwise
 
