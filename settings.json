@@ -116,7 +116,7 @@
       "Edit(~/.claude/skills/test-flow/**)",
       "Bash(timeout 8 ./node_modules/.bin/electron . --enable-logging)",
       "mcp__shortcut__stories-create",
-      "mcp__shortcut__stories-update"
+      "mcp__shortcut__stories-update",
       "Bash(docker compose:*)",
       "Bash(flutter --version)",
       "WebFetch(domain:api.flutter.dev)",
