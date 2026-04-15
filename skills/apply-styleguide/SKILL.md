@@ -7,69 +7,22 @@ description: Triggers on /apply-styleguide only.
 
 > Apply the bepy styleguide to the project - replace hardcoded values with CSS vars and apply standard components.
 
-## Styleguide
+## How this skill is structured
 
-Hosted at: `https://cdn.jsdelivr.net/gh/sirbepy/bepy-project-init@main/styleguide.css`
+- `common.md` - rules shared by every stack (CDN URL, token table, component classes, finish rules).
+- `stacks/<stack>.md` - stack-specific steps that assume `common.md` is already loaded.
 
-## Step 1 - Ensure styleguide is linked
+Adding a new stack = add one file under `stacks/` and one row to the dispatch table below. Do not inline stack logic in this file.
 
-Check `index.html` for a `<link>` tag pointing to the styleguide CDN URL. If missing, add it inside `<head>` before any other stylesheets so project styles can override it:
+## Dispatch
 
-```html
-<link
-  rel="stylesheet"
-  href="https://cdn.jsdelivr.net/gh/sirbepy/bepy-project-init@main/styleguide.css"
-/>
-```
+1. Detect the project stack from files at the repo root:
 
-## Step 2 - Read the project CSS
+    | Signal                                                                            | Stack    | File to load       |
+    | --------------------------------------------------------------------------------- | -------- | ------------------ |
+    | `index.html` exists                                                               | `web`    | `stacks/web.md`    |
+    | `pyproject.toml` exists AND (tkinter/pywebview/Qt imports OR `src/<pkg>/` layout) | `python` | `stacks/python.md` |
 
-Read all CSS files in `src/styles/`. Understand the current visual structure - layout, spacing, components, colors.
+2. Read `common.md` first, then the matching stack file. Follow both.
 
-## Step 3 - Replace hardcoded values
-
-Go through all CSS files and replace:
-
-| Hardcoded               | Replace with                                                                      |
-| ----------------------- | --------------------------------------------------------------------------------- |
-| Background colors       | `var(--color-background)` or `var(--color-surface)` or `var(--color-surface-alt)` |
-| Text colors             | `var(--color-text)` or `var(--color-text-muted)`                                  |
-| Accent/highlight colors | `var(--color-primary)` or `var(--color-secondary)`                                |
-| Border colors           | `var(--color-border)`                                                             |
-| Font families           | `var(--font-body)` or `var(--font-heading)` or `var(--font-mono)`                 |
-| Border radius values    | `var(--radius-card)` or `var(--radius-badge)`                                     |
-| Box shadows             | `var(--shadow-card)`                                                              |
-
-Use judgment for ambiguous colors - pick the closest semantic match, not just the closest color value.
-
-Remove any `background` or `background-color` rules from `body` or `html` - the animated background script handles this.
-
-## Step 4 - Apply standard components to CSS
-
-Replace any custom implementations of these patterns with the standard styleguide classes:
-
-- Card-like containers → add `.card` or `.card-alt`
-- Buttons → ensure `button` elements rely on styleguide base styles, add `.btn-primary`, `.btn-outline`, or `.btn-ghost` as appropriate
-- Badges/tags/pills → `.badge`, `.badge-tech`, `.badge-success`, `.badge-info`
-- Text inputs, selects, textareas → `.input`
-
-## Step 5 - Apply classes to HTML
-
-Open `index.html` and any other HTML files. Add appropriate classes to elements:
-
-- Container/panel elements that are card-like → add `.card` or `.card-alt`
-- `<button>` elements → add `.btn` + the appropriate variant
-- Badge/tag/pill elements → add `.badge` + appropriate variant
-- `<input>`, `<select>`, `<textarea>` → add `.input`
-
-Keep layout, spacing, and structural classes exactly as they are - only add styleguide classes, never remove existing ones.
-
-## Step 6 - Confirm
-
-Print a summary of:
-
-- How many hardcoded values were replaced
-- Which components were applied
-- Anything that was ambiguous or skipped
-
-Do not commit - the user handles that.
+3. If no row matches, print that the styleguide does not apply to this project type and stop. Do not guess.
