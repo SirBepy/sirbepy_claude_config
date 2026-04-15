@@ -7,4 +7,11 @@
 !settings.json
 !skills/
 !skills/**
+
+# Per-user ticket log, not shared
+skills/shortcut-create-ticket/log.md
+
+# Belt-and-suspenders: never commit secrets
+.env
+**/.env
 .DS_Store
