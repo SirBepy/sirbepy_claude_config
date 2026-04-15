@@ -113,9 +113,10 @@
       "Bash(/c/Users/tecno/.aftman/bin/selene.exe src/ReplicatedStorage/UIScripts/Components/SpeedrunCategoryPicker.luau src/ReplicatedStorage/UIScripts/Views/Stopwatch.luau packages/inventory-service/server-storage/ServerEquippedItemsLogic.luau packages/inventory-service/src/AssetsToMove/ReplicatedStorage/InventoryClient.luau)",
       "Bash(stylua \"c:/Users/tecno/Desktop/Projects/sahur_starting_point/src/ServerStorage/Tools/67/Client.client.luau\")",
       "Bash(grep -o '\"[A-Za-z]:\\\\\\\\\\\\\\\\[^\"]*zng-admin[^\"]*\"' \"C:/Users/tecno/.claude.json\")",
-      "Bash(SHORTCUT_API_TOKEN=\"sct_ro_zirtue_NjAyZWVlZGUtZjYzYi00ZmI3LTg3MjAtM2RlY2Y5ZWE2NzA1OjY5OWM3NmZlLTkwNzYtNDQyNC1iYTIyLTJiYjM1MzRmNDE3ZTpmNGM1NzQ3YjcxZTE1ZWU0Mjg0MDEzNzg5NDVhMWUzNA\" npx -y @shortcut/mcp)",
       "Edit(~/.claude/skills/test-flow/**)",
-      "Bash(timeout 8 ./node_modules/.bin/electron . --enable-logging)"
+      "Bash(timeout 8 ./node_modules/.bin/electron . --enable-logging)",
+      "mcp__shortcut__stories-create",
+      "mcp__shortcut__stories-update"
     ],
     "additionalDirectories": [
       "/Users/josipmuzic/.claude",
@@ -133,12 +134,23 @@
     ]
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^mcp__shortcut__stories-(update|add-task|update-task|create-comment|add-external-link|remove-external-link|set-external-links|add-relation|add-subtask|remove-subtask|create-subtask|assign-current-user|unassign-current-user|upload-file)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\skills\\shortcut-create-ticket\\hooks\\guard_mutation.py\""
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"%USERPROFILE%\\.claude\\aiusage-hook.ps1\" refresh"
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/tecno/.claude/aiusage-hook.ps1 refresh"
           }
         ]
       }
@@ -148,7 +160,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"%USERPROFILE%\\.claude\\aiusage-hook.ps1\" notify"
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/tecno/.claude/aiusage-hook.ps1 notify"
           }
         ]
       }
