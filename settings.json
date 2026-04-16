@@ -198,10 +198,12 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "powershell -ExecutionPolicy Bypass -File \"C:\\Users\\tecno\\.claude\\plugins\\cache\\caveman\\caveman\\24e6ee9ea827\\hooks\\caveman-statusline.ps1\""
+    "command": "npx -y ccstatusline@latest",
+    "padding": 0
   },
   "enabledPlugins": {
-    "caveman@caveman": true
+    "caveman@caveman": true,
+    "superpowers@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "caveman": {
