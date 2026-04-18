@@ -33,6 +33,8 @@ Use AskUserQuestion with these options:
 1. Ask which project. Default guess: current working directory name.
 2. If `<Project>.md` missing in vault root, create from `Templates/Project.md`.
 3. If `Kanbans/<Project>.md` missing, create from `Templates/ProjectKanban.md`.
+   - If Joe says "milestones", "sprints", or "versions": swap columns for `Backlog / M1 / M2 / ... / Mn`. No Done column (plugin handles card completion via checkbox).
+   - Propose `n` based on task count, target ~5 tasks per milestone, range 3-12. Group tasks semantically (related work clusters together), not chronologically-random.
 4. Discuss goals, blockers, priorities. Ask questions via AskUserQuestion.
 5. Turn conclusions into Kanban cards or `Tasks/<Title>.md` notes from `Templates/Task.md`. Link with wiki links.
 6. Commit and push.
