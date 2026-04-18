@@ -203,8 +203,7 @@
   },
   "enabledPlugins": {
     "caveman@caveman": true,
-    "superpowers@claude-plugins-official": true,
-    "obsidian@obsidian-skills": true
+    "superpowers@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "caveman": {
