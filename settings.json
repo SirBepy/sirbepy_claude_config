@@ -203,7 +203,8 @@
   },
   "enabledPlugins": {
     "caveman@caveman": true,
-    "superpowers@claude-plugins-official": true
+    "superpowers@claude-plugins-official": true,
+    "obsidian@obsidian-skills": true
   },
   "extraKnownMarketplaces": {
     "caveman": {
@@ -211,13 +212,19 @@
         "source": "github",
         "repo": "JuliusBrussee/caveman"
       }
+    },
+    "obsidian-skills": {
+      "source": {
+        "source": "github",
+        "repo": "kepano/obsidian-skills"
+      }
     }
   },
-  "voiceEnabled": true,
+  "alwaysThinkingEnabled": true,
+  "effortLevel": "medium",
   "voice": {
     "enabled": true,
     "mode": "hold"
   },
-  "alwaysThinkingEnabled": true,
-  "effortLevel": "medium"
+  "voiceEnabled": true
 }
