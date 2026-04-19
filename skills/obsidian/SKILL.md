@@ -31,29 +31,29 @@ Use AskUserQuestion with these options:
 ### Plan or brainstorm a project
 
 1. Ask which project. Default guess: current working directory name.
-2. If `<Project>.md` missing in vault root, create from `Templates/Project.md`.
+2. If `<Project>.md` missing in vault root:
+   - Create from `Templates/Project.md`.
+   - Derive a ticket ID prefix from the project name initials (see vault CLAUDE.md "Ticket IDs"). Check uniqueness against all other project notes' `id:` fields. If clash, propose a variant and confirm with Joe.
+   - Write `id: <PREFIX>` into the project note frontmatter.
 3. If `Kanbans/<Project>.md` missing, create from `Templates/ProjectKanban.md`.
    - If Joe says "milestones", "sprints", or "versions": swap columns for `Backlog / M1 / M2 / ... / Mn`. No Done column (plugin handles card completion via checkbox).
    - Propose `n` based on task count, target ~5 tasks per milestone, range 3-12. Group tasks semantically (related work clusters together), not chronologically-random.
 4. Discuss goals, blockers, priorities. Ask questions via AskUserQuestion.
-5. Turn conclusions into Kanban cards or `Tasks/<Title>.md` notes from `Templates/Task.md`. Link with wiki links.
+5. Turn conclusions into Kanban cards or `Tasks/<PREFIX>-<N> <Title>.md` notes from `Templates/Task.md` (see Add a ticket for ID assignment). Link with wiki links.
 6. Commit and push.
 
 ### Add a ticket
 
 1. Ask which Kanban plus title and context.
-2. Add card to `Kanbans/<Project>.md` under Backlog by default.
-3. If ticket needs detail, create `Tasks/<Title>.md` from `Templates/Task.md` and wiki-link it.
-4. Commit and push.
+2. Read the project note's `id:` field to get the prefix.
+3. Glob `Tasks/<PREFIX>-*.md`, find max N, use `N+1`.
+4. Create `Tasks/<PREFIX>-<N+1> <Title>.md` from `Templates/Task.md`. Include `id: <PREFIX>-<N+1>` in the frontmatter.
+5. Add `- [ ] [[<PREFIX>-<N+1> <Title>]]` to `Kanbans/<Project>.md` under Backlog by default.
+6. Commit and push.
 
 ### Pick up a ticket
 
-1. Ask which project.
-2. Read `Kanbans/<Project>.md`, list active tickets (Backlog, Ready, etc).
-3. Let Joe pick one.
-4. Move card to "In Progress" column.
-5. If linked `Tasks/<Title>.md` exists, read and summarize.
-6. Commit and push.
+Use the `pickup-ticket` skill. It auto-triggers on phrases like "tackle FSM-2", "pick up CUT-3", etc. If Joe explicitly asks to "pick up a ticket" without an ID, ask which project, list active tickets from its Kanban, let him pick one, then hand off to `pickup-ticket`.
 
 ### Quick capture to Inbox
 
