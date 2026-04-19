@@ -53,7 +53,7 @@ Use AskUserQuestion with these options:
 
 ### Pick up a ticket
 
-Use the `pickup-ticket` skill. It auto-triggers on phrases like "tackle FSM-2", "pick up CUT-3", etc. If Joe explicitly asks to "pick up a ticket" without an ID, ask which project, list active tickets from its Kanban, let him pick one, then hand off to `pickup-ticket`.
+Use the `/obsidian-pickup-ticket` skill. It only triggers on its slash command (because Joe also uses Shortcut and other trackers, natural phrases like "tackle FSM-2" must NOT auto-trigger anything). If Joe asks to "pick up a ticket" without an ID inside this `/obsidian` flow, ask which project, list active tickets from its Kanban, let him pick one, then hand off to `/obsidian-pickup-ticket`.
 
 ### Quick capture to Inbox
 

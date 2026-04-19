@@ -1,21 +1,25 @@
 ---
-name: pickup-ticket
-description: Look up an Obsidian vault ticket by ID, gather context, move it to In Progress, and hand off to Joe. Triggers on phrases like "tackle FSM-2", "pick up CUT-3", "work on <ID>", "start <ID>", or "/pickup-ticket". Also triggers on bare numbers ("tackle 2") when the current project is obvious from context.
+name: obsidian-pickup-ticket
+description: Triggers on /obsidian-pickup-ticket only. Looks up an Obsidian vault ticket by ID, gathers context, moves it to In Progress, and hands off to Joe. Never auto-triggers on natural phrases (Joe also uses Shortcut and other trackers, so ticket-like wording must not activate this skill).
 ---
 
-# /pickup-ticket
+# /obsidian-pickup-ticket
 
 > Pick up an Obsidian vault ticket and start working on it.
+
+**Trigger:** `/obsidian-pickup-ticket <ID>` only. Do NOT invoke this skill from natural phrases like "tackle FSM-2" or "pick up CUT-3" - Joe uses other ticket systems (Shortcut, etc.) and those phrases are ambiguous.
 
 **Vault path:** `C:\Users\tecno\Documents\ObsidianVault`
 
 ## Step 1 - Parse the ID
 
-- If Joe used a full ID (`FSM-2`, `CUT-3`), use it directly.
-- If Joe said just a number (`tackle 2`):
+- Expected invocation: `/obsidian-pickup-ticket <ID>` (e.g. `/obsidian-pickup-ticket FSM-2`).
+- If Joe passed a full ID (`FSM-2`, `CUT-3`), use it directly.
+- If Joe passed just a number:
   - Look at recent messages for a project reference.
   - If one project is obvious, combine its prefix with the number.
   - Otherwise ask Joe which project (AskUserQuestion with active project names).
+- If Joe passed no argument, ask which ticket (AskUserQuestion listing active tickets from his projects).
 
 ## Step 2 - Git sync
 
@@ -51,7 +55,7 @@ One short paragraph covering:
 
 ## Step 7 - Commit and push
 
-Use `/commit push`. Prefix: `FEAT:` (or `CHORE:` if not feature work). Message: `FEAT: start <ID> <short title>`.
+Use `/commit push`. Prefix: `CHORE:`. Message: `CHORE: start <ID> <short title>`.
 
 ## Step 8 - Hand off
 
