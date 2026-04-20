@@ -78,6 +78,7 @@ Rules are split into two severity levels. FAIL means the skill has a real proble
 - [ ] Steps are clearly numbered and named
 - [ ] Each step does one thing
 - [ ] If the skill depends on another skill's conventions, it references that skill by name instead of duplicating rules
+- [ ] No hardcoded user names (e.g. "Joe"). Use "the dev", "the user", or "you" instead. Personal names leak identity and reduce portability.
 
 ### WARN rules (flag but don't force)
 
@@ -98,6 +99,7 @@ Show the report as a table with three columns: Rule, Status (FAIL/WARN/PASS), Is
 ## When creating or fixing
 
 - Never use em dashes
+- Never reference users by name; use "the dev"
 - Keep descriptions slash-command focused and trigger-specific
 - Prefer compact tables over bullet lists where possible
 - When cutting for length, always ask: "does removing this make the agent less effective?" If yes, keep it.

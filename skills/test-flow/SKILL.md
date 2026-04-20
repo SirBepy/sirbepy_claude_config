@@ -9,10 +9,10 @@ description: Triggers on /test-flow only. Drives a Flutter web app via Playwrigh
 
 ## Why this skill exists
 
-- Joe develops Flutter web apps and wants AI-assisted manual QA without giving up his VS Code F5 + launch.json + breakpoints flow.
+- the dev develops Flutter web apps and wants AI-assisted manual QA without giving up his VS Code F5 + launch.json + breakpoints flow.
 - He runs the app himself. This skill never starts or stops the dev server.
 - Flutter web renders to canvas, so normal Playwright selectors don't work. Semantics are enabled in debug builds via `WidgetsBinding.ensureSemantics()` inside an `assert`. This emits a DOM tree Playwright can query by label/role.
-- Browser DevTools console catches ~90% of runtime errors, network failures, and app logs. Joe's Debug Console catches the Dart-specific rest; he watches that himself.
+- Browser DevTools console catches ~90% of runtime errors, network failures, and app logs. the dev's Debug Console catches the Dart-specific rest; he watches that himself.
 
 ## Invocation
 
@@ -21,23 +21,23 @@ description: Triggers on /test-flow only. Drives a Flutter web app via Playwrigh
 ```
 
 - `<path-to-test-plan.md>`: required. Markdown file containing the plan. The skill edits this file inline as it runs.
-- `--url`: optional. Dev server URL. If omitted, ask Joe for it using AskUserQuestion with sensible guesses (3000/5000/8080/random Flutter port from recent chromium tabs).
+- `--url`: optional. Dev server URL. If omitted, ask the dev for it using AskUserQuestion with sensible guesses (3000/5000/8080/random Flutter port from recent chromium tabs).
 
 ## Required tools
 
 - Playwright MCP tools (all under `mcp__playwright__*`): `browser_navigate`, `browser_snapshot`, `browser_click`, `browser_type`, `browser_press_key`, `browser_wait_for`, `browser_console_messages`, `browser_take_screenshot`, `browser_evaluate`, `browser_close`.
 - `Read` and `Edit` for the test plan file.
 
-If the Playwright MCP isn't connected, stop immediately and tell Joe to restart Claude Code.
+If the Playwright MCP isn't connected, stop immediately and tell the dev to restart Claude Code.
 
 ## Preconditions checklist (run once at start)
 
 1. **Test plan file exists** — if the path doesn't resolve, stop and ask.
-2. **Dev server URL is known** — either from `--url` or by asking Joe.
-3. **App is running** — `browser_navigate` to the URL; if it fails, tell Joe to F5 and retry.
-4. **App is authenticated** — snapshot the landing page. If it looks like a login screen, stop and ask Joe to log in first (we do NOT log in for him; staff creds shouldn't be in prompts).
-5. **Semantics are live** — `browser_snapshot` should return a non-trivial accessibility tree. If it's empty, Flutter semantics didn't initialize; tell Joe to verify `binding.ensureSemantics()` is in `main.dart` and that he's running a debug build (not `--release`).
-6. **Console is clean** — call `browser_console_messages` once to drain any startup noise; warn Joe about any errors already present before we start touching things.
+2. **Dev server URL is known** — either from `--url` or by asking the dev.
+3. **App is running** — `browser_navigate` to the URL; if it fails, tell the dev to F5 and retry.
+4. **App is authenticated** — snapshot the landing page. If it looks like a login screen, stop and ask the dev to log in first (we do NOT log in for him; staff creds shouldn't be in prompts).
+5. **Semantics are live** — `browser_snapshot` should return a non-trivial accessibility tree. If it's empty, Flutter semantics didn't initialize; tell the dev to verify `binding.ensureSemantics()` is in `main.dart` and that he's running a debug build (not `--release`).
+6. **Console is clean** — call `browser_console_messages` once to drain any startup noise; warn the dev about any errors already present before we start touching things.
 
 ## Test plan file format
 
@@ -58,7 +58,7 @@ Optional per-step metadata uses indented sub-bullets the skill recognizes:
   - console: no new errors
 ```
 
-If a step needs setup/cleanup that the AI can't do (a specific biller in a specific state, a backend-seeded row, etc.), Joe writes it as plain text above the step and the skill reads it for context but doesn't try to execute it.
+If a step needs setup/cleanup that the AI can't do (a specific biller in a specific state, a backend-seeded row, etc.), the dev writes it as plain text above the step and the skill reads it for context but doesn't try to execute it.
 
 ## Execution loop (for each pending step)
 
@@ -73,10 +73,10 @@ If a step needs setup/cleanup that the AI can't do (a specific biller in a speci
    - `[x]` if expectations met and no new console errors.
    - `[!]` if any expectation failed or new console errors appeared. Append a sub-bullet with the failure reason and the screenshot path.
    - `[~]` if the step is unreachable (e.g. previous step failed and this depends on it). Append a sub-bullet with "skipped: <reason>".
-6. **Update the plan file** via Edit tool. Do not batch updates; write after each step so Joe sees progress live.
+6. **Update the plan file** via Edit tool. Do not batch updates; write after each step so the dev sees progress live.
 7. **Stop conditions.**
    - Hard stop: Playwright connection dies, browser crashes, the dev server returns non-200 on navigation.
-   - Soft stop: 3 consecutive `[!]` on dependent steps — ask Joe whether to continue.
+   - Soft stop: 3 consecutive `[!]` on dependent steps — ask the dev whether to continue.
 
 ## Final report
 
@@ -97,18 +97,18 @@ After the loop ends, append a `## Run summary` section to the plan file:
 ...
 ```
 
-Keep the summary terse. Joe reads the file, reruns `/test-flow` after fixes — the skill should be idempotent: on rerun, reset all `[x]`/`[!]`/`[~]` back to `[ ]` if the user confirms, or only re-run failed steps if they pass `--only-failed`.
+Keep the summary terse. the dev reads the file, reruns `/test-flow` after fixes — the skill should be idempotent: on rerun, reset all `[x]`/`[!]`/`[~]` back to `[ ]` if the user confirms, or only re-run failed steps if they pass `--only-failed`.
 
 ## Things to NOT do
 
 - Do not edit application code during a test run. Report failures only.
 - Do not commit anything.
-- Do not create new tickets when things fail; Joe decides.
+- Do not create new tickets when things fail; the dev decides.
 - Do not log in, type passwords, or submit forms with credentials.
-- Do not close the browser after the run unless Joe passes `--close`. He often wants to keep poking manually after.
-- Do not add, remove, or reorder steps in the plan file. Steps are Joe's spec; the skill only flips their state.
+- Do not close the browser after the run unless the dev passes `--close`. He often wants to keep poking manually after.
+- Do not add, remove, or reorder steps in the plan file. Steps are the dev's spec; the skill only flips their state.
 
 ## Fallbacks
 
-- If `browser_snapshot` returns canvas-only content with no semantic tree, warn Joe that semantics aren't on and offer to proceed in "screenshot-only mode" where every step is marked `[~]` and pasted with a screenshot for him to eyeball.
+- If `browser_snapshot` returns canvas-only content with no semantic tree, warn the dev that semantics aren't on and offer to proceed in "screenshot-only mode" where every step is marked `[~]` and pasted with a screenshot for him to eyeball.
 - If a step is ambiguous ("check the Filters button"), use AskUserQuestion with 2-3 interpretations before guessing.

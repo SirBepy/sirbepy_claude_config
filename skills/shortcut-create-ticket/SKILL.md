@@ -1,30 +1,30 @@
 ---
 name: shortcut-create-ticket
-description: Triggers on /shortcut-create-ticket only. Files a new Shortcut story for Joe, mirroring defaults from his existing assigned tickets, then logs the result.
+description: Triggers on /shortcut-create-ticket only. Files a new Shortcut story for the dev, mirroring defaults from his existing assigned tickets, then logs the result.
 ---
 
 # /shortcut-create-ticket
 
-> File a new Shortcut story for Joe (`@josipmui`). Infer every default from tickets already assigned to him. Log every ticket you create so we can eventually pin real defaults.
+> File a new Shortcut story for the dev (`@josipmui`). Infer every default from tickets already assigned to him. Log every ticket you create so we can eventually pin real defaults.
 
 ## Why this skill exists
 
-- Airion (PM) files epics, not tickets. Joe has to file his own.
+- Airion (PM) files epics, not tickets. the dev has to file his own.
 - The Shortcut MCP splits creation across two calls: `stories-create` has no custom_fields/estimate/workflow_state params, `stories-update` is where those land. Skipping the update call leaves the ticket half-configured.
 - Custom field values are opaque UUIDs, nobody remembers them.
-- Joe is solo on the FE side of `zng-admin`, so branch name generation is NOT part of this skill.
+- the dev is solo on the FE side of `zng-admin`, so branch name generation is NOT part of this skill.
 
 ## Required tools
 
-- `mcp__shortcut__stories-search` (find Joe's reference tickets)
+- `mcp__shortcut__stories-search` (find the dev's reference tickets)
 - `mcp__shortcut__stories-get-by-id` with `full: true` (read custom_fields from a reference)
 - `mcp__shortcut__stories-create`
 - `mcp__shortcut__stories-update` (custom fields, estimate, workflow state)
 - `mcp__shortcut__iterations-get-active` (if no reference ticket supplies one)
 
-If `stories-update` is missing/denied, stop and tell Joe to loosen `.claude/settings.local.json`.
+If `stories-update` is missing/denied, stop and tell the dev to loosen `.claude/settings.local.json`.
 
-## Joe's fixed identity
+## the dev's fixed identity
 
 These never change. Hardcode them, don't re-derive:
 
@@ -39,7 +39,7 @@ These never change. Hardcode them, don't re-derive:
 
 ### 1. Front-load questions (AskUserQuestion, never open-ended)
 
-Ask Joe in one batch:
+Ask the dev in one batch:
 
 1. **Title** — open input. Hint the usual prefix `FE: AP: ...` unless he says otherwise.
 2. **Description source** — options: "I'll paste it", "Draft from this conversation", "Mirror another ticket and tweak".
@@ -51,7 +51,7 @@ Never ask mid-task. If the user's initial invocation already provided some of th
 
 ### 2. Pick the reference ticket
 
-- If Joe named one, use it.
+- If the dev named one, use it.
 - Otherwise call `stories-search` with `owner: "josipmui"` and `isArchived: false`. Take the 3-5 most recently updated. Show them with AskUserQuestion and let him pick.
 - Read the reference with `stories-get-by-id` `full: true`. Pull: `team_id`, `epic_id`, `iteration_id`, `workflow_id`, each `custom_fields[].field_id`/`value_id`, the "Release" value.
 
@@ -87,14 +87,14 @@ Shortcut is the team's de-facto documentation. Non-engineers (PM, ops, UX) refer
 **Sizing:**
 
 - Prefer smaller tickets. If a ticket covers two independently shippable chunks (e.g. admin side + app side), split it.
-- If Joe is in a rush, one bigger ticket is fine — trust his judgment.
+- If the dev is in a rush, one bigger ticket is fine — trust his judgment.
 - If the approach feels like it needs breakdown, break it down.
 
 **Reason this exists:** Airion 2026-04-14 — "CONTEXT stupid simple, everything else as eng-oriented as you want. Referencing old SC tickets of past engineers has come in handy multiple times." Keep the signal high for both audiences.
 
 ### 3. Build the create payload
 
-From the reference, inherit: `team`, `epic`, `iteration`, `owner` (always Joe, regardless of reference), `type: feature` (unless Joe said bug/chore).
+From the reference, inherit: `team`, `epic`, `iteration`, `owner` (always the dev, regardless of reference), `type: feature` (unless the dev said bug/chore).
 
 Call `stories-create`. Capture the returned story ID.
 
@@ -102,14 +102,14 @@ Call `stories-create`. Capture the returned story ID.
 
 Call `stories-update` with:
 
-- `custom_fields`: array of `{field_id, value_id}` mirroring the reference, EXCEPT override the Priority value_id to match what Joe chose. Known field IDs (verify against `custom-fields-list` if unsure):
+- `custom_fields`: array of `{field_id, value_id}` mirroring the reference, EXCEPT override the Priority value_id to match what the dev chose. Known field IDs (verify against `custom-fields-list` if unsure):
   - Skill Set: `6216069e-0b41-45b7-8f1f-7d5e8b9b5983` — Frontend: `6216069e-e3ed-403b-804c-f678c58b61a7`
   - Priority: `6260361c-cc5f-475f-9758-ea5b740e5b81` — values vary (High `6260361c-8f25-4cfd-941c-d32094abaca0`, others to be discovered via `custom-fields-list`)
   - ZNG: Product Area: `6881002d-700f-4bb7-b919-6cf8880ccdb9`
   - Technical Area: `6216069e-ae53-4892-a4f2-d9cc796f1484` — Web App: `6881029c-3921-4900-ad9a-197d3755d25f`
-  - Release: `68f8e559-4a18-4a6e-be1c-fa2f5aaa4fdb` — ALWAYS set to **Next release** (`698b4bce-ecd7-44c3-b62a-2b49b2506c1d`) regardless of what the reference ticket had. Joe adjusts release numbers manually in the UI afterward.
-- `estimate`: the point value Joe chose
-- `workflow_state_id`: `500018254` ("To Do") unless Joe specifies otherwise
+  - Release: `68f8e559-4a18-4a6e-be1c-fa2f5aaa4fdb` — ALWAYS set to **Next release** (`698b4bce-ecd7-44c3-b62a-2b49b2506c1d`) regardless of what the reference ticket had. the dev adjusts release numbers manually in the UI afterward.
+- `estimate`: the point value the dev chose
+- `workflow_state_id`: `500018254` ("To Do") unless the dev specifies otherwise
 
 If any custom field ID above looks stale, re-fetch with `custom-fields-list` before proceeding.
 
@@ -130,15 +130,15 @@ Append to `~/.claude/skills/shortcut-create-ticket/log.md` using this shape:
 - URL: https://app.shortcut.com/zirtue/story/XXXXX
 ```
 
-Why: after ~10 entries, Joe + I review the log and pin real hardcoded defaults so the reference-ticket step becomes optional.
+Why: after ~10 entries, the dev + I review the log and pin real hardcoded defaults so the reference-ticket step becomes optional.
 
 ### 6. Report
 
-Tell Joe the new story ID + URL and which reference was used. If Joe also wants a draft comment to post on a related ticket (e.g. the "soft blocker" pattern), offer to draft it but do NOT post without approval.
+Tell the dev the new story ID + URL and which reference was used. If the dev also wants a draft comment to post on a related ticket (e.g. the "soft blocker" pattern), offer to draft it but do NOT post without approval.
 
 ## What this skill never does
 
 - Never posts comments without explicit approval.
 - Never updates existing tickets other than the one just created.
-- Never generates branch names. Joe handles Git.
+- Never generates branch names. the dev handles Git.
 - Never invents custom field values. If a value isn't on the reference ticket, ask.

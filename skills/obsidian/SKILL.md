@@ -1,11 +1,11 @@
 ---
 name: obsidian
-description: Triggers on /obsidian only. Works with Joe's Obsidian vault: plans projects, manages tickets, captures notes, updates journal. Reads vault CLAUDE.md first.
+description: Triggers on /obsidian only. Works with the dev's Obsidian vault: plans projects, manages tickets, captures notes, updates journal. Reads vault CLAUDE.md first.
 ---
 
 # /obsidian
 
-> Work with Joe's Obsidian vault.
+> Work with the dev's Obsidian vault.
 
 **Vault path:** `C:\Users\tecno\Documents\ObsidianVault`
 
@@ -17,7 +17,7 @@ Always read `C:\Users\tecno\Documents\ObsidianVault\CLAUDE.md` first. It's the s
 
 Before any vault change, run the git workflow from vault CLAUDE.md (fetch, pull, commit pending, then proceed). Every commit is followed by push.
 
-## Step 3 - Ask what Joe wants
+## Step 3 - Ask what the dev wants
 
 Use AskUserQuestion with these options:
 - Plan or brainstorm a project
@@ -33,10 +33,10 @@ Use AskUserQuestion with these options:
 1. Ask which project. Default guess: current working directory name.
 2. If `<Project>.md` missing in vault root:
    - Create from `Templates/Project.md`.
-   - Derive a ticket ID prefix from the project name initials (see vault CLAUDE.md "Ticket IDs"). Check uniqueness against all other project notes' `id:` fields. If clash, propose a variant and confirm with Joe.
+   - Derive a ticket ID prefix from the project name initials (see vault CLAUDE.md "Ticket IDs"). Check uniqueness against all other project notes' `id:` fields. If clash, propose a variant and confirm with the dev.
    - Write `id: <PREFIX>` into the project note frontmatter.
 3. If `Kanbans/<Project>.md` missing, create from `Templates/ProjectKanban.md`.
-   - If Joe says "milestones", "sprints", or "versions": swap columns for `Backlog / M1 / M2 / ... / Mn`. No Done column (plugin handles card completion via checkbox).
+   - If the dev says "milestones", "sprints", or "versions": swap columns for `Backlog / M1 / M2 / ... / Mn`. No Done column (plugin handles card completion via checkbox).
    - Propose `n` based on task count, target ~5 tasks per milestone, range 3-12. Group tasks semantically (related work clusters together), not chronologically-random.
 4. Discuss goals, blockers, priorities. Ask questions via AskUserQuestion.
 5. Turn conclusions into Kanban cards or `Tasks/<PREFIX>-<N> <Title>.md` notes from `Templates/Task.md` (see Add a ticket for ID assignment). Link with wiki links.
@@ -53,17 +53,17 @@ Use AskUserQuestion with these options:
 
 ### Pick up a ticket
 
-Use the `/obsidian-pickup-ticket` skill. It only triggers on its slash command (because Joe also uses Shortcut and other trackers, natural phrases like "tackle FSM-2" must NOT auto-trigger anything). If Joe asks to "pick up a ticket" without an ID inside this `/obsidian` flow, ask which project, list active tickets from its Kanban, let him pick one, then hand off to `/obsidian-pickup-ticket`.
+Use the `/obsidian-pickup-ticket` skill. It only triggers on its slash command (because the dev also uses Shortcut and other trackers, natural phrases like "tackle FSM-2" must NOT auto-trigger anything). If the dev asks to "pick up a ticket" without an ID inside this `/obsidian` flow, ask which project, list active tickets from its Kanban, let him pick one, then hand off to `/obsidian-pickup-ticket`.
 
 ### Quick capture to Inbox
 
 1. Create `Inbox/<short title>.md` tagged `unreviewed`.
-2. Write Joe's thought verbatim.
+2. Write the dev's thought verbatim.
 3. Commit and push.
 
 ### Update today's journal
 
 1. Open `Journal/<YYYY-MM-DD>.md`. Create from `Templates/Journal.md` if missing.
-2. Add under `## Tasks` or `## Time Blocks` based on what Joe said.
-3. If Joe mentioned time: `- Activity: expected Xmin, actual Y`.
+2. Add under `## Tasks` or `## Time Blocks` based on what the dev said.
+3. If the dev mentioned time: `- Activity: expected Xmin, actual Y`.
 4. Commit and push.

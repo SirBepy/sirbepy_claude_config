@@ -214,7 +214,7 @@ For each issue with `planned` label (sorted by priority first, P0 before P1 befo
 
 ## Planning Gate
 
-Non-negotiable. If Joe asks to implement anything tied to a GitHub Issue that doesn't have the `planned` label, whether through `/gb do` or by casually asking to build something:
+Non-negotiable. If the dev asks to implement anything tied to a GitHub Issue that doesn't have the `planned` label, whether through `/gb do` or by casually asking to build something:
 
 > "Hold up, #N hasn't been planned yet. Run `/gb plan N` first."
 

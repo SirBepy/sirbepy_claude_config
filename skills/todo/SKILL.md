@@ -106,7 +106,7 @@ When creating fresh: include the comment block and a blank line before the first
 
 ## Planning Gate
 
-If Joe asks to implement something tied to a TODO that isn't `planned` or `in-progress`:
+If the dev asks to implement something tied to a TODO that isn't `planned` or `in-progress`:
 
 > "Hold up - [T-00N] hasn't been planned yet. Run `/todo plan [T-00N]` and we'll do this properly."
 
@@ -116,7 +116,7 @@ Do not start the work. This is the whole point of the system.
 
 ## Session Mode
 
-When Joe adds 3+ todos or says "todo session":
+When the dev adds 3+ todos or says "todo session":
 
 - Add each immediately without interrupting.
 - Accumulate all open questions silently.

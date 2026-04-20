@@ -1,25 +1,25 @@
 ---
 name: obsidian-pickup-ticket
-description: Triggers on /obsidian-pickup-ticket only. Looks up an Obsidian vault ticket by ID, gathers context, moves it to In Progress, and hands off to Joe. Never auto-triggers on natural phrases (Joe also uses Shortcut and other trackers, so ticket-like wording must not activate this skill).
+description: Triggers on /obsidian-pickup-ticket only. Looks up an Obsidian vault ticket by ID, gathers context, moves it to In Progress, and hands off to the dev. Never auto-triggers on natural phrases (the dev also uses Shortcut and other trackers, so ticket-like wording must not activate this skill).
 ---
 
 # /obsidian-pickup-ticket
 
 > Pick up an Obsidian vault ticket and start working on it.
 
-**Trigger:** `/obsidian-pickup-ticket <ID>` only. Do NOT invoke this skill from natural phrases like "tackle FSM-2" or "pick up CUT-3" - Joe uses other ticket systems (Shortcut, etc.) and those phrases are ambiguous.
+**Trigger:** `/obsidian-pickup-ticket <ID>` only. Do NOT invoke this skill from natural phrases like "tackle FSM-2" or "pick up CUT-3" - the dev uses other ticket systems (Shortcut, etc.) and those phrases are ambiguous.
 
 **Vault path:** `C:\Users\tecno\Documents\ObsidianVault`
 
 ## Step 1 - Parse the ID
 
 - Expected invocation: `/obsidian-pickup-ticket <ID>` (e.g. `/obsidian-pickup-ticket FSM-2`).
-- If Joe passed a full ID (`FSM-2`, `CUT-3`), use it directly.
-- If Joe passed just a number:
+- If the dev passed a full ID (`FSM-2`, `CUT-3`), use it directly.
+- If the dev passed just a number:
   - Look at recent messages for a project reference.
   - If one project is obvious, combine its prefix with the number.
-  - Otherwise ask Joe which project (AskUserQuestion with active project names).
-- If Joe passed no argument, ask which ticket (AskUserQuestion listing active tickets from his projects).
+  - Otherwise ask the dev which project (AskUserQuestion with active project names).
+- If the dev passed no argument, ask which ticket (AskUserQuestion listing active tickets from his projects).
 
 ## Step 2 - Git sync
 
@@ -30,7 +30,7 @@ Run the vault git workflow from `C:\Users\tecno\Documents\ObsidianVault\CLAUDE.m
 
 ## Step 3 - Resolve the ticket file
 
-Glob `Tasks/<ID>*.md` inside the vault. If no match, tell Joe the ID doesn't exist and stop.
+Glob `Tasks/<ID>*.md` inside the vault. If no match, tell the dev the ID doesn't exist and stop.
 
 ## Step 4 - Gather context
 
@@ -59,7 +59,7 @@ Use `/commit push`. Prefix: `CHORE:`. Message: `CHORE: start <ID> <short title>`
 
 ## Step 8 - Hand off
 
-Ask Joe what he wants to do next via AskUserQuestion:
+Ask the dev what he wants to do next via AskUserQuestion:
 - Start implementing
 - Add more notes/subtasks to the ticket
 - Plan the approach before coding

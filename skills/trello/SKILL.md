@@ -7,13 +7,13 @@ description: Manage Trello boards, lists, and cards via the REST API. Triggers o
 
 > Manage Trello boards, lists, and cards via the REST API.
 
-Joe gives you a spec (plain text or markdown), you turn it into boards, lists, and cards.
+the dev gives you a spec (plain text or markdown), you turn it into boards, lists, and cards.
 
 ## Setup check
 
 Before ANY API call, verify auth is set up. Read `~/.claude/.env` and confirm `TRELLO_KEY` and `TRELLO_TOKEN` are both present.
 
-If either is missing, STOP and tell Joe:
+If either is missing, STOP and tell the dev:
 
 > Trello auth not set up. Add these to `~/.claude/.env`:
 > ```
@@ -118,7 +118,7 @@ curl -sS -X POST \
   | jq -r '{id, url}'
 ```
 
-Always pass `defaultLists=false` - Trello's defaults ("To Do / Doing / Done") aren't usually what Joe wants, and we'll create lists explicitly.
+Always pass `defaultLists=false` - Trello's defaults ("To Do / Doing / Done") aren't usually what the dev wants, and we'll create lists explicitly.
 
 Optional params:
 - `idOrganization=$WORKSPACE_ID` - put the board in a workspace
@@ -178,7 +178,7 @@ curl -sS -X PUT \
   "https://api.trello.com/1/cards/$CARD_ID?key=$TRELLO_KEY&token=$TRELLO_TOKEN&closed=true"
 ```
 
-Use archive, not delete. Deleting is irreversible and rarely what Joe wants.
+Use archive, not delete. Deleting is irreversible and rarely what the dev wants.
 
 ### Create label
 
@@ -223,7 +223,7 @@ curl -sS -X POST \
 
 ## Recipe: scaffold a board from a spec
 
-Joe will give you a spec as plain text or markdown. Parse it, then:
+the dev will give you a spec as plain text or markdown. Parse it, then:
 
 1. If he mentioned a workspace, find its ID via `members/me/organizations` and match by name (case-insensitive)
 2. Create the board with `defaultLists=false`
@@ -232,7 +232,7 @@ Joe will give you a spec as plain text or markdown. Parse it, then:
 5. For each card: create it in the right list with the right labels/description
 6. Report back with the board URL
 
-**Before starting**, show Joe what you parsed from the spec and confirm:
+**Before starting**, show the dev what you parsed from the spec and confirm:
 
 > Got it. Here's what I'll create:
 > - Board: "Shroomshire Restoration" (in workspace "Tabs Labs")
@@ -242,9 +242,9 @@ Joe will give you a spec as plain text or markdown. Parse it, then:
 >
 > Proceed?
 
-This matters because scaffolding is irreversible in any practical sense - if labels or lists are wrong, Joe has to clean them up manually. Confirm before committing.
+This matters because scaffolding is irreversible in any practical sense - if labels or lists are wrong, the dev has to clean them up manually. Confirm before committing.
 
-If Joe gives a file path (e.g. `PROJECT.md`), read it first with `cat` or the Read tool.
+If the dev gives a file path (e.g. `PROJECT.md`), read it first with `cat` or the Read tool.
 
 ## Recipe: bulk card creation
 
@@ -265,11 +265,11 @@ One curl call per card. Don't try to batch in a single request - the API doesn't
 
 ## Recipe: bulk move or update
 
-Same pattern - get the card IDs first (from a list or board), then loop with PUT requests. Show Joe the plan before executing on large batches (10+ cards).
+Same pattern - get the card IDs first (from a list or board), then loop with PUT requests. Show the dev the plan before executing on large batches (10+ cards).
 
 ## Recipe: mirror markdown checklist to cards
 
-If Joe hands you markdown like:
+If the dev hands you markdown like:
 
 ```markdown
 ## Backlog
@@ -287,8 +287,8 @@ Parse the `##` headings as list names, and each `- [ ]` item as a card in that l
 
 - **idLabels formatting**: pass as a plain comma-separated string in the query (`idLabels=abc123,def456`), NOT as a JSON array. The JSON array form returns 400. Reference: community.developer.atlassian.com thread on this.
 - **URL encoding**: card names with `&`, `=`, `#`, spaces, or emoji MUST be URL-encoded. Use `jq -sRr @uri` - it handles Unicode correctly.
-- **Token scope**: the token Joe generates from the Power-Up admin page has full account access. It can read/write every board he's on. Treat the token as a password.
-- **Deleted cards are gone**: `DELETE /cards/{id}` is permanent. Prefer `closed=true` (archive) unless Joe explicitly says "delete permanently".
+- **Token scope**: the token the dev generates from the Power-Up admin page has full account access. It can read/write every board he's on. Treat the token as a password.
+- **Deleted cards are gone**: `DELETE /cards/{id}` is permanent. Prefer `closed=true` (archive) unless the dev explicitly says "delete permanently".
 - **Short board IDs work**: the 8-char code from the URL (`dQHqCohZ`) is accepted anywhere a board ID is needed.
 - **"me" shortcut**: use `members/me` instead of looking up your own member ID.
 - **Rate limits**: you likely won't hit them for normal use, but for scaffolding 50+ cards add `sleep 0.1` between calls.
@@ -297,7 +297,7 @@ Parse the `##` headings as list names, and each `- [ ]` item as a card in that l
 ## Trello-specific rules
 
 - Piping curl output to `jq` is fine (not considered chaining). All other shell rules follow global CLAUDE.md.
-- Never commit Joe's env or any file containing his token.
+- Never commit the dev's env or any file containing his token.
 
 ## When to ask
 
@@ -306,11 +306,11 @@ Always confirm before:
 - Bulk-creating 10+ cards
 - Bulk-updating existing cards
 - Deleting anything (and prefer archive)
-- Writing to a board Joe didn't explicitly name in this session
+- Writing to a board the dev didn't explicitly name in this session
 
 Never ask for:
 - The API key/token (read from env only)
-- Which board when Joe explicitly named one
+- Which board when the dev explicitly named one
 
 ## Output format
 
@@ -319,4 +319,4 @@ After any successful operation, report concisely:
 > Created board "Shroomshire Restoration": https://trello.com/b/abc123
 > - 4 lists, 3 labels, 12 cards
 
-Not a wall of IDs. Joe wants the URL and a summary.
+Not a wall of IDs. the dev wants the URL and a summary.
