@@ -1,6 +1,7 @@
 ---
 name: commit
 description: Triggers on /commit and its subcommands (v, bump, onlybump, onlyv, push, pushbump, pushnbump) to commit changes.
+argument-hint: "[v|bump|push|pushbump|pushnbump|onlyv|onlybump]"
 ---
 
 # /commit

@@ -1,6 +1,7 @@
 ---
 name: github-board
 description: Triggers on /github-board (or /gb) commands. Manages project work via GitHub Issues, creating epics, breaking them into tasks, planning conversationally, and implementing with a strict planning gate. Uses GitHub MCP to read/write issues. Use this skill whenever the user types /github-board, /gb, mentions epics, project planning, ticket management, or wants to track and implement features across their projects. Also triggers when the user says "add a ticket", "plan this feature", "what's on my board", "break this down", or references GitHub Issues in a project management context.
+argument-hint: "[add|epic|plan|planall|do|doall] [ref|description]"
 ---
 
 # /github-board

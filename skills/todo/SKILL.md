@@ -1,6 +1,7 @@
 ---
 name: todo
 description: Triggers on /todo only, managing a per-repo TODO backlog with a mandatory planning gate before any work starts.
+argument-hint: "[plan|do|doall|planall] [id] | <description>"
 ---
 
 # /todo

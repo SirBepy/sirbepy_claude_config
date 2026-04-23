@@ -1,6 +1,7 @@
 ---
 name: obsidian-pickup-ticket
 description: Triggers on /obsidian-pickup-ticket only. Looks up an Obsidian vault ticket by ID, gathers context, moves it to In Progress, and hands off to the dev. Never auto-triggers on natural phrases (the dev also uses Shortcut and other trackers, so ticket-like wording must not activate this skill).
+argument-hint: "<ticket-id>"
 ---
 
 # /obsidian-pickup-ticket

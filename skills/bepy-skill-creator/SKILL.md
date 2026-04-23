@@ -71,6 +71,7 @@ Rules are split into two severity levels. FAIL means the skill has a real proble
 ### FAIL rules (must fix)
 
 - [ ] Frontmatter exists with `name` and `description` fields
+- [ ] If the skill accepts arguments or subcommands, `argument-hint` is set in frontmatter (e.g. `argument-hint: "[on|off|push]"` or `argument-hint: "<ticket-id>"`). Skipped only if the skill takes no args.
 - [ ] First line after frontmatter is `# /skill-name`
 - [ ] Second line is `> one liner description`
 - [ ] No em dashes anywhere, use commas, colons, or hyphens instead
@@ -101,6 +102,7 @@ Show the report as a table with three columns: Rule, Status (FAIL/WARN/PASS), Is
 - Never use em dashes
 - Never reference users by name; use "the dev"
 - Keep descriptions slash-command focused and trigger-specific
+- If the skill takes args or subcommands, include `argument-hint` in frontmatter. Use `[a|b|c]` for enum-ish choices, `<name>` for required free-form values. Skill autocomplete shows this hint after the slash command.
 - Prefer compact tables over bullet lists where possible
 - When cutting for length, always ask: "does removing this make the agent less effective?" If yes, keep it.
 - Reference other skills rather than repeating their rules

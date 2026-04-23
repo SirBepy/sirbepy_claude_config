@@ -1,6 +1,7 @@
 ---
 name: autocommit
 description: Triggers on /autocommit and its subcommands (on, push, pushbump, pushnbump, off) to manage auto-commit mode.
+argument-hint: "[on|off|push|pushbump|pushnbump]"
 ---
 
 # /autocommit
