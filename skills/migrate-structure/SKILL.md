@@ -23,7 +23,15 @@ And stop.
 
 ### Step 1 - Detect project type
 
-Read `CLAUDE.md` and check the `Type:` field. If missing, infer from project structure.
+Read `CLAUDE.md` and check the `Type:` field. If missing, infer from project structure using these signals:
+
+- `src-tauri/` folder or a `tauri.conf.json` file anywhere, or a `Cargo.toml` depending on `tauri` → `tauri`
+- `electron-builder.yml` / `electron-builder.json` or `electron` in `package.json` deps → `electron`
+- `vite.config.{ts,js}` + React deps → `react`
+- `vite.config.{ts,js}` without React → `vite`
+- `default.project.json` / `rojo.project.json` / `*.rbxlx` → `roblox`
+- `pubspec.yaml` → `flutter`
+- Plain `index.html` + no bundler config → `html`
 
 ### Step 2 - Read the structure spec
 
@@ -33,6 +41,7 @@ Read the corresponding spec from this skill's `structure/` folder:
 - `vite` - read `structure/vite.md`
 - `react` - read `structure/react.md`
 - `electron` - read `structure/electron.md`
+- `tauri` - read `structure/tauri.md`
 - `roblox` - read `structure/roblox.md`
 - `flutter` - read `structure/flutter.md`
 
