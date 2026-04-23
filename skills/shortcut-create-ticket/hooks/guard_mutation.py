@@ -24,6 +24,12 @@ from pathlib import Path
 API_BASE = "https://api.app.shortcut.com/api/v3"
 ENV_FILE = Path.home() / ".claude" / ".env"
 
+# Release custom field UUID. Mutations that touch ONLY this field are allowed
+# through without the owner check, so the zirtue-release-backfill skill can
+# set release numbers on tickets that were filed by someone else but assigned
+# to the dev. See skills/zirtue-release-backfill/SKILL.md.
+RELEASE_FIELD_ID = "68f8e559-4a18-4a6e-be1c-fa2f5aaa4fdb"
+
 # Keys in tool_input that may carry a Shortcut story id. Anything matching
 # these is treated as a story the mutation targets and must pass the owner
 # check. If a matched tool has none of these, we deny fail-closed rather
@@ -75,6 +81,23 @@ def fetch_story(story_id: int, token: str) -> dict:
         return json.loads(resp.read().decode("utf-8"))
 
 
+def is_release_only_mutation(tool_input: dict) -> bool:
+    """True if the tool_input changes ONLY the Release custom field.
+
+    Any other key present (name, description, workflow_state_id, etc.) — or a
+    custom_fields entry for any other field — fails this check so the regular
+    owner guard still applies.
+    """
+    allowed_keys = {"storyPublicId", "custom_fields"}
+    extra = set(tool_input.keys()) - allowed_keys
+    if extra:
+        return False
+    cfs = tool_input.get("custom_fields") or []
+    if not cfs:
+        return False
+    return all(cf.get("field_id") == RELEASE_FIELD_ID for cf in cfs)
+
+
 def extract_story_ids(tool_input: dict) -> list[int]:
     ids: list[int] = []
     for key in STORY_ID_KEYS:
@@ -103,6 +126,13 @@ def main() -> None:
             f"Add the correct key to STORY_ID_KEYS in guard_mutation.py "
             f"before using this tool."
         )
+
+    # Release-only bypass: if the mutation touches ONLY the Release custom
+    # field and nothing else, skip the owner check. This lets zirtue-release-
+    # backfill update Release on tickets filed by other teammates but owned
+    # by the dev.
+    if is_release_only_mutation(tool_input):
+        allow()
 
     load_env_file(ENV_FILE)
     token = os.environ.get("SHORTCUT_API_TOKEN")
