@@ -9,13 +9,14 @@ description: Triggers on /commit and its subcommands (v, bump, onlybump, onlyv, 
 
 ## `/commit`
 
-1. Run `git status`
-2. Run `git diff` to understand the changes
-3. Infer the right commit prefix (see below)
-4. Check if a linter exists - if yes, run it and fix all issues first
-5. Check if the repo has a project-level `run-tests` skill at `.claude/skills/run-tests/SKILL.md`. If yes, invoke it and wait for the result. If it fails, **abort the commit**, print the failing output, and explain to the user exactly why the commit was aborted (which command failed, what it printed, and that they need to fix it or tell you to skip). Do not stage or commit anything until the user either fixes it or explicitly says to skip.
-6. Stage all relevant files by name
-7. Commit
+1. Check for project-level overrides at `.claude/commit-style.md`. If it exists, read it fully and let its rules override the defaults below (prefixes, grouping, message format, etc.). Only read it once per session.
+2. Run `git status`
+3. Run `git diff` to understand the changes
+4. Infer the right commit prefix (see below, or per project overrides)
+5. Check if a linter exists - if yes, run it and fix all issues first
+6. Check if the repo has a project-level `run-tests` skill at `.claude/skills/run-tests/SKILL.md`. If yes, invoke it and wait for the result. If it fails, **abort the commit**, print the failing output, and explain to the user exactly why the commit was aborted (which command failed, what it printed, and that they need to fix it or tell you to skip). Do not stage or commit anything until the user either fixes it or explicitly says to skip.
+7. Stage all relevant files by name
+8. Commit
 
 If nothing to commit, say so and stop.
 
@@ -57,6 +58,7 @@ If no `package.json` exists, say so and stop.
 
 ## Rules
 
+- Project `.claude/commit-style.md` overrides these rules when present.
 - One purpose per commit. Many files is fine if it's one logical change.
 - Prefer more commits over fewer big ones. Split unrelated changes.
 - Message title alone should make clear what was done.
