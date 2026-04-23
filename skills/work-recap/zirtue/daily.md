@@ -85,16 +85,13 @@ Split the combined commit + ticket signal into three buckets:
 
 Rules:
 
-- **Bullets, not prose.** Each distinct thing = one short line.
-- **First person verb, lowercase start.** "wrapped...", "fixed...", "started...", "investigated...". No "I" in front.
-- **Link label = ticket title, verbatim from Shortcut `name` field.** The PM values seeing the real ticket title. Do NOT use `sc-XXXXX` as the label.
-- **Two bullet shapes:**
-  1. **Title alone is clear:** `<verb> <linked title>`. Example: `wrapped <a href="...">Analytics Event: Forgive Loan Tapped</a>`.
-  2. **Title is cryptic or doesn't describe what actually got done:** `<verb> <short prose> (<linked title>)`. The parenthetical keeps the title visible to the PM while the prose adds the clarity the title lacks. Example: `fixed login keystroke bug (<a href="...">Web: Input not accepting typing until refocus</a>)`.
-- **Unticketed work:** just the verb + prose, no link. Example: `fixed web login input not accepting keystrokes until blur/refocus`.
-- **Multiple items from one ticket collapse into one bullet.** Do not re-list the same link.
+- **Each bullet names what was worked on, NOT what was done.** No verbs like "wrapped", "shipped", "pushed", "fixed". The reader (PM) only cares about the topic.
+- **Bullet = linked ticket title.** Label is the Shortcut `name` field verbatim. Do NOT paraphrase, do NOT prepend a verb. The link URL is the Shortcut story URL.
+- **Unticketed work:** a short noun phrase describing the area (not a full sentence). Example: `web login keystroke bug`. No link.
+- **Multiple commits on one ticket collapse into one bullet.** Do not re-list the same ticket title.
 - **Skip empty buckets entirely.** If a section has nothing, omit the section heading too.
-- **Keep it tight.** 3-6 bullets per section max. If more, the dev did too much; still cap at 6, note "and misc".
+- **Keep it tight.** 3-6 bullets per section max. If more, cap at 6, append one bullet "and misc".
+- **Blank line between sections.** Yesterday, Today, and the "If I wrap early" line are each separated by a blank line for readability.
 
 ### 7. Write the markdown file (archive)
 
@@ -102,7 +99,7 @@ Path: `C:/Users/tecno/daily-recaps/<today_YYYY-MM-DD>_daily.md`
 
 Create the directory if missing: `mkdir -p`.
 
-Content (use markdown links `[title](url)` wrapping the ticket title):
+Content (use markdown links `[title](url)` wrapping the ticket title, blank line between sections):
 
 ```markdown
 # Daily Standup - <today>
@@ -110,12 +107,11 @@ Content (use markdown links `[title](url)` wrapping the ticket title):
 _Generated <today> by /work-recap zirtue daily_
 
 Yesterday:
-- <verb> [<ticket title>](https://app.shortcut.com/zirtue/story/XXXXX)
-- <verb> <short prose> ([<ticket title>](https://app.shortcut.com/zirtue/story/XXXXX))
-- <verb> <unticketed prose>
+- [<ticket title>](https://app.shortcut.com/zirtue/story/XXXXX)
+- <unticketed area, short noun phrase>
 
 Today:
-- <verb> [<ticket title>](https://app.shortcut.com/zirtue/story/XXXXX)
+- [<ticket title>](https://app.shortcut.com/zirtue/story/XXXXX)
 
 If I wrap early: [<ticket title>](https://app.shortcut.com/zirtue/story/XXXXX)
 ```
@@ -132,47 +128,50 @@ Write TWO temp files so we can set BOTH HTML and plain-text clipboard formats. S
 
 **HTML file:** `C:/tmp/work-recap-clipboard.html`
 
-Anchors wrap the ticket title. Use either shape:
-- `<li><verb> <a href="...">Ticket Title</a></li>`
-- `<li><verb> <short prose> (<a href="...">Ticket Title</a>)</li>`
+Each bullet is just the linked ticket title (or unticketed noun phrase). No verbs. Section headings are `<p>` tags (which render with natural spacing in Slack paste).
 
 ```html
 <html><body>
 <p>Yesterday:</p>
 <ul>
-<li>wrapped <a href="https://app.shortcut.com/zirtue/story/49222">Analytics Event: Forgive Loan Tapped</a></li>
-<li>fixed login keystroke bug (<a href="https://app.shortcut.com/zirtue/story/53xxxx">Web: Input not accepting typing until refocus</a>)</li>
-<li>fixed web login input not accepting keystrokes until blur/refocus</li>
+<li><a href="https://app.shortcut.com/zirtue/story/49222">Amplitude: Web App - Implement FE forgive-loan-tapped event</a></li>
+<li><a href="https://app.shortcut.com/zirtue/story/49145">Amplitude: Web App - Implement FE loan-forgiven event</a></li>
+<li><a href="https://app.shortcut.com/zirtue/story/53816">Biller flow: keep the flow for Registration Step 1 > Login redirection case</a></li>
+<li>web login keystroke bug</li>
+<li><a href="https://app.shortcut.com/zirtue/story/53794">[FE] Loan details: Incorrect copy for Deactivated status</a></li>
 </ul>
 <p>Today:</p>
 <ul>
-<li>finishing <a href="https://app.shortcut.com/zirtue/story/53794">Deactivated Loan Details copy fix</a> and moving to review</li>
+<li><a href="https://app.shortcut.com/zirtue/story/53794">[FE] Loan details: Incorrect copy for Deactivated status</a></li>
 </ul>
-<p>If I wrap early: <a href="https://app.shortcut.com/zirtue/story/53751">Biller Deeplink: updating page breaks the flow</a></p>
+<p>If I wrap early: <a href="https://app.shortcut.com/zirtue/story/53751">Biller deeplink flow: updating page breaks the deeplink flow</a></p>
 </body></html>
 ```
 
 **Plain-text file:** `C:/tmp/work-recap-clipboard.txt`
 
-Same bullets but with bare URLs after the title (for Slack fallback if HTML is ever dropped):
+Same content, bare URLs after each title, blank lines between sections:
 
 ```
 Yesterday:
-- wrapped Analytics Event: Forgive Loan Tapped https://app.shortcut.com/zirtue/story/49222
-- fixed login keystroke bug (Web: Input not accepting typing until refocus https://app.shortcut.com/zirtue/story/53xxxx)
-- fixed web login input not accepting keystrokes until blur/refocus
+- Amplitude: Web App - Implement FE forgive-loan-tapped event https://app.shortcut.com/zirtue/story/49222
+- Amplitude: Web App - Implement FE loan-forgiven event https://app.shortcut.com/zirtue/story/49145
+- Biller flow: keep the flow for Registration Step 1 > Login redirection case https://app.shortcut.com/zirtue/story/53816
+- web login keystroke bug
+- [FE] Loan details: Incorrect copy for Deactivated status https://app.shortcut.com/zirtue/story/53794
 
 Today:
-- finishing Deactivated Loan Details copy fix and moving to review https://app.shortcut.com/zirtue/story/53794
+- [FE] Loan details: Incorrect copy for Deactivated status https://app.shortcut.com/zirtue/story/53794
 
-If I wrap early: Biller Deeplink: updating page breaks the flow https://app.shortcut.com/zirtue/story/53751
+If I wrap early: Biller deeplink flow: updating page breaks the deeplink flow https://app.shortcut.com/zirtue/story/53751
 ```
 
 Notes:
-- HTML: escape `<`, `>`, `&` inside bullet text AND inside ticket titles as `&lt;`, `&gt;`, `&amp;`. Plain text: leave as-is.
+- HTML: escape `<`, `>`, `&` inside ticket titles as `&lt;`, `&gt;`, `&amp;` (ticket titles CAN contain `<`, `>`, `&`, as seen in the example "Step 1 > Login"). Plain text: leave as-is.
 - Omit the "If I wrap early" paragraph if today isn't light.
 - Omit any section whose list is empty.
 - Ticket titles come verbatim from the Shortcut search result's `name` field. Do NOT paraphrase them.
+- No verbs anywhere. Each bullet is ONLY the topic.
 
 ### 9. Push to clipboard
 
