@@ -102,7 +102,10 @@
       "mcp__Roblox_Studio__script_grep",
       "mcp__Roblox_Studio__execute_luau",
       "mcp__shortcut__stories-create",
-      "mcp__shortcut__stories-update"
+      "mcp__shortcut__stories-update",
+      "Bash(echo \"exit=$?\")",
+      "Skill(schedule)",
+      "Skill(schedule:*)"
     ],
     "additionalDirectories": [
       "/Users/josipmuzic/.claude",
@@ -122,6 +125,16 @@
     ]
   },
   "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/tecno/.claude/aiusage-hook.ps1 notify"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "^mcp__shortcut__stories-(update|add-task|update-task|create-comment|add-external-link|remove-external-link|set-external-links|add-relation|add-subtask|remove-subtask|create-subtask|assign-current-user|unassign-current-user|upload-file)$",
@@ -129,6 +142,26 @@
           {
             "type": "command",
             "command": "python \"C:\\Users\\tecno\\.claude\\skills\\shortcut-create-ticket\\hooks\\guard_mutation.py\""
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -sS -X POST --data-binary @- -H 'Content-Type: application/json' http://127.0.0.1:27182/hooks/session-end"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -sS -X POST --data-binary @- -H 'Content-Type: application/json' http://127.0.0.1:27182/hooks/session-start"
           }
         ]
       }
@@ -142,16 +175,6 @@
           }
         ]
       }
-    ],
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/tecno/.claude/aiusage-hook.ps1 notify"
-          }
-        ]
-      }
     ]
   },
   "statusLine": {
@@ -161,8 +184,8 @@
   },
   "enabledPlugins": {
     "caveman@caveman": true,
-    "superpowers@claude-plugins-official": true,
-    "rust-analyzer-lsp@claude-plugins-official": true
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "caveman": {
