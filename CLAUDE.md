@@ -53,6 +53,12 @@
 - Before writing or modifying code, detect the project's language/stack and check if `~/.claude/code-style/` has a matching file (e.g. `luau.md`, `react.md`). If it exists, read it and follow its preferences.
 - Only read the file once per session, and only when you actually need to write or change code.
 
+## Execution Discipline
+
+- State assumptions before coding. Present interpretations instead of picking silently.
+- Every changed line must trace to the request. No drive-by refactors.
+- Define success criteria upfront (test, command, check). Loop until verified.
+
 ## Specs
 
 - If given a spec file, read it fully before writing any code.
