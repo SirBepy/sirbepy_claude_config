@@ -1,5 +1,96 @@
 {
+  "agentPushNotifEnabled": true,
+  "alwaysThinkingEnabled": true,
+  "effortLevel": "high",
+  "enabledPlugins": {
+    "caveman@caveman": true,
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "caveman": {
+      "source": {
+        "repo": "JuliusBrussee/caveman",
+        "source": "github"
+      }
+    },
+    "obsidian-skills": {
+      "source": {
+        "repo": "kepano/obsidian-skills",
+        "source": "github"
+      }
+    }
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/tecno/.claude/aiusage-hook.ps1 notify",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "python \"C:\\Users\\tecno\\.claude\\skills\\shortcut-create-ticket\\hooks\\guard_mutation.py\"",
+            "type": "command"
+          }
+        ],
+        "matcher": "^mcp__shortcut__stories-(update|add-task|update-task|create-comment|add-external-link|remove-external-link|set-external-links|add-relation|add-subtask|remove-subtask|create-subtask|assign-current-user|unassign-current-user|upload-file)$"
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "command": "curl -sS -X POST --data-binary @- -H 'Content-Type: application/json' http://127.0.0.1:27182/hooks/session-end",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "curl -sS -X POST --data-binary @- -H 'Content-Type: application/json' http://127.0.0.1:27182/hooks/session-start",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/tecno/.claude/aiusage-hook.ps1 refresh",
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
+    "additionalDirectories": [
+      "/Users/josipmuzic/.claude",
+      "/Users/josipmuzic/projects/tycoon_price_visualizer/assets/scripts",
+      "/Users/josipmuzic/projects/bepy-project-init/src",
+      "C:\\Users\\tecno\\.claude",
+      "C:\\Users\\tecno\\Desktop\\Projects\\Web\\no_sleep",
+      "C:\\Users\\tecno\\Desktop\\Projects\\Toolbar\\AIUsage\\src\\renderer",
+      "C:\\Users\\tecno\\Desktop\\Projects\\Cinnamon\\zirtue\\zng-admin\\lib\\api",
+      "C:\\Users\\tecno\\.claude\\skills",
+      "C:\\Users\\tecno",
+      "\\tmp",
+      "C:\\Users\\tecno\\.claude\\ide",
+      "c:\\Users\\tecno\\.claude",
+      "/Users/josipmuzic/.pub-cache/git/tiktok_sdk_v2-11e9f6bbd84704489d0da652224e76319e897b12/android/src/main/kotlin/com/tofinds/tiktok_sdk_v2",
+      "/Users/josipmuzic/projects/cinnamon/sampl-flutter/packages/tiktok_sdk_v2/.git"
+    ],
     "allow": [
       "Read(/Users/josipmuzic/.claude/**)",
       "Edit(C:/Users/tecno/Desktop/Projects/Web/video-script-assistant/**)",
@@ -106,107 +197,17 @@
       "Bash(echo \"exit=$?\")",
       "Skill(schedule)",
       "Skill(schedule:*)"
-    ],
-    "additionalDirectories": [
-      "/Users/josipmuzic/.claude",
-      "/Users/josipmuzic/projects/tycoon_price_visualizer/assets/scripts",
-      "/Users/josipmuzic/projects/bepy-project-init/src",
-      "C:\\Users\\tecno\\.claude",
-      "C:\\Users\\tecno\\Desktop\\Projects\\Web\\no_sleep",
-      "C:\\Users\\tecno\\Desktop\\Projects\\Toolbar\\AIUsage\\src\\renderer",
-      "C:\\Users\\tecno\\Desktop\\Projects\\Cinnamon\\zirtue\\zng-admin\\lib\\api",
-      "C:\\Users\\tecno\\.claude\\skills",
-      "C:\\Users\\tecno",
-      "\\tmp",
-      "C:\\Users\\tecno\\.claude\\ide",
-      "c:\\Users\\tecno\\.claude",
-      "/Users/josipmuzic/.pub-cache/git/tiktok_sdk_v2-11e9f6bbd84704489d0da652224e76319e897b12/android/src/main/kotlin/com/tofinds/tiktok_sdk_v2",
-      "/Users/josipmuzic/projects/cinnamon/sampl-flutter/packages/tiktok_sdk_v2/.git"
     ]
   },
-  "hooks": {
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/tecno/.claude/aiusage-hook.ps1 notify"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "^mcp__shortcut__stories-(update|add-task|update-task|create-comment|add-external-link|remove-external-link|set-external-links|add-relation|add-subtask|remove-subtask|create-subtask|assign-current-user|unassign-current-user|upload-file)$",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python \"C:\\Users\\tecno\\.claude\\skills\\shortcut-create-ticket\\hooks\\guard_mutation.py\""
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "curl -sS -X POST --data-binary @- -H 'Content-Type: application/json' http://127.0.0.1:27182/hooks/session-end"
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "curl -sS -X POST --data-binary @- -H 'Content-Type: application/json' http://127.0.0.1:27182/hooks/session-start"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/tecno/.claude/aiusage-hook.ps1 refresh"
-          }
-        ]
-      }
-    ]
-  },
+  "skipAutoPermissionPrompt": true,
   "statusLine": {
-    "type": "command",
     "command": "npx -y ccstatusline@latest",
-    "padding": 0
+    "padding": 0,
+    "type": "command"
   },
-  "enabledPlugins": {
-    "caveman@caveman": true,
-    "rust-analyzer-lsp@claude-plugins-official": true,
-    "superpowers@claude-plugins-official": true
-  },
-  "extraKnownMarketplaces": {
-    "caveman": {
-      "source": {
-        "source": "github",
-        "repo": "JuliusBrussee/caveman"
-      }
-    },
-    "obsidian-skills": {
-      "source": {
-        "source": "github",
-        "repo": "kepano/obsidian-skills"
-      }
-    }
-  },
-  "alwaysThinkingEnabled": true,
-  "effortLevel": "medium",
   "voice": {
     "enabled": true,
     "mode": "hold"
   },
-  "voiceEnabled": true,
-  "agentPushNotifEnabled": true
+  "voiceEnabled": true
 }
