@@ -50,8 +50,8 @@
 
 ## Code Style
 
-- Before writing or modifying code, detect the project's language/stack and check if `~/.claude/code-style/` has a matching file (e.g. `luau.md`, `react.md`). If it exists, read it and follow its preferences.
-- Only read the file once per session, and only when you actually need to write or change code.
+- On first encounter with a project's language/stack (editing code, debugging, inspecting build/wally configs, or planning), check if `~/.claude/code-style/` has a matching file (e.g. `luau.md`, `react.md`). If it exists, read it and follow its preferences.
+- Read it once per session.
 
 ## Execution Discipline
 
