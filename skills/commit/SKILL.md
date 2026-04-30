@@ -23,7 +23,14 @@ If nothing to commit, say so and stop.
 
 ## `/commit v` / `/commit bump`
 
-Same as `/commit` but also bumps the patch version in `package.json` before committing (e.g. 1.0.0 -> 1.0.1). Stage `package.json` with the other files. Commit message follows the normal style - no need to mention the version bump.
+Same as `/commit` but also bumps the patch version before committing (e.g. 1.0.0 -> 1.0.1).
+
+Version bump procedure:
+1. Find `package.json` in the repo root. If it exists, it is the **source of truth** - read the version from it, increment the patch number, and write it back.
+2. Find any other `.json` files in the repo root that contain a top-level `"version"` field (e.g. `tauri.conf.json`, `manifest.json`). Update each one to match the new version.
+3. Stage all modified version files alongside the other changed files.
+
+Commit message follows the normal style - no need to mention the version bump.
 
 If no `package.json` exists, skip the version step and commit normally.
 
@@ -41,8 +48,10 @@ Do not push if the commit failed or there was nothing to commit.
 
 ## `/commit onlyv` / `/commit onlybump`
 
-Only bumps the patch version in `package.json`. No other changes staged.
+Only bumps the patch version. No other changes staged.
 Commit message is always: `CHORE: bump to v1.0.1` (with the actual new version).
+
+Version bump procedure: same as `/commit v` above.
 
 If no `package.json` exists, say so and stop.
 
