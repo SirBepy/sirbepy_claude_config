@@ -28,18 +28,27 @@
 
 - Never install packages without asking first.
 
-## Manual Tasks
+## .for_bepy Folder
 
-- If something requires manual action from Joe (web configs, credentials, cloud console, etc.), don't stop working.
-- Add it as a numbered step to `WORKFLOWS_FOR_SIRBEPY.md` and continue.
-- When Joe completes a manual task (or you have context that it's done), delete that line from the file.
-- If the file has no remaining tasks, delete the file entirely.
+All persistent cross-session notes live in `.for_bepy/` at the project root. Three files:
 
-## Notes for Joe
+### COMMENTS.md - Notes for Joe
+- Only write here if something important happened that Joe might have missed - especially relevant in auto mode where Joe may not have seen every decision.
+- High bar: if Joe would say "I already knew that", don't write it.
+- Keep entries brief, one or two sentences max. No padding.
+- Never reset or clear. Joe manages it.
 
-- If you have comments, questions, or things Joe should review after a session, append them to `COMMENTS_FOR_BEPY.md` in the project root.
-- Never reset or clear that file. Joe manages it.
-- If the file doesn't exist, create it.
+### BEPY_TODOS.md - Manual tasks for Joe
+- Before adding anything here: try to do it yourself first. If you can run a bash command, make an API call, edit a file - do it. Only add here if it genuinely requires Joe's physical action (browser login, cloud console, credentials, hardware, etc.).
+- Bullet points only, no numbers.
+- Keep each bullet brief and actionable. One sentence.
+- Delete bullets when Joe completes them or you have context they're done.
+
+### AI_TODOS.md - Flagged items for Claude
+- `/close` writes flagged code health issues here (large files, duplicates, etc.).
+- Claude does NOT auto-act on this file. Joe triggers execution by saying "do the AI todos".
+- Format: `- [ ] [action] [file/target] - [reason]`
+- Mark done items with `- [x]` then clean them up on next pass.
 
 ## Icons
 
