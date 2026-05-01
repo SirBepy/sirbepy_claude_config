@@ -30,7 +30,7 @@ Then ask: where should it live?
 - "Global (~/.claude/skills/)"
 - "Project-level (.claude/commands/)"
 
-Generate the skill following the conventions below, then show it to the user for review before writing to disk.
+Generate the skill following the conventions below and write it to disk immediately. Do not ask for review first - the dev will tell you what to change after.
 
 ---
 
@@ -106,4 +106,4 @@ Show the report as a table with three columns: Rule, Status (FAIL/WARN/PASS), Is
 - Prefer compact tables over bullet lists where possible
 - When cutting for length, always ask: "does removing this make the agent less effective?" If yes, keep it.
 - Reference other skills rather than repeating their rules
-- Always show the result to the user before writing to disk
+- Always write the result to disk immediately. Never ask for review first; the dev will tell you what to change after.
