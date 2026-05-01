@@ -1,10 +1,18 @@
 ---
 name: todo
-description: Triggers on /todo only, managing a per-repo TODO backlog with a mandatory planning gate before any work starts.
+description: Deprecated - use .for_bepy/ai_todos/ folder convention instead (see CLAUDE.md ai_todos section). The /close skill writes per-task .md files there with full briefing.
 argument-hint: "[plan|do|doall|planall] [id] | <description>"
 ---
 
-# /todo
+# /todo (DEPRECATED)
+> Deprecated. Use `.for_bepy/ai_todos/` instead.
+
+This skill predates the `.for_bepy/ai_todos/` folder convention. New tasks go there as per-file markdown briefs. The `/close` skill manages writes; the dev triggers execution by saying "do the AI todos" or naming a specific file. Do not invoke `/todo`. Migrate any existing `TODOs.md` content into the new structure when encountered.
+
+Original behavior preserved below for reference only.
+
+---
+
 > Manage a persistent TODOs.md backlog per repo, with planning gate enforcement.
 
 Manages `TODOs.md` in the current repo root. No TODO can be worked on until it has a written plan.

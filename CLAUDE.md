@@ -8,6 +8,7 @@
 - Never ask questions mid-task. Front-load everything.
 - Never use the em dash character anywhere, ever. Use a comma, colon, or hyphen instead.
 - When asking any question, always use the AskUserQuestion tool with 2-4 options. Never type numbered options in plain text. Never ask a bare open-ended question.
+- When presenting options, always tag which is best long-term and which is best short-term (in the option label or description). Joe always wants to see both axes so he can weigh tradeoffs. If the same option wins both, say so explicitly.
 
 ## Git Commits
 
@@ -44,11 +45,36 @@ All persistent cross-session notes live in `.for_bepy/` at the project root. Thr
 - Keep each bullet brief and actionable. One sentence.
 - Delete bullets when Joe completes them or you have context they're done.
 
-### AI_TODOS.md - Flagged items for Claude
-- `/close` writes flagged code health issues here (large files, duplicates, etc.).
-- Claude does NOT auto-act on this file. Joe triggers execution by saying "do the AI todos".
-- Format: `- [ ] [action] [file/target] - [reason]`
-- Mark done items with `- [x]` then clean them up on next pass.
+### ai_todos/ - Flagged items for Claude (one .md per task)
+
+A folder of per-task markdown files. Each file is briefed densely enough that a future cold AI session can execute the task without rebuilding context.
+
+- `/close` writes flagged code health issues, unfinished offers, and other follow-ups here, one file each.
+- Claude does NOT auto-act on this folder. Joe triggers execution by saying "do the AI todos" or naming a specific one.
+- Filename: short kebab-case slug describing the task (e.g. `tighten-onboarding-step-redirect.md`).
+- Done tasks: delete the file (or move to `ai_todos/done/` if Joe wants history).
+
+Required sections in every file:
+
+```md
+# <one-line task title>
+
+## Goal
+One or two sentences. The user-facing or code outcome we're after.
+
+## Context
+Background a future cold AI needs. Pointers to relevant writeups (e.g. `.for_bepy/commits_explained/<id>.md`), prior commits, related files with `path:line`. Why this is being deferred (so the AI knows what's already been considered).
+
+## Approach
+Concrete proposed steps. If a code shape was discussed, sketch it. Mention alternatives that were rejected and why, so the AI doesn't re-litigate.
+
+## Acceptance
+- How to know it worked.
+- What must NOT regress (pointers to recent fixes, edge cases).
+- Verification commands or manual repro steps if applicable.
+```
+
+Skip a section only if it genuinely doesn't apply (e.g. trivial chore with no alternatives). Never just write a title and a one-liner.
 
 ## Icons
 
