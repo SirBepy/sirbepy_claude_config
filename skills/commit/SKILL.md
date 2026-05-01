@@ -77,3 +77,12 @@ If no `package.json` exists, say so and stop.
 - Never chain commands. One command per Bash call. No `&&`, `;`, or `|`.
 - Never use `cd` before git commands. Use `git -C /absolute/path <command>`.
 - Stage files by name. Never `git add -A`.
+
+## Backdating commits
+
+- When the user asks for a specific commit time, jitter it to look organic:
+  - Always randomize the seconds (00-59).
+  - Shift the minutes by a few (typically +/- 1-4) from whatever was requested.
+  - Example: user says "27 minutes after the previous commit" → don't use exactly :45:00; use :43:17, :46:52, etc.
+- Apply the same timestamp to both author and committer dates: `GIT_COMMITTER_DATE="..." git ... commit --date="..." ...`.
+- Confirm the resulting timestamp back to the user after committing.
