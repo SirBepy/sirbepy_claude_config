@@ -51,8 +51,9 @@ A folder of per-task markdown files. Each file is briefed densely enough that a 
 
 - `/close` writes flagged code health issues, unfinished offers, and other follow-ups here, one file each.
 - Claude does NOT auto-act on this folder. Joe triggers execution by saying "do the AI todos" or naming a specific one.
-- Filename: short kebab-case slug describing the task (e.g. `tighten-onboarding-step-redirect.md`).
-- Done tasks: delete the file (or move to `ai_todos/done/` if Joe wants history).
+- Filename: zero-padded numeric prefix + kebab-case slug (e.g. `03-tighten-onboarding-step-redirect.md`). The prefix is the task's stable id; Joe references tasks by id ("do todo 03").
+- Picking the next id: scan existing filenames in `ai_todos/` (and `ai_todos/done/` if it exists), take the max numeric prefix, add 1. Never reuse ids, even after a task is deleted.
+- Done tasks: delete the file (or move to `ai_todos/done/` if Joe wants history). The id stays burned either way.
 
 Required sections in every file:
 

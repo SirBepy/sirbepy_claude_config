@@ -45,7 +45,7 @@ Run in this order:
 1. **Memory writes.** Per the auto-memory protocol in CLAUDE.md. For each correction or non-obvious confirmation from Phase 1, write or update the appropriate memory file and update MEMORY.md index. Skip if nothing qualifies. Never invent memories to look productive.
 2. **`.for_bepy/COMMENTS.md`** Per CLAUDE.md rules.
 3. **`.for_bepy/BEPY_TODOS.md`** Reconcile: delete completed steps. Per CLAUDE.md rules.
-4. **`.for_bepy/ai_todos/`** For each item from Phase 1 step 5 (unfinished offers) and Phase 1.5 (large files / duplicates), write a separate `.md` file using the template defined in CLAUDE.md (`# title`, `## Goal`, `## Context`, `## Approach`, `## Acceptance`). Filename: short kebab-case slug. The bar: a future cold AI session must be able to execute the task from the file alone, without re-reading session history. Skip if no items.
+4. **`.for_bepy/ai_todos/`** For each item from Phase 1 step 5 (unfinished offers) and Phase 1.5 (large files / duplicates), write a separate `.md` file using the template defined in CLAUDE.md (`# title`, `## Goal`, `## Context`, `## Approach`, `## Acceptance`). Filename: zero-padded numeric prefix + kebab-case slug per the CLAUDE.md ai_todos rules (scan existing files for max id, add 1, never reuse). The bar: a future cold AI session must be able to execute the task from the file alone, without re-reading session history. Skip if no items.
 5. **Commit.** Hand off to /commit skill. Do not bypass it.
 
 ## Phase 3 - Close
