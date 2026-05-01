@@ -7,3 +7,5 @@ repos:
   - C:/Users/tecno/Desktop/Projects/zng-admin
   - C:/Users/tecno/Desktop/Projects/zng-api
 ticket_regex: ^(\d{4,6}):
+hubstaff_org_id: 410414
+hubstaff_user_id: 4023312
