@@ -23,7 +23,8 @@ Scan the full session. For each bullet below, output specific examples or "none"
 2. **Corrections.** Places the dev pushed back, rejected, or rewrote your output. What rule was missing or violated?
 3. **Repeated manual steps.** Anything done 2+ times manually that should be a skill. List name + one-line scope. Do NOT draft the skill.
 4. **Skill rule violations.** Active skills whose rules got broken. Pointer to skill + which rule. Enforcement gap, not a "be more careful" fix.
-5. **Verdict.** One sentence: was the session efficient, mid, or wasted effort? Pick one. No hedging.
+5. **Unfinished offers.** Scan the session for any "want me to...?" / "should I...?" / "next we could..." offer Claude made that did not get executed. Each one is a candidate for AI_TODOS (will be persisted in Phase 2). List them as: `[file/target] - [action] - [reason]`. If none, say "none".
+6. **Verdict.** One sentence: was the session efficient, mid, or wasted effort? Pick one. No hedging.
 
 ## Phase 1.5 - Code Health Checks
 
@@ -44,7 +45,10 @@ Run in this order:
 1. **Memory writes.** Per the auto-memory protocol in CLAUDE.md. For each correction or non-obvious confirmation from Phase 1, write or update the appropriate memory file and update MEMORY.md index. Skip if nothing qualifies. Never invent memories to look productive.
 2. **`.for_bepy/COMMENTS.md`** Per CLAUDE.md rules.
 3. **`.for_bepy/BEPY_TODOS.md`** Reconcile: delete completed steps. Per CLAUDE.md rules.
-4. **`.for_bepy/AI_TODOS.md`** Append large-file/duplicate findings from Phase 1.5. Format: `- [ ] [action] [file/target] - [reason]`. Skip if none.
+4. **`.for_bepy/AI_TODOS.md`** Append:
+   - Large-file / duplicate findings from Phase 1.5.
+   - Unfinished-offer items from Phase 1 step 5 (everything Claude offered to do but didn't).
+   Format: `- [ ] [action] [file/target] - [reason]`. Skip if none.
 5. **Commit.** Hand off to /commit skill. Do not bypass it.
 
 ## Phase 3 - Close
