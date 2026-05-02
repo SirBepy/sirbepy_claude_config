@@ -87,9 +87,9 @@ Give the session a meaningful name so the `/resume` picker is browsable later.
 1. Pick a short human-readable name (max 60 chars), sentence-style with spaces, written like a commit subject. Sentence case, no kebab-case, no trailing period. Use Phase 1 retrospective as input.
    - Good: `Improve /close skill with auto-rename`, `Fix killbrick poison type damage`, `Investigate session rename storage`
    - Bad: `close-skill-rename-test`, `session-2025-05-02`, `chat-1`, `Updated some files.`
-2. Run the helper:
+2. Run the helper. The path MUST be a string literal (no `$env:` vars, no expressions) - the harness's permission matcher refuses to validate dynamic command names and falls back to always-prompt:
    ```powershell
-   & "$env:USERPROFILE\.claude\skills\close\rename-session.ps1" -Name "<name>"
+   & "C:\Users\tecno\.claude\skills\close\rename-session.ps1" -Name "<name>"
    ```
    The script finds the current session jsonl by matching cwd, then appends the two records the harness uses for renames (`custom-title`, `agent-name`). Idempotent enough - last record wins per harness logic.
 3. If the script errors (no matching session, jsonl not found), print the error and continue. Don't abort the close.
@@ -127,9 +127,9 @@ Skip the kill if ANY of these are true:
 - Any background work is still running in this session: spawned `Agent` with `run_in_background: true`, active `/loop`, or pending `ScheduleWakeup`. Check before killing.
 - The dev explicitly said "don't close" or "stay open" anywhere in this session.
 
-If all clear, run:
+If all clear, run (literal path, no `$env:` vars - see Phase 2.5 note):
 ```powershell
-& "$env:USERPROFILE\.claude\skills\close\rename-session.ps1" -Name "<name>" -Close
+& "C:\Users\tecno\.claude\skills\close\rename-session.ps1" -Name "<name>" -Close
 ```
 The script re-resolves the session pid, spawns a detached PowerShell that waits 800ms then terminates the claude process. The wait lets this final response flush.
 

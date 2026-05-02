@@ -144,6 +144,15 @@
             "command": "python \"C:\\Users\\tecno\\.claude\\skills\\shortcut-create-ticket\\hooks\\guard_mutation.py\""
           }
         ]
+      },
+      {
+        "matcher": "PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/tecno/.claude/skills/close/approve-rename.ps1"
+          }
+        ]
       }
     ],
     "SessionEnd": [
