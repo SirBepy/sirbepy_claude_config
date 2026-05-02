@@ -5,65 +5,86 @@ description: Triggers on /favicon only.
 
 # /favicon
 
-> Check for and generate favicon files (svg, png, ico) in assets/images/.
+> Check for and generate favicon files (svg, png, ico) for any project type.
 
 ## Scripts
 
-- `svg-to-png.js` - converts SVG to PNG. Usage: `node svg-to-png.js <input.svg> <output.png> <size>`
-- `png-to-ico.js` - converts PNG to ICO. Usage: `node png-to-ico.js <input.png> <output.ico>`
-
 Both scripts live in the same folder as this SKILL.md.
+
+- `svg-to-png.js` - converts SVG to PNG. Usage: `node <path-to-skill>/svg-to-png.js <input.svg> <output.png> <size>`
+- `png-to-ico.js` - converts PNG to ICO. Usage: `node <path-to-skill>/png-to-ico.js <input.png> <output.ico>`
+
+`png-to-ico.js` requires the `png-to-ico` npm package. **Before running it, always check and install if missing:**
+
+```
+npm list -g png-to-ico
+```
+
+If not found:
+
+```
+npm install -g png-to-ico
+```
+
+Do this every time, without asking the user.
 
 ## Flags
 
-- `skipVerification` - if passed, skip early-out checks and regenerate everything from scratch (re-derive PNG from SVG, re-derive ICO from PNG, etc.)
+- `skipVerification` - skip early-out checks and regenerate everything from scratch
+
+## Step 0 - Detect platform
+
+Use these signals (first match wins):
+
+- `src-tauri/` folder, `tauri.conf.json`, or `Cargo.toml` depending on `tauri` → `tauri`
+- `next.config.*` or `next` in `package.json` deps → `next`
+- `vite.config.*` + React deps in `package.json` → `react`
+- `vite.config.*` without React → `vite`
+- Plain `index.html` + no bundler config → `html`
+
+Read the matching platform spec from this skill's `platforms/` folder (e.g. `platforms/tauri.md`). The spec defines:
+- Canonical paths for SVG, PNG, ICO
+- Which HTML file to update (or whether to skip)
+- Any platform-specific extras
+
+If no spec exists for the detected type, fall back to `platforms/html.md`.
 
 ## Step 1 - Detect what exists
 
-Search the entire project for any of these files:
+Search the entire project for:
 
 - `favicon.svg`
 - `favicon.png`
 - `favicon.ico`
 
-The canonical location for svg and png is `assets/images/`. The canonical location for ico is the project root. If any are found elsewhere, note their current location.
+Note current locations vs. canonical locations from the platform spec.
 
 ## Step 2 - Move to canonical locations if needed
 
-If any favicon files are found outside their canonical location, move them:
-
-- `favicon.svg` and `favicon.png` → `assets/images/`
-- `favicon.ico` → project root
-
-Update references in `index.html` after moving.
+Move any misplaced favicon files to their canonical paths per the platform spec. Update references in the HTML entry point after moving.
 
 ## Step 3 - Decide what to generate
 
 ### SVG exists
 
-- Generate `assets/images/favicon.png` from SVG if missing:
+- Generate PNG from SVG if missing (use canonical PNG path from spec):
 
 ```
-  node svg-to-png.js assets/images/favicon.svg assets/images/favicon.png 256
+node <path-to-skill>/svg-to-png.js <svg-path> <png-path> 256
 ```
 
-- Generate `favicon.ico` from PNG if missing:
+- Generate ICO from PNG if missing (use canonical ICO path from spec):
 
 ```
-  node png-to-ico.js assets/images/favicon.png favicon.ico
+node <path-to-skill>/png-to-ico.js <png-path> <ico-path>
 ```
 
 - If both already exist and `skipVerification` was not passed, tell the user and stop.
 
 ### Only PNG exists
 
-- Generate `favicon.ico` from PNG if missing:
-
-```
-  node png-to-ico.js assets/images/favicon.png favicon.ico
-```
-
-- Warn the user: "favicon.svg is missing - ICO and PNG exist but SVG was not found. SVG is recommended as the source of truth."
+- Generate ICO from PNG if missing.
+- Warn: "favicon.svg is missing - SVG is recommended as the source of truth."
 
 ### Only ICO exists
 
@@ -79,30 +100,17 @@ Update references in `index.html` after moving.
 
 1. Read the project to understand its name, purpose, and vibe. Check `.portfolio-data/PORTFOLIO.md` and `README.md` if they exist.
 2. Design a simple, bold SVG icon that fits the project - solid shapes, minimal detail, looks good at 32px.
-3. Write it to `assets/images/favicon.svg`.
-4. Generate PNG:
+3. Write it to the canonical SVG path from the platform spec.
+4. Generate PNG, then ICO using the scripts above.
 
-```
-   node svg-to-png.js assets/images/favicon.svg assets/images/favicon.png 256
-```
+## Step 4 - Update HTML (platform-dependent)
 
-5. Generate ICO:
+Follow the platform spec for what HTML changes to make. Some platforms (e.g. Next.js App Router) need no link tags - the spec will say so.
 
-```
-   node png-to-ico.js assets/images/favicon.png favicon.ico
-```
+## Step 5 - Platform extras
 
-## Step 4 - Update index.html
+Run any platform-specific extras defined in the spec (e.g. Tauri native icon generation).
 
-Ensure these tags exist inside `<head>`. Add any that are missing:
+## Step 6 - Confirm
 
-```html
-<link rel="icon" type="image/x-icon" href="favicon.ico" />
-<link rel="icon" type="image/png" href="assets/images/favicon.png" />
-<link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg" />
-```
-
-## Step 5 - Confirm
-
-Tell the user what was found, what was generated, and what is still missing.
-Do not commit - the user handles that.
+Tell the user what was found, what was generated, and what is still missing. Do not commit.
