@@ -13,7 +13,7 @@
 ## Git Commits
 
 - NEVER commit directly. Always invoke the `/commit` skill first and follow its instructions.
-- This applies to every commit, no exceptions.
+- This applies to every commit, no exceptions - including commits made by subagents in subagent-driven development.
 
 ## Shell Commands
 
@@ -34,12 +34,14 @@
 All persistent cross-session notes live in `.for_bepy/` at the project root. Three files:
 
 ### COMMENTS.md - Notes for Joe
+
 - Only write here if something important happened that Joe might have missed - especially relevant in auto mode where Joe may not have seen every decision.
 - High bar: if Joe would say "I already knew that", don't write it.
 - Keep entries brief, one or two sentences max. No padding.
 - Never reset or clear. Joe manages it.
 
 ### BEPY_TODOS.md - Manual tasks for Joe
+
 - Before adding anything here: try to do it yourself first. If you can run a bash command, make an API call, edit a file - do it. Only add here if it genuinely requires Joe's physical action (browser login, cloud console, credentials, hardware, etc.).
 - Bullet points only, no numbers.
 - Keep each bullet brief and actionable. One sentence.
@@ -61,15 +63,19 @@ Required sections in every file:
 # <one-line task title>
 
 ## Goal
+
 One or two sentences. The user-facing or code outcome we're after.
 
 ## Context
+
 Background a future cold AI needs. Pointers to relevant writeups (e.g. `.for_bepy/commits_explained/<id>.md`), prior commits, related files with `path:line`. Why this is being deferred (so the AI knows what's already been considered).
 
 ## Approach
+
 Concrete proposed steps. If a code shape was discussed, sketch it. Mention alternatives that were rejected and why, so the AI doesn't re-litigate.
 
 ## Acceptance
+
 - How to know it worked.
 - What must NOT regress (pointers to recent fixes, edge cases).
 - Verification commands or manual repro steps if applicable.
