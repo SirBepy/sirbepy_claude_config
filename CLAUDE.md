@@ -29,6 +29,17 @@
 
 - Never install packages without asking first.
 
+## Process Hygiene
+
+- **Never leave orphan child processes.** If you spawn a process (vitest, turbo, dev server, anything that forks workers), verify it exited cleanly before claiming the task is done. After running test/build/dev commands, sanity-check with `Get-CimInstance Win32_Process -Filter "Name='node.exe'"` (PowerShell) or `pgrep node` (Unix). Kill any orphans immediately. Joe found 90+ orphan vitest processes from one session at 100% CPU and 90°C; this is unacceptable.
+- **Three-layer orphan defense:**
+  1. **In every subagent prompt that runs tests/builds:** mandatory final step is "run the project's orphan-check script (e.g. `pnpm check-orphans` if it exists, otherwise `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -match 'vitest|turbo|tinypool' }`). If orphans remain, kill them with `Stop-Process -Id <PID> -Force` before reporting DONE."
+  2. **Main agent rule:** after every subagent that ran Node commands completes, the main agent runs the same orphan check itself. If orphans are found, dispatch a one-shot cleanup subagent or kill them inline.
+  3. **Optional Stop hook (recommended):** configure a Claude Code Stop hook that runs the project's orphan-killer when the session ends. Acts as the last safety net.
+- **Cap concurrency at 5.** Never run more than 5 Node-based commands concurrently. Always pass `--concurrency=5` to turbo. Set `poolOptions.threads.maxThreads: 5` (or use `pool: 'forks'` with `singleFork: true` for clean Windows exit) in every vitest config. Use `--workspace-concurrency=5` on pnpm. Never run `pnpm dev --parallel` outside of explicit dress-rehearsal use. (Joe's hardware can handle 5 fine; the orphan issue, not concurrency itself, was what burned the CPU last time.)
+- For long-running dev servers (vite, fastify), track the PID and ensure it terminates on session end / Ctrl-C / completion of the parent task.
+- This is non-negotiable — orphan processes pegged Joe's CPU and disrupted his work.
+
 ## .for_bepy Folder
 
 All persistent cross-session notes live in `.for_bepy/` at the project root. Three files:

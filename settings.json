@@ -104,6 +104,7 @@
       "mcp__shortcut__stories-create",
       "mcp__shortcut__stories-update",
       "Bash(echo \"exit=$?\")",
+      "PowerShell(Get-Content*)",
       "Skill(schedule)",
       "Skill(schedule:*)"
     ],
