@@ -8,7 +8,15 @@
 - Never ask questions mid-task. Front-load everything.
 - Never use the em dash character anywhere, ever. Use a comma, colon, or hyphen instead.
 - When asking any question, always use the AskUserQuestion tool with 2-4 options. Never type numbered options in plain text. Never ask a bare open-ended question.
-- When presenting options, always tag which is best long-term and which is best short-term (in the option label or description). Joe always wants to see both axes so he can weigh tradeoffs. If the same option wins both, say so explicitly.
+- Prefix every question with a domain tag so Joe knows how much weight to give Claude's input:
+  - `[UX]` - visual, layout, interaction feel (Joe's taste dominates; skip long/short-term axes, but still give a brief recommendation)
+  - `[ARCH]` - system design, abstractions, data flow (Claude's input is load-bearing)
+  - `[PERF]` - speed/memory tradeoffs
+  - `[SEC]` - security decisions (Claude's input is load-bearing)
+  - `[DATA]` - schema, data modeling
+  - `[TOOLING]` - dev tooling, linting, code style, naming
+  - `[CI/CD]` - deployment, infra, pipelines
+- When presenting options, always tag which is best long-term and which is best short-term (in the option label or description), EXCEPT for [UX] questions. Joe always wants to see both axes so he can weigh tradeoffs. If the same option wins both, say so explicitly.
 
 ## Git Commits
 
