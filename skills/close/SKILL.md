@@ -1,42 +1,38 @@
 ---
 name: close
-description: Triggers on /close only. Session retrospective + persist + rename. Optional chained slash commands run after (e.g. /close /commit pushnbump /exit).
-argument-hint: "[/commit ...] [/sleep-when-done] [/exit]"
+description: Triggers on /close only. Session retrospective + persist + rename + closes terminal. Use --dont-close to skip the terminal kill.
+argument-hint: "[--dont-close] [/commit ...] [/sleep-when-done]"
 ---
 
 # /close
 
-> Session retrospective, persist, rename. Optionally chain follow-up slash commands.
+> Session retrospective, persist, rename, close terminal. Pass --dont-close to skip the kill.
 
 ## Usage
 
 ```
-/close                                  # retrospect + persist + rename only
-/close /commit                          # ... then commit
-/close /commit pushnbump                # ... then commit pushnbump
-/close /exit                            # ... then kill window
-/close /commit pushnbump /exit          # commit, then kill window
-/close /commit pushnbump /sleep-when-done   # commit, then sleep PC
+/close                                  # retrospect + persist + rename + close terminal
+/close --dont-close                     # everything except closing, then prompts to run /clear
+/close /commit                          # commit, then close terminal
+/close /commit pushnbump                # commit pushnbump, then close terminal
+/close --dont-close /commit             # commit but keep terminal open
+/close /commit /sleep-when-done        # commit, sleep PC, then close terminal
 ```
 
 ### Arg parsing
 
-Args after `/close` are a chain of slash commands. Each slash command may be followed by its own positional args (anything until the next `/`).
+`--dont-close` is a boolean flag, not a chained command. Strip it out first, then parse the rest.
+
+Remaining args are a chain of slash commands. Each slash command may be followed by its own positional args (anything until the next `/`).
 
 - A token starting with `/` opens a new chained command.
 - Tokens between `/foo` and the next `/bar` are `/foo`'s args.
-- Empty arg list = bare /close (retrospect + persist + rename, nothing more).
+- Empty remaining args = bare /close (retrospect + persist + rename, then close unless --dont-close).
 
 Examples:
-- `/close /commit pushnbump /exit` → chain: `[/commit pushnbump]`, `[/exit]`
-- `/close /sleep-when-done` → chain: `[/sleep-when-done]`
-- `/close /commit v` → chain: `[/commit v]`
-
-### Smart ordering
-
-`/exit` always runs last regardless of where it appears in the chain. Everything else preserves user order. Rationale: the dev sometimes writes `/close /exit /commit` thinking "and also commit", but commit must happen before the window dies.
-
-Other terminal-ish commands (`/sleep-when-done`) stay in user order - they're not the same as `/exit`. Dev controls placement.
+- `/close /commit pushnbump` → dont-close: false, chain: `[/commit pushnbump]`
+- `/close --dont-close /commit v` → dont-close: true, chain: `[/commit v]`
+- `/close /sleep-when-done` → dont-close: false, chain: `[/sleep-when-done]`
 
 ## Role
 
@@ -100,40 +96,37 @@ The rename takes effect on next launch / `/resume` picker. It does NOT update th
 
 Print one line:
 ```
-N memory writes . N comments . N workflow reconciles . N skill candidates . renamed to "<name>" . chain: <list of chained commands or "none">
+N memory writes . N comments . N workflow reconciles . N skill candidates . renamed to "<name>" . chain: <list of chained commands or "none"> . closing: yes/no
 ```
 
 ## Phase 4 - Run chained commands
 
-Walk the parsed chain in smart-ordered sequence (`/exit` deferred to last; everything else in user order).
-
-For each chained command:
-- If it's `/exit`: handled in Phase 5 (don't invoke it as a skill - `/exit` is a CLI built-in, but inside this skill we substitute it with our kill mechanism).
-- Otherwise: invoke it via the `Skill` tool with its args. Wait for it to return before moving to the next.
+Walk the parsed chain in user order. Invoke each via the `Skill` tool with its args. Wait for each to return before moving to the next.
 
 If any chained command fails (errors, hook rejection, etc.):
 - Stop the chain right there. Do not run subsequent commands.
-- If `/exit` was queued, **skip it** - failure means there may be unsaved state worth keeping the window open for.
+- Skip Phase 5 (terminal kill) - failure means there may be unsaved state worth keeping the window open for.
 - Print which command failed and why.
 
 If no chained commands, skip this phase.
 
-## Phase 5 - Exit (only if /exit was in the chain)
+## Phase 5 - Close terminal
 
-Skip the kill if ANY of these are true:
-- `/exit` was not in the chain.
-- Any earlier chained command failed.
+**Default: always run.** Skip only if ANY of these are true:
+- `--dont-close` was passed.
+- Any chained command in Phase 4 failed.
 - The rename script in Phase 2.5 errored.
 - Any background work is still running in this session: spawned `Agent` with `run_in_background: true`, active `/loop`, or pending `ScheduleWakeup`. Check before killing.
-- The dev explicitly said "don't close" or "stay open" anywhere in this session.
 
 If all clear, run (literal path, no `$env:` vars - see Phase 2.5 note):
 ```powershell
 & "C:\Users\tecno\.claude\skills\close\rename-session.ps1" -Name "<name>" -Close
 ```
-The script re-resolves the session pid, spawns a detached PowerShell that waits 800ms then terminates the claude process. The wait lets this final response flush.
+The script walks up to the parent shell process (powershell.exe hosting the terminal tab) and kills it, closing the terminal. The detached killer waits 800ms so this final response flushes first.
 
-If kill was skipped (and `/exit` was in the chain), print on its own line: `Exit skipped: <reason>. Run /clear or /exit manually.`
+If kill was skipped, print on its own line:
+- If `--dont-close`: `Terminal kept open. Run /clear or close manually.`
+- If other reason: `Exit skipped: <reason>. Run /clear or close manually.`
 
 ## Anti-patterns
 
@@ -141,4 +134,4 @@ If kill was skipped (and `/exit` was in the chain), print on its own line: `Exit
 - Drafting new skills inline. /close surfaces candidates, /bepy-skill-creator builds them.
 - Auto-committing without `/commit` in the chain. Dev opts in explicitly now.
 - Writing memories about ephemeral session state. Re-read auto-memory rules before writing.
-- Trying to invoke `/exit` as a skill. It's a CLI built-in; substitute the rename-session.ps1 -Close call.
+- Trying to invoke `/exit` as a skill or chained command. Terminal kill is now built into Phase 5 by default.

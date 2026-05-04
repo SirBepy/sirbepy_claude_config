@@ -87,13 +87,14 @@ Write-Host "Renamed session $sessionId (claude pid $claudePid) to '$Name'"
 Write-Host "  jsonl: $jsonlPath"
 
 if ($Close) {
-    if (-not $sessionPid) {
-        Write-Warning "Close requested but no pid resolved for session $sessionId. Skipping kill."
+    if (-not $claudePid) {
+        Write-Warning "Close requested but no claude pid resolved. Skipping kill."
         exit 0
     }
-    $killCmd = "Start-Sleep -Milliseconds 800; try { Stop-Process -Id $sessionPid -Force -ErrorAction Stop } catch {}"
+    # Kill claude.exe directly. VS Code closes the terminal tab when its hosted process exits.
+    $killCmd = "Start-Sleep -Milliseconds 800; try { Stop-Process -Id $claudePid -Force -ErrorAction Stop } catch {}"
     Start-Process -FilePath 'powershell.exe' `
         -ArgumentList '-NoProfile','-NonInteractive','-WindowStyle','Hidden','-Command',$killCmd `
         -WindowStyle Hidden | Out-Null
-    Write-Host "Scheduled kill of pid $sessionPid in 800ms."
+    Write-Host "Scheduled kill of claude pid $claudePid in 800ms."
 }
