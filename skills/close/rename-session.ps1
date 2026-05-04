@@ -5,10 +5,9 @@ param(
 )
 
 # Resolve the current session's jsonl by:
-# 1. Scanning ~/.claude/sessions/*.json (process-state files written by the harness)
-# 2. Matching the entry whose cwd == current $PWD (case-insensitive)
-# 3. Picking the most recently updated match (handles stale exited sessions)
-# 4. Globbing ~/.claude/projects/*/<sessionId>.jsonl to locate the actual transcript
+# 1. Walking up the process tree from this script to find the claude.exe ancestor PID
+# 2. Matching that PID against session JSON files in ~/.claude/sessions/
+# 3. Globbing ~/.claude/projects/*/<sessionId>.jsonl to locate the actual transcript
 #
 # Then appending two JSONL records the harness recognizes as a session rename:
 #   {"type":"custom-title","customTitle":"<name>","sessionId":"<id>"}
@@ -16,13 +15,33 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$claudeRoot = Join-Path $env:USERPROFILE '.claude'
+$claudeRoot  = Join-Path $env:USERPROFILE '.claude'
 $sessionsDir = Join-Path $claudeRoot 'sessions'
 $projectsDir = Join-Path $claudeRoot 'projects'
-$cwd = (Get-Location).Path
 
 if (-not (Test-Path $sessionsDir)) {
     Write-Error "Sessions dir not found: $sessionsDir"
+    exit 1
+}
+
+# Walk up the process tree from $PID to find the claude.exe ancestor
+function Get-AncestorClaudePid {
+    $p = $PID
+    for ($i = 0; $i -lt 8; $i++) {
+        $proc = Get-CimInstance Win32_Process -Filter "ProcessId = $p" -ErrorAction SilentlyContinue
+        if (-not $proc) { break }
+        if ($proc.Name -like '*claude*') { return [int]$p }
+        $next = [int]$proc.ParentProcessId
+        if ($next -eq 0 -or $next -eq $p) { break }
+        $p = $next
+    }
+    return $null
+}
+
+$claudePid = Get-AncestorClaudePid
+
+if (-not $claudePid) {
+    Write-Error "Could not find a claude ancestor process from PID $PID"
     exit 1
 }
 
@@ -30,7 +49,7 @@ $candidates = Get-ChildItem -Path $sessionsDir -Filter '*.json' -File -ErrorActi
     ForEach-Object {
         try {
             $data = Get-Content -Raw -Path $_.FullName | ConvertFrom-Json
-            if ($data.cwd -and ($data.cwd.TrimEnd('\','/') -ieq $cwd.TrimEnd('\','/'))) {
+            if ($data.pid -and ([int]$data.pid -eq $claudePid)) {
                 [pscustomobject]@{
                     SessionId = $data.sessionId
                     Pid       = $data.pid
@@ -43,7 +62,7 @@ $candidates = Get-ChildItem -Path $sessionsDir -Filter '*.json' -File -ErrorActi
     } | Sort-Object -Property UpdatedAt -Descending
 
 if (-not $candidates -or $candidates.Count -eq 0) {
-    Write-Error "No session found with cwd matching '$cwd'"
+    Write-Error "No session found with pid matching claude ancestor pid $claudePid"
     exit 1
 }
 
@@ -64,7 +83,7 @@ $agentRecord = @{ type = 'agent-name';   agentName   = $Name; sessionId = $sessi
 Add-Content -Path $jsonlPath -Value $titleRecord -Encoding utf8
 Add-Content -Path $jsonlPath -Value $agentRecord -Encoding utf8
 
-Write-Host "Renamed session $sessionId to '$Name'"
+Write-Host "Renamed session $sessionId (claude pid $claudePid) to '$Name'"
 Write-Host "  jsonl: $jsonlPath"
 
 if ($Close) {
@@ -72,8 +91,6 @@ if ($Close) {
         Write-Warning "Close requested but no pid resolved for session $sessionId. Skipping kill."
         exit 0
     }
-    # Spawn detached PowerShell that waits, then kills the claude process by pid.
-    # Detached so the kill survives this script (and its parent claude.exe) exiting.
     $killCmd = "Start-Sleep -Milliseconds 800; try { Stop-Process -Id $sessionPid -Force -ErrorAction Stop } catch {}"
     Start-Process -FilePath 'powershell.exe' `
         -ArgumentList '-NoProfile','-NonInteractive','-WindowStyle','Hidden','-Command',$killCmd `
