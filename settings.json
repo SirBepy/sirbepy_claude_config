@@ -105,6 +105,7 @@
       "mcp__shortcut__stories-update",
       "Bash(echo \"exit=$?\")",
       "PowerShell(Get-Content*)",
+      "PowerShell(New-Item *)",
       "Skill(schedule)",
       "Skill(schedule:*)"
     ],
@@ -211,7 +212,7 @@
       }
     }
   },
-  "alwaysThinkingEnabled": true,
+"alwaysThinkingEnabled": true,
   "effortLevel": "high",
   "voice": {
     "enabled": true,

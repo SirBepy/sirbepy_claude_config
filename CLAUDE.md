@@ -36,6 +36,7 @@
 ## Packages
 
 - Never install packages without asking first.
+- Before suggesting any package, tool, or program to install/download, do a quick web search to verify it is legitimate and safe. Check for typosquatting, malicious forks, or known malware reports. Only suggest after confirming.
 
 ## Process Hygiene
 
