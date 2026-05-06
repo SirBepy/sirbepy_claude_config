@@ -40,11 +40,24 @@ Same as `/commit` but also runs `git push` after committing.
 
 Do not push if the commit failed or there was nothing to commit.
 
-## `/commit pushbump` / `/commit pushnbump`
+## `/commit pushbump`
 
 Same as `/commit v` but also runs `git push` after committing.
 
 Do not push if the commit failed or there was nothing to commit.
+
+## `/commit pushnbump`
+
+Commits changes and version as **two separate commits**, then pushes.
+
+Order:
+1. Do the normal commit for changed files (same as `/commit`).
+2. Bump the patch version (same procedure as `/commit v`).
+3. Stage only the version files.
+4. Commit with message: `VERSION: <new-version>` — where `<new-version>` is the full version string after bumping. If a build number field (e.g. `"build"` in `package.json` or `tauri.conf.json`) exists alongside the version, append it: `VERSION: 1.0.1+21`.
+5. Run `git push`.
+
+Do not push if either commit failed or there was nothing to commit.
 
 ## `/commit onlyv` / `/commit onlybump`
 
