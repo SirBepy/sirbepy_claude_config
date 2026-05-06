@@ -81,6 +81,11 @@ node <path-to-skill>/png-to-ico.js <png-path> <ico-path>
 
 - If both already exist and `skipVerification` was not passed, tell the user and stop.
 
+### PNG and ICO both exist, no SVG
+
+- Warn: "favicon.svg is missing - SVG is recommended as the source of truth."
+- Stop. Do NOT overwrite existing PNG or ICO. Do NOT design a new icon from scratch.
+
 ### Only PNG exists
 
 - Generate ICO from PNG if missing.
