@@ -125,3 +125,12 @@ Skip a section only if it genuinely doesn't apply (e.g. trivial chore with no al
 
 - If given a spec file, read it fully before writing any code.
 - Summarize your understanding and ask any questions, then implement.
+
+## Subagent-Driven vs Inline Execution
+
+When a plan is ready to execute, choose based on task size - do not default to subagent-driven just because skills recommend it:
+
+- **Inline execution** (default): small features, fewer than 4 tasks, fewer than 3 files, tightly sequential steps. Just do it.
+- **Subagent-driven**: large features with 5+ independent tasks, multiple files, where fresh context per task and review gates add real value.
+
+If it feels quick, it's inline. Only escalate to subagent-driven when the complexity genuinely justifies the overhead.
