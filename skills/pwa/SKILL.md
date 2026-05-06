@@ -7,9 +7,19 @@ description: Triggers on /pwa only.
 
 > Set up Progressive Web App support for the project.
 
-## Step 0 - Check if already done
+## Step 0 - Skip for Tauri / desktop projects
 
-If the user passed `skipVerification`, skip this step entirely and proceed to Step 1.
+If `src-tauri/` exists or `CLAUDE.md` lists `Type: tauri`, print:
+
+```
+/pwa - skipped, Tauri desktop apps don't use PWA.
+```
+
+And stop.
+
+## Step 1 - Check if already done
+
+If the user passed `skipVerification`, skip this step entirely and proceed to Step 2.
 
 If `manifest.json` exists, `sw.js` exists, and `index.html` contains the manifest link + service worker registration script, print:
 
@@ -19,7 +29,7 @@ If `manifest.json` exists, `sw.js` exists, and `index.html` contains the manifes
 
 And stop.
 
-## Step 1 - Gather context
+## Step 2 - Gather context
 
 Read the following to fill manifest fields:
 
@@ -27,7 +37,7 @@ Read the following to fill manifest fields:
 - `.portfolio-data/metadata.json` - title, shortDescription
 - `assets/images/favicon.png` and `favicon.ico` - for icons
 
-## Step 2 - Generate manifest.json
+## Step 3 - Generate manifest.json
 
 Create `manifest.json` in the project root:
 
@@ -64,7 +74,7 @@ Fill fields from gathered context:
 
 Only include SVG icon entry if `assets/images/favicon.svg` exists.
 
-## Step 3 - Generate service worker
+## Step 4 - Generate service worker
 
 Create `sw.js` in the project root:
 
@@ -92,7 +102,7 @@ self.addEventListener("fetch", (e) => {
 
 Replace the ASSETS list with the actual files that exist in the project.
 
-## Step 4 - Update index.html
+## Step 5 - Update index.html
 
 Add inside `<head>` if missing:
 
@@ -111,7 +121,7 @@ Add before `</body>` if missing:
 </script>
 ```
 
-## Step 5 - Confirm
+## Step 6 - Confirm
 
 Tell the user what was created and remind them:
 
