@@ -1,11 +1,11 @@
 ---
-name: bepy-project-setup
-description: Triggers on /bepy-project-setup only.
+name: bepy-project-setup-web
+description: Triggers on /bepy-project-setup-web only. Web/HTML project standardization flow - runs favicon, meta-tags, PWA, GitHub Pages, styleguide, deploy workflow, etc. For Roblox/Luau projects use /bepy-project-setup-roblox instead.
 ---
 
-# /bepy-project-setup
+# /bepy-project-setup-web
 
-> Full project standardization flow - runs all bepy skills in order.
+> Full web project standardization flow - runs all bepy web skills in order.
 
 ## Flags
 
