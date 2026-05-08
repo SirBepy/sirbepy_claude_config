@@ -1,31 +1,23 @@
 ---
 name: night-run
-description: Triggers on /night-run only. Schedules a queue of overnight AI agents that grind through plan files in docs/night_run/, with inline review subagents and side-branch failure isolation.
+description: Triggers on /night-run only. Schedules a queue of REMOTE overnight agents via RemoteTrigger that grind through plan files in docs/night_run/. PC can be turned off. For local (PC must stay on) use /cron-run.
 argument-hint: "<count|all> [every] <interval> [till HH[AM|PM]]"
 ---
 
 # /night-run
 
-> Schedule overnight agents to work plan files, one task at a time, with review and side-branch failure isolation.
+> Schedule overnight agents to work plan files remotely on Anthropic's cloud (PC can be off), one task at a time, with review and side-branch failure isolation.
 
-## Modes
-
-The first argument selects the mode:
-
-- `tick` -> single task cycle (cron fires this; never run by the dev)
-- anything else -> schedule mode (the dev runs this)
-
-## Prerequisites (schedule mode only)
+## Prerequisites
 
 Refuse with a clear message if any check fails:
 
 1. Inside a git repo (`git rev-parse --is-inside-work-tree`)
 2. Working tree clean (`git status --porcelain` empty)
 3. `docs/night_run/plans/` exists and has at least one `.md` plan file
+4. Repo has a GitHub remote (`git remote get-url origin` returns a github.com URL) - the remote agent must be able to clone and push
 
-## Schedule mode
-
-### 1. Parse arguments
+## Step 1 - Parse arguments
 
 Free-form. Tokens may appear in any order:
 
@@ -35,9 +27,10 @@ Free-form. Tokens may appear in any order:
 
 Reject and ask for missing pieces if count or interval is absent.
 
-### 2. Build INDEX.md
+## Step 2 - Build INDEX.md
 
 - Read current branch via `git rev-parse --abbrev-ref HEAD`
+- Read git remote URL via `git remote get-url origin`. Normalize to `https://github.com/owner/repo` (no `.git` suffix).
 - Glob `docs/night_run/plans/*.md`. Title for each = first `# ` heading or filename without extension
 - If `docs/night_run/INDEX.md` exists, preserve `[x]` and `[!]` lines from the prior run by plan path. New plans get `[ ]`.
 - unfinished = count of `[ ]` lines after merge
@@ -45,98 +38,137 @@ Reject and ask for missing pieces if count or interval is absent.
 - firings = ceil(unfinished * 1.1) (10% buffer, minimum +1 if unfinished > 0)
 - If end cap given: firings = min(firings, floor((end_cap - now) / interval))
 - Write INDEX.md (format below)
+- Commit and push INDEX.md now so the remote agent sees it: `git add docs/night_run/INDEX.md`, then commit with message `night-run: init INDEX`, then push.
 
-### 3. Schedule crons
+## Step 3 - Schedule remote agents
+
+Load `RemoteTrigger` via ToolSearch first.
 
 For n in 0..firings-1:
 
-- slot_time = now + (n + 1) * interval
-- If slot_time minute is :00 or :30, shift by +3 minutes (per CronCreate fleet jitter guidance)
-- Build cron: `<M> <H> <DoM> <Month> *` pinned to slot_time
-- CronCreate(cron, recurring=false, durable=true, prompt=`/night-run tick`)
-- Track returned IDs in memory for the summary
+- slot_time = now + (n + 1) * interval (convert to UTC RFC3339 for `run_once_at`)
+- Build the self-contained tick prompt (template below) substituting actual values
+- Generate a fresh lowercase UUID v4 for `events[].data.uuid`
+- Call `RemoteTrigger` with:
 
-### 4. Print summary
+```json
+{
+  "action": "create",
+  "body": {
+    "name": "night-run-tick-<n+1>-of-<firings>",
+    "run_once_at": "<slot_time_utc>",
+    "enabled": true,
+    "job_config": {
+      "ccr": {
+        "environment_id": "env_01WbN3tVvAW5TjieuFJeW2cx",
+        "session_context": {
+          "model": "claude-sonnet-4-6",
+          "sources": [
+            {"git_repository": {"url": "<repo_url>"}}
+          ],
+          "allowed_tools": ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "Agent"]
+        },
+        "events": [
+          {
+            "data": {
+              "uuid": "<generated_uuid>",
+              "session_id": "",
+              "type": "user",
+              "parent_tool_use_id": null,
+              "message": {
+                "content": "<tick_prompt>",
+                "role": "user"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+- Track returned routine IDs for the summary
+
+## Step 4 - Print summary
 
 Show:
 
-- branch
+- branch and repo URL
 - interval
 - firings count + buffer count
-- first and last fire time
+- first and last fire time (local timezone)
 - relative path to INDEX.md
-- reminder: keep Claude Code open and PC awake through the run
+- list of created routine IDs with links: `https://claude.ai/code/routines/<id>`
+- note: PC can be turned off - agents run on Anthropic's cloud
 
-## Tick mode
+## Tick prompt template
+
+Substitute `<BRANCH>`, `<REPO_URL>`, and `<INTERVAL_MINUTES>` before embedding in the JSON.
+
+```
+You are executing a night-run tick on this repository. Work autonomously - no user is present.
+
+Repository: <REPO_URL>
+Branch: <BRANCH>
+Interval (minutes): <INTERVAL_MINUTES>
+
+## Instructions
 
 ### 1. Reclaim stale locks
-
-Read `docs/night_run/INDEX.md`. For each `[~ HH:MM]` line, compute `now - HH:MM`. If older than `2 * interval`, rewrite that line back to `[ ]`. The interval comes from the `Interval:` header in INDEX.md.
+Read `docs/night_run/INDEX.md`. For each `[~ HH:MM]` line, compute minutes since that timestamp. If older than `<INTERVAL_MINUTES> * 2` minutes, rewrite that line to `[ ]`.
 
 ### 2. Pick next task
-
-First `[ ]` line in document order. If none, print "night-run: all tasks done" and exit cleanly.
+Find the first `[ ]` line in `docs/night_run/INDEX.md`. If none exist, output "night-run: all tasks done" and stop.
 
 ### 3. Soft-lock the task
-
-Rewrite the chosen `[ ]` to `[~ HH:MM]` (current local time, zero-padded). Stage, then invoke `/commit` for the INDEX.md change. Push.
+Rewrite the chosen `[ ]` to `[~ HH:MM]` using current UTC time (HH:MM zero-padded). Stage and commit:
+- `git add docs/night_run/INDEX.md`
+- `git commit -m "night-run: lock <slug>"`
+- `git push`
 
 ### 4. Verify branch
-
-Compare `git rev-parse --abbrev-ref HEAD` to the `Branch:` value in INDEX.md.
-
-- If equal, continue.
-- If not equal, attempt `git checkout <branch>`. If that fails (dirty tree, missing branch), mark `[!]` on the task with reason `branch mismatch`, commit + push INDEX update, exit.
+Run `git rev-parse --abbrev-ref HEAD`. If not `<BRANCH>`, run `git checkout <BRANCH>`. If that fails, mark `[!]` on the task with reason `branch mismatch`, commit + push INDEX update, stop.
 
 ### 5. Execute the plan
-
-Read the linked plan file. Decide subagent-driven vs inline per CLAUDE.md "Subagent-Driven vs Inline Execution" rule. Execute.
+Read the linked plan file. If the plan has 5+ independent tasks, use the Agent tool (subagent-driven). Otherwise execute inline. Apply every change the plan describes.
 
 ### 6. Review subagent
-
-Dispatch a fresh subagent (general-purpose) with this brief:
-
-> Cold review of the current uncommitted diff against HEAD. The plan being implemented is at `<plan-path>`. Look for: bugs, unsafe patterns, missed edge cases, broken or missing tests, scope creep beyond the plan, security issues. Report issues as a numbered list with severity tags BLOCKER, WARN, or NIT. Do not edit any files. Be thorough; this code lands unsupervised.
+Dispatch a fresh general-purpose Agent subagent with this exact brief:
+"Cold review of the current uncommitted diff against HEAD. The plan being implemented is at <plan-path>. Look for: bugs, unsafe patterns, missed edge cases, broken or missing tests, scope creep beyond the plan, security issues. Report issues as a numbered list with severity tags BLOCKER, WARN, or NIT. Do not edit any files. Be thorough - this code lands unsupervised."
 
 ### 7. Fix loop
+If review has any BLOCKER: apply targeted fixes, re-dispatch the review subagent. Repeat up to 4 total attempts (1 initial + 3 retries). WARN and NIT do not trigger retry - capture them in the commit body.
 
-If review reports any BLOCKER:
-
-- Apply targeted fixes addressing each BLOCKER
-- Re-dispatch the review subagent
-- Repeat up to 4 total attempts (1 initial + 3 retries)
-
-WARN and NIT do not trigger a retry. Capture them in the commit body.
-
-### 8a. Success path (clean review with no BLOCKER)
-
-- Invoke `/commit` for the work
-- Push
+### 8a. Success (no BLOCKER)
+- `git add -A`
+- `git commit -m "<plan slug>: <one-line summary>" -m "<WARN/NIT list if any>"`
+- `git push`
 - Rewrite `[~ HH:MM]` to `[x]` in INDEX.md
-- Invoke `/commit` for the INDEX update, push
+- `git add docs/night_run/INDEX.md`
+- `git commit -m "night-run: complete <slug>"`
+- `git push`
 
-### 8b. Failure path (BLOCKER still present after 4 attempts)
-
-- slug = kebab-case of plan filename without extension
+### 8b. Failure (BLOCKER after 4 attempts)
 - `git checkout -b night-run/failed-<slug>`
-- Stage all current work, invoke `/commit` with subject `WIP: night-run failed <slug>` and body containing the last review summary
-- Push the side branch with `-u`
-- `git checkout <original-branch>` (recorded from INDEX header)
-- Safety net: `git restore .` then `git clean -fd`
-- Rewrite `[~ HH:MM]` to `[!]` in INDEX.md and append ` (side: night-run/failed-<slug>)`
-- Invoke `/commit` for INDEX update, push
+- `git add -A`
+- `git commit -m "WIP: night-run failed <slug>" -m "<last review summary>"`
+- `git push -u origin night-run/failed-<slug>`
+- `git checkout <BRANCH>`
+- `git restore .`
+- `git clean -fd`
+- Rewrite `[~ HH:MM]` to `[!] <slug> (side: night-run/failed-<slug>)` in INDEX.md
+- `git add docs/night_run/INDEX.md`
+- `git commit -m "night-run: failed <slug>"`
+- `git push`
 
 ### 9. Log the run
-
 Append one line to `docs/night_run/log.md` (create with `# Night Run Log` header if missing):
-
+`<YYYY-MM-DD HH:MM UTC> <[x]|[!]> <slug> attempts=<N>`
+- `git add docs/night_run/log.md`
+- `git commit -m "night-run: log <slug>"`
+- `git push`
 ```
-<YYYY-MM-DD HH:MM> <[x]|[!]> <slug> attempts=<N>
-```
-
-### 10. Orphan check before exit
-
-Run the project orphan-check per CLAUDE.md "Process Hygiene". Kill any node orphans before returning.
 
 ## INDEX.md format
 
@@ -144,6 +176,7 @@ Run the project orphan-check per CLAUDE.md "Process Hygiene". Kill any node orph
 # Night Run - YYYY-MM-DD
 
 Branch: <branch>
+Repo: <repo_url>
 Interval: <interval>
 Scheduled: <N> (<unfinished> tasks + <buffer> buffer)
 Started: HH:MM
@@ -159,9 +192,10 @@ End cap: <HH:MM | none>
 
 ## Notes
 
-- Cron entries are `durable: true` so they survive Claude Code restarts, but only fire while Claude Code is open and idle. The dev must keep Claude Code running and the PC awake through the run.
-- All commits go through `/commit`. Never bypass.
-- The dev can run `/night-run tick` manually to dry-run a single cycle before walking away.
-- INDEX.md is the only source of truth across ticks. Each tick is a fresh session with no inherited state.
-- If `unfinished * 1.1` rounds down to the same integer, force at least +1 firing as buffer (any unfinished count gets at least one extra slot).
+- Each tick is a fully isolated remote CCR session. No shared state between ticks - INDEX.md is the only coordination mechanism.
+- The remote agent does NOT have the `/commit` skill. All commits use raw git commands.
+- `run_once_at` supports sub-hour intervals (unlike `cron_expression` which requires minimum 1 hour).
+- The dev can run `/cron-run tick` manually for a local dry-run before setting up the remote run.
 - If the end cap forces fewer firings than tasks, the summary clearly states `<X tasks won't fit in window>`.
+- Routine links: `https://claude.ai/code/routines/<id>` - visit to cancel if needed.
+- The repo must be public OR the CCR environment must have GitHub auth configured for private repos.
