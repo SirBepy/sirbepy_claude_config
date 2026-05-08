@@ -212,7 +212,7 @@
       }
     }
   },
-"alwaysThinkingEnabled": true,
+  "alwaysThinkingEnabled": true,
   "effortLevel": "high",
   "voice": {
     "enabled": true,
