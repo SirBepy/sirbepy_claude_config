@@ -37,9 +37,11 @@ if (size <= 0) {
   process.exit(1);
 }
 
+const { resolveModule } = require("./_resolve");
+
 let sharp;
 try {
-  sharp = require("sharp");
+  sharp = resolveModule("sharp");
 } catch {
   process.stderr.write(
     `${RED}Error: sharp is not installed. Run: npm install -g sharp${RESET}\n`,

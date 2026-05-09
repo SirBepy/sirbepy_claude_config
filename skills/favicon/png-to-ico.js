@@ -14,9 +14,12 @@ if (args.length !== 2) {
 
 const [input, output] = args;
 
+const { resolveModule } = require("./_resolve");
+
 let pngToIco;
 try {
-  pngToIco = require("png-to-ico");
+  const mod = resolveModule("png-to-ico");
+  pngToIco = typeof mod === "function" ? mod : mod.default;
 } catch {
   process.stderr.write(
     `${RED}Error: png-to-ico is not installed. Run: npm install -g png-to-ico${RESET}\n`,
