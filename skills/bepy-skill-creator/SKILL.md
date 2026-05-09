@@ -90,6 +90,8 @@ Rules are split into two severity levels. FAIL means the skill has a real proble
 - [ ] Check for sections that could be cut, but don't flag sections that serve a distinct purpose even if they look similar to another section (e.g., a standalone planning gate that catches casual requests vs a gate check inside a command flow)
 - [ ] No unnecessary examples of things the agent can figure out, but detailed examples that ensure consistency (like hex colors, specific error messages) are fine
 - [ ] If the skill uses a script, the script path and usage is clearly stated
+- [ ] Heavy flag flows live in adjacent sidecar files. A flag's rules belong in `<flag-name>.md` next to `SKILL.md` if it materially changes the flow OR its body has its own heading and contains imperative steps. SKILL.md keeps only a single pointer line per offloaded flag: `If <flag>: read <file> before proceeding.` Lighter flags stay inline.
+- [ ] Sidecar count is bounded. If a single skill needs 4+ sidecars, the skill itself is too broad - flag it for a split or simplification rather than spawning more files.
 
 ### Report format
 
