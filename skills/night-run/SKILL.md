@@ -215,61 +215,18 @@ Append one line to `docs/night_run/log.md` (create with `# Night Run Log` header
 ### 10. Write the morning prompt (only if this was the last task)
 After step 9, re-read `docs/night_run/INDEX.md`. If every task line is now `[x]` or `[!]` (no `[ ]` or `[~]` left), this tick is the run's finisher.
 
-Write `.for_bepy/TOMORROWS_AI_PROMPT.md` (relative to repo root) using this **fixed template**. Fill every section. Keep prose terse, caveman-acceptable. Do not add sections.
-
-```markdown
-# Tomorrow's AI Prompt
-
-Generated: <YYYY-MM-DD HH:MM UTC>
-Branch when written: <branch>
-First night-run commit: <short SHA of first tick commit>
-Last night-run commit: <short SHA of HEAD>
-
-## Context
-
-<2-4 sentences. What the night-run was trying to accomplish. What shipped, what didn't.>
-
-## Verify checklist (Joe should do these)
-
-- [ ] `git pull`
-- [ ] <first concrete sanity-check action - e.g. "cargo tauri dev, open Sessions, verify X">
-- [ ] <second action>
-- [ ] <third action>
-- [ ] <add as many as needed, max ~6>
-
-## Open decisions for Joe
-
-<bulleted list. Each item: one decision Joe needs to make. If none, write "None.">
-
-## Files changed
-
-<bulleted list grouped by plan slug. Source: `git diff --name-only <first-tick-sha>..HEAD` filtered to non-INDEX/log/.for_bepy files.>
-
-## Failed plans
-
-<for each [!] task in INDEX.md: slug, side branch name, one-line BLOCKER cause. If none, write "Nothing failed.">
-
-## Suggested next steps
-
-<2-4 bullets. Things to work on after the morning routine, derived from plan deliverables or open decisions above.>
-
-## Tick notes
-
-<If `.for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md` exists, paste its full contents here verbatim (after the header line). If it doesn't exist or is empty, write "None.">
-````
+Invoke `/next-ai-prompt --caller "night-run tick <N>" --mode night-run`. That skill writes `.for_bepy/TOMORROWS_AI_PROMPT.md` using the canonical template and handles gathering context (git history, INDEX.md, failed plans, tick notes).
 
 Then commit and clean up:
 
 - `git add .for_bepy/TOMORROWS_AI_PROMPT.md`
 - `git commit -m "night-run: morning prompt for next AI"`
 - `git push`
-- If `.for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md` exists: `git rm .for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md`, then commit `night-run: consume tick messages`, then push. (Keeps morning AI's read surface to one file.)
-
-If `.for_bepy/TOMORROWS_AI_PROMPT.md` already exists, OVERWRITE - the finisher owns this file.
+- If `.for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md` exists: `git rm .for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md`, then commit `night-run: consume tick messages`, then push.
 
 If this tick is NOT the run's finisher (any `[ ]` or `[~]` remains), skip step 10 entirely.
 
-**Note on the old FOR_TOMORROWS_AI.md**: previous versions of this skill wrote `FOR_TOMORROWS_AI.md` at the repo root. That file is gone. The replacement is `.for_bepy/TOMORROWS_AI_PROMPT.md` (finisher only, includes folded tick notes). The temp accumulator `.for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md` is deleted by the finisher - morning AI reads one file.
+**Note on the old FOR_TOMORROWS_AI.md**: previous versions wrote `FOR_TOMORROWS_AI.md` at the repo root. That file is gone. Use `/next-ai-prompt` now.
 
 ```
 
