@@ -1,6 +1,6 @@
 ---
 name: rate-it
-description: Triggers on /rate-it only. Brutally honest 1-10 rating with named score tiers. No sugar-coating. Defaults to a 3-subagent panel + main rating, synthesized to one verdict. Auto-detects if web research is needed; supports --research and --dont-research flags.
+description: Triggers on /rate-it only. Brutally honest 1-10 rating with named score tiers. No sugar-coating. Solo by default; pass an integer N to spawn an N-subagent panel synthesized to one verdict (use when stakes are high - panel mode costs ~5-6x tokens). Auto-detects if web research is needed; supports --research and --dont-research flags.
 argument-hint: "[N] <thing to rate> [--research|--dont-research]"
 ---
 
@@ -21,16 +21,17 @@ Before writing the score, internally check at least four:
 
 If you cannot answer at least 3 of these concretely, you do not understand the idea well enough to rate it - ask for context instead.
 
-## Panel mode (default)
+## Panel mode (opt-in)
 
-Default rating uses a 3-subagent panel + main agent rating, synthesized to one final verdict.
+Solo by default - main agent rates alone. Pass an integer to spawn a panel of subagents synthesized to one verdict. Use when stakes are high (architecture, security, irreversible decisions). Each subagent burns ~15-20k tokens, so a panel of 3 costs roughly 5-6× a solo rating.
 
 ### Argument parsing
 
-- `/rate-it <thing>` → 3 subagents + main (default)
-- `/rate-it 1 <thing>` → solo main agent only, no subagents
-- `/rate-it N <thing>` (N is an integer 2-5) → N subagents + main
+- `/rate-it <thing>` → solo main agent only (default, cheap)
+- `/rate-it N <thing>` (N is an integer 2-5) → N subagents + main, synthesized
 - Subagents do not count main agent. `/rate-it 3` = 3 subs + 1 main = 4 total scores.
+
+If solo mode (no N), skip the Dispatch + Synthesis subsections - main agent just rates and returns.
 
 ### Dispatch
 
