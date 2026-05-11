@@ -16,6 +16,14 @@ Refuse with a clear message if any check fails:
 2. Working tree clean (`git status --porcelain` empty)
 3. `docs/night_run/plans/` exists and has at least one `.md` plan file
 4. Repo has a GitHub remote (`git remote get-url origin` returns a github.com URL) - the remote agent must be able to clone and push
+5. **Repo is PUBLIC** on GitHub. Run `gh repo view <owner>/<repo> --json visibility -q .visibility`. If the result is anything other than `PUBLIC` (i.e. `PRIVATE` or `INTERNAL`), refuse to schedule. The remote CCR environment has no GitHub auth for private SirBepy repos, so the agent cannot clone or push. The trigger will fire silently and produce zero output.
+
+   When refusing for this reason, tell the dev:
+   - that the repo is private and the remote agent will fail silently
+   - suggest `/cron-run` instead (same workflow, runs locally, PC must stay on)
+   - ask via AskUserQuestion whether to switch to `/cron-run` with the same args, or abort
+
+   Do not auto-switch. Wait for explicit confirmation.
 
 ## Step 1 - Parse arguments
 
@@ -35,7 +43,7 @@ Reject and ask for missing pieces if count or interval is absent.
 - If `docs/night_run/INDEX.md` exists, preserve `[x]` and `[!]` lines from the prior run by plan path. New plans get `[ ]`.
 - unfinished = count of `[ ]` lines after merge
 - If count argument is integer, treat unfinished as min(unfinished, count)
-- firings = ceil(unfinished * 1.1) (10% buffer, minimum +1 if unfinished > 0)
+- firings = unfinished + 2 if unfinished > 0, else 0 (flat buffer only when work exists; avoids phantom ticks on an already-empty queue)
 - If end cap given: firings = min(firings, floor((end_cap - now) / interval))
 - Write INDEX.md (format below)
 - Commit and push INDEX.md now so the remote agent sees it: `git add docs/night_run/INDEX.md`, then commit with message `night-run: init INDEX`, then push.
@@ -46,7 +54,7 @@ Load `RemoteTrigger` via ToolSearch first.
 
 For n in 0..firings-1:
 
-- slot_time = now + (n + 1) * interval (convert to UTC RFC3339 for `run_once_at`)
+- slot_time = now + (n + 1) \* interval (convert to UTC RFC3339 for `run_once_at`)
 - Build the self-contained tick prompt (template below) substituting actual values
 - Generate a fresh lowercase UUID v4 for `events[].data.uuid`
 - Call `RemoteTrigger` with:
@@ -63,10 +71,16 @@ For n in 0..firings-1:
         "environment_id": "env_01WbN3tVvAW5TjieuFJeW2cx",
         "session_context": {
           "model": "claude-sonnet-4-6",
-          "sources": [
-            {"git_repository": {"url": "<repo_url>"}}
-          ],
-          "allowed_tools": ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "Agent"]
+          "sources": [{ "git_repository": { "url": "<repo_url>" } }],
+          "allowed_tools": [
+            "Bash",
+            "Read",
+            "Write",
+            "Edit",
+            "Glob",
+            "Grep",
+            "Agent"
+          ]
         },
         "events": [
           {
@@ -116,7 +130,7 @@ Interval (minutes): <INTERVAL_MINUTES>
 ## Instructions
 
 ### 1. Reclaim stale locks
-Read `docs/night_run/INDEX.md`. For each `[~ HH:MM]` line, compute minutes since that timestamp. If older than `<INTERVAL_MINUTES> * 2` minutes, rewrite that line to `[ ]`.
+Read `docs/night_run/INDEX.md`. For each `[~ HH:MM]` line, compute minutes since that timestamp. If older than `ceil(<INTERVAL_MINUTES> * 1.25)` minutes, rewrite that line to `[ ]`. (Tighter than 2x so a single lost tick doesn't burn the next tick on a fresh-but-dead lock.)
 
 ### 2. Pick next task
 Find the first `[ ]` line in `docs/night_run/INDEX.md`. If none exist, output "night-run: all tasks done" and stop.
@@ -148,6 +162,7 @@ If review has any BLOCKER: apply targeted fixes, re-dispatch the review subagent
 - `git add docs/night_run/INDEX.md`
 - `git commit -m "night-run: complete <slug>"`
 - `git push`
+- **Optional message to morning AI** (only if something is genuinely worth saying that the morning AI cannot derive from git/INDEX/log/diff): append to `.for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md` per step 8c. Skip by default. Examples worth writing: a non-obvious design tradeoff you took, a WARN you couldn't resolve and want flagged, a surprise about the codebase the morning agent should know. Examples NOT worth writing: "shipped successfully", "tests pass", anything visible in the diff or commit body.
 
 ### 8b. Failure (BLOCKER after 4 attempts)
 - `git checkout -b night-run/failed-<slug>`
@@ -161,6 +176,34 @@ If review has any BLOCKER: apply targeted fixes, re-dispatch the review subagent
 - `git add docs/night_run/INDEX.md`
 - `git commit -m "night-run: failed <slug>"`
 - `git push`
+- **Always message the morning AI on failure**: append to `.for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md` per step 8c. Body: 2-4 lines naming the side branch, the last BLOCKER cause, and anything you tried that didn't work.
+
+### 8c. AI_MESSAGES_TO_TOMORROWS_AI.md format
+
+Path: `.for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md` (relative to repo root). This is a **temp accumulator** - the finisher (step 10) reads it, folds it into `TOMORROWS_AI_PROMPT.md`, then deletes it. Morning AI reads one file, not two.
+
+If the file doesn't exist, create it with this header:
+```
+
+# Messages to tomorrow's AI
+
+Append-only across ticks. Consumed and deleted by finisher tick (step 10).
+
+```
+
+Append a section using this exact shape:
+```
+
+## Tick <N> @ <YYYY-MM-DD HH:MM UTC> - <[x] success | [!] failure> <slug>
+
+<2-4 lines, terse, no padding>
+
+````
+
+Then commit:
+- `git add .for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md`
+- `git commit -m "night-run: message to tomorrow's AI <slug>"`
+- `git push`
 
 ### 9. Log the run
 Append one line to `docs/night_run/log.md` (create with `# Night Run Log` header if missing):
@@ -168,11 +211,72 @@ Append one line to `docs/night_run/log.md` (create with `# Night Run Log` header
 - `git add docs/night_run/log.md`
 - `git commit -m "night-run: log <slug>"`
 - `git push`
+
+### 10. Write the morning prompt (only if this was the last task)
+After step 9, re-read `docs/night_run/INDEX.md`. If every task line is now `[x]` or `[!]` (no `[ ]` or `[~]` left), this tick is the run's finisher.
+
+Write `.for_bepy/TOMORROWS_AI_PROMPT.md` (relative to repo root) using this **fixed template**. Fill every section. Keep prose terse, caveman-acceptable. Do not add sections.
+
+```markdown
+# Tomorrow's AI Prompt
+
+Generated: <YYYY-MM-DD HH:MM UTC>
+Branch when written: <branch>
+First night-run commit: <short SHA of first tick commit>
+Last night-run commit: <short SHA of HEAD>
+
+## Context
+
+<2-4 sentences. What the night-run was trying to accomplish. What shipped, what didn't.>
+
+## Verify checklist (Joe should do these)
+
+- [ ] `git pull`
+- [ ] <first concrete sanity-check action - e.g. "cargo tauri dev, open Sessions, verify X">
+- [ ] <second action>
+- [ ] <third action>
+- [ ] <add as many as needed, max ~6>
+
+## Open decisions for Joe
+
+<bulleted list. Each item: one decision Joe needs to make. If none, write "None.">
+
+## Files changed
+
+<bulleted list grouped by plan slug. Source: `git diff --name-only <first-tick-sha>..HEAD` filtered to non-INDEX/log/.for_bepy files.>
+
+## Failed plans
+
+<for each [!] task in INDEX.md: slug, side branch name, one-line BLOCKER cause. If none, write "Nothing failed.">
+
+## Suggested next steps
+
+<2-4 bullets. Things to work on after the morning routine, derived from plan deliverables or open decisions above.>
+
+## Tick notes
+
+<If `.for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md` exists, paste its full contents here verbatim (after the header line). If it doesn't exist or is empty, write "None.">
+````
+
+Then commit and clean up:
+
+- `git add .for_bepy/TOMORROWS_AI_PROMPT.md`
+- `git commit -m "night-run: morning prompt for next AI"`
+- `git push`
+- If `.for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md` exists: `git rm .for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md`, then commit `night-run: consume tick messages`, then push. (Keeps morning AI's read surface to one file.)
+
+If `.for_bepy/TOMORROWS_AI_PROMPT.md` already exists, OVERWRITE - the finisher owns this file.
+
+If this tick is NOT the run's finisher (any `[ ]` or `[~]` remains), skip step 10 entirely.
+
+**Note on the old FOR_TOMORROWS_AI.md**: previous versions of this skill wrote `FOR_TOMORROWS_AI.md` at the repo root. That file is gone. The replacement is `.for_bepy/TOMORROWS_AI_PROMPT.md` (finisher only, includes folded tick notes). The temp accumulator `.for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md` is deleted by the finisher - morning AI reads one file.
+
 ```
 
 ## INDEX.md format
 
 ```
+
 # Night Run - YYYY-MM-DD
 
 Branch: <branch>
@@ -188,6 +292,7 @@ End cap: <HH:MM | none>
 - [~ HH:MM] <title> - @docs/night_run/plans/<file>.md
 - [x] <title> - @docs/night_run/plans/<file>.md
 - [!] <title> - @docs/night_run/plans/<file>.md (side: night-run/failed-<slug>)
+
 ```
 
 ## Notes
@@ -198,4 +303,5 @@ End cap: <HH:MM | none>
 - The dev can run `/cron-run tick` manually for a local dry-run before setting up the remote run.
 - If the end cap forces fewer firings than tasks, the summary clearly states `<X tasks won't fit in window>`.
 - Routine links: `https://claude.ai/code/routines/<id>` - visit to cancel if needed.
-- The repo must be public OR the CCR environment must have GitHub auth configured for private repos.
+- Private repos are hard-blocked at prereq step 5. Use `/cron-run` (local) for private repos.
+```
