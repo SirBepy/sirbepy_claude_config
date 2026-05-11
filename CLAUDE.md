@@ -12,7 +12,7 @@
   - `[SEC]` - security decisions (Claude's input is load-bearing)
   - `[DATA]` - schema, data modeling
   - `[TOOLING]` - dev tooling, linting, code style, naming
-- When presenting options, always tag which is best long-term and which is best short-term (in the option label or description), EXCEPT for [UX] questions. Joe always wants to see both axes so he can weigh tradeoffs. If the same option wins both, say so explicitly.
+- When presenting options, always tag which is best long-term and which is best short-term INSIDE the option label or description (e.g. description starts `Long-term best: ...`), not only in surrounding chat - Joe skims past commentary. EXCEPT for [UX] questions, skip the axes. Long-term means architectural/design merit over a multi-year horizon. If the same option wins both axes, say so explicitly. Default to picking a winner; only declare "no clear long-term winner" when you can name the specific tradeoff that ties them.
 
 ## Git Commits
 
