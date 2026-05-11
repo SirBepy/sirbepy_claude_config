@@ -60,34 +60,33 @@ Scan the full session. For each bullet below, output specific examples or "none"
 
 ## Phase 2 - Code Health Review
 
-Skip this entire phase if EITHER:
+Skip this entire phase if ANY:
 
 - `--skip-review` was passed.
 - Zero code files changed this session (only docs/config/`.for_bepy/`/memory edits).
+- Fewer than 50 added lines total across all code files (`git diff --shortstat` insertions). Rationale: small diffs are almost always edits to existing code, not new symbol declarations - DRY/dead-code review finds nothing. Saves ~5-10k tokens on routine closes.
 
 Use `git diff --name-only` against the session's starting HEAD (or unpushed commits if commits were made) to get the changed code-file list. Treat `.md`, `.json`, `.toml`, `.yaml`, `.yml`, `.gitignore`, files under `.for_bepy/`, and files under `memory/` as non-code for this gate.
 
-### Step 2a - Inline size check
+> **All inline, no subagents.** Past iterations of this phase dispatched two Explore agents in parallel. They burned ~66k tokens per close (33k each), required brittle prose to prevent the agents from writing inline shell scripts, and the /compact-protection they offered turned out to be hypothetical (the dev rarely hits /compact in practice). Inline is ~13x cheaper for the typical case. If you find yourself wanting to dispatch a subagent here, use `--light` mode instead - that path is built for high-context closes.
 
-Cheap, no subagent. For each changed code file: line count it. If > 400 lines AND has an obvious split seam (separate concerns, reusable unit, clear boundary), record a finding: `{ "title": "...", "files": [...], "problem": "[file] is N lines, mixes [X] and [Y]", "fix": "split at [boundary] into [new file]" }`. If no obvious seam, skip that file.
+### Step 2a - Size check
 
-### Step 2b - Parallel review subagents
+For each changed code file: line count it using `wc -l "path"` via the Bash tool (`Bash(wc*)` is pre-allowed). If > 400 lines AND has an obvious split seam (separate concerns, reusable unit, clear boundary), record a finding: `{ "title": "...", "files": [...], "problem": "[file] is N lines, mixes [X] and [Y]", "fix": "split at [boundary] into [new file]" }`. If no obvious seam, skip that file.
 
-Dispatch TWO `Agent` calls **in a single message** (parallel) using `subagent_type: "Explore"` (read-only is sufficient). Each agent gets fresh context - the bloated session context is the whole reason we're delegating.
+### Step 2b - DRY + dead code (inline)
 
-**Agent 1 - DRY check.** Prompt template:
+Use only the `Grep`, `Read`, and `Glob` tools. Do NOT shell out for analysis - the language-aware shell pipelines you'd reach for (`for func in ...`, `Select-String ... | Measure-Object`) hit permission prompts and break the autonomous flow. Grep with `output_mode: "count"` covers every reference-counting need.
 
-> Review the following changed files for duplication against the existing codebase. Files: `<list>`. For each new component/hook/function/module/util introduced, grep the rest of the repo for equivalents (similar name, similar shape, similar purpose). For each duplicate found, return one finding with: `title` (short), `files` (array of `path:line` for both new and existing), `problem` (one sentence: what duplicates what), `fix` (one-line action: e.g. "delete X and import Y" / "extract shared util to Z"). Return ONLY a JSON array of findings - no prose, no preamble. Empty array if none. Under 300 words total.
+**DRY pass.** For each new top-level symbol introduced in the diff (new `function`, `const`, `class`, `interface`, `type`, `export`, `def`, `func`, `local function`, etc. - language-dependent), Grep the rest of the repo for equivalents (similar name, similar shape, similar purpose). For each duplicate found, record: `{ "title": ..., "files": [path:line for both new and existing], "problem": "what duplicates what (one sentence)", "fix": "delete X and import Y / extract shared util to Z" }`. Cap at ~3 Grep calls per new symbol.
 
-**Agent 2 - Dead code.** Prompt template:
+**Dead code pass.** For each new top-level symbol in the diff, call Grep with `pattern: "\\b<symbol>\\b"`, `output_mode: "count"`, and the file glob. Symbols with count <= 1 (only the definition) are defined-but-never-called. Also scan the diff for: unreachable branches, commented-out blocks left in, imports never read. Record: `{ "title": ..., "files": [path:line], "problem": "one sentence", "fix": "delete / uncomment if needed / wire up at X" }`.
 
-> Review the following changed files for dead code: `<list>`. Look for: unused exports, unreachable branches, commented-out blocks left in, variables/imports never read, functions never called. For each finding return: `title` (short), `files` ([path:line]), `problem` (one sentence), `fix` (one-line action: "delete", "uncomment if needed", "wire up at X"). Return ONLY a JSON array of findings - no prose. Empty array if none. Under 300 words total.
+If the diff has zero added top-level symbols (only body edits), skip both passes - by definition there is nothing new to dupe-check or dead-check.
 
 ### Step 2c - Collect findings
 
-Parse both agents' JSON arrays. Merge with the inline size findings into one list. This list is consumed in Phase 3 step 4 (ai_todos write).
-
-If any agent returns malformed JSON or errors, log the failure and continue with whatever findings parsed cleanly. Don't abort.
+Merge Step 2a (size) and Step 2b (DRY + dead code) findings into one list. This list is consumed in Phase 3 step 4 (ai_todos write).
 
 ## Phase 3 - Persist
 
