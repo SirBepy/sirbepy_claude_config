@@ -75,11 +75,21 @@ Capture: id, name, workflow_state, epic, estimate, updated_at. Cap at 25 most re
 
 ### 5. Classify items
 
-Split the combined commit + ticket signal into three buckets:
+Split the combined commit + ticket signal into three buckets by Shortcut workflow state:
 
-- **Yesterday's work (shipped / pushed / investigated):** tickets in done-ish states (`Completed`, `Merged`, `Ready for Release`), plus commits that landed on main-ish branches, plus any investigation-style tickets updated in the window but not assigned `In Progress` today.
-- **Today's active work:** tickets in `In Progress` right now.
-- **Carry-over candidate (only if today looks light):** top 1 from `Ready` / `To Do` / `In Review` the dev owns. Single pick, not a list.
+| Shortcut state | Bucket |
+|---|---|
+| `Completed`, `Accepted`, `Tested` | Done + Tested (rare) |
+| `Ready for deploy`, `Ready for Release`, `Merged`, `In Review`, `Blocked`* | Done |
+| `Doing`, `In Progress` | In Progress (always-included) |
+| `Backlog`, `To Do`, `Ready` | Next up (single pick only, see below) |
+| `Won't do`, `Duplicate`, `Archived` | **Exclude** |
+
+\* `Blocked` - if the ticket has merged commits in the window, treat as Done. If nothing shipped, omit.
+
+**Next up (optional):** If In Progress has ≤1 item, surface the single highest-priority candidate from `Ready` / `To Do` / `Backlog` owned by the dev. Prefer tickets with recent activity (updated last 7 days) or explicit `P1`/`P2` labels. One line only - not a list.
+
+Skip any bucket that has no items.
 
 ### 6. Compose the bullets
 
@@ -91,7 +101,8 @@ Rules:
 - **Multiple commits on one ticket collapse into one bullet.** Do not re-list the same ticket title.
 - **Skip empty buckets entirely.** If a section has nothing, omit the section heading too.
 - **Keep it tight.** 3-6 bullets per section max. If more, cap at 6, append one bullet "and misc".
-- **Blank line between sections.** Yesterday, Today, and the "If I wrap early" line are each separated by a blank line for readability.
+- **Blank line between sections.**
+- **Next up:** single line only. Format: `Next up: [<ticket title>](url)`. Omit if In Progress has ≥2 items.
 
 ### 7. Write the markdown file (archive)
 
@@ -106,71 +117,71 @@ Content (use markdown links `[title](url)` wrapping the ticket title, blank line
 
 _Generated <today> by /work-recap zirtue daily_
 
-Yesterday:
+Done + Tested:
+- [<ticket title>](https://app.shortcut.com/zirtue/story/XXXXX)
+
+Done:
 - [<ticket title>](https://app.shortcut.com/zirtue/story/XXXXX)
 - <unticketed area, short noun phrase>
 
-Today:
+In Progress:
 - [<ticket title>](https://app.shortcut.com/zirtue/story/XXXXX)
 
-If I wrap early: [<ticket title>](https://app.shortcut.com/zirtue/story/XXXXX)
+Next up: [<ticket title>](https://app.shortcut.com/zirtue/story/XXXXX)
 ```
 
-(The "If I wrap early" line is included ONLY if today looks light per Step 5. Otherwise drop it entirely.)
-
-If the `Today:` section would be empty (e.g., first thing in the morning with nothing assigned), keep the heading and write one bullet saying "plan TBD, will update after standup".
+Omit any section that has no items. Omit "Next up" line if In Progress has ≥2 items.
 
 ### 8. Build the clipboard payload (only if `copy` flag passed)
 
 The clipboard payload is the BLURB ONLY. No `# Daily Standup` title. No `_Generated_` attribution. No file-metadata text.
 
-Write TWO temp files so we can set BOTH HTML and plain-text clipboard formats. Slack prefers HTML (renders hyperlinks with the "sc-XXXXX" label), but if Slack drops HTML for any reason, the plain-text fallback still gives Slack bare URLs that auto-linkify.
+Write TWO temp files so we can set BOTH HTML and plain-text clipboard formats. Slack prefers HTML (renders hyperlinks with the ticket title as label), but if Slack drops HTML for any reason, the plain-text fallback still gives Slack bare URLs that auto-linkify.
 
 **HTML file:** `C:/tmp/work-recap-clipboard.html`
 
-Each bullet is just the linked ticket title (or unticketed noun phrase). No verbs. Section headings are `<p>` tags (which render with natural spacing in Slack paste).
+Sections are state-based: Done + Tested, Done, In Progress. Skip any section with no items. Section headings are `<p>` tags. Each bullet is the linked ticket title only, no verbs.
 
 ```html
 <html><body>
-<p>Yesterday:</p>
+<p>Done + Tested:</p>
 <ul>
 <li><a href="https://app.shortcut.com/zirtue/story/49222">Amplitude: Web App - Implement FE forgive-loan-tapped event</a></li>
 <li><a href="https://app.shortcut.com/zirtue/story/49145">Amplitude: Web App - Implement FE loan-forgiven event</a></li>
+</ul>
+<p>Done:</p>
+<ul>
 <li><a href="https://app.shortcut.com/zirtue/story/53816">Biller flow: keep the flow for Registration Step 1 > Login redirection case</a></li>
 <li>web login keystroke bug</li>
-<li><a href="https://app.shortcut.com/zirtue/story/53794">[FE] Loan details: Incorrect copy for Deactivated status</a></li>
 </ul>
-<p>Today:</p>
+<p>In Progress:</p>
 <ul>
 <li><a href="https://app.shortcut.com/zirtue/story/53794">[FE] Loan details: Incorrect copy for Deactivated status</a></li>
 </ul>
-<p>If I wrap early: <a href="https://app.shortcut.com/zirtue/story/53751">Biller deeplink flow: updating page breaks the deeplink flow</a></p>
 </body></html>
 ```
 
 **Plain-text file:** `C:/tmp/work-recap-clipboard.txt`
 
-Same content, bare URLs after each title, blank lines between sections:
+Same structure, bare URLs after each title, blank lines between sections:
 
 ```
-Yesterday:
+Done + Tested:
 - Amplitude: Web App - Implement FE forgive-loan-tapped event https://app.shortcut.com/zirtue/story/49222
 - Amplitude: Web App - Implement FE loan-forgiven event https://app.shortcut.com/zirtue/story/49145
+
+Done:
 - Biller flow: keep the flow for Registration Step 1 > Login redirection case https://app.shortcut.com/zirtue/story/53816
 - web login keystroke bug
-- [FE] Loan details: Incorrect copy for Deactivated status https://app.shortcut.com/zirtue/story/53794
 
-Today:
+In Progress:
 - [FE] Loan details: Incorrect copy for Deactivated status https://app.shortcut.com/zirtue/story/53794
-
-If I wrap early: Biller deeplink flow: updating page breaks the deeplink flow https://app.shortcut.com/zirtue/story/53751
 ```
 
 Notes:
-- HTML: escape `<`, `>`, `&` inside ticket titles as `&lt;`, `&gt;`, `&amp;` (ticket titles CAN contain `<`, `>`, `&`, as seen in the example "Step 1 > Login"). Plain text: leave as-is.
-- Omit the "If I wrap early" paragraph if today isn't light.
-- Omit any section whose list is empty.
-- Ticket titles come verbatim from the Shortcut search result's `name` field. Do NOT paraphrase them.
+- HTML: escape `<`, `>`, `&` inside ticket titles as `&lt;`, `&gt;`, `&amp;`. Plain text: leave as-is.
+- Omit any section whose list is empty (no heading either).
+- Ticket titles come verbatim from the Shortcut `name` field. Do NOT paraphrase them.
 - No verbs anywhere. Each bullet is ONLY the topic.
 
 ### 9. Push to clipboard

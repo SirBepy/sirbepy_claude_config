@@ -19,12 +19,26 @@ All three live as siblings of `zng-app`:
 
 ## Required tools
 
-- Bash (`git log`, `git -C <path>`)
-- `mcp__shortcut__stories-search`
-- `mcp__shortcut__stories-get-by-id` (only if a ticket summary needs enrichment)
+- Bash (`git log`, `git -C <path>`, `curl` to api.app.shortcut.com)
+- `mcp__shortcut__stories-search` and `mcp__shortcut__stories-get-by-id` **if available** (preferred when the MCP server is loaded in this session)
+- Python (to parse `~/.claude/.env` and Shortcut JSON)
+- AskUserQuestion (to pick backlog items for "Today")
 - Write (the recap file)
 
-If any Shortcut MCP call is denied, stop and tell the dev to loosen `.claude/settings.local.json`.
+### Shortcut access
+
+The Shortcut MCP server is not always loaded. The user-level `~/.claude.json` typically lists only `figma` + `playwright`. Before using MCP, check via ToolSearch for `mcp__shortcut__*`. If absent, use the REST API directly:
+
+```bash
+python -c "import re; t=open(r'C:/Users/tecno/.claude/.env','r',encoding='utf-8-sig').read(); m=re.search(r'^SHORTCUT_API_TOKEN=(\S+)', t, re.M); print(m.group(1))" > C:/tmp/sc/tok
+```
+
+Notes:
+- The `.env` file is UTF-8 **with BOM** and CRLF line endings. Bash `grep | cut` returns an empty string. Always read with Python `utf-8-sig`.
+- `WebFetch` cannot send the `Shortcut-Token` header. Use `curl` via Bash.
+- Token also unlocks `SHORTCUT_OWNER_UUID` (= `699c76fe-9076-4424-ba22-2bb3534f417e`).
+
+If both MCP and the env token are missing, stop and tell the dev.
 
 ## Flow
 
@@ -64,8 +78,11 @@ git -C <repo> log --all --author="JosipMuzicZirtue" --author="tecnomon99@gmail.c
 
 ### 4. Pull Shortcut tickets
 
-One call:
+**Two queries, both required:**
 
+**(a) Touched-during-window:** tickets the dev owned and that were updated in the recap window. Used for the Done buckets.
+
+If MCP is loaded:
 ```
 mcp__shortcut__stories-search with:
   owner: "josipmui"
@@ -73,9 +90,26 @@ mcp__shortcut__stories-search with:
   updated: "<window start YYYY-MM-DD>..*"
 ```
 
-(The `updated` param takes a range; `*` means open-ended. Single date = exact match, not "since".)
+If MCP is **not** loaded, use the REST API:
+```bash
+curl -s -H "Shortcut-Token: $(cat C:/tmp/sc/tok)" \
+  "https://api.app.shortcut.com/api/v3/search/stories?query=owner:josipmui+!is:archived+updated:<start>..*&page_size=25"
+```
 
-Capture: id, name, workflow_state, epic, estimate, updated_at.
+The skill also needs the **commit-referenced ticket IDs**. Cross-reference the `sc-XXXXX` ids from "Shipped / merged" commit subjects with the search results. If a commit references a ticket the search missed, fetch it individually (`/api/v3/stories/<id>`).
+
+**(b) Currently-open:** all open tickets the dev owns (used to suggest "Today" candidates).
+
+```bash
+curl -s -H "Shortcut-Token: $(cat C:/tmp/sc/tok)" \
+  "https://api.app.shortcut.com/api/v3/search/stories?query=owner:josipmui+!is:archived+!is:done&page_size=25"
+```
+
+Paginate via `next` until exhausted, or stop at ~50 results — enough to surface today's candidates.
+
+**State name resolution:** ticket JSON returns `workflow_state_id` (integer), not the state name. Fetch `/api/v3/workflows` once and build an id → (name, type) map. Cache for the rest of the run.
+
+Capture per ticket: id, name, workflow_state (name + type), epic, estimate, updated_at.
 
 If the search returns >25, just keep the top 25 most recently updated.
 
@@ -156,18 +190,120 @@ Link each ID as `[sc-XXXXX](https://app.shortcut.com/zirtue/story/XXXXX)`.
 - Commits by: JosipMuzicZirtue / tecnomon99@gmail.com
 ```
 
-### 7. Report
+### 6b. Verify "Doing" tickets actually shipped
 
-One-line reply to the dev: absolute path to the file. Nothing else. No chat-inline summary.
+Tickets in `Doing` state at fetch time may have actually been finished but the dev forgot to move them. Before pinning a `Doing` ticket to **Today**, scan its recent comments for a "done" signal from the dev (`josipmui`). If the most recent dev comment is silent and the ticket was last updated by someone else (designer, PM) >2 days ago, ask the dev: "did you finish this on Friday?" via AskUserQuestion.
+
+If yes:
+- Move the ticket from **Today** to **Done** in the payload.
+- Offer to draft a "done" comment for the dev to paste on the ticket. Mention any teammates already tagged in the thread.
+- Do **not** post the comment automatically — Shortcut mutations route through `mcp__shortcut__create-comment` and the `guard_mutation.py` hook requires explicit dev approval. Hand the draft to the dev for review.
+
+### 7. Build the clipboard payload (only if `copy` flag passed)
+
+No title, no attribution, no file metadata in the payload.
+
+Two sections (skip either if empty):
+
+- **Done:** tickets touched in the window whose Shortcut state maps to "merged / ready / accepted" (see bucketing table below). Verbatim ticket titles, linked.
+- **Today:** what the dev plans to work on today. Always-pinned: anything currently in a true In-Progress state (`Doing` / `In Progress`). Plus zero-or-more backlog items picked by the dev via AskUserQuestion (see step 7b).
+
+**No "Done + Tested" section in practice** — Zirtue's workflow uses `Ready for deploy` as the FE terminal state; QA acceptance happens after deploy and rarely reaches the FE dev within the same week. Keep the bucketing flexible: if a ticket really is in `Completed` / `Accepted`, split it out, otherwise fold everything into Done.
+
+#### State bucketing (Zirtue workflows)
+
+| Shortcut state | Bucket |
+|---|---|
+| `Completed`, `Accepted`, `Tested` | Done + Tested (rare) |
+| `Ready for deploy`, `Ready for Release`, `Merged`, `In Review`, `Blocked`* | Done |
+| `Doing`, `In Progress` | Today (always-pinned) |
+| `Backlog`, `To Do`, `Ready` | Today (only if dev picks via AskUserQuestion) |
+| `Won't do`, `Duplicate`, `Archived` | **Exclude** even if commits exist (work was reverted/abandoned) |
+
+\* `Blocked` is ambiguous — if the ticket has merged commits in the window, treat as Done. If it was just touched but nothing shipped, omit.
+
+Cross-check: if a commit subject references a ticket id (`sc-XXXXX`) but the ticket itself isn't in the search results (e.g. it was archived or moved), still include it with whatever state the individual `/stories/<id>` fetch returns.
+
+#### Unticketed commits
+
+**Default: omit.** Unticketed refactors, in-progress version bumps (`Version 49`, `1.0.0+8`), small cleanup commits do not belong in the standup payload.
+
+Exception: a real released version. If a commit corresponds to a version that **actually shipped** (app store release, admin deploy hit prod), include as a noun phrase: `app v49 released`. The dev confirms shipping; do not infer from the commit alone. When in doubt, omit and tell the dev in chat.
+
+Never include unticketed refactors, comments-only changes, or developer-only cleanup. Those belong in the recap file but not the clipboard payload.
+
+#### Today section: picking backlog items
+
+After determining the always-pinned In-Progress tickets, ask the dev which backlog items (if any) to add to Today. Use AskUserQuestion with `multiSelect: true`. Rank candidates:
+
+1. **Recent + user-visible bugs / regressions** (titles containing `bug`, `Regression`, `broken`, `error`) updated in the last ~14 days.
+2. **Recent feature tickets** updated in the last ~14 days, regardless of estimate.
+3. **Stale tickets** updated >30 days ago — surface only if nothing fresher.
+
+Surface 2–4 options in the question. Include `Doing`/`In Progress` tickets as always-pinned context in the question preamble, not as options. The dev may pick none ("just the in-progress one").
+
+#### Payload structure
+
+Write TWO temp files. **Insert a blank `<p>&nbsp;</p>` between sections in HTML, and TWO blank lines in plain text** — single blank line looks cramped in Slack/Teams.
+
+**HTML file:** `C:/tmp/work-recap-clipboard.html`
+
+```html
+<html><body>
+<p>Done:</p>
+<ul>
+<li><a href="https://app.shortcut.com/zirtue/story/XXXXX">Ticket title verbatim</a></li>
+</ul>
+<p>&nbsp;</p>
+<p>Today:</p>
+<ul>
+<li><a href="https://app.shortcut.com/zirtue/story/XXXXX">Ticket title verbatim</a></li>
+</ul>
+</body></html>
+```
+
+**Plain-text file:** `C:/tmp/work-recap-clipboard.txt`
+
+```
+Done:
+- Ticket title verbatim https://app.shortcut.com/zirtue/story/XXXXX
+
+
+Today:
+- Ticket title verbatim https://app.shortcut.com/zirtue/story/XXXXX
+```
+
+Rules:
+- Escape `<`, `>`, `&` in ticket titles as `&lt;`, `&gt;`, `&amp;` in HTML only. Plain text: leave as-is.
+- Ticket titles come **verbatim** from Shortcut `name` field. Do not rewrite, paraphrase, prefix, or trim. If the title starts with `[FE]`, `[Regression]`, etc., keep it.
+- The "no verbs" rule applies only to the rare unticketed noun-phrase bullet (see exception above), never to verbatim ticket titles.
+- Omit any section whose list is empty (no heading either).
+
+### 8. Push to clipboard (only if `copy` flag passed)
+
+One PowerShell call:
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File "C:/Users/tecno/.claude/skills/work-recap/set-clipboard-html.ps1" -HtmlPath "C:/tmp/work-recap-clipboard.html" -TextPath "C:/tmp/work-recap-clipboard.txt"
+```
+
+If it fails, note it but don't fail the whole flow.
+
+### 9. Report
+
+One-line reply to the dev: absolute path to the file. If `copy` ran successfully, add " (copied to clipboard)". Then paste the plain-text version of the clipboard payload (the `.txt` contents) into chat for review — the dev typically wants to sanity-check before pasting into Slack/Teams.
 
 ## What this variant never does
 
 - Never commits or pushes anything.
 - Never pulls in sibling repos (fetch only).
-- Never posts comments on Shortcut tickets.
+- Never posts comments on Shortcut tickets. Draft them and hand to the dev.
 - Never invents tickets or commits. If a section has no data, write "none" or omit it.
-- Never dumps the full recap to chat. File path only.
+- Never dumps the full recap markdown file to chat. The clipboard plain-text payload **is** pasted into chat for review (step 9).
 - Never writes inside a project repo (output lives in `~/weekly-recaps/`).
+- Never uses `clip.exe` (loses hyperlinks). Always go through the PS helper for clipboard.
+- Never rewrites or paraphrases ticket titles. Verbatim from Shortcut `name` field.
+- Never includes unticketed refactors, version bumps, or developer cleanup commits in the clipboard payload (the markdown recap file is fine to list them; the clipboard is for the standup, where it's noise).
 
 ## Caveman mode
 
