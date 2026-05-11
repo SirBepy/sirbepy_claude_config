@@ -46,26 +46,38 @@ hubstaff_org_id: <id>    # optional - enables HubStaff comparison step
 
 Read the named file. Abort with clear error listing missing required fields.
 
-### 2. Resolve window
+### 2. HubStaff screenshot preflight (skip if `hubstaff_org_id` not set)
+
+Run before any reconciliation work so the dev can fix auth without waiting through the full reconciliation.
+
+- Resolve the window now: if `[lookback]` was given, parse it; else Monday 00:00 of current week to now, in dev's timezone. (Step 3 will skip resolution if already done here.)
+- Compute all Mon-Sun calendar weeks that fall within that window.
+- Open Playwright browser. Navigate to the weekly URL for the first week: `https://app.hubstaff.com/organizations/{hubstaff_org_id}/time_entries/weekly?date={mon}&date_end={sun}&filters%5Buser%5D={hubstaff_user_id}`.
+- If redirected to `account.hubstaff.com/login`: stop immediately. Tell the dev exactly which weeks would be screenshotted. Wait for manual login in the Playwright window, then re-navigate once.
+  - Still on login page after retry: warn that screenshot step will be skipped, close the tab, continue with reconciliation. Mark screenshot step as "skipped - auth failed preflight".
+  - Now authenticated: close the tab, continue.
+- Not redirected: close the tab, continue.
+
+### 3. Resolve window
 
 If `[lookback]` given, parse it. Else: Monday 00:00 of current week to now, in dev's timezone.
 
-### 3. Fetch Clockify entries
+### 4. Fetch Clockify entries
 
 Call `GET /workspaces/{ws}/user/{user}/time-entries?start=...&end=...&page-size=200` — do NOT pass `hydrated=true`, it bloats each entry with full user/project objects. Only fields needed: `id`, `description`, `timeInterval`, `projectId`, `billable`, `tagIds`. Bucket:
 
 - In-project (matches `clockify_project_id`)
 - Other-project (for the warning)
 
-### 4. Identify targets
+### 5. Identify targets
 
 Target = in-project entry with empty or whitespace-only description.
 
-### 5. Read commits
+### 6. Read commits
 
 For each repo in config: `git -C <repo> log --author="<user_id or name>" --since=... --until=... --pretty=format:...`. Capture sha, ISO timestamp, subject, body, branch (best-effort via `git branch --contains`).
 
-### 6. Build proposals
+### 7. Build proposals
 
 For each target:
 
@@ -76,11 +88,11 @@ For each target:
 - If a matched commit subject hits `ticket_regex`, append ` (53794)` using just the captured number.
 - If a day has zero commits at all across all repos, ask the dev what was done before proposing.
 
-### 7. Warn on other-project entries
+### 8. Warn on other-project entries
 
 List description-less entries in OTHER projects in the same window. Dev handles those separately (could be a different config).
 
-### 8. Present plan
+### 9. Present plan
 
 Show a table: date, start-end, duration, proposed split, proposed description(s). Use AskUserQuestion:
 
@@ -88,14 +100,14 @@ Show a table: date, start-end, duration, proposed split, proposed description(s)
 - Apply some (pick which by index)
 - Cancel
 
-### 9. Apply
+### 10. Apply
 
 Approved rows only.
 
 - Description-only: `PUT /workspaces/{ws}/time-entries/{id}` with updated description, preserving start/end/project/billable/tags.
 - Split: shorten the original to the first chunk's end, then `POST /workspaces/{ws}/time-entries` for each remaining chunk with same project, same tags, contiguous times.
 
-### 10. HubStaff comparison (skip if `hubstaff_org_id` not set or `HUBSTAFF_REFRESH_TOKEN` missing)
+### 11. HubStaff comparison (skip if `hubstaff_org_id` not set or `HUBSTAFF_REFRESH_TOKEN` missing)
 
 First exchange the refresh token for an access token - no client credentials needed:
 ```
@@ -120,10 +132,23 @@ Present flagged days as a table: date, HubStaff window, Clockify window, which b
 
 Do NOT auto-fix anything here - report only. User decides what to adjust.
 
-### 11. Report
+### 12. HubStaff weekly screenshot (skip if `hubstaff_org_id` not set or preflight marked auth as failed)
+
+Auth already confirmed in step 2 - no login-check needed here. For each Mon-Sun week computed in step 2:
+
+- Navigate to `https://app.hubstaff.com/organizations/{hubstaff_org_id}/time_entries/weekly?date={mon}&date_end={sun}&filters%5Buser%5D={hubstaff_user_id}` (dates as `YYYY-MM-DD`).
+- Resize viewport to ~1600x1000 before screenshotting so the weekly table renders wide enough.
+- Wait for the weekly data grid to render: use `browser_wait_for` targeting a table row or data cell that indicates the grid has loaded (timeout 10s). If timeout: warn "weekly table did not load for {mon} - skipping this week's screenshot" and move to the next week.
+- Take screenshot: `browser_take_screenshot` with `fullPage: false`, filename `hubstaff-weekly-{mon}_to_{sun}.png` (relative path - playwright MCP can only write under its allowed roots).
+- Validate file size: if the saved file is under 50 KB, warn "screenshot for {mon} may be a login page or empty table - check manually before sharing."
+- Move the file to `C:\Users\tecno\Desktop\`.
+- Close the browser tab.
+
+### 13. Report
 
 - Entries written (count + per-day summary)
-- HubStaff comparison results (step 10), or "HubStaff comparison skipped - hubstaff_org_id not configured" if absent
+- HubStaff comparison results (step 11), or "HubStaff comparison skipped - hubstaff_org_id not configured" if absent
+- HubStaff weekly screenshot path(s) (step 12), or skipped reason (auth failed preflight / org not configured)
 - "Needs manual" targets with time + reason
 - Other-project warning list
 
