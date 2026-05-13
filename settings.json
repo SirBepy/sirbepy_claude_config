@@ -219,6 +219,22 @@
     ],
     "defaultMode": "acceptEdits"
   },
+  "skillOverrides": {
+    "apply-styleguide": "name-only",
+    "decouple-file": "off",
+    "favicon": "name-only",
+    "fix-studio-content-folder": "off",
+    "github-pages-init": "name-only",
+    "init-claude-md": "name-only",
+    "inject-widgets": "name-only",
+    "meta-tags": "name-only",
+    "migrate-structure": "off",
+    "next-ai-prompt": "name-only",
+    "portfolio-data": "name-only",
+    "pwa": "name-only",
+    "readme": "name-only",
+    "update-workflow": "name-only"
+  },
   "skipAutoPermissionPrompt": true,
   "statusLine": {
     "command": "npx -y ccstatusline@latest",
