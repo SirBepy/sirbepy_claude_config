@@ -36,29 +36,21 @@ Working-tree cleanliness and queue-population are no longer prereqs; both are re
 
 ## Step 0 - Import plans into the queue
 
+The source directory `docs/superpowers/plans/` IS the curated list. Whatever lives there gets queued, no selection prompt. If the dev wanted to skip a plan, they would have deleted it from that directory before invoking `/night-run`.
+
 Glob `docs/superpowers/plans/*.md` (project-relative).
 
 - If empty AND `docs/night_run/queue/` is also empty (or doesn't exist): refuse with "No plans in `docs/superpowers/plans/` and queue is empty. Write a plan via superpowers first, then re-run /night-run."
 - If empty BUT `docs/night_run/queue/` already has plans: skip to Step 0.5 (queue is pre-populated from a prior run).
-- Otherwise: list every plan from `docs/superpowers/plans/*.md` to the dev (filename + first `# ` heading if any), then ask via `AskUserQuestion` (single-select, 3 options):
-  1. **Import all** - queue every plan listed.
-  2. **Pick subset** - dev replies with comma-separated filenames or numbers. Loop AskUserQuestion if input is unclear.
-  3. **None - run only what's already queued** - skip import entirely.
+- Otherwise: print an informational summary `Importing <N> plan(s) to queue:` followed by a bullet list (filename + first `# ` heading from each file if any). Then for each plan:
+  - Create `docs/night_run/queue/` if missing (`mkdir -p`)
+  - `git mv docs/superpowers/plans/<file>.md docs/night_run/queue/<file>.md`
 
-(The 3-option meta prompt is necessary because `AskUserQuestion` is capped at 4 options total - it can't directly render a multi-select over many plans.)
-
-For each selected plan:
-
-- Create `docs/night_run/queue/` if missing (`mkdir -p`)
-- `git mv docs/superpowers/plans/<file>.md docs/night_run/queue/<file>.md`
-
-If anything was moved into the queue: commit via `/commit` (invoke the `commit` skill via `Skill` tool):
+Once all moves are done, commit via `/commit` (invoke the `commit` skill via `Skill` tool):
 
 - Commit subject: `night-run: queue <N> plan(s) from superpowers`
 - Body: list moved slugs
 - Push (this is a clean op, no WIP entanglement)
-
-Skip the commit entirely if the dev selected "None - run only what's already queued".
 
 ## Step 0.5 - Resolve dirty working tree
 
