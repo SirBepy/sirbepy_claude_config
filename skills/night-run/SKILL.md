@@ -8,15 +8,22 @@ argument-hint: "<count|all> [every] <interval> [till HH[AM|PM]]"
 
 > Schedule overnight agents to work plan files remotely on Anthropic's cloud (PC can be off), one task at a time, with review and side-branch failure isolation.
 
+## Terminology
+
+Two distinct things, both historically called "plans":
+
+- **Plans** (source): implementation plans written by superpowers. Live in `docs/superpowers/plans/*.md` inside this project.
+- **Queue** (execution order): the ordered list of plans this project will execute overnight. Lives in `docs/night_run/queue/*.md` plus `docs/night_run/INDEX.md` for state.
+
+Both directories live in the same git repo, so all moves are plain `git mv`. `/night-run` moves selected plans from the source into the queue, then schedules ticks against the queue.
+
 ## Prerequisites
 
 Refuse with a clear message if any check fails:
 
 1. Inside a git repo (`git rev-parse --is-inside-work-tree`)
-2. Working tree clean (`git status --porcelain` empty)
-3. `docs/night_run/plans/` exists and has at least one `.md` plan file
-4. Repo has a GitHub remote (`git remote get-url origin` returns a github.com URL) - the remote agent must be able to clone and push
-5. **Repo is PUBLIC** on GitHub. Run `gh repo view <owner>/<repo> --json visibility -q .visibility`. If the result is anything other than `PUBLIC` (i.e. `PRIVATE` or `INTERNAL`), refuse to schedule. The remote CCR environment has no GitHub auth for private SirBepy repos, so the agent cannot clone or push. The trigger will fire silently and produce zero output.
+2. Repo has a GitHub remote (`git remote get-url origin` returns a github.com URL) - the remote agent must be able to clone and push
+3. **Repo is PUBLIC** on GitHub. Run `gh repo view <owner>/<repo> --json visibility -q .visibility`. If the result is anything other than `PUBLIC` (i.e. `PRIVATE` or `INTERNAL`), refuse to schedule. The remote CCR environment has no GitHub auth for private SirBepy repos, so the agent cannot clone or push. The trigger will fire silently and produce zero output.
 
    When refusing for this reason, tell the dev:
    - that the repo is private and the remote agent will fail silently
@@ -24,6 +31,45 @@ Refuse with a clear message if any check fails:
    - ask via AskUserQuestion whether to switch to `/cron-run` with the same args, or abort
 
    Do not auto-switch. Wait for explicit confirmation.
+
+Working-tree cleanliness and queue-population are no longer prereqs; both are resolved interactively in Steps 0 and 0.5.
+
+## Step 0 - Import plans into the queue
+
+Glob `docs/superpowers/plans/*.md` (project-relative).
+
+- If empty AND `docs/night_run/queue/` is also empty (or doesn't exist): refuse with "No plans in `docs/superpowers/plans/` and queue is empty. Write a plan via superpowers first, then re-run /night-run."
+- If empty BUT `docs/night_run/queue/` already has plans: skip to Step 0.5 (queue is pre-populated from a prior run).
+- Otherwise: list every plan from `docs/superpowers/plans/*.md` to the dev (filename + first `# ` heading if any), then ask via `AskUserQuestion` (single-select, 3 options):
+  1. **Import all** - queue every plan listed.
+  2. **Pick subset** - dev replies with comma-separated filenames or numbers. Loop AskUserQuestion if input is unclear.
+  3. **None - run only what's already queued** - skip import entirely.
+
+(The 3-option meta prompt is necessary because `AskUserQuestion` is capped at 4 options total - it can't directly render a multi-select over many plans.)
+
+For each selected plan:
+
+- Create `docs/night_run/queue/` if missing (`mkdir -p`)
+- `git mv docs/superpowers/plans/<file>.md docs/night_run/queue/<file>.md`
+
+If anything was moved into the queue: commit via `/commit` (invoke the `commit` skill via `Skill` tool):
+
+- Commit subject: `night-run: queue <N> plan(s) from superpowers`
+- Body: list moved slugs
+- Push (this is a clean op, no WIP entanglement)
+
+Skip the commit entirely if the dev selected "None - run only what's already queued".
+
+## Step 0.5 - Resolve dirty working tree
+
+Run `git status --porcelain`. If empty, continue to Step 1.
+
+If non-empty, present via `AskUserQuestion` (single-select, 2 options):
+
+- **Commit via /commit** - invoke the `commit` skill (`Skill` tool). After it completes and tree is clean (verify with `git status --porcelain`), continue. If `/commit` is aborted or fails, abort `/night-run` with a clear message.
+- **Abort** - stop without scheduling anything.
+
+(Stash is deliberately not offered: night-run's remote agents push to the same branch on a cadence, and `git stash pop` after the run can conflict with the agents' commits. Commit or abort is the safe set.)
 
 ## Step 1 - Parse arguments
 
@@ -39,7 +85,7 @@ Reject and ask for missing pieces if count or interval is absent.
 
 - Read current branch via `git rev-parse --abbrev-ref HEAD`
 - Read git remote URL via `git remote get-url origin`. Normalize to `https://github.com/owner/repo` (no `.git` suffix).
-- Glob `docs/night_run/plans/*.md`. Title for each = first `# ` heading or filename without extension
+- Glob `docs/night_run/queue/*.md`. Title for each = first `# ` heading or filename without extension
 - If `docs/night_run/INDEX.md` exists, preserve `[x]` and `[!]` lines from the prior run by plan path. New plans get `[ ]`.
 - unfinished = count of `[ ]` lines after merge
 - If count argument is integer, treat unfinished as min(unfinished, count)
@@ -245,10 +291,10 @@ End cap: <HH:MM | none>
 
 ## Tasks
 
-- [ ] <title> - @docs/night_run/plans/<file>.md
-- [~ HH:MM] <title> - @docs/night_run/plans/<file>.md
-- [x] <title> - @docs/night_run/plans/<file>.md
-- [!] <title> - @docs/night_run/plans/<file>.md (side: night-run/failed-<slug>)
+- [ ] <title> - @docs/night_run/queue/<file>.md
+- [~ HH:MM] <title> - @docs/night_run/queue/<file>.md
+- [x] <title> - @docs/night_run/queue/<file>.md
+- [!] <title> - @docs/night_run/queue/<file>.md (side: night-run/failed-<slug>)
 
 ```
 
@@ -260,5 +306,5 @@ End cap: <HH:MM | none>
 - The dev can run `/cron-run tick` manually for a local dry-run before setting up the remote run.
 - If the end cap forces fewer firings than tasks, the summary clearly states `<X tasks won't fit in window>`.
 - Routine links: `https://claude.ai/code/routines/<id>` - visit to cancel if needed.
-- Private repos are hard-blocked at prereq step 5. Use `/cron-run` (local) for private repos.
+- Private repos are hard-blocked at prereq step 3. Use `/cron-run` (local) for private repos.
 ```

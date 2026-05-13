@@ -8,6 +8,15 @@ argument-hint: "<count|all> [every] <interval> [till HH[AM|PM]]"
 
 > Schedule overnight agents to work plan files locally via CronCreate, one task at a time, with review and side-branch failure isolation. PC must stay on and Claude Code must remain open.
 
+## Terminology
+
+Two distinct things, both historically called "plans":
+
+- **Plans** (source): implementation plans written by superpowers. Live in `docs/superpowers/plans/*.md` inside this project.
+- **Queue** (execution order): the ordered list of plans this project will execute overnight. Lives in `docs/night_run/queue/*.md` plus `docs/night_run/INDEX.md` for state.
+
+Both directories live in the same git repo, so all moves are plain `git mv`. `/cron-run` moves selected plans from the source into the queue, then schedules ticks against the queue.
+
 ## Modes
 
 The first argument selects the mode:
@@ -20,10 +29,47 @@ The first argument selects the mode:
 Refuse with a clear message if any check fails:
 
 1. Inside a git repo (`git rev-parse --is-inside-work-tree`)
-2. Working tree clean (`git status --porcelain` empty)
-3. `docs/night_run/plans/` exists and has at least one `.md` plan file
+
+Working-tree cleanliness and queue-population are no longer prereqs; both are resolved interactively in Steps 0 and 0.5.
 
 ## Schedule mode
+
+### 0. Import plans into the queue
+
+Glob `docs/superpowers/plans/*.md` (project-relative).
+
+- If empty AND `docs/night_run/queue/` is also empty (or doesn't exist): refuse with "No plans in `docs/superpowers/plans/` and queue is empty. Write a plan via superpowers first, then re-run /cron-run."
+- If empty BUT `docs/night_run/queue/` already has plans: skip to Step 0.5 (queue is pre-populated from a prior run).
+- Otherwise: list every plan from `docs/superpowers/plans/*.md` to the dev (filename + first `# ` heading if any), then ask via `AskUserQuestion` (single-select, 3 options):
+  1. **Import all** - queue every plan listed.
+  2. **Pick subset** - dev replies with comma-separated filenames or numbers. Loop AskUserQuestion if input is unclear.
+  3. **None - run only what's already queued** - skip import entirely.
+
+(The 3-option meta prompt is necessary because `AskUserQuestion` is capped at 4 options total - it can't directly render a multi-select over many plans.)
+
+For each selected plan:
+
+- Create `docs/night_run/queue/` if missing (`mkdir -p`)
+- `git mv docs/superpowers/plans/<file>.md docs/night_run/queue/<file>.md`
+
+If anything was moved into the queue: commit via `/commit` (invoke the `commit` skill via `Skill` tool):
+
+- Commit subject: `night-run: queue <N> plan(s) from superpowers`
+- Body: list moved slugs
+- Push (this is a clean op, no WIP entanglement)
+
+Skip the commit entirely if the dev selected "None - run only what's already queued".
+
+### 0.5. Resolve dirty working tree
+
+Run `git status --porcelain`. If empty, continue to Step 1.
+
+If non-empty, present via `AskUserQuestion` (single-select, 2 options):
+
+- **Commit via /commit** - invoke the `commit` skill (`Skill` tool). After it completes and tree is clean (verify with `git status --porcelain`), continue. If `/commit` is aborted or fails, abort `/cron-run` with a clear message.
+- **Abort** - stop without scheduling anything.
+
+(Stash is deliberately not offered: ticks push to the same branch on a cadence, and `git stash pop` after the run can conflict with tick commits. Commit or abort is the safe set.)
 
 ### 1. Parse arguments
 
@@ -38,7 +84,7 @@ Reject and ask for missing pieces if count or interval is absent.
 ### 2. Build INDEX.md
 
 - Read current branch via `git rev-parse --abbrev-ref HEAD`
-- Glob `docs/night_run/plans/*.md`. Title for each = first `# ` heading or filename without extension
+- Glob `docs/night_run/queue/*.md`. Title for each = first `# ` heading or filename without extension
 - If `docs/night_run/INDEX.md` exists, preserve `[x]` and `[!]` lines from the prior run by plan path. New plans get `[ ]`.
 - unfinished = count of `[ ]` lines after merge
 - If count argument is integer, treat unfinished as min(unfinished, count)
@@ -151,10 +197,10 @@ End cap: <HH:MM | none>
 
 ## Tasks
 
-- [ ] <title> - @docs/night_run/plans/<file>.md
-- [~ HH:MM] <title> - @docs/night_run/plans/<file>.md
-- [x] <title> - @docs/night_run/plans/<file>.md
-- [!] <title> - @docs/night_run/plans/<file>.md (side: night-run/failed-<slug>)
+- [ ] <title> - @docs/night_run/queue/<file>.md
+- [~ HH:MM] <title> - @docs/night_run/queue/<file>.md
+- [x] <title> - @docs/night_run/queue/<file>.md
+- [!] <title> - @docs/night_run/queue/<file>.md (side: night-run/failed-<slug>)
 ```
 
 ## Notes
