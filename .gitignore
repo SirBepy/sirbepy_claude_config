@@ -11,6 +11,8 @@
 !code-style/**
 !refs/
 !refs/**
+!snippets/
+!snippets/**
 
 # Per-user ticket log, not shared
 skills/shortcut-create-ticket/log.md
