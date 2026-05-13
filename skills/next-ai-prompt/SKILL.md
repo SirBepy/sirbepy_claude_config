@@ -1,6 +1,6 @@
 ---
 name: next-ai-prompt
-description: Triggers when a skill needs to leave a structured handoff prompt for the next AI session. Called by /night-run finisher and /close. Writes .for_bepy/TOMORROWS_AI_PROMPT.md with caller attribution. Never auto-triggers on its own.
+description: Triggers when a skill needs to leave a structured handoff prompt for the next AI session. Called by /night-run finisher, or invoked manually. Writes .for_bepy/TOMORROWS_AI_PROMPT.md with caller attribution. Never auto-triggers on its own.
 argument-hint: "--caller <name> [--mode night-run|close|manual]"
 ---
 
