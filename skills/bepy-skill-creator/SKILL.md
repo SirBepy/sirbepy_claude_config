@@ -32,19 +32,6 @@ Then ask: where should it live?
 
 Generate the skill following the conventions below and write it to disk immediately. Do not ask for review first - the dev will tell you what to change after.
 
-**Exact header format** (critical - do not deviate):
-```
----
-name: skill-name
-description: Triggers on /skill-name only. [one sentence about what it does]
----
-
-# /skill-name
-> one liner description
-```
-
-The `name` field has NO slash. The `# /skill-name` heading has ONLY the slash-prefixed name - nothing before or after it on the same line. Do not write `# skill-name /skill-name` or `# skill-name` (without slash).
-
 ---
 
 ## Mode 2 - Validate and improve an existing skill
@@ -85,7 +72,7 @@ Rules are split into two severity levels. FAIL means the skill has a real proble
 
 - [ ] Frontmatter exists with `name` and `description` fields
 - [ ] If the skill accepts arguments or subcommands, `argument-hint` is set in frontmatter (e.g. `argument-hint: "[on|off|push]"` or `argument-hint: "<ticket-id>"`). Skipped only if the skill takes no args.
-- [ ] First line after frontmatter is `# /skill-name` - slash-prefixed name only, nothing else on that line (not `# name /name` or `# name`)
+- [ ] First line after frontmatter is `# /skill-name`
 - [ ] Second line is `> one liner description`
 - [ ] No em dashes anywhere, use commas, colons, or hyphens instead
 - [ ] No true duplicate content (same info repeated in two places within the skill)
