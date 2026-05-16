@@ -136,6 +136,20 @@ For Marketplace imports: the asset is already published. To tune, the Animation 
 
 `KeyframeSequenceProvider:RegisterKeyframeSequence` is dev-mode-only. Shipped games must use a real published asset ID.
 
+**Plugin-capability gated properties (do NOT write from runtime scripts):**
+
+`KeyframeSequence.AuthoredHipHeight`, `KeyframeSequence.Priority`, and `KeyframeSequence.Loop` can only be written from a Plugin context. Runtime scripts get "lacking capability Plugin" errors. In emitted modules, skip these writes in `build()` and have the caller set the equivalents on the `AnimationTrack` after loading:
+
+```lua
+local track = animator:LoadAnimation(anim)
+track.Priority = Animation.PRIORITY     -- AnimationTrack.Priority IS runtime-writable
+track.Looped = Animation.LOOPED         -- AnimationTrack.Looped IS runtime-writable
+```
+
+`AuthoredHipHeight` has no runtime equivalent — Roblox uses the rig's default hip height. Don't emit a write for it.
+
+**Valid `Enum.PoseEasingStyle` values are limited:** `Linear`, `Constant`, `Elastic`, `Cubic`, `Bounce`. Do NOT use `Quad`, `Sine`, `Back`, `Exponential` etc. — those are `Enum.EasingStyle` (for tweens), not `Enum.PoseEasingStyle`. Skill output should use `Cubic` as the default smooth ease, `Linear` for sharp transitions.
+
 ## Quality limits
 
 The author flow ships placeholders. The import flow ships whatever the source had - Mixamo BVH animations look great after re-targeting; Marketplace varies by author. The skill is best at: discrete short motions, single-character animations. Worst at: paired (two-character) interactions, weight-shifted motion that depends on inverse kinematics.
