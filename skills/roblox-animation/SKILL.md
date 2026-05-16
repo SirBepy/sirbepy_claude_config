@@ -36,9 +36,11 @@ Generates a placeholder KeyframeSequence module from scratch.
 
 3. **Author the keyframes.** Build a 5-8 keyframe motion as a storyboard comment at the top of the file, then emit a Luau module with the canonical structure (see template under `## Output format` below). Include named marker events at the contact / climax moment so game code can listen via `track:GetMarkerReachedSignal(name)`.
 
-4. **Verify build.** Run `rojo build default.project.json -o build/<placefile>`. If `bash scripts/check.sh` exists, prefer that.
+4. **Emit a smoke test.** REQUIRED. Place at `tests/animations/<Name>.spec.luau`. Must assert: module shape (NAME / PRIORITY / LOOPED / build), `build()` returns a `KeyframeSequence` (catches Plugin-capability + invalid-enum errors at jest time, not playtest time), at least 2 keyframes emitted, each Keyframe has a HumanoidRootPart root Pose, Time values monotonically increasing. Reference: `tests/animations/Kick.spec.luau`. Without this test, the dev only hits errors at Studio playtest - shipped 2026-05-17 after exactly that bit twice (AuthoredHipHeight Plugin-gate, Enum.PoseEasingStyle.Quad doesn't exist).
 
-5. **Report.** Path, bones touched, marker events with timestamps, integration snippet, visual-tune instructions.
+5. **Verify build + tests.** Run `bash scripts/check.sh` (or `rojo build` if no check script). Must report green before commit.
+
+6. **Report.** Path, bones touched, marker events with timestamps, integration snippet, visual-tune instructions.
 
 ## Subcommand: import
 
