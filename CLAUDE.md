@@ -18,10 +18,13 @@
 
 - NEVER commit directly. Always invoke the `/commit` skill first and follow its instructions.
 - This applies to every commit, no exceptions - including commits made by subagents in subagent-driven development.
+- **Subagents cannot invoke `/commit` (they have no access to the Skill tool).** Therefore subagents must NEVER commit. When dispatching any subagent (foreground or background), the dispatch prompt MUST include this exact language: "Stage your changes but do NOT commit. The main agent will run `/commit` after your report-back." For background subagents, have them write a short `READY_TO_COMMIT.md` marker (or similar report-back doc) so the main agent knows there's staged work waiting when the completion notification arrives.
+- If you find yourself about to commit and cannot invoke the `/commit` skill, do not commit at all. Stop, surface the problem, wait for the main agent / human.
 
 ## Shell Commands
 
-- Never chain commands with `&&`, `;`, or `|`. One command per bash call, always.
+- Default to PowerShell. Joe's tooling (fvm, dart, flutter, node, gh, etc.) is configured for PowerShell on Windows. Only fall back to Bash if a PowerShell attempt fails or the command is genuinely POSIX-only.
+- Never chain commands with `&&`, `;`, or `|`. One command per call, always.
 - This includes git - never do `cd /path && git add && git commit` in one call.
 
 ## File Editing
@@ -82,6 +85,12 @@ All persistent cross-session notes live in `.for_bepy/` at the project root. Thr
 - State assumptions before coding. Present interpretations instead of picking silently.
 - Every changed line must trace to the request. No drive-by refactors.
 - Define success criteria upfront (test, command, check). Loop until verified.
+
+## Persistence
+
+- Before adding any persistence (localStorage, sessionStorage, cookies, IndexedDB, disk, DB), state explicitly before writing the code the specific user-facing behavior it preserves across tab close or refresh. If you cannot name the behavior, do not persist. Default to in-memory state (Riverpod / context / useState / module-scope).
+- When extending an existing persistence layer (e.g. adding a field to a storage class), re-check whether the underlying pattern still matches the current UX. Existing code is not evidence the pattern is right.
+- Past incident: pending-login email persisted to localStorage in a flow whose UX is "refresh redirects to login." Persistence was contradictory by definition and introduced a race between in-memory and persisted state. Should have stayed in Riverpod (`keepAlive: true`) with zero disk.
 
 ## Specs
 
