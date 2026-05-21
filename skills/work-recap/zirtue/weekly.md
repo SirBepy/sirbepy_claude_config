@@ -7,15 +7,16 @@
 - Shortcut user ID: `699c76fe-9076-4424-ba22-2bb3534f417e`
 - Shortcut mention: `josipmui`
 - Git author name: `JosipMuzicZirtue`
-- Git author email: `tecnomon99@gmail.com`
+- Git author email: `josip.muzic+zirtue@cinnamon.agency`
 
 ## Repos to scan
 
-All three live as siblings of `zng-app`:
+All four live as siblings under the same parent folder:
 
 - `C:/Users/tecno/Desktop/Projects/zng-app`
 - `C:/Users/tecno/Desktop/Projects/zng-admin`
 - `C:/Users/tecno/Desktop/Projects/zng-api`
+- `C:/Users/tecno/Desktop/Projects/zng-biller`
 
 ## Required tools
 
@@ -34,6 +35,7 @@ python -c "import re; t=open(r'C:/Users/tecno/.claude/.env','r',encoding='utf-8-
 ```
 
 Notes:
+
 - The `.env` file is UTF-8 **with BOM** and CRLF line endings. Bash `grep | cut` returns an empty string. Always read with Python `utf-8-sig`.
 - `WebFetch` cannot send the `Shortcut-Token` header. Use `curl` via Bash.
 - Token also unlocks `SHORTCUT_OWNER_UUID` (= `699c76fe-9076-4424-ba22-2bb3534f417e`).
@@ -69,36 +71,45 @@ If a fetch fails (network, auth), note it in the output and keep going.
 For each repo, one Bash call:
 
 ```
-git -C <repo> log --all --author="JosipMuzicZirtue" --author="tecnomon99@gmail.com" --since="<YYYY-MM-DD>" --pretty=format:"%h|%ad|%s" --date=short
+git -C <repo> log --all --author="josip.muzic+zirtue@cinnamon.agency" --since="<YYYY-MM-DD>" --pretty=format:"%h|%ad|%s" --date=short
 ```
 
 - `--all` catches feature branches that never merged to develop/main.
-- Both `--author` flags are OR'd by git.
 - If output empty for a repo, record "no commits" for that repo.
 
 ### 4. Pull Shortcut tickets
 
 **Two queries, both required:**
 
-**(a) Touched-during-window:** tickets the dev owned and that were updated in the recap window. Used for the Done buckets.
+**(a) Commit-referenced tickets (primary signal for Done):**
 
-If MCP is loaded:
-```
-mcp__shortcut__stories-search with:
-  owner: "josipmui"
-  isArchived: false
-  updated: "<window start YYYY-MM-DD>..*"
-```
+First, extract all ticket IDs from the commits gathered in step 3. Commit subjects follow the pattern `NNNNN: ...` (bare number prefix) or `sc-NNNNN`. Collect the union across all repos.
 
-If MCP is **not** loaded, use the REST API:
+For each extracted ID, fetch the ticket individually:
+
 ```bash
 curl -s -H "Shortcut-Token: $(cat C:/tmp/sc/tok)" \
-  "https://api.app.shortcut.com/api/v3/search/stories?query=owner:josipmui+!is:archived+updated:<start>..*&page_size=25"
+  "https://api.app.shortcut.com/api/v3/stories/<id>"
 ```
 
-The skill also needs the **commit-referenced ticket IDs**. Cross-reference the `sc-XXXXX` ids from "Shipped / merged" commit subjects with the search results. If a commit references a ticket the search missed, fetch it individually (`/api/v3/stories/<id>`).
+This is the authoritative Done list. Only tickets with a commit in the window belong in the "Shipped / merged" and "Done" sections of the recap and standup payload. Do NOT use `updated_at` to infer work was done — the dev may have bulk-updated ticket statuses on tickets completed weeks earlier.
 
-**(b) Currently-open:** all open tickets the dev owns (used to suggest "Today" candidates).
+**(b) Recently completed (secondary cross-check for Done):**
+
+Search for tickets the dev owns that were **completed** (not just updated) in the window plus a 2-day buffer before the start, to catch tickets Joe finished just before the recap window:
+
+```bash
+curl -s -H "Shortcut-Token: $(cat C:/tmp/sc/tok)" \
+  "https://api.app.shortcut.com/api/v3/search/stories?query=owner:josipmui+!is:archived+completed:<buffer_start>..*&page_size=25"
+```
+
+Where `<buffer_start>` = window start minus 2 days (e.g. if window starts 2026-05-12, use 2026-05-10).
+
+Intersect this with the commit-referenced IDs from (a). A ticket belongs in Done only if it appears in **both** — completed recently AND has a commit in the repos. If a ticket is completed but has no commit in any repo this window, omit it from the recap (Joe likely marked it done without touching code in this window).
+
+If a commit references a ticket that is NOT yet completed, include it in the recap under "Tickets touched" but NOT in the Done standup payload bucket — it's still in progress.
+
+**(c) Currently-open:** all open tickets the dev owns (used to suggest "Today" candidates).
 
 ```bash
 curl -s -H "Shortcut-Token: $(cat C:/tmp/sc/tok)" \
@@ -109,9 +120,9 @@ Paginate via `next` until exhausted, or stop at ~50 results — enough to surfac
 
 **State name resolution:** ticket JSON returns `workflow_state_id` (integer), not the state name. Fetch `/api/v3/workflows` once and build an id → (name, type) map. Cache for the rest of the run.
 
-Capture per ticket: id, name, workflow_state (name + type), epic, estimate, updated_at.
+Capture per ticket: id, name, workflow_state (name + type), epic, estimate, completed_at.
 
-If the search returns >25, just keep the top 25 most recently updated.
+If the secondary search returns >25, keep the top 25 most recently completed.
 
 ### 5. Derive next-week candidates
 
@@ -122,7 +133,7 @@ Combine three sources:
    - then `In Review`
    - then `To Do` / `Ready`
    - ignore anything `Completed` / `Archived`
-2. **Unfinished-from-last-week** - tickets that were updated but still aren't Done.
+2. **Unfinished-from-last-week** - tickets referenced by a commit in the window but whose Shortcut state is still not Done.
 3. **Inferred-from-commits** - look at commit subjects: if a ticket ID (`sc-XXXXX`) appears in a commit but the ticket isn't Done, flag it. If a feature branch has commits but no matching Shortcut ticket, call that out as "unticketed work, file one?".
 
 Keep this list short: 3-6 items, priority-ordered. If there's an obvious next step implied by a commit ("Part 1 of ..."), surface it.
@@ -146,27 +157,30 @@ _Generated <today> by /work-recap zirtue weekly_
 
 ## Say it out loud (standup script)
 
-_Plain spoken sentences the dev can read aloud. No ticket numbers, no commit hashes, no Shortcut/epic/repo jargon. Talk about features and outcomes, not IDs. 4-8 sentences total: what got done last week, then what's up next week. First person ("I..."). Conversational, not a report._
+_Plain spoken sentences the dev can read aloud. Audience is non-technical - no jargon, no framework names, no architecture terms. Talk about what users or the business can now do, not how it was built. Order: small items first, biggest thing last. 4-8 sentences total: what got done last week, then what's up next week. First person ("I..."). Conversational, not a report. Words to avoid: bootstrapped, scaffolded, NestJS, DTOs, controller, module, endpoint, repo, branch, deploy, refactor._
 
 ## Shipped / merged
 
 ### zng-app
+
 - `<shortsha>` YYYY-MM-DD - <subject>
 - ...
 
 ### zng-admin
+
 - ...
 
 ### zng-api
+
 - ...
 
 (Omit a repo section entirely if it had zero commits.)
 
 ## Tickets touched (Shortcut)
 
-| ID | Title | State | Epic | Estimate |
-|----|-------|-------|------|----------|
-| sc-XXXXX | ... | In Progress | ... | 3 |
+| ID       | Title | State       | Epic | Estimate |
+| -------- | ----- | ----------- | ---- | -------- |
+| sc-XXXXX | ...   | In Progress | ...  | 3        |
 
 Link each ID as `[sc-XXXXX](https://app.shortcut.com/zirtue/story/XXXXX)`.
 
@@ -180,14 +194,15 @@ Link each ID as `[sc-XXXXX](https://app.shortcut.com/zirtue/story/XXXXX)`.
 2. ...
 
 ### Unticketed work spotted
+
 - <repo>: <branch or commit cluster> - no matching Shortcut ticket. File one?
 
 ## Data sources
 
 - Window: <start> -> <today>
-- Repos scanned: zng-app, zng-admin, zng-api
+- Repos scanned: zng-app, zng-admin, zng-api, zng-biller
 - Shortcut filter: owner=josipmui, updated since <start>, not archived
-- Commits by: JosipMuzicZirtue / tecnomon99@gmail.com
+- Commits by: JosipMuzicZirtue
 ```
 
 ### 6b. Verify "Doing" tickets actually shipped
@@ -195,6 +210,7 @@ Link each ID as `[sc-XXXXX](https://app.shortcut.com/zirtue/story/XXXXX)`.
 Tickets in `Doing` state at fetch time may have actually been finished but the dev forgot to move them. Before pinning a `Doing` ticket to **Today**, scan its recent comments for a "done" signal from the dev (`josipmui`). If the most recent dev comment is silent and the ticket was last updated by someone else (designer, PM) >2 days ago, ask the dev: "did you finish this on Friday?" via AskUserQuestion.
 
 If yes:
+
 - Move the ticket from **Today** to **Done** in the payload.
 - Offer to draft a "done" comment for the dev to paste on the ticket. Mention any teammates already tagged in the thread.
 - Do **not** post the comment automatically — Shortcut mutations route through `mcp__shortcut__create-comment` and the `guard_mutation.py` hook requires explicit dev approval. Hand the draft to the dev for review.
@@ -212,13 +228,13 @@ Two sections (skip either if empty):
 
 #### State bucketing (Zirtue workflows)
 
-| Shortcut state | Bucket |
-|---|---|
-| `Completed`, `Accepted`, `Tested` | Done + Tested (rare) |
-| `Ready for deploy`, `Ready for Release`, `Merged`, `In Review`, `Blocked`* | Done |
-| `Doing`, `In Progress` | Today (always-pinned) |
-| `Backlog`, `To Do`, `Ready` | Today (only if dev picks via AskUserQuestion) |
-| `Won't do`, `Duplicate`, `Archived` | **Exclude** even if commits exist (work was reverted/abandoned) |
+| Shortcut state                                                              | Bucket                                                          |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `Completed`, `Accepted`, `Tested`                                           | Done + Tested (rare)                                            |
+| `Ready for deploy`, `Ready for Release`, `Merged`, `In Review`, `Blocked`\* | Done                                                            |
+| `Doing`, `In Progress`                                                      | Today (always-pinned)                                           |
+| `Backlog`, `To Do`, `Ready`                                                 | Today (only if dev picks via AskUserQuestion)                   |
+| `Won't do`, `Duplicate`, `Archived`                                         | **Exclude** even if commits exist (work was reverted/abandoned) |
 
 \* `Blocked` is ambiguous — if the ticket has merged commits in the window, treat as Done. If it was just touched but nothing shipped, omit.
 
@@ -249,17 +265,27 @@ Write TWO temp files. **Insert a blank `<p>&nbsp;</p>` between sections in HTML,
 **HTML file:** `C:/tmp/work-recap-clipboard.html`
 
 ```html
-<html><body>
-<p>Done:</p>
-<ul>
-<li><a href="https://app.shortcut.com/zirtue/story/XXXXX">Ticket title verbatim</a></li>
-</ul>
-<p>&nbsp;</p>
-<p>Today:</p>
-<ul>
-<li><a href="https://app.shortcut.com/zirtue/story/XXXXX">Ticket title verbatim</a></li>
-</ul>
-</body></html>
+<html>
+  <body>
+    <p>Done:</p>
+    <ul>
+      <li>
+        <a href="https://app.shortcut.com/zirtue/story/XXXXX"
+          >Ticket title verbatim</a
+        >
+      </li>
+    </ul>
+    <p>&nbsp;</p>
+    <p>Today:</p>
+    <ul>
+      <li>
+        <a href="https://app.shortcut.com/zirtue/story/XXXXX"
+          >Ticket title verbatim</a
+        >
+      </li>
+    </ul>
+  </body>
+</html>
 ```
 
 **Plain-text file:** `C:/tmp/work-recap-clipboard.txt`
@@ -274,6 +300,7 @@ Today:
 ```
 
 Rules:
+
 - Escape `<`, `>`, `&` in ticket titles as `&lt;`, `&gt;`, `&amp;` in HTML only. Plain text: leave as-is.
 - Ticket titles come **verbatim** from Shortcut `name` field. Do not rewrite, paraphrase, prefix, or trim. If the title starts with `[FE]`, `[Regression]`, etc., keep it.
 - The "no verbs" rule applies only to the rare unticketed noun-phrase bullet (see exception above), never to verbatim ticket titles.
