@@ -38,6 +38,18 @@ Concrete proposed steps. If a code shape was discussed, sketch it. Mention alter
 
 Skip a section only if it genuinely doesn't apply (e.g. trivial chore with no alternatives). Never just write a title and a one-liner.
 
+## What belongs in ai_todos vs BEPY_TODOS
+
+**ai_todos** = tasks Claude can execute in a future session (code, config, skill edits, analysis).
+
+**BEPY_TODOS** = tasks that require Joe's physical action: browser login, cloud console, credentials, hardware, running the app to QA visually.
+
+The wrong bar: "Claude can't test it" (e.g. Playwright can't reach Tauri webview). That makes it Claude's limitation, not a physical-action requirement. If Joe needs to look at something first, put it in BEPY_TODOS. Once he gives feedback, handle it inline in that session - don't create a new ai_todo for it.
+
 ## Triggering execution
 
 Claude does NOT auto-act on this folder. Joe triggers execution by saying "do the AI todos" or naming a specific id.
+
+## Off-limits content
+
+Never include git instructions in an ai_todo (commit, push, amend, tag, etc.). Git decisions belong to Joe and the `/commit` skill. An ai_todo describes WHAT to build, not how to close the session.

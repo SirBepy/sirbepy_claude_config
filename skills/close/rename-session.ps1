@@ -80,8 +80,26 @@ $jsonlPath = $jsonlMatches[0].FullName
 $titleRecord = @{ type = 'custom-title'; customTitle = $Name; sessionId = $sessionId } | ConvertTo-Json -Compress
 $agentRecord = @{ type = 'agent-name';   agentName   = $Name; sessionId = $sessionId } | ConvertTo-Json -Compress
 
-Add-Content -Path $jsonlPath -Value $titleRecord -Encoding utf8
-Add-Content -Path $jsonlPath -Value $agentRecord -Encoding utf8
+$maxAttempts = 8
+$retryMs     = 250
+
+foreach ($record in @($titleRecord, $agentRecord)) {
+    $written = $false
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        try {
+            Add-Content -Path $jsonlPath -Value $record -Encoding utf8
+            $written = $true
+            break
+        } catch {
+            if ($attempt -lt $maxAttempts) {
+                Start-Sleep -Milliseconds $retryMs
+            } else {
+                Write-Error "Could not write record to jsonl after $maxAttempts attempts: $_"
+                exit 1
+            }
+        }
+    }
+}
 
 Write-Host "Renamed session $sessionId (claude pid $claudePid) to '$Name'"
 Write-Host "  jsonl: $jsonlPath"
