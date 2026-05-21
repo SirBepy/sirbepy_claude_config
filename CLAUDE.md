@@ -58,9 +58,11 @@ All persistent cross-session notes live in `.for_bepy/` at the project root. Thr
 ### BEPY_TODOS.md - Manual tasks for Joe
 
 - Before adding anything here: try to do it yourself first. If you can run a bash command, make an API call, edit a file - do it. Only add here if it genuinely requires Joe's physical action (browser login, cloud console, credentials, hardware, etc.).
+- **Testing:** if the project has Playwright, a test suite, or any automated testing setup - use it. Write the test and run it. Only hand off to Joe if it is genuinely untestable by Claude (e.g. native Tauri UI, hardware, visual judgment calls). Never ask Joe to test something Claude can test itself.
 - Bullet points only, no numbers.
 - Keep each bullet brief and actionable. One sentence.
 - Delete bullets when Joe completes them or you have context they're done.
+- **Categories:** group entries under `### Urgent` (credentials, keys, hardware) and `### Visual QA` (needs Joe's eyes) so Joe can triage at a glance.
 
 ### ai_todos/ - Flagged items for Claude (one .md per task)
 
