@@ -105,6 +105,7 @@
       "mcp__shortcut__stories-update",
       "Bash(echo \"exit=$?\")",
       "PowerShell(Get-Content*)",
+      "PowerShell(Get-ChildItem*)",
       "PowerShell(New-Item *)",
       "Skill(schedule)",
       "Skill(schedule:*)",
@@ -245,6 +246,8 @@
     "enabled": true,
     "mode": "hold"
   },
+  "autoCompactEnabled": false,
+  "remoteControlAtStartup": true,
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
   "voiceEnabled": true
