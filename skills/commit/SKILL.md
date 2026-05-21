@@ -16,8 +16,17 @@ argument-hint: "[v|bump|push|pushbump|pushnbump|onlyv|onlybump]"
 4. Infer the right commit prefix (see below, or per project overrides)
 5. Check if a linter exists - if yes, run it and fix all issues first
 6. Check if the repo has a project-level `run-tests` skill at `.claude/skills/run-tests/SKILL.md`. If yes, invoke it and wait for the result. If it fails, **abort the commit**, print the failing output, and explain to the user exactly why the commit was aborted (which command failed, what it printed, and that they need to fix it or tell you to skip). Do not stage or commit anything until the user either fixes it or explicitly says to skip.
-7. Stage all relevant files by name
-8. Commit
+7. **Submodule check:** run `git submodule status` (no flags). For each submodule whose sha is prefixed with `+` (modified) or `-` (uninitialized/not checked out), handle it before committing the parent:
+   - If prefixed with `-`: warn the user, do not auto-commit an uninitialized submodule.
+   - If prefixed with `+` (dirty pointer — submodule has new commits not yet staged in parent): this is fine, stage the pointer with `git add <submodule-path>` and include it in the parent commit.
+   - If the submodule itself has **uncommitted working-tree changes** (detected via `git -C <submodule-path> status --porcelain`): run the 4-step submodule commit flow first:
+     1. `git -C <submodule-path> add <changed files by name>` — stage changed files inside the submodule.
+     2. `git -C <submodule-path> commit -m "<message>"` — commit inside the submodule using the same prefix/style rules as the parent commit.
+     3. `git add <submodule-path>` — stage the updated pointer in the parent.
+     4. Then continue to step 8 as normal; the parent commit will include the pointer bump.
+   - If no submodules or all are clean: skip this step silently.
+8. Stage all relevant files by name
+9. Commit
 
 If nothing to commit, say so and stop.
 
