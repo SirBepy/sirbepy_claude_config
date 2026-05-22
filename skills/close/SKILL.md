@@ -100,18 +100,26 @@ Note: there is no implicit /commit step anymore. If the dev wants a commit, they
 
 ## Phase 4 - Rename session
 
-> **Why-literal:** The rename-session.ps1 path is hardcoded to `C:\Users\tecno\...` on purpose. The harness's permission matcher refuses to validate dynamic command names (`$env:` vars, expressions, globs) and falls back to always-prompt for every invocation. A literal path keeps /close at one prompt instead of N. Do NOT "portable-ize" this - it will re-introduce permission spam. This is a documented constraint, not a leaked username.
+> **Why-literal:** Both script paths are hardcoded on purpose. The harness's permission matcher refuses to validate dynamic command names (`$env:` vars, expressions, globs) and falls back to always-prompt for every invocation. Literal paths keep /close at one prompt instead of N. Do NOT "portable-ize" these - it will re-introduce permission spam. This is a documented constraint, not a leaked username.
 
 Give the session a meaningful name so the `/resume` picker is browsable later.
 
 1. Pick a short human-readable name (max 60 chars), sentence-style with spaces, written like a commit subject. Sentence case, no kebab-case, no trailing period. Use Phase 1 retrospective as input.
    - Good: `Improve /close skill with auto-rename`, `Fix killbrick poison type damage`, `Investigate session rename storage`
    - Bad: `close-skill-rename-test`, `session-2025-05-02`, `chat-1`, `Updated some files.`
-2. Run the helper:
+2. Run the helper for your OS:
+
+   **Mac/Linux:**
+   ```sh
+   sh /Users/josipmuzic/.claude/skills/close/rename-session.sh --name "<name>"
+   ```
+
+   **Windows:**
    ```powershell
    & "C:\Users\tecno\.claude\skills\close\rename-session.ps1" -Name "<name>"
    ```
-   The script finds the current session jsonl by matching cwd, then appends the two records the harness uses for renames (`custom-title`, `agent-name`). Idempotent enough - last record wins per harness logic.
+
+   The script finds the current session jsonl by walking the process tree to the claude ancestor PID, then appends the two records the harness uses for renames (`custom-title`, `agent-name`). Idempotent enough - last record wins per harness logic.
 3. If the script errors (no matching session, jsonl not found), print the error and continue. Don't abort the close.
 
 The rename takes effect on next launch / `/resume` picker. It does NOT update the current session's prompt bar live.
@@ -147,13 +155,19 @@ If no chained commands, skip this phase.
 - The rename script in Phase 4 errored.
 - Any background work is still running in this session: spawned `Agent` with `run_in_background: true`, active `/loop`, or pending `ScheduleWakeup`. Check before killing.
 
-If all clear, run (literal path - see Phase 4 Why-literal callout):
+If all clear, run for your OS (literal path - see Phase 4 Why-literal callout):
 
+**Mac/Linux:**
+```sh
+sh /Users/josipmuzic/.claude/skills/close/rename-session.sh --name "<name>" --close
+```
+
+**Windows:**
 ```powershell
 & "C:\Users\tecno\.claude\skills\close\rename-session.ps1" -Name "<name>" -Close
 ```
 
-The script walks up to the parent shell process (powershell.exe hosting the terminal tab) and kills it, closing the terminal. The detached killer waits 800ms so this final response flushes first.
+The script kills the claude ancestor process after an 800ms delay so this final response flushes first. In VS Code terminals this closes the tab; in Terminal.app it returns to the shell prompt.
 
 If kill was skipped, print on its own line:
 
