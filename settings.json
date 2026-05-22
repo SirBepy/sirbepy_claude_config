@@ -152,7 +152,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/tecno/.claude/aiusage-hook.ps1 notify"
+            "command": "sh ~/.claude/aiusage-hook.sh notify || powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/tecno/.claude/aiusage-hook.ps1 notify"
           }
         ]
       }
@@ -182,7 +182,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -sS -X POST --data-binary @- -H 'Content-Type: application/json' http://127.0.0.1:27182/hooks/session-end"
+            "command": "curl -sS -X POST --data-binary @- -H 'Content-Type: application/json' http://127.0.0.1:27182/hooks/session-end || exit 0"
           }
         ]
       }
@@ -192,7 +192,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -sS -X POST --data-binary @- -H 'Content-Type: application/json' http://127.0.0.1:27182/hooks/session-start"
+            "command": "curl -sS -X POST --data-binary @- -H 'Content-Type: application/json' http://127.0.0.1:27182/hooks/session-start || exit 0"
           }
         ]
       }
@@ -202,7 +202,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/tecno/.claude/aiusage-hook.ps1 refresh"
+            "command": "sh ~/.claude/aiusage-hook.sh refresh || powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/tecno/.claude/aiusage-hook.ps1 refresh"
           }
         ]
       },
@@ -210,7 +210,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -sS -X POST --data-binary @- -H 'Content-Type: application/json' http://127.0.0.1:27182/hooks/stop"
+            "command": "curl -sS -X POST --data-binary @- -H 'Content-Type: application/json' http://127.0.0.1:27182/hooks/stop || exit 0"
           }
         ]
       }

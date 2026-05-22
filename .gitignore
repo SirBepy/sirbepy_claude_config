@@ -13,6 +13,7 @@
 !refs/**
 !snippets/
 !snippets/**
+!aiusage-hook.sh
 
 # Per-user ticket log, not shared
 skills/shortcut-create-ticket/log.md

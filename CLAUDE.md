@@ -107,3 +107,5 @@ When a plan is ready to execute, choose based on task size - do not default to s
 - **Subagent-driven**: large features with 5+ independent tasks, multiple files, where fresh context per task and review gates add real value.
 
 If it feels quick, it's inline. Only escalate to subagent-driven when the complexity genuinely justifies the overhead.
+
+- **Context-weight axis**: independent of task size, a job with fewer than 4 tasks still warrants an Explore subagent when answering it means reading material you discard once you have the conclusion: large files, wide grep sweeps. The test: do I need the raw bytes, or just the verdict? Verdict only, delegate and keep the summary. (Read-only investigation; subagent-written code still follows the workflow above.)
