@@ -64,33 +64,65 @@ Before calling `stories-create`, search for an existing ticket that covers the s
 - If a plausible match shows up, stop and ask with AskUserQuestion whether to (a) use the existing ticket, (b) file a new one anyway because the scope differs, or (c) cancel. Include the existing story ID + title so it's trivially judgeable.
 - If nothing matches, proceed to step 3 and note in the reply that the check was performed ("No existing ticket found for X").
 
-### 2.8. Description structure (Airion's standard, 2026-04-14)
+### 2.8. Description structure — pick the smallest shape that fits
 
-Shortcut is the team's de-facto documentation. Non-engineers (PM, ops, UX) reference tickets too. Write descriptions so anyone on the team can pick them up cold.
+**Default: keep it short.** The dev consistently feels Claude-generated tickets are too long. When in doubt, write less. Aim for a description you'd write yourself in a hurry — the engineer doing the work can ping you if they need more.
 
-**Structure:**
+**Pick the shape by ticket type:**
 
-1. **`# CONTEXT`** — stupid simple. Plain-English explanation of what's changing and why, readable by someone who has never seen the code. No file paths, no function names, no jargon. 2-5 sentences is ideal. If you can't explain it without engineering terms, you don't understand the ticket yet.
-2. **`# ACTION ITEMS`** — the **what**, not the **how**. Short bullet list naming what needs to exist when the ticket is done (a field, a screen, a route, a redirect behavior). No file paths, no function names, no implementation steps, no "call X then Y". 3-6 bullets. If a bullet starts explaining *how* to build it, delete that half. The engineer figures out the how at PR time.
-3. **`# ACCEPTANCE CRITERIA (QA)`** — numbered, scenario-grouped, runnable by someone who has never seen the code. Group by flow/state ("Biller with custom URL configured", "Regression"), then list concrete click-through steps with expected outcomes. Avoid implementation language (no "calls X", "resolves Y"). Always include a **Regression** group listing what should keep working untouched.
-4. **Relationships** — do NOT add a `# RELATED` text block. Use native Shortcut story links instead (they show up in the "Relationships" panel and stay in sync). The MCP doesn't expose link creation, so call the REST API directly:
+#### Bug filed for a known engineer
+Just the essentials. No headings, no QA acceptance criteria. Plain prose, ≤ 10 lines:
+- One short paragraph: what's happening, what's expected.
+- A "Repro:" section: 3-5 numbered steps OR a tight bullet list (entity IDs, exact API call, observation).
+- (Optional) one line of hypothesis if you have one.
 
-    ```bash
-    source ~/.claude/.env && curl -s -X POST "https://api.app.shortcut.com/api/v3/story-links" \
-      -H "Content-Type: application/json" \
-      -H "Shortcut-Token: $SHORTCUT_API_TOKEN" \
-      -d '{"subject_id":<new_story_id>,"object_id":<related_story_id>,"verb":"relates to"}'
-    ```
+Example shape:
+```
+DELETE /foo/:id returns 200 but the deleted row is still in subsequent GET responses.
+Looks like soft-delete fires but the relation read isn't filtering deletedAt IS NULL.
 
-    Verbs: `relates to` (default), `blocks`, `duplicates`. Token lives in `~/.claude/.env` as `SHORTCUT_API_TOKEN`. Create a link for every BE/paired-FE ticket the new story depends on or pairs with.
+Repro:
+- Entity X
+- Hit DELETE
+- Observe: still present in masks[] of response AND in fresh GET
+```
 
-**Sizing:**
+That's it. Don't add ACTION ITEMS or ACCEPTANCE CRITERIA blocks for a single-symptom bug.
 
-- Prefer smaller tickets. If a ticket covers two independently shippable chunks (e.g. admin side + app side), split it.
+#### Chore / small refactor / single tweak
+1-3 sentences. State what, why, where. No headings.
+
+#### Feature filed for the dev to pick up later (Airion-style)
+Use the full three-section template ONLY when the ticket may be picked up cold by someone else (PM reference, future engineer, QA hand-off). Heuristic: if this ticket might sit in the backlog for weeks before someone unrelated picks it up, write it for that person.
+
+Template (Airion's standard, 2026-04-14):
+1. **`# CONTEXT`** — plain English, no file paths or jargon. 2-5 sentences.
+2. **`# ACTION ITEMS`** — the *what*, not the *how*. 3-6 bullets naming what should exist when done. No file paths, no implementation steps. Delete any bullet that starts explaining *how*.
+3. **`# ACCEPTANCE CRITERIA (QA)`** — numbered, scenario-grouped, runnable by someone who has never seen the code. Include a **Regression** group.
+
+Skip this template for anything smaller than a multi-day feature.
+
+#### Relationships
+Do NOT add a `# RELATED` text block. Use native Shortcut story links (they appear in the Relationships panel and stay in sync). The MCP doesn't expose link creation, so call the REST API directly:
+
+```bash
+source ~/.claude/.env && curl -s -X POST "https://api.app.shortcut.com/api/v3/story-links" \
+  -H "Content-Type: application/json" \
+  -H "Shortcut-Token: $SHORTCUT_API_TOKEN" \
+  -d '{"subject_id":<new_story_id>,"object_id":<related_story_id>,"verb":"relates to"}'
+```
+
+Verbs: `relates to` (default), `blocks`, `duplicates`. Create a link for every BE/paired-FE ticket the new story depends on or pairs with.
+
+**Sizing reminder:**
+
+- Prefer smaller scopes AND smaller descriptions. If you find yourself writing acceptance criteria for a single-symptom bug, stop — that's overkill.
+- If a ticket covers two independently shippable chunks (e.g. admin side + app side), split it.
 - If the dev is in a rush, one bigger ticket is fine — trust his judgment.
-- If the approach feels like it needs breakdown, break it down.
 
-**Reason this exists:** Airion 2026-04-14 — "CONTEXT stupid simple, everything else as eng-oriented as you want. Referencing old SC tickets of past engineers has come in handy multiple times." Keep the signal high for both audiences.
+**Reason for the smaller default (2026-05-26):** the dev pushed back that Claude-generated tickets are too big. Bugs filed for known engineers don't need the full Airion template — Stevan asked for "mali ticket" and got a wall of acceptance criteria. Match the audience.
+
+**Reason the full template still exists (Airion 2026-04-14):** "CONTEXT stupid simple, everything else as eng-oriented as you want. Referencing old SC tickets of past engineers has come in handy multiple times." Apply it when the ticket is genuinely cold-pickup material.
 
 ### 3. Build the create payload
 
