@@ -36,7 +36,6 @@ Build a compact payload object from Phase 1 output:
 ```
 {
   "memory": [ { "file": "path", "frontmatter": "...", "body": "..." } ],  // only entries that qualify
-  "comments": "string or null",
   "todos_to_delete": ["bullet text"],
   "ai_todos": [ { "slug": "...", "title": "...", "goal": "...", "context": "...", "approach": "...", "acceptance": "..." } ]
 }
@@ -49,7 +48,6 @@ Then dispatch ONE `Agent` call with `subagent_type: "general-purpose"` and this 
 > Memory dir: `C:\Users\tecno\.claude\projects\C--Users-tecno--claude\memory\`
 > For each entry in `memory`: write the file at `<memory dir>/<file>` with the given frontmatter + body. Then append a pointer line to `MEMORY.md` if not already present.
 >
-> `.for_bepy/COMMENTS.md`: if `comments` is non-null, append it.
 > `.for_bepy/BEPY_TODOS.md`: delete any bullet matching `todos_to_delete` entries.
 > `.for_bepy/ai_todos/`: for each entry in `ai_todos`, scan existing files for max numeric prefix, write `<id+1>-<slug>.md` with standard sections.
 >

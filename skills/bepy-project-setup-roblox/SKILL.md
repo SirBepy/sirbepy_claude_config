@@ -54,7 +54,7 @@ Walk `../sirbepy_roblox/templates/default/` recursively. For each file:
 4. If the destination does not exist -> write it.
 5. If the destination exists and contents match -> skip silently.
 6. If the destination exists and contents differ:
-   - With `auto` flag: skip and append a line to `.for_bepy/COMMENTS.md` saying "skipped <path> during bepy-project-setup-roblox: differs from template".
+   - With `auto` flag: skip and print one line to chat output: "skipped <path> during bepy-project-setup-roblox: differs from template". Collect all such lines into the final run summary.
    - Without `auto`: print a unified diff (or a short summary if large), then AskUserQuestion: "Overwrite", "Keep existing", "Show full diff". `Keep existing` is the default-safe choice.
 
 Always preserve the existing destination's encoding and line endings if you have to merge.

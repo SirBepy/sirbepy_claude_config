@@ -46,14 +46,7 @@
 
 ## .for_bepy Folder
 
-All persistent cross-session notes live in `.for_bepy/` at the project root. Three files:
-
-### COMMENTS.md - Notes for Joe
-
-- Only write here if something important happened that Joe might have missed - especially relevant in auto mode where Joe may not have seen every decision.
-- High bar: if Joe would say "I already knew that", don't write it.
-- Keep entries brief, one or two sentences max. No padding.
-- Never reset or clear. Joe manages it.
+All persistent cross-session notes live in `.for_bepy/` at the project root. Two files:
 
 ### BEPY_TODOS.md - Manual tasks for Joe
 
