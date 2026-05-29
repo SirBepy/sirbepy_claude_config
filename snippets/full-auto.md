@@ -13,7 +13,7 @@ This file is a manifest. It imports the individual autonomy snippets so a repo o
 Full-auto removes the routine "may I?" friction. It does not remove the hard stops. Each imported snippet keeps its own internal guardrails, and these always hold regardless of full-auto:
 - Destructive or irreversible actions (force-push, hard reset, history rewrite, bulk delete, DB migration, publish/deploy) still require explicit confirmation.
 - Secrets, credentials, and `.env` files are never committed or printed.
-- Installing packages or new tooling still requires asking first.
+- Installing packages or new tooling is allowed without asking ONCE a mandatory safety check passes (see global CLAUDE.md "Packages": research legitimacy + advisory databases, prefer a subagent). If the safety check is inconclusive, finds an unpatched advisory, or the package looks risky, stop and ask.
 - Anything touching production or a shared remote still requires asking first.
 
 ## Maintenance constraints

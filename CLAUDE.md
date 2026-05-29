@@ -34,8 +34,10 @@
 
 ## Packages
 
-- Never install packages without asking first.
-- Before suggesting any package, tool, or program to install/download, do a quick web search to verify it is legitimate and safe. Check for typosquatting, malicious forks, or known malware reports. Only suggest after confirming.
+- **Safety check is mandatory and automatic.** Before suggesting OR adding any package, tool, or program, research that it is legitimate and safe. This is default behavior - do it every time without being asked.
+- The check must cover: typosquatting (is this the real package name?), malicious forks, known malware reports, AND the security-advisory databases for the ecosystem (RustSec for crates, `npm audit` / GitHub advisories for npm, PyPI/OSV for Python, etc.). Confirm the version you'll pin is past any known vulnerability fix.
+- **Prefer a subagent for the research.** Dispatch a subagent (e.g. `general-purpose`) to do the safety investigation and report back a verdict + the specific advisories/versions it found. This keeps the main context clean and is more thorough. For a single obvious package a quick inline web search is acceptable, but for anything load-bearing or crypto/network-related, use a subagent.
+- **Asking before adding:** in non-personal projects, still ask before installing. In personal projects (those importing `full-auto.md`), auto-adding is allowed *once the safety check passes* - no need to ask. If the safety check is inconclusive, finds an advisory with no patched version, or the package looks risky, stop and ask regardless of project type.
 
 ## Process Hygiene
 
