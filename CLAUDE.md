@@ -70,6 +70,12 @@ All persistent cross-session notes live in `.for_bepy/` at the project root. Two
 - React projects: use `@phosphor-icons/react` package.
 - Browse available icons at https://phosphoricons.com
 
+## Screenshots
+
+- Verification/debug screenshots (ad-hoc Playwright captures, manual smoke tests) go in `.for_bepy/screenshots/`, never the repo root. That folder is gitignored, so they never leak into commits or clutter `git status`. Create the folder if it's missing before saving.
+- This does NOT apply to the `/screenshot` skill: its portfolio-quality keepers stay in `.portfolio-data/`. Only throwaway verification shots go in `.for_bepy/screenshots/`.
+- `/close` empties `.for_bepy/screenshots/` at session end, so treat anything there as disposable.
+
 ## Code Style
 
 - On first encounter with a project's language/stack (editing code, debugging, inspecting build/wally configs, or planning), check if `~/.claude/code-style/` has a matching file (e.g. `luau.md`, `react.md`). If it exists, read it and follow its preferences.

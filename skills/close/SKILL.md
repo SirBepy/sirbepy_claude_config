@@ -95,6 +95,7 @@ Run in this order:
 1. **Memory writes.** Per the auto-memory protocol in CLAUDE.md. For each correction or non-obvious confirmation from Phase 1, write or update the appropriate memory file and update MEMORY.md index. Skip if nothing qualifies. Never invent memories to look productive.
 2. **`.for_bepy/BEPY_TODOS.md`** Reconcile: delete completed steps. Per CLAUDE.md rules.
 3. **`.for_bepy/ai_todos/`** For each item from Phase 1 step 5 (unfinished offers) and each finding from Phase 2 (size + DRY + dead code), write a separate `.md` file using the template defined in CLAUDE.md (`# title`, `## Goal`, `## Context`, `## Approach`, `## Acceptance`). Filename: zero-padded numeric prefix + kebab-case slug per the CLAUDE.md ai_todos rules (scan existing files for max id, add 1, never reuse). For Phase 2 findings, use the structured fields directly: `title` → filename slug + `# title` heading; `problem` → `## Context`; `fix` → `## Approach`; `files` → cited inside Context. The bar: a future cold AI session must be able to execute the task from the file alone, without re-reading session history. Skip if no items.
+4. **Screenshot cleanup.** Delete the contents of `.for_bepy/screenshots/` (the throwaway verification-screenshot quarantine per CLAUDE.md). Scope is strictly that folder - never touch `.portfolio-data/` (portfolio keepers), committed assets, or any image elsewhere. List each file deleted in the output so the dev sees what went. Delete without a blocking prompt (the folder is disposable by definition, and /close runs autonomously when chained with `/sleep-when-done`). Skip silently if the folder is missing or empty. PowerShell: `Get-ChildItem -File '.for_bepy/screenshots/' | Remove-Item -Force`.
 Note: there is no implicit /commit step anymore. If the dev wants a commit, they chain `/commit` (with whatever subcommand they want) into the /close call.
 
 ## Phase 4 - Rename session
@@ -120,10 +121,10 @@ The rename takes effect on next launch / `/resume` picker. It does NOT update th
 Print one line:
 
 ```
-N memory writes . N comments . N workflow reconciles . N ai_todos written (M from review) . renamed to "<name>" . chain: <list of chained commands or "none"> . closing: yes/no
+N memory writes . N comments . N workflow reconciles . N ai_todos written (M from review) . N screenshots cleaned . renamed to "<name>" . chain: <list of chained commands or "none"> . closing: yes/no
 ```
 
-`M from review` is the count of findings from Phase 2 (size + DRY + dead code). If Phase 2 was skipped, omit the parenthetical and say `review skipped`.
+`M from review` is the count of findings from Phase 2 (size + DRY + dead code). If Phase 2 was skipped, omit the parenthetical and say `review skipped`. `N screenshots cleaned` is the count deleted from `.for_bepy/screenshots/` in Phase 3 step 4 (0 if folder was missing/empty).
 
 ## Phase 6 - Run chained commands
 
