@@ -1,11 +1,11 @@
 ---
 name: good-morning
-description: Triggers on /good-morning only. Morning routine dispatcher. Reads overnight handoff (`.for_bepy/TOMORROWS_AI_PROMPT.md`), surfaces ai_todos, then runs /clockify-reconciliator zirtue yesterday.
+description: Triggers on /good-morning only. Morning routine dispatcher. Pulls latest, reads overnight handoff (`.for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md` + `.for_bepy/TOMORROWS_AI_PROMPT.md`), surfaces ai_todos, then commits morning cleanup.
 ---
 
 # /good-morning
 
-> Morning routine. Reads overnight handoff from `/night-run`, surfaces flagged AI todos, then reconciles yesterday's Zirtue Clockify.
+> Morning routine. Pulls latest, reads overnight handoff from `/night-run`, surfaces flagged AI todos, then commits morning cleanup.
 
 ## Steps
 
