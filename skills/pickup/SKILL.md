@@ -9,7 +9,7 @@ description: Triggers on /pickup only. Reads the next-session handoff written by
 
 ## Step 1 - Check for handoff
 
-Read `.for_bepy/TOMORROWS_AI_PROMPT.md` (use `git rev-parse --show-toplevel` if repo root is unclear).
+Read `.for_bepy/NEXT_AI_PROMPT.md` (use `git rev-parse --show-toplevel` if repo root is unclear).
 
 If not found: output "No handoff found." and stop.
 
@@ -38,7 +38,7 @@ If 4 or fewer combined items: one option each. If more than 4: show top 4, list 
 ## Step 5 - Clean up and commit
 
 ```
-git rm .for_bepy/TOMORROWS_AI_PROMPT.md
+git rm .for_bepy/NEXT_AI_PROMPT.md
 ```
 
 Then run `/commit`.

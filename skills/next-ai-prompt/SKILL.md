@@ -1,6 +1,6 @@
 ---
 name: next-ai-prompt
-description: Triggers when a skill needs to leave a structured handoff prompt for the next AI session. Called by /night-run finisher, or invoked manually. Writes .for_bepy/TOMORROWS_AI_PROMPT.md with caller attribution. Never auto-triggers on its own.
+description: Triggers when a skill needs to leave a structured handoff prompt for the next AI session. Called by /night-run finisher, or invoked manually. Writes .for_bepy/NEXT_AI_PROMPT.md with caller attribution. Never auto-triggers on its own.
 argument-hint: "--caller <name> [--mode night-run|close|manual]"
 ---
 
@@ -40,7 +40,7 @@ argument-hint: "--caller <name> [--mode night-run|close|manual]"
 
 ## Step 2 - Write the file
 
-Path: `.for_bepy/TOMORROWS_AI_PROMPT.md` (relative to repo root). **OVERWRITE** if file already exists.
+Path: `.for_bepy/NEXT_AI_PROMPT.md` (relative to repo root). **OVERWRITE** if file already exists.
 
 Use this fixed template. Fill every section. Keep prose terse, caveman-acceptable. Do not add or remove sections.
 
@@ -98,5 +98,5 @@ Night-run step 10 commits it. /close Phase 5 commits it. Do not double-commit.
 
 - If `.for_bepy/` doesn't exist, create it.
 - If repo root is unclear, use `git rev-parse --show-toplevel`.
-- `/pickup` reads and deletes this file. Do not write sensitive data.
+- `/pickup` reads and deletes this file (`NEXT_AI_PROMPT.md`). Do not write sensitive data.
 - The "Tick notes" section is only relevant for night-run mode. In close/manual mode, omit it and the AI_MESSAGES check entirely.
