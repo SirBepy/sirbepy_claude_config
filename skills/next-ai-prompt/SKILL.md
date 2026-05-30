@@ -98,5 +98,5 @@ Night-run step 10 commits it. /close Phase 5 commits it. Do not double-commit.
 
 - If `.for_bepy/` doesn't exist, create it.
 - If repo root is unclear, use `git rev-parse --show-toplevel`.
-- `/good-morning` reads and deletes this file. Do not write sensitive data.
+- `/pickup` reads and deletes this file. Do not write sensitive data.
 - The "Tick notes" section is only relevant for night-run mode. In close/manual mode, omit it and the AI_MESSAGES check entirely.
