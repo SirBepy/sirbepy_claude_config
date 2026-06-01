@@ -89,6 +89,12 @@ All persistent cross-session notes live in `.for_bepy/` at the project root. Two
 - Every changed line must trace to the request. No drive-by refactors.
 - Define success criteria upfront (test, command, check). Loop until verified.
 
+## Testing & verification floor
+
+- Before claiming done or handing work to Joe, run every fast check the project HAS - typecheck, unit tests, lint, build - and it must pass. Change size never exempts: a one-line edit gets the same floor as a rewrite. Never skip silently because something "looks small."
+- If a project has no tests, or the change is genuinely untestable by Claude (native UI, hardware, visual judgment), say so explicitly instead of skipping quietly.
+- Slow end-to-end suites (Playwright, etc.) are NOT part of this floor. A project with a browser e2e suite `@import`s `~/.claude/snippets/test-e2e.md` in its own CLAUDE.md, which defines when/how e2e runs; projects that don't import it run the floor only.
+
 ## Persistence
 
 - Before adding any persistence (localStorage, sessionStorage, cookies, IndexedDB, disk, DB), state explicitly before writing the code the specific user-facing behavior it preserves across tab close or refresh. If you cannot name the behavior, do not persist. Default to in-memory state (Riverpod / context / useState / module-scope).
