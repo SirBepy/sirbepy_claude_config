@@ -34,13 +34,16 @@ Determine what to review before rating:
 
 ## Below-threshold question
 
+Before asking, check whether the `/rate-it` "How to raise the score:" bullets would bring the score to threshold if applied. If yes, include option 1 below; otherwise omit it.
+
 ```
 Question: "Score is X/10 - below threshold of N. What now?"
 Header: "Next move"
 Options:
-  1. "Iterate first, then commit" - invoke /iterate-it on the same target, wait for convergence, then invoke /commit.
-  2. "Commit anyway" - skip iteration, invoke /commit immediately.
-  3. "Abandon" - stop. Do not commit.
+  1. "Accept suggestions, then commit" (only if lifts would reach threshold) - apply the How-to-raise bullets to the target file, then invoke /commit.
+  2. "Iterate first, then commit" - invoke /iterate-it on the same target, wait for convergence, then invoke /commit.
+  3. "Commit anyway" - skip iteration, invoke /commit immediately.
+  4. "Abandon" - stop. Do not commit.
 ```
 
 ## Rules
