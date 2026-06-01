@@ -100,6 +100,22 @@ If no `package.json` exists, say so and stop.
 - Never use `cd` before git commands. Use `git -C /absolute/path <command>`.
 - Stage files by name. Never `git add -A`.
 
+## Splitting one file across commits (partial staging)
+
+When a single file holds changes belonging to different commits, stage the specific hunks - do NOT commit the whole file, and do NOT mutate the working tree (delete progress → commit → undo) to fake it.
+
+- `git add -p` is the usual way, but it's INTERACTIVE and hangs in this non-interactive shell. Do not use it.
+- Non-interactive route instead:
+  1. `git -C <path> diff <file> > <tmp>.patch` (or `diff HEAD <file>`).
+  2. Edit the patch: delete the hunks you don't want. Keep the `diff --git`/`index`/`---`/`+++` header lines and the `@@` line of each hunk you keep. Don't bother renumbering `@@` counts.
+  3. `git -C <path> apply --cached --recount <tmp>.patch` (`--recount` tolerates off `@@` counts from hand-trimming). If it still rejects on context mismatch, re-dump and re-trim rather than forcing.
+  4. Verify the partially-staged result compiles/lints on its own (the committed state must build without the unstaged remainder), then commit.
+- This is surgical and leaves the working tree untouched - prefer it over restore-edit-amend whenever you need exact lines.
+
+## Grouping: shared-component swaps
+
+When a file's only change is swapping a local implementation for a shared / design-system component, it belongs with the commit that adds or changes that shared component - not the feature commit that happened to trigger the swap. If that file also carries feature-specific edits, split it via partial staging above: swap hunks go with the component commit, the rest with the feature.
+
 ## Backdating commits
 
 - When the user asks for a specific commit time, jitter it to look organic:
