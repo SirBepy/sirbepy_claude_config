@@ -86,6 +86,7 @@ For each target:
 - Distribute the day's commits across chunks by rough chronology: earliest commits → earliest chunks. Assume the dev worked on things in the order committed, even if the commit timestamp falls outside the chunk (e.g. commit at 18:00 can describe the 15:00-17:00 chunk if it represents that chunk's work in the dev's workflow).
 - Draft description from the chunk's assigned commit subjects. Max 80 chars. Drop filler to fit.
 - If a matched commit subject hits `ticket_regex`, append ` (53794)` using just the captured number.
+- **Never assign the same description to two chunks.** If distributing commits would produce identical descriptions (e.g. all commits land in one chunk, leaving another empty), try to differentiate by splitting a combined subject on semicolons and assigning one part per chunk. If there are more chunks than semicolon-delimited parts, the first (longer/context) part may repeat for overflow chunks - but ticket-specific parts (those matching `ticket_regex`) must NOT repeat. If no semicolons exist and no split is possible, mark overflow chunks as "needs manual".
 - If a day has zero commits at all across all repos, ask the dev what was done before proposing.
 
 ### 8. Warn on other-project entries
