@@ -41,6 +41,7 @@
 
 ## Process Hygiene
 
+- **Running servers - always via `/supervised-run`.** Always route long-lived servers through the `/supervised-run` skill; fall back to a plain shell run only if the supervisor is unreachable. Does NOT apply to one-off commands that exit (tests, builds, git, scripts).
 - **Never leave orphan child processes.** After running test/build/dev commands, check with `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -match 'vitest|turbo|tinypool' }` (Windows) or `pgrep node` (Unix). Kill orphans with `Stop-Process -Id <PID> -Force` before claiming done. Past incident: 90+ orphan vitest processes pegged the CPU at 100% and 90°C.
 - **Cap concurrency at 5** for all Node commands: turbo `--concurrency=5`, vitest `poolOptions.threads.maxThreads: 5` (or `pool: 'forks'` + `singleFork: true` for clean Windows exit), pnpm `--workspace-concurrency=5`. Never `pnpm dev --parallel` outside explicit dress-rehearsal.
 - For long-running dev servers (vite, fastify), track the PID and ensure it terminates on session end / Ctrl-C / parent task completion.
