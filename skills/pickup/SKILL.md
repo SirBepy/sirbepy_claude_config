@@ -19,15 +19,7 @@ Print the **Context** section verbatim.
 
 ## Step 3 - Run verify checklist
 
-File has a `## Verify checklist` section with `- [ ]` items. Ask via AskUserQuestion:
-
-Question: "Run the verify checklist?"
-Options:
-- "Run all items" - execute each in order
-- "Pick items" - multiSelect follow-up listing each item as an option
-- "Skip" - go to step 4
-
-Execute selected items as real shell commands or inspections. Do not just print them.
+File has a `## Verify checklist` section with `- [ ]` items. Execute each in order as real shell commands or inspections. Do not just print them.
 
 ## Step 4 - Surface open decisions and next steps
 
