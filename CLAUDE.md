@@ -96,6 +96,14 @@ All persistent cross-session notes live in `.for_bepy/` at the project root. Two
 - If a project has no tests, or the change is genuinely untestable by Claude (native UI, hardware, visual judgment), say so explicitly instead of skipping quietly.
 - Slow end-to-end suites (Playwright, etc.) are NOT part of this floor. A project with a browser e2e suite `@import`s `~/.claude/snippets/test-e2e.md` in its own CLAUDE.md, which defines when/how e2e runs; projects that don't import it run the floor only.
 
+## UI verification (show your work)
+
+- For user-facing or visual changes, do not just claim it works - show Joe how to see it himself:
+  - Bring the app up via `/supervised-run` and give Joe the testable URL (e.g. `http://localhost:PORT`).
+  - Capture a screenshot of the actual change and surface it with SendUserFile (throwaways go in `.for_bepy/screenshots/`).
+- Scope: ONLY user-facing/visual work. Skip for pure logic, config, backend, or non-visual edits - a URL+screenshot on those is noise.
+- Per-repo run mechanics (env file, login/OTP, web-server vs chrome device, ports, CORS) live in project memories - check them first; don't rediscover them each time.
+
 ## Persistence
 
 - Before adding any persistence (localStorage, sessionStorage, cookies, IndexedDB, disk, DB), state explicitly before writing the code the specific user-facing behavior it preserves across tab close or refresh. If you cannot name the behavior, do not persist. Default to in-memory state (Riverpod / context / useState / module-scope).
