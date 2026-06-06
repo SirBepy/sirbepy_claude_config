@@ -1,0 +1,125 @@
+# disk-doctor — Windows platform file
+
+Repeatable cleanup scan for Joe's PC (win32, Windows 11). You **advise**, never delete. Joe runs the delete commands. You may run the read-only **scan** commands yourself; you never run `Remove-Item` / `Clear-RecycleBin` / `cleanmgr` / `docker prune`.
+
+## Sizing helper (robocopy, not Get-ChildItem -Recurse)
+
+Directory sizes use `robocopy` in list-only mode, NOT `Get-ChildItem -Recurse`. Reasons (all verified on this machine 2026-06-03):
+- **Speed:** robocopy sized the full home tree in ~32s; the recursive `Get-ChildItem` version hung past 2 minutes and had to be killed.
+- **Junctions:** `/XJ` skips junction points, so it never loops through the reparse points scattered across `AppData`.
+- **`robocopy` ships with Windows** - no external tool to install (WizTree/TreeSize not present here).
+
+GOTCHA: robocopy exits with code 1-7 on SUCCESS (1 = "files found"). The harness/PowerShell will surface "Exit code 1" even though the scan worked - that is normal, not an error. Only exit code ≥ 8 is a real failure.
+
+GOTCHA: PowerShell functions do NOT persist between separate tool calls, so each sizing command below **embeds** this helper inline. When running them yourself, paste the whole block, not just the pipeline.
+
+```powershell
+function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0 /W:0; $l=@($o|Where-Object{$_ -match '^\s*Bytes :'})[0]; if($l -and $l -match 'Bytes :\s+(\d+)'){[math]::Round([int64]$Matches[1]/1GB,2)}else{0} }
+```
+
+## How to run a scan
+
+Run these (PowerShell, one per call - never chain with `;`/`&&`), then rank findings by payoff (GB freed × ease × reversibility). All read-only.
+
+```powershell
+Get-Volume C | Select-Object DriveLetter, @{n='FreeGB';e={[math]::Round($_.SizeRemaining/1GB,1)}}, @{n='TotalGB';e={[math]::Round($_.Size/1GB,1)}}
+```
+```powershell
+# Home top dirs
+function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0 /W:0; $l=@($o|Where-Object{$_ -match '^\s*Bytes :'})[0]; if($l -and $l -match 'Bytes :\s+(\d+)'){[math]::Round([int64]$Matches[1]/1GB,2)}else{0} }
+Get-ChildItem $env:USERPROFILE -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object { [PSCustomObject]@{ GB=(Get-DirGB $_.FullName); Dir=$_.Name } } | Sort-Object GB -Descending | Select-Object -First 12
+```
+```powershell
+# LocalAppData top dirs - biggest Windows blind spot (caches, package stores, app data)
+function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0 /W:0; $l=@($o|Where-Object{$_ -match '^\s*Bytes :'})[0]; if($l -and $l -match 'Bytes :\s+(\d+)'){[math]::Round([int64]$Matches[1]/1GB,2)}else{0} }
+Get-ChildItem $env:LOCALAPPDATA -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object { [PSCustomObject]@{ GB=(Get-DirGB $_.FullName); Dir=$_.Name } } | Sort-Object GB -Descending | Select-Object -First 12
+```
+```powershell
+# Temp + Recycle Bin
+[PSCustomObject]@{ TempGB=[math]::Round((Get-ChildItem $env:TEMP -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum/1GB,2); RecycleGB=[math]::Round((((New-Object -ComObject Shell.Application).Namespace(0xA).Items() | Measure-Object Size -Sum).Sum)/1GB,2) }
+```
+```powershell
+# Stale node_modules (depth-capped to keep it fast)
+function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0 /W:0; $l=@($o|Where-Object{$_ -match '^\s*Bytes :'})[0]; if($l -and $l -match 'Bytes :\s+(\d+)'){[math]::Round([int64]$Matches[1]/1GB,2)}else{0} }
+Get-ChildItem $env:USERPROFILE -Directory -Recurse -Depth 5 -Filter node_modules -Force -ErrorAction SilentlyContinue | ForEach-Object { [PSCustomObject]@{ GB=(Get-DirGB $_.FullName); Path=$_.FullName.Replace($env:USERPROFILE,'~') } } | Sort-Object GB -Descending | Select-Object -First 10
+```
+```powershell
+# Package-manager caches (correct bases: cargo/gradle live under USERPROFILE, the rest under LOCALAPPDATA)
+function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0 /W:0; $l=@($o|Where-Object{$_ -match '^\s*Bytes :'})[0]; if($l -and $l -match 'Bytes :\s+(\d+)'){[math]::Round([int64]$Matches[1]/1GB,2)}else{0} }
+@(
+  @{N='gradle';     P=(Join-Path $env:USERPROFILE '.gradle')},
+  @{N='cargo';      P=(Join-Path $env:USERPROFILE '.cargo')},
+  @{N='npm-cache';  P=(Join-Path $env:LOCALAPPDATA 'npm-cache')},
+  @{N='pnpm-store'; P=(Join-Path $env:LOCALAPPDATA 'pnpm')},
+  @{N='pip';        P=(Join-Path $env:LOCALAPPDATA 'pip\Cache')}
+) | ForEach-Object { if(Test-Path $_.P){ [PSCustomObject]@{ GB=(Get-DirGB $_.P); Cache=$_.N } } } | Sort-Object GB -Descending
+```
+
+### Second-pass drill-down
+
+After the initial scan, drill into the **top-3 dirs (home or LocalAppData) exceeding 2GB**:
+
+```powershell
+function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0 /W:0; $l=@($o|Where-Object{$_ -match '^\s*Bytes :'})[0]; if($l -and $l -match 'Bytes :\s+(\d+)'){[math]::Round([int64]$Matches[1]/1GB,2)}else{0} }
+Get-ChildItem '<dir>' -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object { [PSCustomObject]@{ GB=(Get-DirGB $_.FullName); Dir=$_.Name } } | Sort-Object GB -Descending | Select-Object -First 10
+```
+
+Hard cap: 3 dirs max regardless of how many exceed the threshold.
+
+## Output rules
+
+- Rank deletables, biggest realistic win first.
+- Per item: size, what it is, regenerates/re-downloadable?, exact delete command (PowerShell `Remove-Item -Recurse -Force` or the named cleanup command).
+- Prefer the **native/owner cleanup** over raw deletes: `docker system prune` for Docker, `cleanmgr`/Storage Sense for Windows Update leftovers / Windows.old / Delivery Optimization, `npm cache clean --force` / `pnpm store prune` for package caches. Never raw-`Remove-Item` inside `C:\Windows\*`.
+- Flag slow-to-restore items - confirm live project targets before swinging (e.g. node_modules in an active repo).
+- Never suggest anything in NEVER-TOUCH below.
+- Offer to write commands; Joe runs them. You never run the delete.
+
+## Self-improvement (only when invoked as /disk-doctor)
+
+At END of scan, propose any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCAN LOG entry using the confirmation gate below. Only edit this file when invoked as `/disk-doctor`. No silent/auto edits, no edits when triggered indirectly.
+
+### Confirmation gate (required before any edit to this file)
+
+Output this exact format and wait for explicit YES before writing anything:
+
+```
+## PLATFORM-FILE-EDIT -- reply YES to apply
++ [SECTION-NAME] exact line to be added
+```
+
+- `SECTION-NAME` must be one of: `SCAN LOG`, `KNOWN-SAFE`, `NEVER-TOUCH`
+- Claude resolves the section name to the matching header in this file and appends the line there
+- The `## PLATFORM-FILE-EDIT` sentinel line is required and must be reproduced verbatim
+- Only lines beginning with `+` are written to this file
+- No prose above or below the block
+- A single gate block may contain multiple `+` lines targeting different sections
+
+---
+
+## NEVER-TOUCH (Joe's machine)
+
+- `~/.claude/` - config, skills, memory.
+- `~/.ssh/` + any `*.jks` / `*.pem` / `*.key` keystores - signing & SSH keys.
+- `~/fvm` (~13G) - active Flutter toolchains, not junk.
+- `~/.gitconfig`, credential stores.
+- `C:\Windows\WinSxS` - component store. Deleting corrupts the OS; only DISM may clean it.
+- `pagefile.sys`, `hiberfil.sys`, `swapfile.sys` - system-managed; never manual-delete (disable the feature instead if reclaiming).
+- `C:\Windows\System32`, `C:\Program Files*`, `C:\ProgramData` package installs - not cleanup targets.
+
+## KNOWN SAFE-TO-DELETE (regenerates / re-downloadable)
+
+- Gradle cache `~/.gradle\caches` (~16G here, the biggest single win) - re-downloads on next build.
+- npm cache - `npm cache clean --force` (~4G). pnpm store - `pnpm store prune`. cargo registry `~/.cargo\registry` - re-downloads. pip cache - `pip cache purge`.
+- Docker: `docker system prune -a` (images/build cache; LocalAppData\Docker was ~15G here) - re-pulls. Confirm no needed images first.
+- `$env:TEMP\*` and `$env:LOCALAPPDATA\Temp\*` - temp files, regenerate. `Get-ChildItem $env:TEMP -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue` (in-use files skip).
+- Recycle Bin - `Clear-RecycleBin -Force`.
+- Browser caches under `$env:LOCALAPPDATA\<Browser>\User Data\*\Cache` - regenerate.
+- Stale-project `node_modules` - `npm i` / `pnpm i` rebuilds. Build artifacts (`build/`, `.dart_tool/`, `dist/`, `.next/`, `target/`) - regenerate.
+- Windows Update leftovers / `Windows.old` / Delivery Optimization - via `cleanmgr` or Storage Sense, not manual delete.
+
+## SCAN LOG
+
+Cap: 5 entries max. When at cap, drop the entry with the earliest date field before appending; if dates tie, drop the topmost entry. Never reorder remaining entries.
+
+- 2026-06-03: First Windows scan. C: free 24.3/930.6G (tight). Home top: Desktop 288.6G, AppData 197.5G, Videos 40G, Downloads 34.3G, .gradle 16.3G, fvm 13.2G. LocalAppData: Packages 20G, Android 15.7G, Docker 14.9G, Google 13.7G. Caches: gradle 16.3G, npm 4.2G, cargo 2.5G. Temp 0.56G, Recycle 0.79G. Top safe wins: gradle cache + Docker prune + npm cache ≈ 35G.

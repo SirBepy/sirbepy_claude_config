@@ -1,89 +1,32 @@
 ---
 name: disk-doctor
-description: Use when Joe asks what to delete / how to free disk space on his Mac. Repeatable cleanup scan that self-improves - records new safe-to-delete spots and never-touch zones in this file. Edits to this file only on explicit /disk-doctor invoke.
+description: Use when Joe asks what to delete / how to free disk space. Repeatable, self-improving cleanup scan that auto-routes by OS - macOS uses macos.md, Windows uses windows.md. Advise-only (Claude never deletes). Records new safe-to-delete spots and never-touch zones in the matching platform file, only on explicit /disk-doctor invoke.
 argument-hint: "(no args - just scan and advise)"
 ---
 
 # /disk-doctor — Self-Improving Disk Cleanup Advisor
 
-Repeatable cleanup scan for Joe's Mac (darwin/arm64). You **advise**, never delete. Joe runs the commands.
+OS-aware cleanup scan. You **advise**, never delete - Joe runs the delete commands. The actual scan logic, scan commands, NEVER-TOUCH / KNOWN-SAFE lists, and SCAN LOG all live in a per-platform file. This file is just the router.
 
-## How to run a scan
+## Step 1 — Detect the platform
 
-Run in parallel, then rank findings by payoff (GB freed × ease × reversibility):
+Determine the OS you are running on. The environment block at session start states the platform (`win32` = Windows, `darwin` = macOS), or run one of:
 
+```powershell
+$PSVersionTable.OS   # PowerShell - contains "Windows" or "Darwin"
+```
 ```bash
-df -h /                                                                                                                   # free space first
-du -sh ~/* 2>/dev/null | sort -rh | head -25                                                                              # home top dirs
-du -sh ~/Library/Caches/* 2>/dev/null | sort -rh | head -15                                                              # all caches (dynamic, no hardcoded names)
-du -sh ~/Library/Application\ Support 2>/dev/null                                                                        # app data (not caches - separate blind spot)
-du -sh ~/Library/Developer/Xcode/DerivedData 2>/dev/null                                                                 # Xcode build artifacts
-xcrun simctl runtime list                                                                                                 # iOS sim runtimes (use -j flag only when extracting UUIDs for delete)
-du -sh ~/Library/Developer/CoreSimulator 2>/dev/null
-find ~ -maxdepth 6 -name node_modules -type d -prune 2>/dev/null | xargs du -sh 2>/dev/null | sort -rh | head -10        # maxdepth 6 caps runtime on large repos
-du -sh ~/Downloads ~/.Trash 2>/dev/null
-find /System/Library/AssetsV2 -maxdepth 1 -name "*iOSSimulator*" 2>/dev/null | xargs du -sh 2>/dev/null
+uname -s             # bash - "Darwin" = macOS, "Linux"/other otherwise
 ```
 
-Avoid `sudo du` - it blocks on a password prompt in this harness.
+## Step 2 — Load and follow the matching platform file
 
-### Second-pass drill-down
+- **Windows (`win32`)** → Read `windows.md` (in this skill folder) and follow it exactly.
+- **macOS (`darwin`)** → Read `macos.md` (in this skill folder) and follow it exactly.
+- Any other OS → tell Joe there is no platform file yet and offer to scaffold one from an existing file.
 
-After the initial scan, drill into the **top-3 home dirs exceeding 2GB**:
+Each platform file is fully self-contained: it owns its scan commands, output rules, self-improvement confirmation gate, and its own NEVER-TOUCH / KNOWN-SAFE / SCAN LOG sections.
 
-```bash
-du -sh <dir>/* 2>/dev/null | sort -rh | head -10
-```
+## Step 3 — Self-improvement edits go in the platform file
 
-Hard cap: 3 dirs max regardless of how many exceed the threshold. Skip `~/Library` if it appears in top-3 (it is an aggregator; its contents are already covered by the dedicated cache, AppSupport, and simulator commands) - substitute the next qualifying dir.
-
-## Output rules
-
-- Rank deletables, biggest realistic win first.
-- Per item: size, what it is, regenerates/re-downloadable?, exact delete command.
-- Flag slow-to-restore items (sim runtimes) - confirm live project targets before swinging.
-- Never suggest anything in NEVER-TOUCH below.
-- Offer to write commands; Joe runs them. You never run `rm`.
-
-## Self-improvement (only when invoked as /disk-doctor)
-
-At END of scan, propose any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCAN LOG entry using the confirmation gate below. Only edit this file when invoked as `/disk-doctor`. No silent/auto edits, no edits when triggered indirectly.
-
-### Confirmation gate (required before any SKILL.md edit)
-
-Output this exact format and wait for explicit YES before writing anything:
-
-```
-## SKILL.MD-EDIT -- reply YES to apply
-+ [SECTION-NAME] exact line to be added
-```
-
-- `SECTION-NAME` must be one of: `SCAN LOG`, `KNOWN-SAFE`, `NEVER-TOUCH`
-- Claude resolves the section name to the matching header in this file and appends the line there
-- The `## SKILL.MD-EDIT` sentinel line is required and must be reproduced verbatim
-- Only lines beginning with `+` are written to SKILL.md
-- No prose above or below the block
-- A single gate block may contain multiple `+` lines targeting different sections
-
----
-
-## NEVER-TOUCH (Joe's machine)
-
-- `~/*.jks` keystores (test-keystore, kto-keystore, github-builds-keystore, some-old-key) - signing keys, loose in home.
-- `~/josipm.gitlab.ssh` + `.pub` - SSH keys.
-- `~/github-recovery-codes.txt` - account recovery.
-- `~/fvm` (~1.7G) - Flutter version mgr, active toolchains. Not junk.
-- `~/.claude/` - config, skills, memory.
-
-## KNOWN SAFE-TO-DELETE (regenerates / re-downloadable)
-
-- iOS Simulator runtimes via `xcrun simctl runtime delete <id>` - re-download from Xcode. Biggest win (~38G in `/System/Library/AssetsV2/com_apple_MobileAsset_iOSSimulatorRuntime`). GOTCHA: `simctl delete <id>` (no `runtime`) errors "Invalid device" - that subcommand is DEVICES only. Get runtime IDs from `xcrun simctl runtime list -j`. Deletion is async (shows "Deleting"). 17.5≈7.3G, 18.5≈8.8G.
-- Orphan sim devices: `xcrun simctl delete unavailable` (did nothing on 2026-05-23 - no orphan devices, weight was in runtimes not devices).
-- `~/Library/Caches/*` entries not in NEVER-TOUCH - all regenerate.
-- Stale-project `node_modules` - `npm i` rebuilds.
-
-## SCAN LOG
-
-Cap: 5 entries max. When at cap, drop the entry with the earliest date field before appending; if dates tie, drop the topmost entry. Never reorder remaining entries.
-
-- 2026-05-22: First scan. Free 2.1Gi (critical). 5 sim runtimes: 17.5, 18.5, 26.2, dup 26.4×2 ≈ 38G - top target. CoreSimulator 15G. Home Library 62G total. Caches: Google 2.8G, Spotify 1.9G.
+When invoked as `/disk-doctor`, any proposed NEVER-TOUCH / KNOWN-SAFE / SCAN LOG additions are appended to the **platform file you loaded** (`windows.md` or `macos.md`) via that file's confirmation gate. Never edit this router file for scan findings.
