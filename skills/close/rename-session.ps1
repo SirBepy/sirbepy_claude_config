@@ -1,6 +1,6 @@
 param(
-    [Parameter(Mandatory=$true)]
-    [string]$Name,
+    [Parameter(Mandatory=$false)]
+    [string]$Name = "",
     [switch]$Close
 )
 
@@ -45,64 +45,66 @@ if (-not $claudePid) {
     exit 1
 }
 
-$candidates = Get-ChildItem -Path $sessionsDir -Filter '*.json' -File -ErrorAction SilentlyContinue |
-    ForEach-Object {
-        try {
-            $data = Get-Content -Raw -Path $_.FullName | ConvertFrom-Json
-            if ($data.pid -and ([int]$data.pid -eq $claudePid)) {
-                [pscustomobject]@{
-                    SessionId = $data.sessionId
-                    Pid       = $data.pid
-                    UpdatedAt = $data.updatedAt
-                    Status    = $data.status
-                    File      = $_.FullName
+if ($Name) {
+    $candidates = Get-ChildItem -Path $sessionsDir -Filter '*.json' -File -ErrorAction SilentlyContinue |
+        ForEach-Object {
+            try {
+                $data = Get-Content -Raw -Path $_.FullName | ConvertFrom-Json
+                if ($data.pid -and ([int]$data.pid -eq $claudePid)) {
+                    [pscustomobject]@{
+                        SessionId = $data.sessionId
+                        Pid       = $data.pid
+                        UpdatedAt = $data.updatedAt
+                        Status    = $data.status
+                        File      = $_.FullName
+                    }
                 }
-            }
-        } catch {}
-    } | Sort-Object -Property UpdatedAt -Descending
+            } catch {}
+        } | Sort-Object -Property UpdatedAt -Descending
 
-if (-not $candidates -or $candidates.Count -eq 0) {
-    Write-Error "No session found with pid matching claude ancestor pid $claudePid"
-    exit 1
-}
+    if (-not $candidates -or $candidates.Count -eq 0) {
+        Write-Error "No session found with pid matching claude ancestor pid $claudePid"
+        exit 1
+    }
 
-$sessionId   = $candidates[0].SessionId
-$sessionPid  = $candidates[0].Pid
-$jsonlMatches = Get-ChildItem -Path $projectsDir -Recurse -Filter "$sessionId.jsonl" -File -ErrorAction SilentlyContinue
+    $sessionId   = $candidates[0].SessionId
+    $sessionPid  = $candidates[0].Pid
+    $jsonlMatches = Get-ChildItem -Path $projectsDir -Recurse -Filter "$sessionId.jsonl" -File -ErrorAction SilentlyContinue
 
-if (-not $jsonlMatches -or $jsonlMatches.Count -eq 0) {
-    Write-Error "Session jsonl not found for sessionId '$sessionId' under $projectsDir"
-    exit 1
-}
+    if (-not $jsonlMatches -or $jsonlMatches.Count -eq 0) {
+        Write-Error "Session jsonl not found for sessionId '$sessionId' under $projectsDir"
+        exit 1
+    }
 
-$jsonlPath = $jsonlMatches[0].FullName
+    $jsonlPath = $jsonlMatches[0].FullName
 
-$titleRecord = @{ type = 'custom-title'; customTitle = $Name; sessionId = $sessionId } | ConvertTo-Json -Compress
-$agentRecord = @{ type = 'agent-name';   agentName   = $Name; sessionId = $sessionId } | ConvertTo-Json -Compress
+    $titleRecord = @{ type = 'custom-title'; customTitle = $Name; sessionId = $sessionId } | ConvertTo-Json -Compress
+    $agentRecord = @{ type = 'agent-name';   agentName   = $Name; sessionId = $sessionId } | ConvertTo-Json -Compress
 
-$maxAttempts = 8
-$retryMs     = 250
+    $maxAttempts = 8
+    $retryMs     = 250
 
-foreach ($record in @($titleRecord, $agentRecord)) {
-    $written = $false
-    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
-        try {
-            Add-Content -Path $jsonlPath -Value $record -Encoding utf8
-            $written = $true
-            break
-        } catch {
-            if ($attempt -lt $maxAttempts) {
-                Start-Sleep -Milliseconds $retryMs
-            } else {
-                Write-Error "Could not write record to jsonl after $maxAttempts attempts: $_"
-                exit 1
+    foreach ($record in @($titleRecord, $agentRecord)) {
+        $written = $false
+        for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            try {
+                Add-Content -Path $jsonlPath -Value $record -Encoding utf8
+                $written = $true
+                break
+            } catch {
+                if ($attempt -lt $maxAttempts) {
+                    Start-Sleep -Milliseconds $retryMs
+                } else {
+                    Write-Error "Could not write record to jsonl after $maxAttempts attempts: $_"
+                    exit 1
+                }
             }
         }
     }
-}
 
-Write-Host "Renamed session $sessionId (claude pid $claudePid) to '$Name'"
-Write-Host "  jsonl: $jsonlPath"
+    Write-Host "Renamed session $sessionId (claude pid $claudePid) to '$Name'"
+    Write-Host "  jsonl: $jsonlPath"
+}
 
 if ($Close) {
     if (-not $claudePid) {

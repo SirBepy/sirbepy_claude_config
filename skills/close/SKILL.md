@@ -1,17 +1,17 @@
 ---
 name: close
-description: Triggers on /close only. Session retrospective, code-health review, persist, rename, close terminal.
+description: Triggers on /close only. Session retrospective, code-health review, persist, close terminal.
 argument-hint: "[--dont-close] [--skip-review] [--light] [/commit ...] [/sleep-when-done]"
 ---
 
 # /close
 
-> Retrospect, review, persist, rename, close terminal.
+> Retrospect, review, persist, close terminal.
 
 ## Usage
 
 ```
-/close                                  # retrospect + review + persist + rename + close terminal
+/close                                  # retrospect + review + persist + close terminal
 /close --dont-close                     # everything except closing, then prompts to run /clear
 /close --skip-review                    # skip the parallel code-health review subagents
 /close --light                          # high-context mode: short Phase 1, delegate Phase 2+3 to subagents
@@ -98,73 +98,46 @@ Run in this order:
 4. **Screenshot cleanup.** Delete the contents of `.for_bepy/screenshots/` (the throwaway verification-screenshot quarantine per CLAUDE.md). Scope is strictly that folder - never touch `.portfolio-data/` (portfolio keepers), committed assets, or any image elsewhere. List each file deleted in the output so the dev sees what went. Delete without a blocking prompt (the folder is disposable by definition, and /close runs autonomously when chained with `/sleep-when-done`). Skip silently if the folder is missing or empty. PowerShell: `Get-ChildItem -File '.for_bepy/screenshots/' | Remove-Item -Force`.
 Note: there is no implicit /commit step anymore. If the dev wants a commit, they chain `/commit` (with whatever subcommand they want) into the /close call.
 
-## Phase 4 - Rename session
-
-> **Why-literal:** Both script paths are hardcoded on purpose. The harness's permission matcher refuses to validate dynamic command names (`$env:` vars, expressions, globs) and falls back to always-prompt for every invocation. Literal paths keep /close at one prompt instead of N. Do NOT "portable-ize" these - it will re-introduce permission spam. This is a documented constraint, not a leaked username.
-
-Give the session a meaningful name so the `/resume` picker is browsable later.
-
-1. Pick a short human-readable name (max 60 chars), sentence-style with spaces, written like a commit subject. Sentence case, no kebab-case, no trailing period. Use Phase 1 retrospective as input.
-   - Good: `Improve /close skill with auto-rename`, `Fix killbrick poison type damage`, `Investigate session rename storage`
-   - Bad: `close-skill-rename-test`, `session-2025-05-02`, `chat-1`, `Updated some files.`
-2. Run the helper for your OS:
-
-   **Mac/Linux:**
-   ```sh
-   sh /Users/josipmuzic/.claude/skills/close/rename-session.sh --name "<name>"
-   ```
-
-   **Windows:**
-   ```powershell
-   & "C:\Users\tecno\.claude\skills\close\rename-session.ps1" -Name "<name>"
-   ```
-
-   The script finds the current session jsonl by walking the process tree to the claude ancestor PID, then appends the two records the harness uses for renames (`custom-title`, `agent-name`). Idempotent enough - last record wins per harness logic.
-3. If the script errors (no matching session, jsonl not found), print the error and continue. Don't abort the close.
-
-The rename takes effect on next launch / `/resume` picker. It does NOT update the current session's prompt bar live.
-
-## Phase 5 - Counter summary
+## Phase 4 - Counter summary
 
 Print one line:
 
 ```
-N memory writes . N comments . N workflow reconciles . N ai_todos written (M from review) . N screenshots cleaned . renamed to "<name>" . chain: <list of chained commands or "none"> . closing: yes/no
+N memory writes . N comments . N workflow reconciles . N ai_todos written (M from review) . N screenshots cleaned . chain: <list of chained commands or "none"> . closing: yes/no
 ```
 
 `M from review` is the count of findings from Phase 2 (size + DRY + dead code). If Phase 2 was skipped, omit the parenthetical and say `review skipped`. `N screenshots cleaned` is the count deleted from `.for_bepy/screenshots/` in Phase 3 step 4 (0 if folder was missing/empty).
 
-## Phase 6 - Run chained commands
+## Phase 5 - Run chained commands
 
 Walk the parsed chain in user order. Invoke each via the `Skill` tool with its args. Wait for each to return before moving to the next.
 
 If any chained command fails (errors, hook rejection, etc.):
 
 - Stop the chain right there. Do not run subsequent commands.
-- Skip Phase 7 (terminal kill) - failure means there may be unsaved state worth keeping the window open for.
+- Skip Phase 6 (terminal kill) - failure means there may be unsaved state worth keeping the window open for.
 - Print which command failed and why.
 
 If no chained commands, skip this phase.
 
-## Phase 7 - Close terminal
+## Phase 6 - Close terminal
 
 **Default: always run.** Skip only if ANY of these are true:
 
 - `--dont-close` was passed.
-- Any chained command in Phase 6 failed.
-- The rename script in Phase 4 errored.
+- Any chained command in Phase 5 failed.
 - Any background work is still running in this session: spawned `Agent` with `run_in_background: true`, active `/loop`, or pending `ScheduleWakeup`. Check before killing.
 
-If all clear, run for your OS (literal path - see Phase 4 Why-literal callout):
+If all clear, run for your OS (literal paths hardcoded - dynamic `$env:` expressions fail the harness permission matcher and cause per-invocation prompts):
 
 **Mac/Linux:**
 ```sh
-sh /Users/josipmuzic/.claude/skills/close/rename-session.sh --name "<name>" --close
+sh /Users/josipmuzic/.claude/skills/close/rename-session.sh --close
 ```
 
 **Windows:**
 ```powershell
-& "C:\Users\tecno\.claude\skills\close\rename-session.ps1" -Name "<name>" -Close
+& "C:\Users\tecno\.claude\skills\close\rename-session.ps1" -Close
 ```
 
 The script kills the claude ancestor process after an 800ms delay so this final response flushes first. In VS Code terminals this closes the tab; in Terminal.app it returns to the shell prompt.
