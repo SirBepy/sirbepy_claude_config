@@ -215,7 +215,7 @@ If any slot was left empty for any char, list explicitly so the user knows.
 ## Don't
 
 - Don't ship an icon you couldn't actually fetch. No synthesized art.
-- Don't normalize / convert audio formats unless required (loader accepts wav/mp3/ogg/flac).
+- Audio format is load-bearing. The app decodes natively via `rodio` built with ONLY `wav`, `symphonia-mp3`, and `vorbis` features, so the **only playable formats are WAV (PCM), MP3, and Ogg *Vorbis***. NOT flac, NOT opus (incl. opus-in-ogg), NOT m4a/aac/webm - those decode to silence with no error. When a source clip is `.ogg`, confirm it is Vorbis not Opus (`ffprobe -show_entries stream=codec_name`); when it's any unsupported codec, transcode to WAV or Ogg Vorbis before saving. Past incident: a whole HotS batch shipped as valid files that played silently because rodio lacked the vorbis feature - never assume an extension implies playability.
 - Don't write outside `<app-data>/characters/<char-slug>/` (and the temp scratch dir).
 - Don't run the app, the dev server, or the test suite. Just produce files.
 - Don't re-search per character what you can search once per game. Icons + sounds are bulk ops.
