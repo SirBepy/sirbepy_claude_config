@@ -119,11 +119,20 @@ function selfCompute() {
   const scan = scanUsage(t.path);
   if (!scan) { console.log("context-left: no usage data yet (no completed turn in this session)"); return false; }
   const { win, confidence } = windowFor(scan.model, scan.maxOcc);
+  // remaining is driven by `current` (this turn's occupancy), not `maxOcc`: after a
+  // context compaction the live window genuinely shrinks, so the latest line is right.
   const remaining = Math.max(0, win - scan.current);
+  // Be precise about WHY we fell back to the newest transcript - the two causes are different.
+  let warning = "";
+  if (!t.exact) {
+    warning = SESSION_ID
+      ? `CLAUDE_CODE_SESSION_ID=${SESSION_ID} set but no matching transcript found; used newest instead - may be a different session`
+      : "CLAUDE_CODE_SESSION_ID unset; used newest transcript - may be a different session";
+  }
   printStatus({
     remaining, window: win, pctLeft: Math.round((remaining / win) * 100), model: scan.model, confidence,
     note: confidence !== "proven" ? "window is a heuristic; ~ marks an estimate (computed locally, daemon unreachable)" : "computed locally (daemon unreachable)",
-    warning: t.exact ? "" : "CLAUDE_CODE_SESSION_ID unset; used newest transcript, may be a different session",
+    warning,
   });
   return true;
 }
