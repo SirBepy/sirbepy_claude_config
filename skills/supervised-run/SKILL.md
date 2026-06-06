@@ -17,30 +17,61 @@ Start a long-lived dev server through server_supervisor instead of spawning it i
 1. **Discover the API.** Read the data dir `%APPDATA%\com.sirbepy.server-supervisor\supervisor\`:
    - token = contents of `api_token.txt`
    - port = contents of `api_port.txt`
-   If either file is missing, treat the supervisor as not running → go to Fallback.
+   If either file is missing, treat the supervisor as not running -> go to Fallback.
 
-2. **Probe health.** `GET http://127.0.0.1:<port>/health` (no auth). If it does not return 200 (connection refused, timeout, missing) → go to Fallback.
+2. **Probe health.** `GET http://127.0.0.1:<port>/health` (no auth). If it does not return 200 -> go to Fallback.
 
-3. **Run it.** `POST http://127.0.0.1:<port>/run` with header `Authorization: Bearer <token>` and JSON body:
+3. **List first - reuse before you create.** `GET http://127.0.0.1:<port>/procs` (header `Authorization: Bearer <token>`). Look for an existing entry whose `project` equals the current project folder's name AND whose `name`/command is the server you want.
+   - **If a matching entry exists:** do NOT `/run` a new one. Reuse it by id:
+     - status `running` and you just want it up: leave it, or `POST /procs/<id>/restart` to pick up code changes.
+     - status `stopped` or `crashed`: `POST /procs/<id>/start` (or `/restart`).
+   - **Only if nothing matches** do you go to step 4. This is what stops the same project from collecting `flutter run` three times.
+
+4. **Run it (first launch only).** `POST /run` with header `Authorization: Bearer <token>` and JSON body:
    ```json
    { "root": "<absolute path of the current project folder>", "cmd": "<the server command>", "kind": "generic", "use_dynamic_port": true }
    ```
    - Set `"kind": "flutter"` only for `flutter run` commands; otherwise `"generic"`.
-   - For the dynamic port to actually take effect, template the port flag INTO the command where the tool supports one, using the literal `{PORT}` placeholder (the supervisor substitutes it and also sets the `PORT` env var):
-     - Vite: `vite --port {PORT}` (or `npm run dev -- --port {PORT}`)
-     - Next: `next dev -p {PORT}`
-     - Flutter web: `flutter run -d chrome --web-port {PORT}`
-     - Node servers reading `process.env.PORT`: no `{PORT}` needed; the env var is set automatically.
-     - If you cannot make the tool honor a port, send `"use_dynamic_port": false` and accept its built-in port.
-   - The response is the started process's info: `{ id, project, name, kind, status, pid, port }`.
+   - **Set the port** - see the Port table below. This is the step AIs most often get wrong.
+   - The response is the started process's info: `{ id, project, name, kind, status, pid, port, mem_bytes }`. Note the `id` (form: `<project>:<name>`) - you manage everything else by it.
 
-4. **Report.** Tell Joe it's running, on which port, and that it's in the supervisor dashboard. Calling `/run` again with the same root+cmd is safe - it reuses the same entry and restarts it (no duplicates).
+5. **On failure, clean up before you retry.** If the started process is `crashed` (check `GET /procs` or `GET /procs/<id>/logs`):
+   - Read `GET /procs/<id>/logs` to see why.
+   - **Retrying the SAME command** (e.g. it was a transient port clash): `POST /procs/<id>/restart`. Reuses the entry, keeps its log history. Do NOT `/run` again.
+   - **Trying a DIFFERENT command** (different flags/port/target): `DELETE /procs/<id>` to remove the failed attempt FIRST, then `/run` the new command. This is what prevents leaving dead variants behind.
+   - (The backend also auto-prunes dead-on-arrival variants on the next successful `/run`, but delete explicitly - do not rely on it.)
 
-5. **Manage it afterward** via the same base URL + bearer token:
+6. **Report.** Tell Joe it's running, on which port, and that it's in the supervisor dashboard.
+
+7. **Manage it afterward** via the same base URL + bearer token:
    - Logs: `GET /procs/<id>/logs`
    - Stop: `POST /procs/<id>/stop`
    - Restart: `POST /procs/<id>/restart`
-   - List everything running: `GET /procs`
+   - Delete (remove the entry entirely): `DELETE /procs/<id>` (stop it first if running)
+   - List everything: `GET /procs`
+
+## Port table (do this in step 4)
+
+For a dynamic port to take effect, template the port flag INTO the command with the literal `{PORT}` placeholder. The supervisor substitutes it AND sets the `PORT` env var.
+
+| Tool | `cmd` to send |
+| --- | --- |
+| Vite | `vite --port {PORT}` (or `npm run dev -- --port {PORT}`) |
+| Next.js | `next dev -p {PORT}` |
+| Flutter web | `flutter run -d chrome --web-port {PORT}` |
+| Node server reading `process.env.PORT` | no `{PORT}` needed - the env var is set automatically |
+| Tool with no port flag you can find | send `"use_dynamic_port": false` and accept its built-in port |
+
+### Worked example (Vite project)
+
+```http
+POST http://127.0.0.1:<port>/run
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{ "root": "C:\\Users\\joe\\Projects\\my-app", "cmd": "npm run dev -- --port {PORT}", "kind": "generic", "use_dynamic_port": true }
+```
+Response: `{ "id": "my-app:dev", "project": "my-app", "port": 42013, "status": "running", ... }` -> the app is on http://127.0.0.1:42013.
 
 ## Fallback (supervisor not reachable)
 
@@ -50,3 +81,5 @@ Run the server the normal way (in your own background shell), and tell Joe: "ser
 
 - The API binds 127.0.0.1 only and the token is per-machine; never send it anywhere off-localhost.
 - One-off commands never go through here - this is only for processes that stay running.
+- Manage a process by the `id` from its `/run` (or `/procs`) response. Never blind-`/run` a variant when an entry already exists - reuse it.
+- Endpoints verified against the running supervisor on 2026-06-06: `GET /health`, `GET /procs`, `POST /run`, and per-id `POST /procs/<id>/{start,stop,restart}`, `GET /procs/<id>/logs`, `DELETE /procs/<id>` all exist. Auth is `Authorization: Bearer <token>` on everything except `/health`.
