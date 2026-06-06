@@ -68,6 +68,14 @@ Resolve `<app-data>` per platform:
 
 Add fields as the app grows. Always write at minimum `id` + `label`.
 
+### Canonical game dir - NEVER create a duplicate game group
+
+Before writing ANY game dir, LIST the existing `<app-data>/characters/` dirs (and read each one's `game.json` `label`). If a dir already exists for the SAME game - even under a different slug - REUSE that exact existing dir + slug and write the new characters into it. Never create a second dir for a game that's already present.
+
+Match by game IDENTITY, not exact slug string: normalize both sides (lowercase, strip punctuation, drop edition/article words like `the`, `iii`, `frozen-throne`, `rehydrated`) and compare against existing dir names AND their `game.json` labels before choosing a slug. If a normalized match exists, the existing slug wins; do not invent a new one.
+
+Past incident (2026-06-06): a run created `warcraft3` (3 chars, 6 clips) alongside the existing `warcraft-3-frozen-throne` (4 chars, full kits) -> two duplicate "Warcraft III" groups in the UI. This had also happened on 2026-06-04. Root cause: no existing-dir check before picking a game-slug. Always do the check above.
+
 ## Workflow
 
 ### Step 1: Parse args + pick characters
@@ -149,22 +157,35 @@ Filename convention: `<char-slug>-<original-action>-<n>.<ext>` (NOT `<slot>-<n>`
 
 Don't reuse the same clip across `select` and `question_asked` slots for the same char unless unavoidable. But the FILES exist in the pool regardless — slots just point to a subset.
 
-**Clip length rules (HARD):**
-- Discard ANY candidate clip > 5 seconds. Don't even keep it staged. Joe doesn't want long clips and they make poor notification chimes.
-- Trim accepted clips to <= 2 seconds when writing the final WAV. Ideal is <1 second.
-- For WAVs use Python's stdlib `wave` module to truncate frames (no ffmpeg needed):
+**Clip length rules (HARD) - NEVER guillotine a clip:**
+- NEVER truncate a clip to a fixed length. The old "cut every clip to 2s" rule was WRONG: it chopped lines off mid-word (1136 clips ruined in the first batch). Do not reintroduce a fixed-length cut under any circumstance.
+- **> 10 seconds:** discard the clip entirely. Too long for a notification chime. Find a shorter line instead - never chop a long clip down to fit.
+- **<= 5 seconds:** keep the WHOLE clip. The only editing allowed is stripping leading/trailing PURE silence (never speech).
+- **5 to 10 seconds:** keep the whole clip, but it needs the user's ear before shipping. Do NOT auto-assign a 5-10s clip to a slot. Add it to a per-run "5-10s clips pending approval" list so the user can listen once and approve or reject. Under `/autopilot` (no human present): fill slots from <=5s clips, and park every 5-10s candidate in `COMMENTS_FOR_BEPY.md` under a `## 5-10s clips pending approval` heading with its full path. Never block the run waiting on approval.
+- **Silence-trim only** (WAV, stdlib `wave` - strip leading AND trailing silence below an amplitude floor, keep a ~150ms head/tail so the onset/final consonant isn't clipped). Do NOT use `audioop` (removed in Python 3.13+; read samples with `int.from_bytes`):
   ```python
-  import wave, io
+  import wave  # stdlib only - do NOT use audioop (removed in Python 3.13+)
   with wave.open(in_path, 'rb') as w:
-      sr = w.getframerate(); n = w.getnframes()
-      if n / sr > 5: skip()
-      keep = min(n, int(sr * 2))
-      frames = w.readframes(keep)
+      sr, sw, ch, n = w.getframerate(), w.getsampwidth(), w.getnchannels(), w.getnframes()
+      if n / sr > 10.0: skip()              # >10s -> discard, never cut
+      frames = w.readframes(n)
+  fr = sw * ch                              # bytes per frame
+  full = 1 << (8 * sw - 1)                  # full-scale amp (128 for 8-bit, 32768 for 16-bit)
+  floor = full // 90                        # ~1% of full scale counts as silence
+  def amp(i):                               # |amplitude| of channel 0 at frame i
+      v = int.from_bytes(frames[i*fr:i*fr+sw], 'little', signed=(sw > 1))
+      return abs(v - 128) if sw == 1 else abs(v)   # 8-bit PCM is unsigned, centered at 128
+  first = 0
+  while first < n and amp(first) <= floor: first += 1          # strip leading silence
+  last = n
+  while last > first and amp(last - 1) <= floor: last -= 1     # strip trailing silence
+  first = max(0, first - int(sr * 0.15))    # keep ~150ms head/tail so onset/consonant isn't clipped
+  last  = min(n, last + int(sr * 0.15))
+  frames = frames[first*fr:last*fr]
   with wave.open(out_path, 'wb') as ow:
-      ow.setnchannels(...); ow.setsampwidth(...); ow.setframerate(sr)
-      ow.writeframes(frames)
+      ow.setnchannels(ch); ow.setsampwidth(sw); ow.setframerate(sr); ow.writeframes(frames)
   ```
-- For MP3 trimming, use ffmpeg: `ffmpeg -i in.mp3 -t 2 -c:a copy out.mp3`. Install via scoop if missing.
+- MP3/OGG: do NOT re-encode to shorten. Keep whole if <=10s (subject to the 5-10s approval rule above); discard if longer.
 
 ### Step 7: User picks per slot per char
 
