@@ -77,6 +77,8 @@
       "WebFetch(domain:devforum.roblox.com)",
       "WebFetch(domain:api.flutter.dev)",
       "Edit(~/.claude/skills/**)",
+      "Edit(C:/Users/tecno/.claude/skills/**)",
+      "Write(C:/Users/tecno/.claude/skills/**)",
       "Edit(~/.claude/skills/jest-lua/**)",
       "Edit(~/.claude/skills/test-flow/**)",
       "Read(//c/Users/tecno/**)",
