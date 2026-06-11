@@ -64,29 +64,11 @@ Skip this entire phase if ANY:
 
 - `--skip-review` was passed.
 - Zero code files changed this session (only docs/config/`.for_bepy/`/memory edits).
-- Fewer than 50 added lines total across all code files (`git diff --shortstat` insertions). Rationale: small diffs are almost always edits to existing code, not new symbol declarations - DRY/dead-code review finds nothing. Saves ~5-10k tokens on routine closes.
+- Fewer than 50 added lines total across all code files (`git diff --shortstat` insertions). Rationale: small diffs are almost always edits to existing code, not new symbol declarations - DRY/dead-code review finds nothing. Saves tokens on routine closes.
 
-Use `git diff --name-only` against the session's starting HEAD (or unpushed commits if commits were made) to get the changed code-file list. Treat `.md`, `.json`, `.toml`, `.yaml`, `.yml`, `.gitignore`, files under `.for_bepy/`, and files under `memory/` as non-code for this gate.
+Determine scope arg: if commits were made this session, pass `unpushed`; otherwise pass `uncommitted`.
 
-> **All inline, no subagents.** Past iterations of this phase dispatched two Explore agents in parallel. They burned ~66k tokens per close (33k each), required brittle prose to prevent the agents from writing inline shell scripts, and the /compact-protection they offered turned out to be hypothetical (the dev rarely hits /compact in practice). Inline is ~13x cheaper for the typical case. If you find yourself wanting to dispatch a subagent here, use `--light` mode instead - that path is built for high-context closes.
-
-### Step 2a - Size check
-
-For each changed code file: line count it using `wc -l "path"` via the Bash tool (`Bash(wc*)` is pre-allowed). If > 400 lines AND has an obvious split seam (separate concerns, reusable unit, clear boundary), record a finding: `{ "title": "...", "files": [...], "problem": "[file] is N lines, mixes [X] and [Y]", "fix": "split at [boundary] into [new file]" }`. If no obvious seam, skip that file.
-
-### Step 2b - DRY + dead code (inline)
-
-Use only the `Grep`, `Read`, and `Glob` tools. Do NOT shell out for analysis - the language-aware shell pipelines you'd reach for (`for func in ...`, `Select-String ... | Measure-Object`) hit permission prompts and break the autonomous flow. Grep with `output_mode: "count"` covers every reference-counting need.
-
-**DRY pass.** For each new top-level symbol introduced in the diff (new `function`, `const`, `class`, `interface`, `type`, `export`, `def`, `func`, `local function`, etc. - language-dependent), Grep the rest of the repo for equivalents (similar name, similar shape, similar purpose). For each duplicate found, record: `{ "title": ..., "files": [path:line for both new and existing], "problem": "what duplicates what (one sentence)", "fix": "delete X and import Y / extract shared util to Z" }`. Cap at ~3 Grep calls per new symbol.
-
-**Dead code pass.** For each new top-level symbol in the diff, call Grep with `pattern: "\\b<symbol>\\b"`, `output_mode: "count"`, and the file glob. Symbols with count <= 1 (only the definition) are defined-but-never-called. Also scan the diff for: unreachable branches, commented-out blocks left in, imports never read. Record: `{ "title": ..., "files": [path:line], "problem": "one sentence", "fix": "delete / uncomment if needed / wire up at X" }`.
-
-If the diff has zero added top-level symbols (only body edits), skip both passes - by definition there is nothing new to dupe-check or dead-check.
-
-### Step 2c - Collect findings
-
-Merge Step 2a (size) and Step 2b (DRY + dead code) findings into one list. This list is consumed in Phase 3 step 4 (ai_todos write).
+Invoke `/code-check` with that scope arg via the Skill tool. It handles the analysis and writes ai_todos directly. Read its summary line (`code-check: N findings ...`) to extract the finding count for the Phase 4 counter.
 
 ## Phase 3 - Persist
 
@@ -94,7 +76,7 @@ Run in this order:
 
 1. **Memory writes.** Per the auto-memory protocol in CLAUDE.md. For each correction or non-obvious confirmation from Phase 1, write or update the appropriate memory file and update MEMORY.md index. Skip if nothing qualifies. Never invent memories to look productive.
 2. **`.for_bepy/BEPY_TODOS.md`** Reconcile: delete completed steps. Per CLAUDE.md rules.
-3. **`.for_bepy/ai_todos/`** For each item from Phase 1 step 5 (unfinished offers) and each finding from Phase 2 (size + DRY + dead code), write a separate `.md` file using the template defined in CLAUDE.md (`# title`, `## Goal`, `## Context`, `## Approach`, `## Acceptance`). Filename: zero-padded numeric prefix + kebab-case slug per the CLAUDE.md ai_todos rules (scan existing files for max id, add 1, never reuse). For Phase 2 findings, use the structured fields directly: `title` → filename slug + `# title` heading; `problem` → `## Context`; `fix` → `## Approach`; `files` → cited inside Context. The bar: a future cold AI session must be able to execute the task from the file alone, without re-reading session history. Skip if no items.
+3. **`.for_bepy/ai_todos/`** For each item from Phase 1 step 5 (unfinished offers), write a separate `.md` file using the template defined in CLAUDE.md (`# title`, `## Goal`, `## Context`, `## Approach`, `## Acceptance`). Filename: zero-padded numeric prefix + kebab-case slug per the CLAUDE.md ai_todos rules (scan existing files for max id, add 1, never reuse). The bar: a future cold AI session must be able to execute the task from the file alone, without re-reading session history. Skip if no items. Note: Phase 2 review findings are written to ai_todos by `/code-check` directly - do not re-write them here.
 4. **Screenshot cleanup.** Delete the contents of `.for_bepy/screenshots/` (the throwaway verification-screenshot quarantine per CLAUDE.md). Scope is strictly that folder - never touch `.portfolio-data/` (portfolio keepers), committed assets, or any image elsewhere. List each file deleted in the output so the dev sees what went. Delete without a blocking prompt (the folder is disposable by definition, and /close runs autonomously when chained with `/sleep-when-done`). Skip silently if the folder is missing or empty. PowerShell: `Get-ChildItem -File '.for_bepy/screenshots/' | Remove-Item -Force`.
 Note: there is no implicit /commit step anymore. If the dev wants a commit, they chain `/commit` (with whatever subcommand they want) into the /close call.
 
