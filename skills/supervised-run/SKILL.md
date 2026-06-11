@@ -58,7 +58,8 @@ For a dynamic port to take effect, template the port flag INTO the command with 
 | --- | --- |
 | Vite | `vite --port {PORT}` (or `npm run dev -- --port {PORT}`) |
 | Next.js | `next dev -p {PORT}` |
-| Flutter web | `flutter run -d chrome --web-port {PORT}` |
+| Flutter web (auto-reload) | `flutter run -d web-server --web-port {PORT}` - supervisor fronts it with a live-reload proxy; a `/reload` refreshes every open tab on its own |
+| Flutter web (chrome) | `flutter run -d chrome --web-port {PORT}` - flutter owns its chrome; no supervisor proxy, no auto-refresh |
 | Node server reading `process.env.PORT` | no `{PORT}` needed - the env var is set automatically |
 | Tool with no port flag you can find | send `"use_dynamic_port": false` and accept its built-in port |
 
