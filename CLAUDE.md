@@ -13,6 +13,7 @@
   - `[DATA]` - schema, data modeling
   - `[TOOLING]` - dev tooling, linting, code style, naming
 - When presenting options, always tag which is best long-term and which is best short-term INSIDE the option label or description (e.g. description starts `Long-term best: ...`), not only in surrounding chat - Joe skims past commentary. EXCEPT for [UX] questions, skip the axes. Long-term means architectural/design merit over a multi-year horizon. If the same option wins both axes, say so explicitly. Default to picking a winner; only declare "no clear long-term winner" when you can name the specific tradeoff that ties them.
+- When writing something Joe is meant to copy-paste, use a **fenced code block** for commands/code/config or a **blockquote** for prose he'll paste elsewhere (e.g. a message draft). Plain text is never easily copyable. Never use a blockquote for technical content.
 
 ## Git Commits
 
