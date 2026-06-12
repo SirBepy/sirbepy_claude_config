@@ -2,43 +2,38 @@
 
 ## Communication
 
-- Always invoke `/caveman` at the start of every session before doing anything else.
 - Front-load all questions before starting work, trivial or not. Never ask mid-task; never assume.
 - Never use the em dash character anywhere, ever. Use a comma, colon, or hyphen instead.
-- When asking any question, always use the AskUserQuestion tool with 2-4 options. Never type numbered options in plain text. Never ask a bare open-ended question.
+- Every question: use the AskUserQuestion tool with 2-4 options. Never a bare open-ended question; never plain-text numbered options.
 - Prefix every question with a domain tag so Joe knows how much weight to give Claude's input:
-  - `[UX]` - visual, layout, interaction feel (Joe's taste dominates; skip long/short-term axes, but still give a brief recommendation)
+  - `[UX]` - visual, layout, interaction feel (Joe's taste dominates; skip the long/short-term axes, but still give a brief recommendation)
   - `[ARCH]` - system design, abstractions, data flow (Claude's input is load-bearing)
   - `[SEC]` - security decisions (Claude's input is load-bearing)
   - `[DATA]` - schema, data modeling
   - `[TOOLING]` - dev tooling, linting, code style, naming
-- When presenting options, always tag which is best long-term and which is best short-term INSIDE the option label or description (e.g. description starts `Long-term best: ...`), not only in surrounding chat - Joe skims past commentary. EXCEPT for [UX] questions, skip the axes. Long-term means architectural/design merit over a multi-year horizon. If the same option wins both axes, say so explicitly. Default to picking a winner; only declare "no clear long-term winner" when you can name the specific tradeoff that ties them.
-- When writing something Joe is meant to copy-paste, use a **fenced code block** for commands/code/config or a **blockquote** for prose he'll paste elsewhere (e.g. a message draft). Plain text is never easily copyable. Never use a blockquote for technical content.
+- Mark the long-term-best and short-term-best pick INSIDE the option label/description, not only in surrounding chat (Joe skims past commentary). Skip the axes for [UX]. Long-term means architectural/design merit over a multi-year horizon. Default to naming a winner; only declare no clear winner when you can name the specific tradeoff that ties them.
+- Copy-paste for Joe: fenced code block for commands/code/config, blockquote for prose he'll paste elsewhere. Never blockquote technical content.
 
 ## Git Commits
 
-- NEVER commit directly. Always invoke the `/commit` skill first and follow its instructions.
-- This applies to every commit, no exceptions - including commits made by subagents in subagent-driven development.
-- **Subagents cannot invoke `/commit` (they have no access to the Skill tool).** Therefore subagents must NEVER commit. When dispatching any subagent (foreground or background), the dispatch prompt MUST include this exact language: "Stage your changes but do NOT commit. The main agent will run `/commit` after your report-back." For background subagents, have them write a short `READY_TO_COMMIT.md` marker (or similar report-back doc) so the main agent knows there's staged work waiting when the completion notification arrives.
-- If you find yourself about to commit and cannot invoke the `/commit` skill, do not commit at all. Stop, surface the problem, wait for the main agent / human.
+- NEVER commit directly. Always invoke `/commit` first and follow it - every commit, no exceptions, including in subagent-driven work.
+- Subagents can't invoke skills, so subagents NEVER commit. Every subagent dispatch prompt (foreground or background) MUST include verbatim: "Stage your changes but do NOT commit. The main agent will run `/commit` after your report-back." Background subagents: see `~/.claude/refs/process-hygiene.md` for the READY_TO_COMMIT marker.
+- If you're about to commit and can't invoke `/commit`, don't commit - stop, surface the problem, wait for the main agent / human.
 
 ## Shell Commands
 
-- Default to PowerShell. Joe's tooling (fvm, dart, flutter, node, gh, etc.) is configured for PowerShell on Windows. Only fall back to Bash if a PowerShell attempt fails or the command is genuinely POSIX-only.
-- Never chain commands with `&&`, `;`, or `|`. One command per call, always.
-- This includes git - never do `cd /path && git add && git commit` in one call.
+- Default to PowerShell (Joe's fvm/dart/flutter/node/gh tooling is configured for PowerShell on Windows). Fall back to Bash only if a PowerShell attempt fails or the command is genuinely POSIX-only.
+- Never chain commands with `&&`, `;`, or `|` - one command per call, always, git included.
 
 ## File Editing
 
-- Inside a git repo, edit any file freely without asking for permission first.
-- Outside a git repo, ask before editing.
+- Inside a git repo: edit any file freely, no permission needed. Outside a git repo: ask before editing.
 
 ## Packages
 
-- **Safety check is mandatory and automatic.** Before suggesting OR adding any package, tool, or program, research that it is legitimate and safe. This is default behavior - do it every time without being asked.
-- The check must cover: typosquatting (is this the real package name?), malicious forks, known malware reports, AND the security-advisory databases for the ecosystem (RustSec for crates, `npm audit` / GitHub advisories for npm, PyPI/OSV for Python, etc.). Confirm the version you'll pin is past any known vulnerability fix.
-- **Prefer a subagent for the research.** Dispatch a subagent (e.g. `general-purpose`) to do the safety investigation and report back a verdict + the specific advisories/versions it found. This keeps the main context clean and is more thorough. For a single obvious package a quick inline web search is acceptable, but for anything load-bearing or crypto/network-related, use a subagent.
-- **Asking before adding:** in non-personal projects, still ask before installing. In personal projects (those importing `full-auto.md`), auto-adding is allowed *once the safety check passes* - no need to ask. If the safety check is inconclusive, finds an advisory with no patched version, or the package looks risky, stop and ask regardless of project type.
+- Before suggesting OR adding any package/tool/program: a mandatory, automatic safety check - typosquat (real name?), malicious forks, known malware reports, and the ecosystem advisory DB (RustSec / `npm audit` / OSV); confirm the version you'll pin is past any known fix.
+- Prefer a subagent for the research; required for anything load-bearing or crypto/network. A quick inline web search is acceptable for a single obvious package.
+- Asking gate: personal projects (those importing `full-auto.md`) auto-add once the check passes; otherwise ask before installing. If the check is inconclusive, finds no patched version, or the package looks risky - stop and ask regardless.
 
 ## Process Hygiene
 
@@ -48,81 +43,52 @@
 - For long-running dev servers (vite, fastify), track the PID and ensure it terminates on session end / Ctrl-C / parent task completion.
 - Non-negotiable. Full doctrine (3-layer defense, subagent prompt requirements): `~/.claude/refs/process-hygiene.md`.
 
-## .for_bepy Folder
-
-All persistent cross-session notes live in `.for_bepy/` at the project root. Two files:
-
-### BEPY_TODOS.md - Manual tasks for Joe
-
-- Before adding anything here: try to do it yourself first. If you can run a bash command, make an API call, edit a file - do it. Only add here if it genuinely requires Joe's physical action (browser login, cloud console, credentials, hardware, etc.).
-- **Testing:** if the project has Playwright, a test suite, or any automated testing setup - use it. Write the test and run it. Only hand off to Joe if it is genuinely untestable by Claude (e.g. native Tauri UI, hardware, visual judgment calls). Never ask Joe to test something Claude can test itself.
-- Bullet points only, no numbers.
-- Keep each bullet brief and actionable. One sentence.
-- Delete bullets when Joe completes them or you have context they're done.
-- **Categories:** group entries under `### Urgent` (credentials, keys, hardware) and `### Visual QA` (needs Joe's eyes) so Joe can triage at a glance.
-
-### ai_todos/ - Flagged items for Claude (one .md per task)
-
-- `/close` writes flagged code health issues, unfinished offers, and other follow-ups here, one file each.
-- Claude does NOT auto-act on this folder. Joe triggers execution by saying "do the AI todos" or naming a specific id.
-- Format spec (filename rules, id-numbering, required sections): `~/.claude/skills/close/ai-todos-format.md`.
-
-## Icons
-
-- Always use Phosphor Icons for icons. Never create inline SVGs or custom icon markup.
-- HTML projects: load via CDN (`<script src="https://unpkg.com/@phosphor-icons/web"></script>`) and use `<i class="ph ph-icon-name">`.
-- React projects: use `@phosphor-icons/react` package.
-- Browse available icons at https://phosphoricons.com
-
-## Screenshots
-
-- Verification/debug screenshots (ad-hoc Playwright captures, manual smoke tests) go in `.for_bepy/screenshots/`, never the repo root. That folder is gitignored, so they never leak into commits or clutter `git status`. Create the folder if it's missing before saving.
-- This does NOT apply to the `/screenshot` skill: its portfolio-quality keepers stay in `.portfolio-data/`. Only throwaway verification shots go in `.for_bepy/screenshots/`.
-- `/close` empties `.for_bepy/screenshots/` at session end, so treat anything there as disposable.
-
 ## Code Style
 
-- On first encounter with a project's language/stack (editing code, debugging, inspecting build/wally configs, or planning), check if `~/.claude/code-style/` has a matching file (e.g. `luau.md`, `react.md`). If it exists, read it and follow its preferences.
-- Read it once per session.
+- On first encounter with a project's stack, check `~/.claude/code-style/` for a matching file (e.g. `luau.md`, `react.md`) and follow its preferences. Read once per session.
 
 ## Execution Discipline
 
-- State assumptions before coding. Present interpretations instead of picking silently.
+- State assumptions and interpretations before coding; present them instead of picking silently.
 - Every changed line must trace to the request. No drive-by refactors.
 - Define success criteria upfront (test, command, check). Loop until verified.
+- Given a spec file: read it fully, summarize your understanding and ask any questions, then implement.
 
 ## Testing & verification floor
 
-- Before claiming done or handing work to Joe, run every fast check the project HAS - typecheck, unit tests, lint, build - and it must pass. Change size never exempts: a one-line edit gets the same floor as a rewrite. Never skip silently because something "looks small."
+- Before claiming done or handing to Joe: run every FAST check the project HAS (typecheck, unit, lint, build) - all must pass. No size exemption; a one-line edit gets the same floor as a rewrite. Never skip silently because something "looks small."
 - If a project has no tests, or the change is genuinely untestable by Claude (native UI, hardware, visual judgment), say so explicitly instead of skipping quietly.
-- Slow end-to-end suites (Playwright, etc.) are NOT part of this floor. A project with a browser e2e suite `@import`s `~/.claude/snippets/test-e2e.md` in its own CLAUDE.md, which defines when/how e2e runs; projects that don't import it run the floor only.
+- Slow end-to-end suites (Playwright, etc.) are NOT part of this floor; projects opt in via `@import ~/.claude/snippets/test-e2e.md`.
 
-## UI verification (show your work)
+## UI & visual changes
 
-- For user-facing or visual changes, do not just claim it works - show Joe how to see it himself:
-  - Bring the app up via `/supervised-run` and give Joe the testable URL (e.g. `http://localhost:PORT`).
-  - Capture a screenshot of the actual change and surface it with SendUserFile (throwaways go in `.for_bepy/screenshots/`).
-- Scope: ONLY user-facing/visual work. Skip for pure logic, config, backend, or non-visual edits - a URL+screenshot on those is noise.
-- Per-repo run mechanics (env file, login/OTP, web-server vs chrome device, ports, CORS) live in project memories - check them first; don't rediscover them each time.
+- Frontend icons: always Phosphor Icons, never inline SVG or custom icon markup. HTML via CDN (`<script src="https://unpkg.com/@phosphor-icons/web"></script>`, `<i class="ph ph-icon-name">`); React via `@phosphor-icons/react`. Browse: https://phosphoricons.com
+- User-facing/visual change: show Joe - bring the app up via `/supervised-run`, give him the URL, and capture a screenshot via SendUserFile. Skip for pure logic/backend/config (noise there).
+- Per-repo run mechanics (env file, login/OTP, ports, web-server vs chrome device, CORS) live in project memories - check them first; don't rediscover them.
+- Throwaway verification screenshots go in `.for_bepy/screenshots/` (gitignored, disposable, `/close` empties it; create the folder if missing). The `/screenshot` skill's portfolio keepers stay in `.portfolio-data/`.
+
+## .for_bepy Folder
+
+Cross-session notes live in `.for_bepy/` at the project root (never global; skip if there's no project).
+
+### BEPY_TODOS.md - manual tasks for Joe
+
+- Try it yourself first - only add items genuinely needing Joe's physical action (browser login, cloud console, credentials, hardware). If the project has any test setup (Playwright, a suite, anything), write and run the test yourself; only hand off if genuinely untestable by Claude.
+- Bullet points only (no numbers), each brief and one sentence; delete when done. Group entries under `### Urgent` and `### Visual QA`.
+
+### ai_todos/ - flagged for Claude (one .md per task)
+
+- `/close` writes flagged code-health issues and follow-ups here, one file each. Claude never auto-acts; Joe triggers via "do the AI todos" or by naming a specific id.
+- Format spec (filename rules, id-numbering, sections): `~/.claude/skills/close/ai-todos-format.md`.
 
 ## Persistence
 
-- Before adding any persistence (localStorage, sessionStorage, cookies, IndexedDB, disk, DB), state explicitly before writing the code the specific user-facing behavior it preserves across tab close or refresh. If you cannot name the behavior, do not persist. Default to in-memory state (Riverpod / context / useState / module-scope).
-- When extending an existing persistence layer (e.g. adding a field to a storage class), re-check whether the underlying pattern still matches the current UX. Existing code is not evidence the pattern is right.
-- Past incident: pending-login email persisted to localStorage in a flow whose UX is "refresh redirects to login." Persistence was contradictory by definition and introduced a race between in-memory and persisted state. Should have stayed in Riverpod (`keepAlive: true`) with zero disk.
-
-## Specs
-
-- If given a spec file, read it fully before writing any code.
-- Summarize your understanding and ask any questions, then implement.
+- Before adding any persistence (localStorage / sessionStorage / cookies / IndexedDB / disk / DB), name the specific cross-refresh/close behavior it preserves; if you can't name it, don't persist - default to in-memory (Riverpod / context / useState / module-scope). When extending an existing persistence layer, re-check the pattern still matches the current UX. Why + past incident: `~/.claude/refs/persistence.md`.
 
 ## Subagent-Driven vs Inline Execution
 
-When a plan is ready to execute, choose based on task size - do not default to subagent-driven just because skills recommend it:
+Choose by task size when a plan is ready to execute:
 
-- **Inline execution** (default): small features, fewer than 4 tasks, fewer than 3 files, tightly sequential steps. Just do it.
-- **Subagent-driven**: large features with 5+ independent tasks, multiple files, where fresh context per task and review gates add real value.
-
-If it feels quick, it's inline. Only escalate to subagent-driven when the complexity genuinely justifies the overhead.
-
-- **Context-weight axis**: independent of task size, a job with fewer than 4 tasks still warrants an Explore subagent when answering it means reading material you discard once you have the conclusion: large files, wide grep sweeps. The test: do I need the raw bytes, or just the verdict? Verdict only, delegate and keep the summary. (Read-only investigation; subagent-written code still follows the workflow above.)
+- **Inline** (default): small features, fewer than 4 tasks, fewer than 3 files, tightly sequential. Just do it.
+- **Subagent-driven**: large features with 5+ independent tasks across multiple files, where fresh context per task and review gates add real value.
+- **Context-weight axis** (independent of size): even a job under 4 tasks warrants an Explore subagent when answering means reading material you discard once you have the conclusion (large files, wide grep sweeps). Need the verdict, not the raw bytes. Read-only investigation; subagent-written code still follows the rule above.
