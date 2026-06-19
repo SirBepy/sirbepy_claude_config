@@ -12,7 +12,8 @@
   - `[DATA]` - schema, data modeling
   - `[TOOLING]` - dev tooling, linting, code style, naming
 - Mark the long-term-best and short-term-best pick INSIDE the option label/description, not only in surrounding chat (Joe skims past commentary). Skip the axes for [UX]. Long-term means architectural/design merit over a multi-year horizon. Default to naming a winner; only declare no clear winner when you can name the specific tradeoff that ties them.
-- Copy-paste for Joe: fenced code block for commands/code/config, blockquote for prose he'll paste elsewhere. Never blockquote technical content.
+- Copy-paste for Joe: full ruleset in `~/.claude/refs/copy-paste-format.md` - read once per session. Core: everything Joe should copy goes in a BLOCKQUOTE (inline backticks and fenced code blocks don't render distinctly in the app). Also covers: placeholder callouts, sequential command batching, language matching (Croatian vs English), message length limits.
+- Work quietly: minimize narration between tool calls. No play-by-play ("Now let me…", "Let me check…"). Batch independent tool calls, let results speak, and give ONE tight summary at the end. The CLI statusline already shows live activity. Surface mid-task only for a real decision, blocker, or question.
 
 ## Git Commits
 
