@@ -105,7 +105,7 @@ Read `sprite-sources.md`. Find ONE source that covers the whole game's roster (s
 
 **Bulk-zip strategy applies here too.** If the game is dumped on archive.org or available as a modding asset pack, downloading once and pulling per-character textures + portrait files out is faster than per-char web hunts. Same trust rule as sounds: archive.org / ModDB / NexusMods / official = safe. Unknown hosts = flag for Joe before downloading.
 
-Then per character: crop / resize to 64x64 with Python Pillow (ImageMagick is NOT installed on this machine). Save as `<char-dir>/icon.png`.
+Then per character: crop / resize to 64x64 with Python Pillow (ImageMagick is NOT installed on this machine), then **flatten onto an opaque background** (see sprite-sources.md "ALWAYS flatten transparency" — never ship an alpha icon; cutouts like HotS hexagons must become opaque rectangles). Save as `<char-dir>/icon.png`.
 
 If no source covers a character, leave that char's icon missing and surface in the final summary as:
 
