@@ -248,7 +248,7 @@
     "enabled": true,
     "mode": "hold"
   },
-  "autoCompactEnabled": false,
+  "autoCompactEnabled": true,
   "remoteControlAtStartup": true,
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
