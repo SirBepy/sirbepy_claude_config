@@ -64,6 +64,12 @@ After a successful push, run the **Build watch** (see below).
 Commits changes and version as **two separate commits**, then pushes.
 
 Order:
+0. **Kit sync (before anything else):** if `vendor/tauri_kit` exists as a submodule, pull its latest remote commits:
+   - Record the current SHA: `git submodule status vendor/tauri_kit` (note the sha before the space).
+   - Run `git submodule update --remote vendor/tauri_kit`.
+   - Check if the SHA changed by running `git submodule status vendor/tauri_kit` again.
+   - If it changed: stage it (`git add vendor/tauri_kit`) and commit it as a standalone commit: `CHORE: bump tauri_kit <old-short-sha> → <new-short-sha>` (7-char shas). This commit lands before the main changes commit so the two concerns stay separate in git blame.
+   - If unchanged or the submodule doesn't exist: skip silently.
 1. Do the normal commit for changed files (same as `/commit`).
 2. Bump the patch version (same procedure as `/commit v`).
 3. Stage only the version files.
