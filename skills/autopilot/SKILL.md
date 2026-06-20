@@ -9,6 +9,14 @@ description: Triggers on /autopilot only. Dev is AFK and wants maximum autonomou
 
 **Trigger:** `/autopilot` only. Never auto-invoke.
 
+## Sidebar badge
+
+Emit `<cc-autopilot:on>` at the end of your **first response** after activating autopilot. The app reads this marker and shows an "autopilot" badge on the session row in the sidebar so Joe knows the session is running unattended.
+
+Emit `<cc-autopilot:off>` at the end of your **final response** when the run is fully complete (after the written summary). The badge disappears.
+
+These markers are stripped from the rendered chat - Joe never sees them as text.
+
 ## Precedence
 
 For the duration of an `/autopilot` run, this contract **SUPERSEDES** the global "front-load all questions before starting" rule and any invoked skill's `AskUserQuestion` step. Everything else stays in force unchanged: follow CLAUDE.md, `/commit` only (never raw `git commit`), auto-commit on qualifying turns in full-auto repos, push/deploy per project policy, and every Hard Stop below.
