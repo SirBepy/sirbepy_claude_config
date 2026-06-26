@@ -4,6 +4,7 @@
 
 - Front-load all questions before starting work, trivial or not. Never ask mid-task; never assume.
 - Never use the em dash character anywhere, ever. Use a comma, colon, or hyphen instead.
+- When stating that Claude Code is about to do something, write "Claude" as the subject, never "you" or "I" (it gets confusing about who acts). E.g. "Claude will write them to Clockify", "Claude will POST the new entries", not "I'll write them" or "you'll write them".
 - Every question: use the AskUserQuestion tool with 2-4 options. Never a bare open-ended question; never plain-text numbered options.
 - Prefix every question with a domain tag so Joe knows how much weight to give Claude's input:
   - `[UX]` - visual, layout, interaction feel (Joe's taste dominates; skip the long/short-term axes, but still give a brief recommendation)
@@ -13,6 +14,7 @@
   - `[TOOLING]` - dev tooling, linting, code style, naming
 - Mark the long-term-best and short-term-best pick INSIDE the option label/description, not only in surrounding chat (Joe skims past commentary). Skip the axes for [UX]. Long-term means architectural/design merit over a multi-year horizon. Default to naming a winner; only declare no clear winner when you can name the specific tradeoff that ties them.
 - Copy-paste for Joe: full ruleset in `~/.claude/refs/copy-paste-format.md` - read once per session. Core: everything Joe should copy goes in a BLOCKQUOTE (inline backticks and fenced code blocks don't render distinctly in the app). Also covers: placeholder callouts, sequential command batching, language matching (Croatian vs English), message length limits.
+- Popup attribution: whenever a Claude action triggers an OS/app prompt Joe sees (GitHub/git credential picker, UAC, auth/login popups, browser permission dialogs, keychain, MFA, any external dialog), proactively and immediately tell Joe that the popup came from Claude and name the exact command/action that caused it. Never let Joe wonder who triggered a popup.
 - Work quietly: minimize narration between tool calls. No play-by-play ("Now let me…", "Let me check…"). Batch independent tool calls, let results speak, and give ONE tight summary at the end. The CLI statusline already shows live activity. Surface mid-task only for a real decision, blocker, or question.
 
 ## Git Commits
@@ -50,8 +52,11 @@
 
 ## Execution Discipline
 
+- For any creative/feature work (new feature, component, behavior change, non-trivial design), use the local `/brainstorm` skill, never `superpowers:brainstorming`. The local one is the owned, gate-free replacement.
 - State assumptions and interpretations before coding; present them instead of picking silently.
 - Every changed line must trace to the request. No drive-by refactors.
+- Before writing a new helper, util, or type: scan the codebase first. If something equivalent already exists a few files over, reuse it. Re-implementing what's nearby is the most common way code bloats.
+- Prefer the platform primitive over a library or custom code: CSS over JS animation, `<input type="date">` over a picker lib, a DB constraint over app-layer validation, a built-in widget over a custom one. If the runtime provides it, use it.
 - Define success criteria upfront (test, command, check). Loop until verified.
 - Given a spec file: read it fully, summarize your understanding and ask any questions, then implement.
 
@@ -92,4 +97,5 @@ Choose by task size when a plan is ready to execute:
 
 - **Inline** (default): small features, fewer than 4 tasks, fewer than 3 files, tightly sequential. Just do it.
 - **Subagent-driven**: large features with 5+ independent tasks across multiple files, where fresh context per task and review gates add real value.
-- **Context-weight axis** (independent of size): even a job under 4 tasks warrants an Explore subagent when answering means reading material you discard once you have the conclusion (large files, wide grep sweeps). Need the verdict, not the raw bytes. Read-only investigation; subagent-written code still follows the rule above.
+- **Context-weight axis** (independent of size): even a job under 4 tasks warrants an Explore subagent when answering means reading material you discard once you have the conclusion (large files, wide grep sweeps, multi-query or iterative web research). Need the verdict, not the raw bytes. Read-only investigation; subagent-written code still follows the rule above.
+  - **Web research specifically:** delegate any multi-query or iterative web search (research, comparisons, "how do people do X") to a subagent so raw result dumps never land in the main context; have it return the conclusion plus the source URLs. A single-fact lookup (one version check, one typosquat check) stays inline - the subagent round-trip isn't worth it there.
