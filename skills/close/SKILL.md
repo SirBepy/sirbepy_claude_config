@@ -47,6 +47,12 @@ Honest reviewer, not cheerleader. Same anti-sycophancy bar as /rate-it. If sessi
 
 Manual only. The dev triggers /close when a session reaches a natural end. Never auto-fire on token thresholds: deciding "this session is done" is what makes the retrospective land.
 
+## Lifecycle markers (host app integration)
+
+The first line of output, before anything else (before Phase 1, as plain text - not in a code block): emit `<cc-close:starting>`. This is how a hosting app (e.g. claude_usage_in_taskbar) knows the skill is genuinely running and marks the session "closing" - it must never appear anywhere except as the very first line, and never appear at all in a plain terminal session that isn't hosted by such an app's parser (harmless either way: it's a no-op line of text there). Skip this marker entirely if you are not actually going to execute this skill (e.g. arg parsing fails before any phase starts).
+
+The closing counterpart `<cc-close:done>` is emitted in Phase 6 below - it confirms the terminal is genuinely about to be killed, and must be skipped whenever Phase 6 itself is skipped.
+
 ## Phase 1 - Retrospective
 
 Scan the full session. For each bullet below, output specific examples or "none". No vague filler.
@@ -110,7 +116,7 @@ If no chained commands, skip this phase.
 - Any chained command in Phase 5 failed.
 - Any background work is still running in this session: spawned `Agent` with `run_in_background: true`, active `/loop`, or pending `ScheduleWakeup`. Check before killing.
 
-If all clear, run for your OS (literal paths hardcoded - dynamic `$env:` expressions fail the harness permission matcher and cause per-invocation prompts):
+If all clear: first emit `<cc-close:done>` on its own line as plain text (this is the host app's confirmation that the terminal is genuinely about to die - never emit it if any skip condition above applies). Then run for your OS (literal paths hardcoded - dynamic `$env:` expressions fail the harness permission matcher and cause per-invocation prompts):
 
 **Mac/Linux:**
 ```sh
