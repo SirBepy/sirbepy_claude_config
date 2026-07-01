@@ -29,10 +29,15 @@ try {
         $exe = $job.claudeExe
         if (-not $exe -or -not (Test-Path $exe)) { $exe = (Get-Command claude -ErrorAction SilentlyContinue).Source }
         if (-not $exe) { Log "ERROR: claude executable not found"; return }
-        Log "RUN  <prompt via stdin> | claude -p --permission-mode $($job.permMode)"
+        # Build optional overrides. Guard each field so sidecars written before these
+        # were added (no model/effort keys) still run exactly as before.
+        $extra = @()
+        if ($job.PSObject.Properties['model']  -and $job.model)  { $extra += @('--model',  $job.model) }
+        if ($job.PSObject.Properties['effort'] -and $job.effort) { $extra += @('--effort', $job.effort) }
+        Log "RUN  <prompt via stdin> | claude -p --permission-mode $($job.permMode) $($extra -join ' ')"
         # Pipe the prompt via stdin rather than as an arg — a native-arg prompt mangles
         # embedded quotes. -p reads stdin as the prompt (see `claude --help`: "useful for pipes").
-        $job.payload | & $exe -p --permission-mode $job.permMode --no-session-persistence *>&1 |
+        $job.payload | & $exe -p --permission-mode $job.permMode @extra --no-session-persistence *>&1 |
             Tee-Object -FilePath $logFile -Append
         Log "claude exit code: $LASTEXITCODE"
     }

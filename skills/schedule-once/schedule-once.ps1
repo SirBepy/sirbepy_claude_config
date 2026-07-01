@@ -10,6 +10,9 @@ param(
     [string]$Shell,                                     # OR a raw PowerShell command to run
     [ValidateSet('acceptEdits', 'bypassPermissions', 'default', 'plan')]
     [string]$PermMode = 'acceptEdits',
+    [string]$Model = '',                                # optional model override (opus/sonnet/fable or full id)
+    [ValidateSet('', 'low', 'medium', 'high', 'xhigh', 'max')]
+    [string]$Effort = '',                               # optional reasoning-effort override
     [string]$Label = ''                                 # optional friendly slug source
 )
 
@@ -48,6 +51,8 @@ $job = [ordered]@{
     payload   = if ($Prompt) { $Prompt } else { $Shell }
     workDir   = $WorkDir
     permMode  = $PermMode
+    model     = $Model
+    effort    = $Effort
     claudeExe = $claudeExe
     humanTime = $fireAt.ToString('yyyy-MM-dd HH:mm:ss')
     createdAt = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
@@ -72,6 +77,8 @@ Register-ScheduledTask -TaskName $taskName -TaskPath '\ClaudeOnce\' `
     TaskName = $taskName
     FiresAt  = $job.humanTime
     Mode     = $job.mode
+    Model    = if ($Model) { $Model } else { '(default)' }
+    Effort   = if ($Effort) { $Effort } else { '(default)' }
     WorkDir  = $WorkDir
     LogFile  = (Join-Path $base "logs\$taskName.log")
     JobFile  = $jobFile

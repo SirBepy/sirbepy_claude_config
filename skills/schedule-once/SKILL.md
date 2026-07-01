@@ -1,7 +1,7 @@
 ---
 name: schedule-once
 description: Triggers on /schedule-once only. Schedules a SINGLE future run of a Claude prompt (or a raw shell command) on THIS machine via Windows Task Scheduler, as a self-deleting one-time task. The local, one-shot counterpart to the cloud /schedule and the recurring /cron-run. PC must be on and logged in at fire time; Claude Code itself need not be open. Also supports list and cancel.
-argument-hint: "<prompt> at <time> | --shell <cmd> at <time> | list | cancel <id|all>"
+argument-hint: "<prompt> at <time> [with <model>] [<effort> effort] | --shell <cmd> at <time> | list | cancel <id|all>"
 ---
 
 # /schedule-once
@@ -32,6 +32,8 @@ Free-form, tokens in any order. Determine the subcommand first:
   - **Time**: the `at <when>` / `in <duration>` / trailing time phrase. Accept "3pm", "15:30", "in 2 hours", "in 90m", "tomorrow 9am", "jun 8 14:00", etc.
   - **Payload**: everything else. If it begins with `/` or reads like a Claude instruction → a **prompt**. If the user wrote `--shell <cmd>` (or "run command"/"shell:") → a **raw PowerShell command**.
   - **Perm mode** (prompt jobs): default `acceptEdits`. If the user says "yolo"/"bypass"/"no prompts" → `bypassPermissions`. If "plan only" → `plan`.
+  - **Model** (prompt jobs, optional): if the user names one ("with opus", "use sonnet", "model fable", or a full id like `claude-opus-4-8`) → pass it through. Omitted = the machine's default model.
+  - **Effort** (prompt jobs, optional): if the user names a level ("high effort", "max effort", one of low/medium/high/xhigh/max) → pass it through. Omitted = default.
 
 If the time is missing or ambiguous, that is the ONE thing worth a quick `AskUserQuestion` (you cannot safely guess when to fire). Everything else: pick a sensible default and proceed.
 
@@ -41,9 +43,9 @@ If the time is missing or ambiguous, that is the ONE thing worth a quick `AskUse
 2. **Capture the working dir** = the current project folder (cwd). Jobs run there.
 3. **Register it** by calling the registrar (literal path — do not build it from `$env:` so it does not trigger a permission prompt). One command, no chaining:
 
-   Prompt job:
+   Prompt job (add `-Model <alias>` and/or `-Effort <level>` only when the user asked for them; omit otherwise):
    ```powershell
-   & "C:\Users\tecno\.claude\skills\schedule-once\schedule-once.ps1" -At "<yyyy-MM-dd HH:mm:ss>" -WorkDir "<cwd>" -PermMode acceptEdits -Prompt '<the prompt>'
+   & "C:\Users\tecno\.claude\skills\schedule-once\schedule-once.ps1" -At "<yyyy-MM-dd HH:mm:ss>" -WorkDir "<cwd>" -PermMode acceptEdits -Model opus -Effort high -Prompt '<the prompt>'
    ```
    Shell job:
    ```powershell
@@ -84,6 +86,6 @@ If none, say "no one-time tasks scheduled." To inspect what a pending task will 
 ## Notes
 
 - Logs persist at `%LOCALAPPDATA%\ClaudeScheduleOnce\logs\<task>.log` even after the task self-deletes, so Joe can review what happened.
-- Prompt jobs run headless via `claude -p "<prompt>" --permission-mode <mode> --no-session-persistence` — no chat state is inherited; write self-contained prompts.
+- Prompt jobs run headless via `claude -p "<prompt>" --permission-mode <mode> [--model <m>] [--effort <e>] --no-session-persistence` — no chat state is inherited; write self-contained prompts. `--model`/`--effort` are appended only when set at schedule time (older sidecars without those fields run unchanged).
 - One command per call; never chain with `;`/`&&`/`|`. PowerShell on Windows.
 - This skill schedules on the local machine only. It never touches the cloud or the network.
