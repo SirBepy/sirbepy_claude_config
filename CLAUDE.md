@@ -77,15 +77,11 @@
 
 Cross-session notes live in `.for_bepy/` at the project root (never global; skip if there's no project).
 
-### BEPY_TODOS.md - manual tasks for Joe
-
-- Try it yourself first - only add items genuinely needing Joe's physical action (browser login, cloud console, credentials, hardware). If the project has any test setup (Playwright, a suite, anything), write and run the test yourself; only hand off if genuinely untestable by Claude.
-- Bullet points only (no numbers), each brief and one sentence; delete when done. Group entries under `### Urgent` and `### Visual QA`.
-
 ### ai_todos/ - flagged for Claude (one .md per task)
 
-- `/close` writes flagged code-health issues and follow-ups here, one file each. Claude never auto-acts; Joe triggers via "do the AI todos" or by naming a specific id.
-- Format spec (filename rules, id-numbering, sections): `~/.claude/skills/close/ai-todos-format.md`.
+- `/close` writes flagged code-health issues, follow-ups, and skill-improvement candidates here, one file each. Claude never auto-acts; Joe triggers via "do the AI todos", `/batch-todos`, or by naming a specific id.
+- Format spec (filename rules, id-numbering, sections, Type tag): `~/.claude/skills/close/ai-todos-format.md`.
+- Items needing Joe's physical action (browser login, cloud console, credentials, hardware) have no persistent home right now - try it yourself first (if the project has any test setup, write and run the test rather than handing off), and only if genuinely blocked, surface it directly in the response instead of writing a file. (BEPY_TODOS.md was removed 2026-07-07 because it never got read; a proper replacement is TBD.)
 
 ## Persistence
 

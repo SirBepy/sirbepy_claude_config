@@ -104,7 +104,7 @@ Run, in order. Stop on first failure.
 2. `bash scripts/wally-install.sh` - installs runtime + test wally deps.
 3. `rojo build default.project.json -o build/smoke.rbxlx` - confirms the project compiles.
 
-If any step fails, print the failing stage's stderr and stop. Do NOT proceed to commit. Add a line to `.for_bepy/BEPY_TODOS.md` summarizing what is broken.
+If any step fails, print the failing stage's stderr and stop. Do NOT proceed to commit.
 
 ## Step 7 - Check for /jest-lua skill
 

@@ -66,7 +66,7 @@ Caveat: because the orchestrator delegates, its own context % can stay low even 
 ## Where decisions and parked items go (use the dev's existing taxonomy)
 
 - **Routine auto-decision log + RUN_LEDGER** (chunk -> outcome -> sha) -> `COMMENTS_FOR_BEPY.md` in cwd. Shared format with `/sleep-when-done`, so the dev has one place to skim what happened while away.
-- **Hard-stop needing the dev's physical action** (credentials, destructive op, hardware) -> `.for_bepy/BEPY_TODOS.md` under `### Urgent`.
+- **Hard-stop needing the dev's physical action** (credentials, destructive op, hardware) -> autopilot is unattended, so there's no live response to surface it in. Log it in `COMMENTS_FOR_BEPY.md` under `### BLOCKED` and STOP that chunk (no persistent physical-action queue exists right now - see CLAUDE.md's `.for_bepy Folder` section).
 - **"Dev may want to revisit" design/taste follow-up** -> `.for_bepy/ai_todos/<id>-<slug>.md` (per the close skill's ai-todo format).
 
 Do not invent a fourth channel.

@@ -12,10 +12,19 @@ The prefix is the task's stable id. Joe references tasks by id ("do todo 03").
 
 **Done tasks:** delete the file (or move to `ai_todos/done/` if Joe wants history). The id stays burned either way.
 
+## Type tag
+
+Right after the title, one line: `**Type:** task` or `**Type:** skill-improvement`.
+
+- `task` (default, omit the line entirely on older files - absence means task) - code, config, analysis Claude can execute.
+- `skill-improvement` - "this seems reusable, maybe a skill" / "had to do this differently than the skill suggested, maybe update it" / "this project keeps needing X, maybe a local skill" observations. These used to just print in /close's retrospective and get thrown away - now they persist here instead, same folder, same file format, just tagged so `/batch-todos` and a future skim can tell them apart from regular build tasks. A skill-improvement todo's Approach section names the skill file it points at.
+
 ## Required sections
 
 ```md
 # <one-line task title>
+
+**Type:** task | skill-improvement
 
 ## Goal
 
@@ -38,13 +47,11 @@ Concrete proposed steps. If a code shape was discussed, sketch it. Mention alter
 
 Skip a section only if it genuinely doesn't apply (e.g. trivial chore with no alternatives). Never just write a title and a one-liner.
 
-## What belongs in ai_todos vs BEPY_TODOS
+## What belongs in ai_todos
 
-**ai_todos** = tasks Claude can execute in a future session (code, config, skill edits, analysis).
+Tasks Claude can execute in a future session (code, config, skill edits, analysis) - including skill-improvement candidates, per the Type tag above.
 
-**BEPY_TODOS** = tasks that require Joe's physical action: browser login, cloud console, credentials, hardware, running the app to QA visually.
-
-The wrong bar: "Claude can't test it" (e.g. Playwright can't reach Tauri webview). That makes it Claude's limitation, not a physical-action requirement. If Joe needs to look at something first, put it in BEPY_TODOS. Once he gives feedback, handle it inline in that session - don't create a new ai_todo for it.
+The wrong bar: "Claude can't test it" (e.g. Playwright can't reach Tauri webview). That makes it Claude's limitation, not a reason to defer. If Joe needs to look at something first, surface it directly in the response instead of writing a file (no persistent physical-action queue right now - see CLAUDE.md's `.for_bepy Folder` section). Once he gives feedback, handle it inline in that session - don't create a new ai_todo for it.
 
 ## Triggering execution
 

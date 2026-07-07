@@ -6,7 +6,7 @@ Use when context is already high (~65%+) and you want /close to complete without
 
 ## Phase 1
 
-Same bullets as normal Phase 1, but cap every bullet to 1 sentence max. Skip sub-bullets and examples. Verdict still required.
+Same bullets as normal Phase 1, but cap every bullet to 1 sentence max. Skip sub-bullets and examples. Verdict still required. Same print rule applies: only surface it if 1-4 have a real entry.
 
 ## Phase 2
 
@@ -36,8 +36,7 @@ Build a compact payload object from Phase 1 output:
 ```
 {
   "memory": [ { "file": "path", "frontmatter": "...", "body": "..." } ],  // only entries that qualify
-  "todos_to_delete": ["bullet text"],
-  "ai_todos": [ { "slug": "...", "title": "...", "goal": "...", "context": "...", "approach": "...", "acceptance": "..." } ]
+  "ai_todos": [ { "slug": "...", "title": "...", "type": "task | skill-improvement", "goal": "...", "context": "...", "approach": "...", "acceptance": "..." } ]
 }
 ```
 
@@ -48,8 +47,7 @@ Then dispatch ONE `Agent` call with `subagent_type: "general-purpose"` and this 
 > Memory dir: `C:\Users\tecno\.claude\projects\C--Users-tecno--claude\memory\`
 > For each entry in `memory`: write the file at `<memory dir>/<file>` with the given frontmatter + body. Then append a pointer line to `MEMORY.md` if not already present.
 >
-> `.for_bepy/BEPY_TODOS.md`: delete any bullet matching `todos_to_delete` entries.
-> `.for_bepy/ai_todos/`: for each entry in `ai_todos`, scan existing files for max numeric prefix, write `<id+1>-<slug>.md` with standard sections.
+> `.for_bepy/ai_todos/`: for each entry in `ai_todos`, scan existing files for max numeric prefix, write `<id+1>-<slug>.md` with standard sections including a `**Type:**` line.
 >
 > Payload: `<JSON>`
 
