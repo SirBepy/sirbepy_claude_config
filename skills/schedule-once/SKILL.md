@@ -86,6 +86,7 @@ If none, say "no one-time tasks scheduled." To inspect what a pending task will 
 ## Notes
 
 - Logs persist at `%LOCALAPPDATA%\ClaudeScheduleOnce\logs\<task>.log` even after the task self-deletes, so Joe can review what happened.
+- The wrapper self-protects: if Task Scheduler fires the task before its scheduled time (observed once during a Modern Standby transition), it logs `PREMATURE fire` and exits WITHOUT self-deleting, so the real trigger still fires. If a prompt run dies on a session/usage limit, it re-arms its own trigger for ~30 min after the stated reset (max 3 attempts) instead of burning the one-shot.
 - Prompt jobs run headless via `claude -p "<prompt>" --permission-mode <mode> [--model <m>] [--effort <e>] --no-session-persistence` — no chat state is inherited; write self-contained prompts. `--model`/`--effort` are appended only when set at schedule time (older sidecars without those fields run unchanged).
 - One command per call; never chain with `;`/`&&`/`|`. PowerShell on Windows.
 - This skill schedules on the local machine only. It never touches the cloud or the network.
