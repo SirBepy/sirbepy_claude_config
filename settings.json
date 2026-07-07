@@ -180,6 +180,17 @@
             "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/tecno/.claude/skills/close/approve-rename.ps1"
           }
         ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"C:/Users/tecno/.claude/hooks/gh-account-switch.sh\"",
+            "shell": "bash",
+            "statusMessage": "Syncing gh account to repo"
+          }
+        ]
       }
     ],
     "SessionEnd": [

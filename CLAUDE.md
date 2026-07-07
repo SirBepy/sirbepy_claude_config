@@ -23,6 +23,10 @@
 - Subagents can't invoke skills, so subagents NEVER commit. Every subagent dispatch prompt (foreground or background) MUST include verbatim: "Stage your changes but do NOT commit. The main agent will run `/commit` after your report-back." Background subagents: see `~/.claude/refs/process-hygiene.md` for the READY_TO_COMMIT marker.
 - If you're about to commit and can't invoke `/commit`, don't commit - stop, surface the problem, wait for the main agent / human.
 
+## gh CLI Account
+
+- A global `PreToolUse` hook (`~/.claude/hooks/gh-account-switch.sh`) auto-switches `gh`'s active account to match the repo's `origin` remote before any `gh` command runs (zirtue-corp -> JosipMuzicZirtue, Fibo-Studio -> JosipMuzicFibo, revaire -> josipmuzic, else SirBepy). Joe never runs `gh auth switch` himself. If a `gh` "Could not resolve to a Repository" error ever appears, the hook didn't fire (wrong cwd / non-repo dir) - switch to the mapped account and retry, do NOT assume the account was deleted. Commit identity (git includeIf) is a separate, already-correct system.
+
 ## Shell Commands
 
 - Default to PowerShell (Joe's fvm/dart/flutter/node/gh tooling is configured for PowerShell on Windows). Fall back to Bash only if a PowerShell attempt fails or the command is genuinely POSIX-only.
