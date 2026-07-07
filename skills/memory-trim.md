@@ -104,12 +104,15 @@ If < 7: show the feedback, ask the user what to adjust, loop back to Step 3.
 
 After showing the rated plan, ask: "Apply these changes?"
 
-On confirmation:
-1. Trim long index entries in MEMORY.md (rewrite in place)
-2. Move demoted files to `memory/cold/<filename>` and update MEMORY.md links
-3. Archive stale files to `memory/cold/` with a `stale-` prefix
-4. Delete orphaned/broken-link files
-5. Create `memory/axioms.md` if T0 candidates exist (write the entries, add a pointer in MEMORY.md at the top)
-6. Print a summary of what changed
+On confirmation, execute in this order (size reduction is primary):
+
+1. **Cold-archive pass first.** Move all demoted files to `memory/cold/<filename>` and remove their entries from MEMORY.md. This is the primary size lever - do it before any text editing. Create `cold/` if it doesn't exist.
+2. Archive stale files to `memory/cold/stale-<filename>` and remove their entries from MEMORY.md.
+3. Delete orphaned/broken-link files.
+4. **Measure size now.** Run `(Get-Item MEMORY.md).Length / 1KB` (Windows) or `wc -c MEMORY.md` (Unix). If already under the limit, skip step 5.
+5. Trim remaining long index entries in MEMORY.md only if still over limit after the archive pass.
+6. Create `memory/axioms.md` if T0 candidates exist (write the entries, add a pointer in MEMORY.md at the top).
+7. Measure final size and print it. Never claim the limit is met without this check.
+8. Print a summary of what changed (N archived, N deleted, N trimmed, final KB).
 
 Never auto-write to `~/.claude/CLAUDE.md`. Surface promotion candidates to the user as a manual follow-up.
