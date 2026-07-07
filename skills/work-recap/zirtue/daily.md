@@ -132,7 +132,7 @@ Next up: [<ticket title>](https://app.shortcut.com/zirtue/story/XXXXX)
 
 Omit any section that has no items. Omit "Next up" line if In Progress has ≥2 items.
 
-### 8. Build the clipboard payload (only if `copy` flag passed)
+### 8. Build the clipboard payload (always)
 
 The clipboard payload is the BLURB ONLY. No `# Daily Standup` title. No `_Generated_` attribution. No file-metadata text.
 
@@ -198,7 +198,15 @@ If the PowerShell call fails, note it in the reply but don't fail the whole flow
 
 ### 10. Report
 
-One-line reply to the dev: absolute path to the file. If `copy` ran successfully, add " (copied to clipboard)". Nothing else. Do NOT paste the blurb into chat.
+Print the blurb as a markdown blockquote in chat — this is always done, regardless of the `copy` flag. Format: each section heading on its own `>` line, each bullet on its own `>` line, blank `>` line between sections. Then on a new line, print the absolute path to the markdown file. If clipboard copy ran successfully, append " (copied to clipboard)".
+
+Example:
+> Done:
+> - [FE: Issue with Plaid (by Accrue)](https://app.shortcut.com/zirtue/story/54493)
+>
+> Next up: [FE: Framer & Amplitude integration for deeplinks tracking](https://app.shortcut.com/zirtue/story/54570)
+
+`C:/Users/tecno/daily-recaps/2026-06-22_daily.md` (copied to clipboard)
 
 ## What this variant never does
 
@@ -206,8 +214,7 @@ One-line reply to the dev: absolute path to the file. If `copy` ran successfully
 - Never pulls in sibling repos (fetch only).
 - Never posts comments on Shortcut tickets.
 - Never invents tickets or commits. If a section has no data, omit it.
-- Never dumps the full recap to chat. File path only.
-- Never includes the file title or generator attribution in the clipboard payload.
+- Never includes the file title or generator attribution in the clipboard payload or in-chat blockquote.
 - Never uses `clip.exe` (loses the hyperlinks, only CF_TEXT). Always go through the PS helper for clipboard.
 - Never writes inside a project repo (output lives in `~/daily-recaps/`).
 
