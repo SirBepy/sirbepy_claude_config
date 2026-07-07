@@ -81,6 +81,8 @@
       "Write(C:/Users/tecno/.claude/skills/**)",
       "Edit(~/.claude/skills/jest-lua/**)",
       "Edit(~/.claude/skills/test-flow/**)",
+      "Read(C:/Users/tecno/**)",
+      "Read(C:/Users/tecno/.claude/**)",
       "Read(//c/Users/tecno/**)",
       "Read(//c/Users/tecno/.claude/**)",
       "Read(//c/Users/tecno/.aftman/bin/**)",
@@ -132,6 +134,7 @@
       "/Users/josipmuzic/projects/cinnamon/sampl-flutter/packages/tiktok_sdk_v2/.git"
     ]
   },
+  "model": "fable",
   "skillOverrides": {
     "apply-styleguide": "name-only",
     "decouple-file": "off",
@@ -244,10 +247,12 @@
   },
   "alwaysThinkingEnabled": true,
   "effortLevel": "high",
+  "tui": "fullscreen",
   "voice": {
     "enabled": true,
     "mode": "hold"
   },
+  "theme": "dark",
   "autoCompactEnabled": true,
   "remoteControlAtStartup": true,
   "agentPushNotifEnabled": true,
