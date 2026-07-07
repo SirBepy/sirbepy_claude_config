@@ -80,9 +80,28 @@ reviewer could read straight off the diff is noise; cut it.**
      (the terminal renders GitHub-flavored markdown; mermaid shows as a code block
      here but renders on GitHub).
    - State the tier picked, the base branch, and any visual follow-up.
-   - <!-- CONDUCTOR HOOK: the preview file is the single source of truth for the
-     body. A future Claude Conductor integration can render this same file with
-     full mermaid/image fidelity in-app; nothing else needs to change. -->
+   - **Emit the Claude Conductor in-app preview markers** so the modal card appears.
+     Run these PowerShell commands (one per call, no chaining) to encode the data:
+     ```
+     $body = Get-Content ".for_bepy\pr_preview\<slug>.md" -Raw
+     [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($body))
+     ```
+     Build the commits JSON string from the git log output gathered in step 2
+     (array of `{"sha":"<7chars>","msg":"<headline>"}` objects), then encode it:
+     ```
+     $commitsJson = '[{"sha":"abc1234","msg":"headline"},...]'
+     [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($commitsJson))
+     ```
+     Then emit these three lines as PLAIN TEXT in your response (not in a code block,
+     not in a blockquote - raw text so the app parser strips them from the chat display
+     and shows the PR card instead):
+     ```
+     <cc-pr-title:TITLE_GOES_HERE>
+     <cc-pr-body:BASE64_BODY>
+     <cc-pr-commits:BASE64_COMMITS_JSON>
+     ```
+     The title must not contain `>` characters. The base64 values must be single
+     lines with no spaces or line breaks.
 
 8. **Confirm, then create.** Ask the dev to approve the previewed body (AskUserQuestion).
    Only on approval:
