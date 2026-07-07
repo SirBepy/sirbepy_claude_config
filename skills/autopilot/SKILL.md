@@ -1,6 +1,6 @@
 ---
 name: autopilot
-description: Triggers on /autopilot only. Dev is AFK and wants maximum autonomous progress with heavy but purposeful token use. Never block - delegate aggressively to subagents to keep main context lean, resolve real judgment calls via a BOUNDED /iterate-it (capped per run), auto-answer any nested skill's question instead of hanging, log decisions, park true hard-stops, and grind the task to a verified finish.
+description: Triggers on /autopilot only. Dev is AFK and wants maximum autonomous progress with heavy but purposeful token use. Never block - delegate aggressively to subagents to keep main context lean, resolve real judgment calls via a BOUNDED /iterate-it (capped per run), auto-answer any nested skill's question instead of hanging, log genuine blockers only, park true hard-stops, and grind the task to a verified finish.
 ---
 
 # /autopilot
@@ -57,7 +57,7 @@ node ~/.claude/skills/context-left/context-left.mjs
 Read pct used (= 100 - pct left). Two named thresholds, on context USED (tweak here if the dev changes them):
 
 - **SLOW_AT = 50% used:** start winding down. Prefer FINISHING in-flight work over STARTING new chunks; tighten scope; avoid large new investigations or wide subagent fan-out; do not begin anything you cannot also finish AND verify within the remaining budget.
-- **HARD_STOP_AT = 60% used:** STOP taking new work. Immediately, in order: (a) `/commit` anything staged, (b) write every remaining planned item to `.for_bepy/ai_todos/` (one file each, per the close skill's format) so nothing is lost, (c) note in `COMMENTS_FOR_BEPY.md` where you stopped and why, (d) write the final summary and END the run. Do NOT start another chunk past this line.
+- **HARD_STOP_AT = 60% used:** STOP taking new work. Immediately, in order: (a) `/commit` anything staged, (b) write every remaining planned item to `.for_bepy/ai_todos/` (one file each, per the close skill's format) so nothing is lost, (c) write the final summary and END the run. Do NOT start another chunk past this line.
 
 The context-% guard here is the single authoritative run-length guard. Rule 4's cap is orthogonal: it caps iterate-it ESCALATIONS, not tokens (a skill has no runtime token-spend signal - context % via context-left.mjs is the only one). Context % bounds how long a run goes; the escalation cap bounds how often autopilot spends a judgment call.
 
@@ -65,23 +65,25 @@ Caveat: because the orchestrator delegates, its own context % can stay low even 
 
 ## Where decisions and parked items go (use the dev's existing taxonomy)
 
-- **Routine auto-decision log + RUN_LEDGER** (chunk -> outcome -> sha) -> `COMMENTS_FOR_BEPY.md` in cwd. Shared format with `/sleep-when-done`, so the dev has one place to skim what happened while away.
-- **Hard-stop needing the dev's physical action** (credentials, destructive op, hardware) -> autopilot is unattended, so there's no live response to surface it in. Log it in `COMMENTS_FOR_BEPY.md` under `### BLOCKED` and STOP that chunk (no persistent physical-action queue exists right now - see CLAUDE.md's `.for_bepy Folder` section).
+- **Routine auto-decisions** (trivial picks, bounded-iterate-it verdicts) -> decide and move on, no log. The dev has said he never reads a running decision log; git history + the final summary are the record.
+- **Hard-stop needing the dev's physical action** (credentials, destructive op, hardware) -> autopilot is unattended, so there's no live response to surface it in. Write one file to `.for_bepy/autopilot-logs/<slug>.md` (see format below) and STOP that chunk.
 - **"Dev may want to revisit" design/taste follow-up** -> `.for_bepy/ai_todos/<id>-<slug>.md` (per the close skill's ai-todo format).
 
 Do not invent a fourth channel.
 
-### COMMENTS_FOR_BEPY.md log block
+### `.for_bepy/autopilot-logs/` format
+
+One file per incident, named `<slug>.md` (create the `autopilot-logs/` folder if missing):
 
 ```
-## <YYYY-MM-DD HH:MM> - <topic>
-Decision needed: <what you'd have asked>
-Resolved via: <bounded iterate-it 9/10 | direct judgment | escalation-cap-hit guess>
-Picked: <choice>   Reason: <one line>   Where: <file/area>
-Revisit: <yes + why | no>
+# <topic>
+
+What happened: <what you were doing>
+Why blocked: <credential / destructive-op / hardware / other, one line>
+Needs from you: <the specific physical action required>
 ```
 
-Create the file with a `# Comments for Bepy` header if missing.
+This folder is reserved for genuine blockers only - never for routine FYI notes.
 
 ## Order of operations
 
@@ -90,7 +92,7 @@ Create the file with a `# Comments for Bepy` header if missing.
 3. Real judgment call -> bounded iterate-it (within the 3/run cap) -> log. Trivia -> decide.
 4. Verify against the fast-check floor. **Runaway guard:** every loop is 3-strike. If the SAME verification fails 3x consecutively, OR a single chunk makes zero forward progress across 3 consecutive subagent dispatches, stop that loop, park the failure, and continue other unblocked work. There is no infinite retry.
 5. `/commit` (and push/deploy) per project rules.
-6. **Completion oracle:** done = stated success criteria met AND fast-check floor green. Never self-vibe done. End with a written summary + pointer to `COMMENTS_FOR_BEPY.md`.
+6. **Completion oracle:** done = stated success criteria met AND fast-check floor green. Never self-vibe done. End with a written summary.
 
 ## Hard stops (autopilot does NOT override these)
 
@@ -98,4 +100,4 @@ Park to the right channel above (do NOT guess) on: destructive/irreversible acti
 
 ## Relationship to /sleep-when-done
 
-Shares `/sleep-when-done`'s auto-answer + log contract; differs only in not sleeping the PC. Do not fork divergent logic.
+Shares `/sleep-when-done`'s auto-answer contract and the same `.for_bepy/autopilot-logs/` blocker format; differs only in not sleeping the PC. Do not fork divergent logic.
