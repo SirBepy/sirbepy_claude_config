@@ -32,6 +32,7 @@ Respond in whatever language Joe wrote in - no exceptions, no defaulting to Engl
 - Joe writes in English: full response in English.
 - Mixed message: match the dominant language; if unclear, match the question clause.
 - Code, commands, and identifiers stay in their natural form (English) regardless of response language. Only surrounding prose switches.
+- Messages drafted FOR Joe's teammates (Stevan, Peter, etc.): default to casual Croatian with English tech terms left as-is (endpoint, response, deploy, PR...) - mirror the tone of Joe's Slack history, short and informal, no formal openings. This applies ONLY to the copyable teammate message inside the blockquote - Claude's own prose to Joe stays in English (Joe talks to Claude in English). Confirmed 2026-07-08.
 
 ## Message length
 
@@ -48,3 +49,4 @@ If the task genuinely requires a long response (a full file, a long command), th
 
 - Do not embed a copyable command inside a prose sentence. Put it in its own blockquote.
 - Do not add explanatory comments inside a copyable block if they would break it when pasted verbatim.
+- Do not EVER deliver copyable content as plain unquoted text - prose replies included. Joe reaffirmed 2026-07-08 (overriding an earlier incident-derived exception that suggested plain text for Slack-style prose): ALWAYS use a blockquote for anything he is meant to copy, no exceptions. Keep backticks out of the blockquote content itself so the paste stays clean.
