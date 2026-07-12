@@ -49,9 +49,19 @@ Ask via AskUserQuestion:
 - "Reclassify something" - dev names which todo to move; update and re-present
 - "Cancel" - stop, no changes
 
-## Step 5 - Execute EASY todos
+## Step 5 - Evaluate EASY todos before executing
 
-For each EASY todo in id order:
+Dispatch ONE read-only subagent (`model: 'sonnet'`, per the global subagent rule) that reads every EASY todo in full and verifies its premise against the current tree - still valid? actually easy? any downgrade risk (hidden design question, stale assumption, feature that's really HARD)? It returns one verdict per todo with a one-line evidence note:
+
+- **DO** - premise holds, proceed to execution.
+- **SKIP** - already done, stale, or superseded. Delete (or move to `ai_todos/done/` if that folder exists) with the evidence note; do not execute.
+- **FLAG** - real downgrade or open question found. Report it to the dev; re-queue as HARD instead of auto-executing.
+
+Show the DO/SKIP/FLAG breakdown before proceeding to step 6.
+
+## Step 6 - Execute EASY todos
+
+For each **DO**-verdict EASY todo in id order:
 
 1. Read the full file.
 2. Announce which todo is starting (id + title).
@@ -61,14 +71,14 @@ For each EASY todo in id order:
 
 If a todo hits a blocker: surface the blocker, stop that todo, continue with the next EASY.
 
-## Step 6 - Surface HARD todos
+## Step 7 - Surface HARD todos
 
 Once all EASY todos are done (or if none existed), ask via AskUserQuestion:
 
 Question: "Which todo do you want to tackle next?"
 Options: one per HARD todo (id + one-line title). Cap at 4 shown; list extras as plain text below.
 
-If dev picks one: execute inline (same flow as step 5).
+If dev picks one: execute inline (same flow as step 6).
 If dev skips: stop. Output remaining HARD todo ids as a reminder.
 
 ## Notes
