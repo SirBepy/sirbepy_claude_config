@@ -27,9 +27,21 @@ When asking, options:
 - "Specific file or path" - follow up asking the dev to type the path (plain message, not AskUserQuestion)
 - "Commit hash or range" - follow up asking the dev to type the hash or range
 
+## Step 0 - Skill description budget
+
+Before filtering, scan the resolved scope for any `SKILL.md` files. For each, read the `description:` frontmatter and count its words. If over budget (> ~25 words / 120 chars), record a finding - unless the extra length is a trigger keyword that can't be cut without breaking the skill's firing (same judgment as bepy-skill-creator's Description budget gate):
+
+```json
+{ "title": "[skill] description over budget", "files": ["path"], "problem": "description is N words; skill descriptions load into every session's system prompt, so verbosity is a per-session token cost", "fix": "trim to trigger surface (~25 words), preserving every trigger clause and when-to-use keyword" }
+```
+
+If scope has no `SKILL.md` files, skip this step.
+
+## Filter to code files
+
 After resolving, filter to code files only. Drop: `.md`, `.json`, `.toml`, `.yaml`, `.yml`, `.gitignore`, anything under `.for_bepy/` or `memory/`.
 
-If the filtered list is empty: print "No code files in scope." and stop.
+If the filtered list is empty (and Step 0 produced no findings): print "No code files in scope." and stop.
 
 ## Step 1 - Size check
 
@@ -63,7 +75,7 @@ For each new top-level symbol: `Grep pattern: "\\b<symbol>\\b", output_mode: "co
 
 ## Step 4 - Output
 
-Merge findings from Steps 1-3.
+Merge findings from Steps 0-3.
 
 **If `.for_bepy/ai_todos/` exists:** write each finding as a `.md` file. Filename: zero-padded numeric prefix (scan existing files for max id, add 1) + kebab-case slug. Format:
 
@@ -88,7 +100,7 @@ Merge findings from Steps 1-3.
 Print a summary line:
 
 ```
-code-check: N findings (A size, B DRY, C dead code). M written to ai_todos.
+code-check: N findings (A size, B DRY, C dead code, D desc). M written to ai_todos.
 ```
 
 If zero findings: `code-check: No structural issues found.`

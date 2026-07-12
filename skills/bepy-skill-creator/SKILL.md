@@ -30,7 +30,7 @@ Then ask: where should it live?
 - "Global (~/.claude/skills/)"
 - "Project-level (.claude/commands/)"
 
-Generate the skill following the conventions below and write it to disk immediately. Do not ask for review first - the dev will tell you what to change after.
+Generate the skill following the conventions below. Before writing to disk, run the **Description budget gate** (see "When creating or fixing"). Then write immediately - do not ask for review first; the dev will tell you what to change after.
 
 ---
 
@@ -83,7 +83,7 @@ Rules are split into two severity levels. FAIL means the skill has a real proble
 
 ### WARN rules (flag but don't force)
 
-- [ ] `description` is ideally one sentence under 120 chars, but longer is fine if it improves agent triggering
+- [ ] `description` is within the budget gate (~25 words / 120 chars), unless a trigger keyword forces it over - see the Description budget gate below
 - [ ] Description ideally starts with "Triggers on /skill-name only" for slash-command skills, but alternative phrasing is fine if the trigger intent is clear
 - [ ] One-liner is ideally under 80 chars
 - [ ] Ideally under 150 lines total, but longer is fine if the extra detail helps the agent
@@ -100,6 +100,14 @@ Show the report as a table with three columns: Rule, Status (FAIL/WARN/PASS), Is
 ---
 
 ## When creating or fixing
+
+### Description budget gate (enforced on create and on fix)
+
+The `description` loads into the system prompt every session, so verbosity there is a per-session token cost. Before writing any skill:
+
+1. Count the words in the `description`. Budget: <= 25 words / 120 chars.
+2. If over budget, cut restated mechanics, examples, and filler - keeping every trigger clause verbatim in meaning (the `/name` trigger and all when-to-use keywords that make the skill fire).
+3. If it cannot reach budget without dropping a trigger keyword, keep it over budget and note which keyword forced it. Never truncate blindly - a broken trigger costs far more than the saved tokens.
 
 - Never use em dashes
 - Never reference users by name; use "the dev"
