@@ -8,9 +8,31 @@
 # Run in the BACKGROUND. Exit codes: 0 = all succeeded, 1 = >=1 failed, 2 = no run found.
 
 param(
-  [Parameter(Mandatory = $true)][string]$Sha,
-  [Parameter(Mandatory = $true)][string]$Branch
+  [string]$Sha,
+  [Parameter(Mandatory = $true)][string]$Branch,
+  [string]$RepoPath = (Get-Location).Path
 )
+
+# -Sha is optional and self-healing: if omitted, or if it doesn't look like a full
+# 40-char hex sha (e.g. a hand-typed/truncated sha), resolve the real HEAD sha from
+# -RepoPath instead of trusting the caller's value. This closes the enforcement gap
+# where a fabricated sha silently watched nothing.
+if ([string]::IsNullOrWhiteSpace($Sha) -or ($Sha -notmatch '^[0-9a-fA-F]{40}$')) {
+  $badSha = $Sha
+  try {
+    $Sha = (git -C $RepoPath rev-parse HEAD).Trim()
+  } catch {
+    Write-Output "BUILD_RESULT=no_run SHA=$badSha ERROR=could_not_resolve_head"
+    exit 2
+  }
+  if ($Sha -notmatch '^[0-9a-fA-F]{40}$') {
+    Write-Output "BUILD_RESULT=no_run SHA=$badSha ERROR=could_not_resolve_head"
+    exit 2
+  }
+  if ($badSha) {
+    Write-Output "NOTE: malformed -Sha '$badSha' rejected; resolved HEAD instead -> $Sha"
+  }
+}
 
 function Get-RunsForSha {
   try {

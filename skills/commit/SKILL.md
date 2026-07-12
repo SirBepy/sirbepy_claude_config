@@ -88,9 +88,9 @@ Steps:
 
 1. **Clear the loop-breaker marker for a fresh manual push.** If this push was initiated directly by the user (not a re-push from a prior auto-fix), delete `<git-dir>/commit-buildwatch-autofixed` if it exists. (`<git-dir>` = `git -C <path> rev-parse --git-dir`.) This gives each manual push its own one-shot auto-fix budget.
 2. **Detect CI.** Only watch if ALL hold: `gh` is installed (`gh --version` succeeds), the repo has a GitHub remote (`gh repo view` succeeds), and `.github/workflows/` exists with at least one workflow file. If any fail, skip the watch silently - no message, no script launch.
-3. **Launch the watcher in the background.** Get the pushed sha (`git -C <path> rev-parse HEAD`) and branch (`git -C <path> rev-parse --abbrev-ref HEAD`), then run, in the background:
+3. **Launch the watcher in the background.** Get the branch (`git -C <path> rev-parse --abbrev-ref HEAD`), then run, in the background, WITHOUT a `-Sha` argument - the script resolves HEAD itself via `-RepoPath`, so there's no hand-typed sha to get wrong:
 
-   `& "C:\Users\tecno\.claude\skills\commit\watch-build.ps1" -Sha <sha> -Branch <branch>`
+   `& "C:\Users\tecno\.claude\skills\commit\watch-build.ps1" -Branch <branch> -RepoPath <path>`
 
    Use a literal path (never `$env:`-built) so it doesn't trigger a permission prompt.
 4. **Announce and move on.** Tell the user: "Pushed. Watching the CI build in the background - I'll ping you when it lands. Say 'drop it' to ignore." Do NOT block or poll; you'll be re-invoked when the watcher exits.
