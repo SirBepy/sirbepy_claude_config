@@ -1,6 +1,6 @@
 ---
 name: night-run
-description: Triggers on /night-run only. Schedules a queue of REMOTE overnight agents via RemoteTrigger that grind through plan files in docs/night_run/. PC can be turned off. For local (PC must stay on) use /cron-run.
+description: Triggers on /night-run only. Schedules a queue of REMOTE overnight agents via RemoteTrigger. PC can be turned off. For local (PC must stay on) use /cron-run.
 argument-hint: "<count|all> [every] <interval> [till HH[AM|PM]]"
 ---
 

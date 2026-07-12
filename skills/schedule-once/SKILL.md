@@ -1,6 +1,6 @@
 ---
 name: schedule-once
-description: Triggers on /schedule-once only. Schedules a SINGLE future run of a Claude prompt (or a raw shell command) on THIS machine via Windows Task Scheduler, as a self-deleting one-time task. The local, one-shot counterpart to the cloud /schedule and the recurring /cron-run. PC must be on and logged in at fire time; Claude Code itself need not be open. Also supports list and cancel.
+description: Triggers on /schedule-once only. Schedules a SINGLE future run of a Claude prompt or shell command via Windows Task Scheduler, as a self-deleting one-time task. The local, one-shot counterpart to the cloud /schedule and the recurring /cron-run. PC must be on and logged in at fire time; Claude Code need not be open. Also supports list and cancel.
 argument-hint: "<prompt> at <time> [with <model>] [<effort> effort] | --shell <cmd> at <time> | list | cancel <id|all>"
 ---
 

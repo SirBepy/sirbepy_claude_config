@@ -1,6 +1,6 @@
 ---
 name: iterate-it
-description: Triggers on /iterate-it only. Converges a hypothesis through TWO phases: Explore (up to 6 rounds x 1 sub, varying angles, exit on score >= threshold) then Polish (up to 3 rounds x 1 sub, exit on score >= floor). One sub per round, sequential. Cheaper and finer-grained than the old N-per-round panel design. Use when a one-shot /rate-it isn't enough and you want the panel to PROPOSE BETTER VERSIONS, not just judge.
+description: Triggers on /iterate-it only. Converges a hypothesis through two phases (Explore, then Polish), one subagent per round, exiting once the score threshold is hit. Use when a one-shot /rate-it isn't enough and you want the panel to PROPOSE BETTER VERSIONS, not just judge.
 argument-hint: "[--threshold=N] [--floor=N] [--explore-max=N] [--polish-max=N] [--research] <hypothesis>"
 ---
 

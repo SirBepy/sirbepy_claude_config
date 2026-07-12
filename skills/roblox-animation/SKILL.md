@@ -1,6 +1,6 @@
 ---
 name: roblox-animation
-description: Triggers on /roblox-animation only. Two subcommands - `author <name>` generates a placeholder KeyframeSequence Luau module; `import <url-or-path>` converts a Roblox Marketplace URL or a Mixamo BVH file into the same Luau module shape. Output is editable in Studio's Animation Editor.
+description: Triggers on /roblox-animation only. Two subcommands: `author <name>` generates a placeholder KeyframeSequence Luau module; `import <url-or-path>` converts a Roblox Marketplace URL or Mixamo BVH file into the same shape.
 argument-hint: "[author <name>] | [import <url-or-path>]"
 ---
 

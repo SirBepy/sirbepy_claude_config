@@ -1,6 +1,6 @@
 ---
 name: brainstorm
-description: Use before ANY creative or feature work - creating features, components, adding functionality, modifying behavior, or designing a change. Local lightweight replacement for superpowers:brainstorming. Explores context, asks only for genuinely unknowable facts, picks the approach internally, then implements. No approval gates, no spec hand-off, no plan sign-off.
+description: Use before ANY creative or feature work - creating features, components, adding functionality, modifying behavior, or designing a change. Local gate-free replacement for superpowers:brainstorming; explores context, resolves only genuinely unknowable facts, then implements directly.
 ---
 
 # /brainstorm

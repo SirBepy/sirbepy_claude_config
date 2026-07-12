@@ -1,6 +1,6 @@
 ---
 name: disk-doctor
-description: Use when Joe asks what to delete / how to free disk space. Repeatable, self-improving cleanup scan that auto-routes by OS - macOS uses macos.md, Windows uses windows.md. Advise-only (Claude never deletes). Records new safe-to-delete spots and never-touch zones in the matching platform file, only on explicit /disk-doctor invoke.
+description: Use when Joe asks what to delete or how to free disk space. Repeatable cleanup scan, advise-only (Claude never deletes).
 argument-hint: "(no args - just scan and advise)"
 ---
 

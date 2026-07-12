@@ -1,6 +1,6 @@
 ---
 name: supervised-run
-description: Use when you need to start a LONG-LIVED dev server / watcher for the current project (e.g. npm run dev, vite, next dev, flutter run, a backend that stays running). Routes it through the local server_supervisor app so it is visible in Joe's dashboard, owned (no orphans), and centrally logged - auto-registering it if needed. Do NOT use for one-off commands that exit (tests, builds, git, scripts); run those normally. Falls back to a normal shell run if the supervisor is not reachable.
+description: Use when you need to start a LONG-LIVED dev server / watcher for the current project (e.g. npm run dev, vite, next dev, flutter run, a backend that stays running). Routes through server_supervisor for visibility and no orphans. Do NOT use for one-off commands that exit (tests, builds, git, scripts); run those normally.
 ---
 
 # supervised-run

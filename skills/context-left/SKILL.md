@@ -1,6 +1,6 @@
 ---
 name: context-left
-description: Use when the user asks how much context is left or remaining, how full the context window is, how much room is left before it fills, or invokes /context-left. Reports the current claude session's remaining context-window tokens + percent. Read-only and localhost-only: queries the context daemon if it is running, else self-computes from this session's transcript.
+description: Use when the user asks how much context is left or remaining, how full the context window is, how much room is left before it fills, or invokes /context-left. Reports remaining context-window tokens + percent for this session. Read-only, localhost-only.
 ---
 
 # /context-left

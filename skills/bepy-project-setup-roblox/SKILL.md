@@ -1,6 +1,6 @@
 ---
 name: bepy-project-setup-roblox
-description: Triggers on /bepy-project-setup-roblox only. Scaffolds a new Roblox/Luau project from the sirbepy_roblox/templates/default/ skeleton, or fills missing files in an existing one. Idempotent - never clobbers without asking. Verifies with aftman install + wally install + rojo build.
+description: Triggers on /bepy-project-setup-roblox only. Scaffolds or fills in a Roblox/Luau project from the sirbepy_roblox template skeleton; idempotent, never clobbers without asking.
 ---
 
 # /bepy-project-setup-roblox

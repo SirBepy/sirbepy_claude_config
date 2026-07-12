@@ -1,6 +1,6 @@
 ---
 name: cron-run
-description: Triggers on /cron-run only. Schedules a queue of LOCAL overnight agents using Windows Task Scheduler that grind through plan files in docs/night_run/, one task per tick, with review subagents and side-branch failure isolation. PC must stay on and logged in; Claude Code does NOT need to be open. For remote (PC off) use /night-run.
+description: Triggers on /cron-run only. Schedules a queue of LOCAL overnight agents via Windows Task Scheduler; PC must stay on and logged in (Claude Code need not be open). For remote/PC-off use /night-run.
 argument-hint: "<count|all> [every] <interval> [till HH[AM|PM]] | tick | cancel"
 ---
 

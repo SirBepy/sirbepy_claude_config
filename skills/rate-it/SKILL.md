@@ -1,6 +1,6 @@
 ---
 name: rate-it
-description: Triggers on /rate-it only. Brutally honest 1-10 rating with named score tiers. No sugar-coating. Solo by default; pass an integer N to spawn an N-subagent panel synthesized to one verdict (use when stakes are high - panel mode costs ~5-6x tokens). Auto-detects if web research is needed; supports --research and --dont-research flags.
+description: Triggers on /rate-it only. Brutally honest 1-10 rating with named score tiers, no sugar-coating. Solo by default; pass an integer N for an N-subagent panel (higher stakes, ~5-6x cost). Auto-detects if web research is needed; supports --research and --dont-research flags.
 argument-hint: "[N] <thing to rate> [--research|--dont-research]"
 ---
 

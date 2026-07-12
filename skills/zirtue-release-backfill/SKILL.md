@@ -1,6 +1,6 @@
 ---
 name: zirtue-release-backfill
-description: Triggers on /zirtue-release-backfill only. Discovers all Shortcut tickets where the dev authored a commit in zng-app or zng-admin, then for each one whose Release field is unset / Next release / TBD / Oneday / V1.x, figures out the real release by matching merge SHAs against git tags. Backfills Release plus any other missing field metadata (Skill Set, Product Area, Technical Area, Priority, Estimate), then optionally moves resolved tickets to Complete. Always reports first, applies only after explicit approval.
+description: Triggers on /zirtue-release-backfill only. Backfills the Shortcut Release field (and other missing scope metadata) on tickets the dev shipped code for, by matching merge SHAs against git tags. Always reports first, applies only after explicit approval.
 ---
 
 # /zirtue-release-backfill

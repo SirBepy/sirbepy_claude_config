@@ -1,6 +1,6 @@
 ---
 name: autopilot
-description: Triggers on /autopilot only. Dev is AFK and wants maximum autonomous progress with heavy but purposeful token use. Never block - delegate aggressively to subagents to keep main context lean, resolve real judgment calls via a BOUNDED /iterate-it (capped per run), auto-answer any nested skill's question instead of hanging, log genuine blockers only, park true hard-stops, and grind the task to a verified finish.
+description: Triggers on /autopilot only. Dev is AFK and wants maximum autonomous progress: never block - delegate to subagents, resolve judgment calls via a bounded /iterate-it, auto-answer nested skills' questions, log only genuine blockers, and grind to a verified finish.
 ---
 
 # /autopilot

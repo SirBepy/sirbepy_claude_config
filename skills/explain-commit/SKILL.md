@@ -1,6 +1,6 @@
 ---
 name: explain-commit
-description: Triggers on /explain-commit only. Writes a structured deep-dive (TL;DR, context, old behavior, why it failed, the fix, trade-offs) of a git commit to .for_bepy/commits_explained/<id>.md. Use when the dev wants to understand or document why a commit was made.
+description: Triggers on /explain-commit only. Writes a structured deep-dive of a git commit (why it happened, the fix, trade-offs) to .for_bepy/commits_explained/. Use when the dev wants to understand or document why a commit was made.
 argument-hint: "[ticket|hash|empty=HEAD]"
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: character-creator
-description: Triggers on /character-creator <game-or-char> only. Game-centric by default - builds multiple characters from one game in a single batch (one icon source pass + one sound source pass shared across chars). For one-off single chars use `/character-creator <char> from <game>`. Outputs to <app-data>/characters/<char-id>/. Aborts cleanly when nothing usable is found. Never auto-triggers.
+description: Triggers on /character-creator <game-or-char> only, never on natural language. Game-centric by default (batches multiple characters from one game); use `/character-creator <char> from <game>` for a single one-off.
 ---
 
 # /character-creator
