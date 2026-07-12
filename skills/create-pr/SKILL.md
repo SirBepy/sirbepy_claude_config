@@ -58,12 +58,19 @@ reviewer could read straight off the diff is noise; cut it.**
 
 6. **Visual scan → suggest → you approve (never auto-embed).** Inspect the
    changed-files list and propose at most what fits:
-   - **Frontend / UI files** (`frontend/src/**`, `*.tsx`, `*.css`) → offer a
+   - **Frontend / UI files** (`frontend/src/**`, `*.tsx`, `*.css`) → before
+     installing any browser harness, probe once for the `SendUserFile` tool
+     (`ToolSearch` or check the tool list). **If present:** offer a
      **screenshot**. On yes: bring the app up via `/supervised-run`, capture with
      the `/screenshot` helper, `SendUserFile` the image to the dev, and add a line to
      the preview: *"Screenshot saved at `<path>` - drag it into the PR box after
      create (GitHub needs a manual image upload)."* Do **not** try to embed a
-     local path in the body; it won't render.
+     local path in the body; it won't render. **If absent:** still capture the
+     screenshot - it remains the verification step - `Read` it to self-verify the
+     change, then give the dev (a) the live `/supervised-run` URL + the exact
+     route to the changed view, and (b) the absolute PNG path to drag into the
+     PR box himself. Say plainly that no image-to-chat channel exists this
+     session; do not silently substitute an existing/repurposed screenshot.
    - **Schema / pipeline / data-flow files** (`domain/models/**`,
      `backend/**/pipelines/**`, `schema_manager.py`, `migrations/**`) → offer a
      **mermaid diagram** of the changed flow. On yes: embed a fenced ` ```mermaid `
@@ -71,7 +78,10 @@ reviewer could read straight off the diff is noise; cut it.**
      stays a light read. Keep it to the nodes that changed, not the whole system.
    - Nothing matches → no visual. Silence is correct; never pad with a diagram
      for its own sake.
-   - Ask per item, one short y/n. Embed nothing the user didn't approve.
+   - **Ask per item, as its OWN short y/n question, separate from and before**
+     the step 8 approval gate. Never fold the visual y/n into the final
+     approval `AskUserQuestion` alongside other questions - that's the exact
+     violation this note exists to prevent. Embed nothing the user didn't approve.
 
 7. **Preview locally (before any create).**
    - Write the final body to `.for_bepy/pr_preview/<branch-slug>.md` (gitignored
@@ -83,9 +93,12 @@ reviewer could read straight off the diff is noise; cut it.**
    - **Emit the Claude Conductor in-app preview markers** so the modal card appears.
      Run these PowerShell commands (one per call, no chaining) to encode the data:
      ```
-     $body = Get-Content ".for_bepy\pr_preview\<slug>.md" -Raw
+     $body = [System.IO.File]::ReadAllText("<absolute path to .for_bepy\pr_preview\<slug>.md>", [System.Text.Encoding]::UTF8)
      [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($body))
      ```
+     (Always `ReadAllText` with explicit UTF8, never `Get-Content -Raw`: PS 5.1
+     reads BOM-less UTF-8 files with the ANSI codepage and mangles non-ASCII
+     characters like `→` into mojibake inside the base64 marker.)
      Build the commits JSON string from the git log output gathered in step 2
      (array of `{"sha":"<7chars>","msg":"<headline>"}` objects), then encode it:
      ```
@@ -103,7 +116,16 @@ reviewer could read straight off the diff is noise; cut it.**
      The title must not contain `>` characters. The base64 values must be single
      lines with no spaces or line breaks.
 
-8. **Confirm, then create.** Ask the dev to approve the previewed body (AskUserQuestion).
+8. **Confirm, then create.** Pre-flight: have you already asked step 6's visual
+   y/n as its OWN question? If not, STOP and do it first - do not fold it into
+   this step's question. This gate is **not skippable even when `/create-pr` is
+   invoked as the tail of a bundled instruction** (e.g. "commit X onto its own
+   branch and /create-pr") - bundled phrasing is not pre-approval. Always show
+   the preview and wait for an explicit `AskUserQuestion` answer for THIS
+   preview before calling `gh pr create`, every single time, no exceptions for
+   how the invocation was phrased.
+
+   Ask the dev to approve the previewed body (AskUserQuestion).
    Only on approval:
    - Push the branch if it isn't on the remote yet (`git push -u origin <branch>`).
      This is implied by the dev invoking `/create-pr`; still announce it, since it's
