@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>First Two Weeks at Fibo — Josip Mužić</title>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<style>
+  :root {
+    --blue: #1738DD; --blue-lit: #4f6bff;
+    --bg: #0b0e1a; --bg-2: #12162a; --card: #171c33; --card-2: #1d2340;
+    --line: #2a3157; --text: #eef1fb; --muted: #9aa3c7; --dim: #6a7398;
+    --green: #10B981; --amber: #F59E0B; --red: #EF4444;
+    --add-bg: rgba(16,185,129,.12); --add-mark: #10B981;
+    --del-bg: rgba(239,68,68,.11); --del-mark: #EF4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--text); font-family: "DM Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  h1,h2,h3,.h { font-family: "Plus Jakarta Sans", sans-serif; }
+  code, pre, .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  a { color: var(--blue-lit); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .deck { height: 100vh; width: 100vw; position: relative; }
+  .slide { position: absolute; inset: 0; display: none; flex-direction: column; padding: 4.5vh 6vw 8vh; opacity: 0; transform: translateY(24px) scale(.99); transition: opacity .4s ease, transform .6s cubic-bezier(.2,.78,.2,1); }
+  .slide.active { opacity: 1; transform: none; }
+
+  .topbar { position: fixed; top: 0; left: 0; right: 0; height: 4px; background: var(--bg-2); z-index: 60; }
+  .topbar .fill { height: 100%; background: linear-gradient(90deg, var(--blue), var(--blue-lit)); transition: width .3s ease; }
+  .footer { position: fixed; bottom: 14px; left: 6vw; right: 6vw; display: flex; justify-content: space-between; align-items: center; color: var(--dim); font-size: 13px; z-index: 60; }
+  .footer .nav { display: flex; gap: 8px; align-items: center; }
+  .footer button { background: var(--card); color: var(--muted); border: 1px solid var(--line); border-radius: 8px; width: 34px; height: 34px; cursor: pointer; font-size: 16px; display: grid; place-items: center; transition: .15s; }
+  .footer button:hover { background: var(--card-2); color: var(--text); border-color: var(--blue-lit); }
+  .footer #counter { min-width: 54px; text-align: center; }
+  .brand-dot { color: var(--blue-lit); font-weight: 700; }
+
+  .eyebrow { display: inline-flex; align-items: center; gap: 9px; color: var(--blue-lit); font-weight: 600; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 12px; }
+  .eyebrow .arc-num { background: var(--blue); color: #fff; border-radius: 6px; padding: 2px 9px; font-size: 12px; }
+
+  /* TITLE */
+  .title-slide { justify-content: center; align-items: flex-start; }
+  .title-slide .logo { font-size: 22px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 36px; }
+  .title-slide h1 { font-size: clamp(38px, 6vw, 82px); line-height: 1.02; font-weight: 800; letter-spacing: -.03em; }
+  .title-slide h1 .grad { background: linear-gradient(90deg, var(--blue-lit), #a9b8ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .title-slide .sub { color: var(--muted); font-size: clamp(16px, 2vw, 24px); margin-top: 20px; font-weight: 500; }
+  .stat-row { display: flex; gap: 46px; margin-top: 46px; }
+  .stat .n { font-family: "Plus Jakarta Sans"; font-size: 44px; font-weight: 800; color: var(--text); line-height: 1; }
+  .stat .l { color: var(--dim); font-size: 13px; margin-top: 8px; letter-spacing: .04em; }
+
+  /* SECTION HEADS */
+  .slide h2 { font-size: clamp(26px, 3.4vw, 46px); line-height: 1.05; font-weight: 800; letter-spacing: -.02em; max-width: 20ch; }
+  .slide .lede { color: var(--muted); font-size: clamp(15px, 1.5vw, 20px); margin-top: 16px; max-width: 66ch; line-height: 1.5; }
+
+  /* OVERVIEW */
+  .timeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 34px; }
+  .arc-card { background: var(--card); border: 1px solid var(--line); border-radius: 15px; padding: 18px; position: relative; overflow: hidden; }
+  .arc-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--blue); }
+  .arc-card .num { color: var(--dim); font-family: "Plus Jakarta Sans"; font-weight: 800; font-size: 14px; }
+  .arc-card i.ph { font-size: 26px; color: var(--blue-lit); margin: 9px 0; display: block; }
+  .arc-card .t { font-family: "Plus Jakarta Sans"; font-weight: 700; font-size: 16px; line-height: 1.2; }
+  .arc-card .d { color: var(--muted); font-size: 13px; margin-top: 6px; line-height: 1.4; }
+
+  /* ARC SLIDE = narrative (top) + PR viewer (fills rest) */
+  .arc-slide { padding-bottom: 7vh; justify-content: center; }
+  .arc-top { flex-shrink: 0; transform-origin: top center; transition: transform .55s cubic-bezier(.2,.75,.2,1); }
+  .arc-slide:not(.revealed) .arc-top { transform: scale(1.03); }
+  .arc-top h2 { max-width: 34ch; font-size: clamp(23px, 2.7vw, 36px); }
+  .wwi { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 13px; margin-top: 18px; }
+  .wwi .col { background: var(--card); border: 1px solid var(--line); border-radius: 13px; padding: 13px 16px 15px; }
+  .wwi .col .k { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin-bottom: 9px; }
+  .wwi .col .k i { font-size: 15px; }
+  .wwi .col.why .k { color: var(--amber); } .wwi .col.what .k { color: var(--blue-lit); } .wwi .col.impact .k { color: var(--green); }
+  .wwi .col p { font-size: 13.5px; line-height: 1.45; color: var(--text); }
+  .wwi .col ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .wwi .col li { font-size: 13px; line-height: 1.35; color: var(--text); padding-left: 16px; position: relative; }
+  .wwi .col li::before { content: ""; position: absolute; left: 2px; top: 7px; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .5; }
+  /* intro beat: enlarge the Why/What/Impact text; it shrinks to compact once the PR appears */
+  .wwi { transition: gap .5s ease; }
+  .wwi .col { transition: padding .5s ease; }
+  .wwi .col p, .wwi .col li, .wwi .col .k { transition: font-size .5s ease, line-height .5s ease; }
+  /* intro beat: stack the three cards vertically (label left, content right) and enlarge; they
+     collapse back to the compact 3-across row once the PR reveals */
+  .arc-slide:not(.revealed) .arc-top { text-align: center; }
+  .arc-slide:not(.revealed) .arc-top .eyebrow { justify-content: center; }
+  .arc-slide:not(.revealed) .arc-top h2 { max-width: 26ch; margin-left: auto; margin-right: auto; }
+  .arc-slide:not(.revealed) .wwi { grid-template-columns: 1fr; gap: 12px; max-width: 1000px; margin-left: auto; margin-right: auto; text-align: left; }
+  .arc-slide:not(.revealed) .wwi .col { padding: 18px 24px; display: grid; grid-template-columns: 128px 1fr; gap: 4px 22px; align-items: start; }
+  .arc-slide:not(.revealed) .wwi .col .k { font-size: 13px; margin-bottom: 0; padding-top: 3px; }
+  .arc-slide:not(.revealed) .wwi .col p { font-size: 18.5px; line-height: 1.5; }
+  .arc-slide:not(.revealed) .wwi .col ul { gap: 9px; }
+  .arc-slide:not(.revealed) .wwi .col li { font-size: 18px; line-height: 1.45; }
+
+  /* PR VIEWER */
+  .pr-viewer { display: flex; flex-direction: column; max-height: 0; opacity: 0; margin-top: 0; transform: translateY(28px); overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--bg-2); transition: max-height .6s cubic-bezier(.2,.75,.2,1), opacity .45s ease, transform .5s ease, margin-top .45s ease; }
+  .arc-slide.revealed .pr-viewer { max-height: 60vh; opacity: 1; margin-top: 18px; transform: none; }
+  .pr-tabbar { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--line); background: var(--card); flex-shrink: 0; }
+  .pr-tabbar .step { background: var(--card-2); color: var(--muted); border: 1px solid var(--line); border-radius: 8px; width: 30px; height: 30px; display: grid; place-items: center; cursor: pointer; font-size: 15px; flex-shrink: 0; }
+  .pr-tabbar .step:hover { color: var(--text); border-color: var(--blue-lit); }
+  .pr-tabbar .step:disabled { opacity: .3; cursor: default; }
+  .pr-tabs { display: flex; gap: 6px; overflow-x: auto; flex: 1; }
+  .pr-tab { background: none; border: 1px solid var(--line); border-radius: 999px; padding: 5px 13px; color: var(--muted); font-family: "JetBrains Mono"; font-size: 12.5px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+  .pr-tab:hover { color: var(--text); }
+  .pr-tab.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .pr-count { color: var(--dim); font-size: 12px; flex-shrink: 0; margin-left: 4px; }
+
+  .pr-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 22px 26px; }
+  .pr-head { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 15px; margin-bottom: 16px; }
+  .pr-head .l { flex: 1; min-width: 0; }
+  .pr-head .kicker { display: flex; align-items: center; gap: 9px; color: var(--dim); font-size: 12.5px; margin-bottom: 7px; }
+  .pr-head .kicker .badge { background: var(--card-2); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-family: "JetBrains Mono"; font-size: 12px; color: var(--blue-lit); }
+  .pr-head h3 { font-size: 19px; line-height: 1.2; font-weight: 800; letter-spacing: -.01em; }
+  .pr-head .counts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 9px; font-family: "JetBrains Mono"; font-size: 12.5px; }
+  .pr-head .counts .c { color: var(--muted); background: var(--card); border: 1px solid var(--line); border-radius: 7px; padding: 3px 9px; }
+  .pr-head .counts .c.add { color: var(--green); } .pr-head .counts .c.del { color: var(--red); }
+  .gh-btn { background: var(--blue); color: #fff; border-radius: 9px; padding: 8px 15px; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .gh-btn:hover { background: var(--blue-lit); text-decoration: none; }
+
+  .section-label { display: flex; align-items: center; gap: 9px; color: var(--dim); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin: 20px 0 11px; }
+  .section-label i { font-size: 15px; color: var(--blue-lit); }
+  .expand-all { margin-left: auto; background: var(--card); border: 1px solid var(--line); color: var(--muted); border-radius: 8px; padding: 5px 12px; font-size: 11px; font-weight: 600; letter-spacing: .06em; cursor: pointer; font-family: inherit; text-transform: none; }
+  .expand-all:hover { background: var(--card-2); color: var(--text); border-color: var(--blue-lit); }
+
+  .desc-card { background: var(--card); border: 1px solid var(--line); border-radius: 13px; padding: 16px 20px; line-height: 1.55; font-size: 14px; }
+  .desc-card h1,.desc-card h2,.desc-card h3 { font-family: "Plus Jakarta Sans"; margin: 14px 0 7px; line-height: 1.25; }
+  .desc-card h1 { font-size: 18px; } .desc-card h2 { font-size: 16px; } .desc-card h3 { font-size: 14px; color: var(--muted); }
+  .desc-card h1:first-child,.desc-card h2:first-child,.desc-card h3:first-child { margin-top: 0; }
+  .desc-card p { margin: 8px 0; }
+  .desc-card ul,.desc-card ol { margin: 8px 0 8px 20px; } .desc-card li { margin: 3px 0; }
+  .desc-card code { background: var(--bg-2); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; font-size: 12.5px; color: #cfd8ff; }
+  .desc-card pre { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 13px 15px; overflow-x: auto; margin: 11px 0; }
+  .desc-card pre code { background: none; border: none; padding: 0; }
+  .desc-card strong { color: var(--text); font-weight: 600; }
+  .desc-card hr { border: none; border-top: 1px solid var(--line); margin: 14px 0; }
+  .desc-card details.md-details { border: 1px solid var(--line); border-radius: 10px; padding: 2px 15px; margin: 12px 0; background: var(--bg-2); }
+  .desc-card details.md-details summary { cursor: pointer; font-weight: 600; color: var(--text); padding: 9px 0; list-style: none; display: flex; align-items: center; gap: 8px; }
+  .desc-card details.md-details summary::-webkit-details-marker { display: none; }
+  .desc-card details.md-details summary::before { content: "\25B8"; color: var(--blue-lit); transition: transform .15s; display: inline-block; }
+  .desc-card details.md-details[open] summary::before { transform: rotate(90deg); }
+  .desc-card details.md-details[open] summary { border-bottom: 1px solid var(--line); margin-bottom: 7px; }
+
+  /* FILES / DIFF */
+  .file { border: 1px solid var(--line); border-radius: 11px; margin-bottom: 10px; overflow: hidden; }
+  .file-head { display: flex; align-items: center; gap: 11px; padding: 10px 14px; background: var(--card); cursor: pointer; user-select: none; }
+  .file-head:hover { background: var(--card-2); }
+  .file-head .caret { color: var(--dim); transition: transform .15s; font-size: 14px; }
+  .file.collapsed .caret { transform: rotate(-90deg); }
+  .file-head .path { font-family: "JetBrains Mono"; font-size: 12.5px; color: var(--text); flex: 1; word-break: break-all; }
+  .file-head .fstat { font-family: "JetBrains Mono"; font-size: 11.5px; flex-shrink: 0; }
+  .file-head .fstat .a { color: var(--green); } .file-head .fstat .d { color: var(--red); margin-left: 8px; }
+  .file-body { overflow-x: auto; background: #0d1122; }
+  .file.collapsed .file-body { display: none; }
+  table.diff { border-collapse: collapse; width: 100%; font-family: "JetBrains Mono"; font-size: 12px; line-height: 1.55; }
+  table.diff td { padding: 0 10px; white-space: pre; vertical-align: top; }
+  table.diff td.ln { color: var(--dim); text-align: right; user-select: none; width: 1%; opacity: .6; border-right: 1px solid var(--line); }
+  table.diff tr.add td { background: var(--add-bg); } table.diff tr.add td.code::before { content: "+"; color: var(--add-mark); }
+  table.diff tr.del td { background: var(--del-bg); } table.diff tr.del td.code::before { content: "-"; color: var(--del-mark); }
+  table.diff tr.ctx td.code::before { content: " "; }
+  table.diff td.code { color: var(--text); width: 100%; }
+  table.diff td.code::before { display: inline-block; width: 13px; }
+  table.diff td.code .hljs { background: transparent; color: var(--text); }
+  .hljs { background: transparent !important; }
+  table.diff tr.hunk td { background: var(--bg-2); color: var(--blue-lit); padding: 4px 10px; }
+  .trunc { padding: 11px 14px; color: var(--amber); font-size: 12.5px; background: var(--bg-2); border-top: 1px solid var(--line); }
+  .binary { padding: 13px 15px; color: var(--dim); font-size: 12.5px; font-style: italic; }
+
+  /* CLOSING */
+  .close-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 40px; }
+  .close-stat { background: var(--card); border: 1px solid var(--line); border-radius: 15px; padding: 24px; }
+  .close-stat .n { font-family: "Plus Jakarta Sans"; font-size: 40px; font-weight: 800; color: var(--blue-lit); }
+  .close-stat .l { color: var(--muted); font-size: 14px; margin-top: 8px; line-height: 1.4; }
+  .takeaways { margin-top: 36px; display: flex; flex-direction: column; gap: 13px; max-width: 84ch; }
+  .takeaways .row { display: flex; align-items: flex-start; gap: 14px; font-size: 17px; line-height: 1.45; }
+  .takeaways .row i { color: var(--green); font-size: 21px; margin-top: 2px; flex-shrink: 0; }
+  .takeaways .row b { color: var(--text); font-weight: 700; }
+
+  .hint { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); color: var(--dim); font-size: 12px; z-index: 55; opacity: .7; }
+  kbd { background: var(--card-2); border: 1px solid var(--line); border-radius: 5px; padding: 1px 7px; font-family: inherit; font-size: 11px; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; border: 3px solid var(--bg-2); }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<div class="topbar"><div class="fill" id="fill"></div></div>
+<div class="deck" id="deck"></div>
+<div class="footer">
+  <div id="ftitle"></div>
+  <div class="nav">
+    <button id="prev" aria-label="Previous slide"><i class="ph ph-caret-left"></i></button>
+    <span id="counter"></span>
+    <button id="next" aria-label="Next slide"><i class="ph ph-caret-right"></i></button>
+  </div>
+</div>
+<div class="hint"><kbd>←</kbd> <kbd>→</kbd> next · <kbd>↑</kbd> <kbd>↓</kbd> PRs · <kbd>F</kbd> fullscreen</div>
+
+<script>
+const DATA = /*__DATA__*/ null /*__END__*/;
+
+/* ---------- helpers ---------- */
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function mdInline(s){
+  return esc(s)
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+function md(src){
+  if(!src) return '<p style="color:var(--dim)">No description.</p>';
+  // normalise <details>/</details> onto their own lines so an inline <details><summary>… still parses
+  src = src.replace(/<details>/g,'\n<details>\n').replace(/<\/details>/g,'\n</details>\n');
+  const lines = src.replace(/\r/g,'').split('\n');
+  let html='', i=0, inList=false, inCode=false;
+  const closeList=()=>{ if(inList){html+='</ul>';inList=false;} };
+  while(i<lines.length){
+    let l=lines[i];
+    if(l.trim().startsWith('```')){ closeList(); if(!inCode){html+='<pre><code>';inCode=true;} else {html+='</code></pre>';inCode=false;} i++; continue; }
+    if(inCode){ html+=esc(l)+'\n'; i++; continue; }
+    const t=l.trim();
+    if(t==='<details>'){ closeList(); html+='<details class="md-details" open>'; i++; continue; }
+    if(t==='</details>'){ closeList(); html+='</details>'; i++; continue; }
+    const sm=t.match(/^<summary>([\s\S]*)<\/summary>$/);
+    if(sm){ closeList(); html+='<summary>'+mdInline(sm[1])+'</summary>'; i++; continue; }
+    if(/^#{1,3}\s/.test(l)){ closeList(); const lvl=l.match(/^#+/)[0].length; html+='<h'+lvl+'>'+mdInline(l.replace(/^#+\s/,''))+'</h'+lvl+'>'; i++; continue; }
+    if(/^\s*[-*]\s+/.test(l)){ if(!inList){html+='<ul>';inList=true;} html+='<li>'+mdInline(l.replace(/^\s*[-*]\s+/,''))+'</li>'; i++; continue; }
+    if(/^---+$/.test(l.trim())){ closeList(); html+='<hr>'; i++; continue; }
+    if(l.trim()===''){ closeList(); i++; continue; }
+    closeList(); html+='<p>'+mdInline(l)+'</p>'; i++;
+  }
+  if(inList) html+='</ul>'; if(inCode) html+='</code></pre>';
+  return html;
+}
+
+/* ---------- syntax highlighting ---------- */
+const LANG_BY_EXT = { tsx:'typescript', ts:'typescript', jsx:'javascript', js:'javascript', mjs:'javascript', cjs:'javascript', py:'python', sql:'sql', json:'json', yml:'yaml', yaml:'yaml', css:'css', scss:'scss', html:'xml', xml:'xml', svg:'xml', md:'markdown', markdown:'markdown', sh:'bash', bash:'bash', bat:'dos', toml:'ini', ini:'ini', dockerfile:'dockerfile', env:'bash' };
+function langFor(path){ const base=path.split('/').pop().toLowerCase(); if(base==='dockerfile') return 'dockerfile'; const ext=base.includes('.')?base.split('.').pop():''; return LANG_BY_EXT[ext]||null; }
+function hl(code, lang){ if(window.hljs && lang && hljs.getLanguage(lang)){ try { return hljs.highlight(code, {language:lang, ignoreIllegals:true}).value; } catch(e){} } return esc(code); }
+
+/* ---------- diff ---------- */
+function renderDiff(file){
+  if(file.binary) return '<div class="binary">Binary file — not shown. View on GitHub.</div>';
+  const lang=langFor(file.path); const rows=[]; let an=0, dn=0, shown=0; const CAP=500; let capped=false;
+  for(const raw of file.lines){
+    if(shown>=CAP){ capped=true; break; }
+    if(raw.startsWith('@@')){ const m=raw.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/); if(m){ dn=parseInt(m[1]); an=parseInt(m[2]); } rows.push('<tr class="hunk"><td class="ln"></td><td class="code">'+esc(raw)+'</td></tr>'); shown++; continue; }
+    let cls='ctx', num='';
+    if(raw[0]==='+'){ cls='add'; num=an++; } else if(raw[0]==='-'){ cls='del'; num=dn++; } else { num=an; an++; dn++; }
+    rows.push('<tr class="'+cls+'"><td class="ln">'+num+'</td><td class="code">'+hl(raw.slice(1), lang)+'</td></tr>'); shown++;
+  }
+  let html='<table class="diff"><tbody>'+rows.join('')+'</tbody></table>';
+  if(capped) html+='<div class="trunc">Diff truncated at '+CAP+' lines — see the full change on GitHub.</div>';
+  return html;
+}
+function fileBlock(file, idx){
+  return '<div class="file collapsed" id="__fid__'+idx+'">'
+    + '<div class="file-head" onclick="this.parentNode.classList.toggle(\'collapsed\')">'
+    +   '<i class="ph ph-caret-down caret"></i><span class="path">'+esc(file.path)+'</span>'
+    +   '<span class="fstat"><span class="a">+'+file.additions+'</span><span class="d">-'+file.deletions+'</span></span></div>'
+    + '<div class="file-body">'+renderDiff(file)+'</div></div>';
+}
+function toggleAllFiles(btn){
+  const scope=btn.closest('.pr-scroll'); const files=scope.querySelectorAll('.file');
+  const anyCollapsed=[...files].some(f=>f.classList.contains('collapsed'));
+  files.forEach(f=>f.classList.toggle('collapsed', !anyCollapsed));
+  btn.textContent=anyCollapsed?'Collapse all':'Expand all';
+}
+
+/* ---------- PR content ---------- */
+function prContent(pr){
+  const date = pr.mergedAt ? new Date(pr.mergedAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : 'not merged';
+  let h='<div class="pr-head"><div class="l">'
+    + '<div class="kicker"><span class="badge">PR #'+pr.number+'</span><span>merged '+date+'</span></div>'
+    + '<h3>'+esc(pr.title)+'</h3>'
+    + '<div class="counts"><span class="c">'+pr.files.length+' files</span><span class="c add">+'+pr.additions+'</span><span class="c del">-'+pr.deletions+'</span></div>'
+    + '</div><a class="gh-btn" href="'+pr.url+'" target="_blank" rel="noopener"><i class="ph ph-github-logo"></i>Open on GitHub</a></div>';
+  h+='<div class="section-label"><i class="ph ph-text-align-left"></i>What this PR says</div><div class="desc-card">'+md(pr.body)+'</div>';
+  h+='<div class="section-label"><i class="ph ph-git-diff"></i>The code that changed<button class="expand-all" onclick="toggleAllFiles(this)">Expand all</button></div>';
+  h+=pr.files.map(fileBlock).join('');
+  return h;
+}
+
+/* ---------- slide builders ---------- */
+const deck=document.getElementById('deck');
+const slides=[]; const arcNav={}; // slideIndex -> {prev,next} for arc slides
+function addSlide(cls, html){ const s=document.createElement('section'); s.className='slide '+cls; s.innerHTML=html; deck.appendChild(s); slides.push(s); return s; }
+
+// title
+addSlide('title-slide',
+  '<div class="logo">Fibo<span class="brand-dot">.</span></div>'
+  + '<h1>'+esc(DATA.title.line1)+'<br /><span class="grad">'+esc(DATA.title.line2)+'</span></h1>'
+  + '<div class="sub">'+esc(DATA.title.name)+' · '+esc(DATA.title.role)+' · '+esc(DATA.title.dates)+'</div>'
+  + '<div class="stat-row">'+DATA.stats.map(s=>'<div class="stat"><div class="n">'+s.n+'</div><div class="l">'+s.l.toUpperCase()+'</div></div>').join('')+'</div>');
+
+// overview
+addSlide('',
+  '<div class="eyebrow"><i class="ph ph-map-trifold"></i> The arc</div>'
+  + '<h2>'+esc(DATA.overviewTitle)+'</h2>'
+  + '<div class="lede">'+esc(DATA.overviewLede)+'</div>'
+  + '<div class="timeline">'+DATA.arcs.map((a,i)=>'<div class="arc-card"><div class="num">0'+(i+1)+'</div><i class="ph ph-'+a.icon+'"></i><div class="t">'+esc(a.title)+'</div><div class="d">'+esc(a.desc)+'</div></div>').join('')+'</div>');
+
+// arc slides
+DATA.arcs.forEach((arc, ai)=>{
+  const wwi='<div class="wwi">'
+    + '<div class="col what"><div class="k"><i class="ph ph-wrench"></i> What</div><ul>'+arc.what.map(x=>'<li>'+mdInline(x)+'</li>').join('')+'</ul></div>'
+    + '<div class="col why"><div class="k"><i class="ph ph-question"></i> Why</div><p>'+esc(arc.why)+'</p></div>'
+    + '<div class="col impact"><div class="k"><i class="ph ph-trend-up"></i> Impact</div><ul>'+arc.impact.map(x=>'<li>'+mdInline(x)+'</li>').join('')+'</ul></div>'
+    + '</div>';
+  const multi=arc.prs.length>1;
+  const tabbar='<div class="pr-tabbar">'
+    + (multi?'<button class="step" data-d="-1" aria-label="Previous PR"><i class="ph ph-caret-left"></i></button>':'')
+    + '<div class="pr-tabs">'+arc.prs.map((p,i)=>'<button class="pr-tab" data-i="'+i+'">#'+p.number+'</button>').join('')+'</div>'
+    + (multi?'<button class="step" data-d="1" aria-label="Next PR"><i class="ph ph-caret-right"></i></button>':'')
+    + '<span class="pr-count"></span></div>';
+  const s=addSlide('arc-slide',
+    '<div class="arc-top"><div class="eyebrow"><span class="arc-num">0'+(ai+1)+'</span> '+esc(arc.title)+'</div>'
+    + '<h2>'+esc(arc.story)+'</h2>'+wwi+'</div>'
+    + '<div class="pr-viewer">'+tabbar+'<div class="pr-scroll"></div></div>');
+
+  const scroll=s.querySelector('.pr-scroll');
+  const tabs=[...s.querySelectorAll('.pr-tab')];
+  const steps=[...s.querySelectorAll('.step')];
+  const countEl=s.querySelector('.pr-count');
+  let idx=0;
+  function show(n){
+    idx=Math.max(0, Math.min(arc.prs.length-1, n));
+    tabs.forEach((t,i)=>t.classList.toggle('active', i===idx));
+    scroll.innerHTML=prContent(arc.prs[idx]); scroll.scrollTop=0;
+    if(steps.length){ steps.forEach(b=>{ const d=+b.dataset.d; b.disabled=(d<0&&idx===0)||(d>0&&idx===arc.prs.length-1); }); }
+    countEl.textContent = arc.prs.length>1 ? (idx+1)+' / '+arc.prs.length : '';
+  }
+  tabs.forEach(t=>t.onclick=()=>show(+t.dataset.i));
+  steps.forEach(b=>b.onclick=()=>show(idx+ +b.dataset.d));
+  arcNav[slides.length-1]={ prev:()=>show(idx-1), next:()=>show(idx+1) };
+  show(0);
+});
+
+// closing
+addSlide('',
+  '<div class="eyebrow"><i class="ph ph-flag-checkered"></i> Two weeks in</div>'
+  + '<h2>'+esc(DATA.closing.title)+'</h2>'
+  + '<div class="close-grid">'+DATA.closing.stats.map(s=>'<div class="close-stat"><div class="n">'+s.n+'</div><div class="l">'+esc(s.l)+'</div></div>').join('')+'</div>'
+  + '<div class="takeaways">'+DATA.closing.takeaways.map(t=>'<div class="row"><i class="ph ph-check-circle"></i><div>'+t+'</div></div>').join('')+'</div>');
+
+/* ---------- deck navigation (with per-arc staged reveal) ---------- */
+const fill=document.getElementById('fill'), counter=document.getElementById('counter'), ftitle=document.getElementById('ftitle');
+const titles=['Title','Overview',...DATA.arcs.map((a,i)=>'0'+(i+1)+' · '+a.title),'Wrap-up'];
+// arc slides get 1 extra reveal beat (cards first, then the PR); other slides have none
+const maxStepOf=slides.map(s=>s.classList.contains('arc-slide')?1:0);
+const stepOf=slides.map(()=>0);
+let cur=0;
+function applyReveal(i){ if(maxStepOf[i]) slides[i].classList.toggle('revealed', stepOf[i]>=1); }
+function updateChrome(){
+  fill.style.width=((cur+1)/slides.length*100)+'%';
+  counter.textContent=(cur+1)+' / '+slides.length;
+  ftitle.textContent=titles[cur]||'';
+  if(location.hash!=='#s'+cur) history.replaceState(null,'','#s'+cur);
+}
+function goSlide(n, atEnd){
+  cur=Math.max(0, Math.min(slides.length-1, n));
+  slides.forEach((s,i)=>{ if(i!==cur){ s.classList.remove('active'); s.style.display='none'; } });
+  const s=slides[cur];
+  stepOf[cur]= atEnd ? maxStepOf[cur] : 0;
+  s.classList.remove('active');
+  s.style.display='flex';
+  applyReveal(cur);
+  void s.offsetWidth;            // commit the enter state so the fade/rise transition runs
+  s.classList.add('active');
+  updateChrome();
+}
+function next(){ if(stepOf[cur]<maxStepOf[cur]){ stepOf[cur]++; applyReveal(cur); } else goSlide(cur+1, false); }
+function prev(){ if(stepOf[cur]>0){ stepOf[cur]--; applyReveal(cur); } else goSlide(cur-1, true); }
+document.getElementById('next').onclick=next;
+document.getElementById('prev').onclick=prev;
+document.addEventListener('keydown',(e)=>{
+  if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){ next(); e.preventDefault(); }
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){ prev(); e.preventDefault(); }
+  else if(e.key==='ArrowUp'&&arcNav[cur]){ arcNav[cur].prev(); e.preventDefault(); }
+  else if(e.key==='ArrowDown'&&arcNav[cur]){ arcNav[cur].next(); e.preventDefault(); }
+  else if(e.key==='Home'){ goSlide(0,false); }
+  else if(e.key==='End'){ goSlide(slides.length-1,true); }
+  else if(e.key.toLowerCase()==='f'){ if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+});
+const hm=(location.hash||'').match(/s(\d+)/);
+goSlide(hm?parseInt(hm[1]):0, /full/.test(location.hash||''));
+</script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+{
+  "repo": "owner/name",
+  "title": { "line1": "First Two Weeks", "line2": "on the Frontend", "name": "Jane Doe", "role": "Frontend Engineer", "dates": "29 Jun to 11 Jul 2026" },
+  "stats": [
+    { "n": "17", "l": "PRs merged" },
+    { "n": "7", "l": "work streams" },
+    { "n": "13", "l": "days" }
+  ],
+  "overviewTitle": "From landing to shipping, in seven streams",
+  "overviewLede": "The two weeks followed a deliberate progression: get oriented, make the codebase safe to change, then ship on top.",
+  "arcs": [
+    {
+      "title": "Make it Safe",
+      "icon": "shield-check",
+      "desc": "Added linting, tests, and CI",
+      "story": "Added the safety net the frontend was missing: a linter, tests, and CI checks",
+      "why": "The frontend had no linter, no tests, and no CI, so any change could quietly break something.",
+      "what": ["Set up ESLint with the React rules of hooks as hard errors", "Added a 49-test suite and wired both into CI"],
+      "impact": ["Every change now passes automated checks before it can merge", "The linter caught a real bug on day one"],
+      "prs": [[71, "Stabilize layer: ESLint + Vitest + CI gates"]]
+    },
+    {
+      "title": "Build a New Tool",
+      "icon": "browsers",
+      "desc": "A shareable spec browser",
+      "story": "Built a new app so anyone can read our specs from a link",
+      "why": "Non-technical people needed to read specs that only opened in a code editor.",
+      "what": ["Built a standalone web app that browses all docs and user stories"],
+      "impact": ["The specs are now just a link you can send anyone"],
+      "prs": [[106, "docs-site: browsable specs viewer"], [111, "Polish docs-site"]]
+    }
+  ],
+  "closing": {
+    "title": "By the numbers, and the pattern underneath",
+    "stats": [
+      { "n": "17", "l": "PRs merged, all reviewed & green" },
+      { "n": "49+", "l": "unit tests where there were none" }
+    ],
+    "takeaways": [
+      "<b>Safety before speed.</b> Tests and CI landed before the big refactors.",
+      "<b>Fixes at the root, not the symptom.</b>"
+    ]
+  }
+}
