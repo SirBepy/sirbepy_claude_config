@@ -140,17 +140,17 @@ Then a blank line and a `**How to raise the score:**` block: 2-4 bullets, each a
 
 ## Post-rating prompt (main agent only)
 
-After delivering the rating, the main agent calls AskUserQuestion with these options so the dev picks a follow-up path. Skip this if the verdict is 1-2/10 with no lift (nothing to act on) or if `/rate-it` was the dev's last word in an obvious deliberation flow.
+After delivering the rating, call `AskUserQuestion` in the SAME turn so the dev picks a follow-up path - the rating text and the picker should both render together. Skip the picker if the verdict is 1-2/10 with no lift (nothing to act on) or if `/rate-it` was the dev's last word in an obvious deliberation flow.
 
 Question: `Apply the suggestions, or stay the course?`
 Header: `Next move`
 Options:
 
-1. `Apply all suggestions` - dev wants the lifts implemented now. Main agent proceeds to do them.
-2. `Apply some, ask me which` - main agent re-asks with each lift bullet as its own option.
-3. `Ignore, do my thing` - dev keeps original plan. Main agent drops the rating thread and waits for next instruction.
+1. `Apply all suggestions` - implement the How-to-raise lifts now.
+2. `Apply some, ask me which` - re-ask with each lift bullet as its own option.
+3. `Ignore, do my thing` - drop the rating thread and wait for the next instruction.
 
-(The dev can also press Escape to dismiss without answering, which AskUserQuestion supports natively. No need for an explicit "no answer" option.)
+(The dev can also press Escape to dismiss without answering, which AskUserQuestion supports natively.)
 
 ## Examples
 
