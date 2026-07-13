@@ -1,7 +1,7 @@
 ---
 name: work-recap
-description: Triggers on /work-recap only. Dispatches to a named recap variant (e.g. zirtue weekly, zirtue daily). Each variant lives in a subfolder under this skill.
-argument-hint: "zirtue [weekly|daily] [copy]"
+description: Triggers on /work-recap only. Dispatches to a named recap variant (e.g. zirtue weekly, zirtue daily, fibo weekly, fibo daily). Each variant lives in a subfolder under this skill.
+argument-hint: "<zirtue|fibo> [weekly|daily] [copy]"
 ---
 
 # /work-recap
@@ -16,6 +16,9 @@ Examples:
 - `/work-recap zirtue weekly`
 - `/work-recap zirtue daily`
 - `/work-recap zirtue daily copy`
+- `/work-recap fibo weekly`
+- `/work-recap fibo daily`
+- `/work-recap fibo daily copy`
 
 If `<group>` or `<variant>` is missing, ask the dev which recap to run via AskUserQuestion. List the available variants from the table below.
 
@@ -31,6 +34,8 @@ Available variants:
 |-------|---------|------|
 | zirtue | weekly | zirtue/weekly.md |
 | zirtue | daily | zirtue/daily.md |
+| fibo | weekly | fibo/weekly.md |
+| fibo | daily | fibo/daily.md |
 
 If the file does not exist, list what exists and stop.
 
