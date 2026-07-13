@@ -140,17 +140,21 @@ Then a blank line and a `**How to raise the score:**` block: 2-4 bullets, each a
 
 ## Post-rating prompt (main agent only)
 
-After delivering the rating, call `AskUserQuestion` in the SAME turn so the dev picks a follow-up path - the rating text and the picker should both render together. Skip the picker if the verdict is 1-2/10 with no lift (nothing to act on) or if `/rate-it` was the dev's last word in an obvious deliberation flow.
+Do NOT call `AskUserQuestion` in the same turn as the rating. Bundling a tool call with the rating text makes the harness (and the global "no work alongside messages" rule) swallow the rating - the dev ends up with a bare picker and no score. The rating is the deliverable; it must always render.
 
-Question: `Apply the suggestions, or stay the course?`
-Header: `Next move`
-Options:
+So: deliver the full rating (verdict + reasoning + How-to-raise) as a complete text response and END the turn on it. No tool call in that turn.
 
-1. `Apply all suggestions` - implement the How-to-raise lifts now.
-2. `Apply some, ask me which` - re-ask with each lift bullet as its own option.
-3. `Ignore, do my thing` - drop the rating thread and wait for the next instruction.
+Close the rating message with a single plain-text follow-up line offering the next move (this is a menu appended to the deliverable, not a standalone question, so it stays inline text - do not promote it to an AskUserQuestion):
 
-(The dev can also press Escape to dismiss without answering, which AskUserQuestion supports natively.)
+> Next move: **apply all** the suggestions, **apply some** (say which), or **ignore** and carry on?
+
+Skip that line entirely if the verdict is 1-2/10 with no lift (nothing to act on) or if `/rate-it` was the dev's last word in an obvious deliberation flow.
+
+If the dev then replies choosing a path, act on it on the following turn:
+
+- "apply all" → implement the How-to-raise lifts now.
+- "apply some" → then use `AskUserQuestion` (now safe - it's a standalone turn with no rating text to swallow) with one option per lift bullet.
+- "ignore" → drop the rating thread and wait for the next instruction.
 
 ## Examples
 
