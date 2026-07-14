@@ -26,34 +26,25 @@ Single monorepo (not siblings like other groups' variants):
 
 ### 1. Compute the window
 
-- Read today's date from the environment system reminder (`currentDate`). Do NOT hardcode.
-- Find **last working day**:
-  - Monday: window start = Friday (today - 3 days).
-  - Sunday: window start = Friday (today - 2 days).
-  - Saturday: window start = Friday (today - 1 day).
-  - Otherwise: window start = yesterday (today - 1 day).
-- Format start as `YYYY-MM-DD`. End = `now`.
-- Announce the window in one sentence before running commands so the dev can correct it.
+Follow **Window: daily (last working day)** in `../_common.md` (yesterday, or Friday after a weekend/Monday; announce the window before running commands).
 
 ### 2. Refresh the repo (read-only)
 
-One Bash call:
+Follow **Repo refresh: fetch, never pull** in `../_common.md`, single repo:
 
 ```
 git -C C:/Users/tecno/Desktop/Projects/fibo fetch --quiet
 ```
 
-No pulls. If fetch fails, note it and continue.
-
 ### 3. Pull commits
 
-One Bash call. Use `--branches`, **not** `--all` — `--all` pulls in `refs/stash`, which produces bogus `WIP on <branch>: ...` / `index on <branch>: ...` entries that are stash commits, not real work:
+One Bash call:
 
 ```
 git -C C:/Users/tecno/Desktop/Projects/fibo log --branches --author="JosipMuzicFibo" --since="<YYYY-MM-DD>" --pretty=format:"%h|%ad|%s" --date=format:"%H:%M"
 ```
 
-**Dedupe by subject.** Squash-merged PRs and un-deleted local feature branches both leave a commit whose subject is identical to one already seen (different hash, same message) — this repo's `git log --branches` will show the same logical piece of work twice. Collapse duplicate subjects, keeping the earliest timestamp. Drop any subject starting with `WIP on ` or `index on ` (stash leftovers) and any bare `Merge branch 'develop'` noise commits.
+Then apply **Commit dedupe (single-repo `--branches` scans)** from `../_common.md` (`--branches` not `--all`, dedupe by subject keeping earliest timestamp, drop stash/`Merge branch 'develop'` noise).
 
 Keep the deduped list internally — used to group bullets, not printed raw.
 
@@ -122,9 +113,7 @@ Omit any section that has no items.
 
 ### 8. Build the clipboard payload (always)
 
-Blurb only — no title, no `_Generated_` line, no file metadata.
-
-Write TWO temp files so both HTML and plain-text clipboard formats are set. Slack prefers HTML (renders PR titles as real hyperlinks); plain text is the fallback (bare URLs auto-linkify).
+Write the two temp files per the **Clipboard helper contract** in `../_common.md` (blurb only, both HTML + plain-text formats, paths, escaping, verbatim titles, omit-empty-sections).
 
 **HTML file:** `C:/tmp/work-recap-clipboard.html`
 
@@ -153,20 +142,11 @@ In Progress:
 - docs-site dark theme + PWA icon fixes
 ```
 
-Notes:
-- HTML: escape `<`, `>`, `&` inside titles as `&lt;`, `&gt;`, `&amp;`. Plain text: leave as-is.
-- Omit any section whose list is empty (no heading either).
-- PR titles come verbatim from `gh pr list`'s `title` field. Do NOT paraphrase.
+Escaping, verbatim titles, omit-empty: see the contract in `../_common.md`.
 
 ### 9. Push to clipboard
 
-One PowerShell call:
-
-```
-powershell -NoProfile -ExecutionPolicy Bypass -File "C:/Users/tecno/.claude/skills/work-recap/set-clipboard-html.ps1" -HtmlPath "C:/tmp/work-recap-clipboard.html" -TextPath "C:/tmp/work-recap-clipboard.txt"
-```
-
-If it fails, note it in the reply but don't fail the whole flow. NEVER use `clip.exe` (only writes `CF_TEXT`, loses hyperlinks).
+Invoke the helper per the **Clipboard helper contract** in `../_common.md` (one PowerShell call; never `clip.exe`; on failure note it but don't fail the flow).
 
 ### 10. Report
 

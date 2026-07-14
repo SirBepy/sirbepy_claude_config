@@ -31,24 +31,11 @@ If any Shortcut MCP call is denied, stop and tell the dev to loosen `.claude/set
 
 ### 1. Compute the window
 
-- Read today's date from the environment system reminder (`currentDate`). Do NOT hardcode.
-- Find **last working day**:
-  - Monday: window start = Friday (today - 3 days).
-  - Sunday: window start = Friday (today - 2 days).
-  - Saturday: window start = Friday (today - 1 day).
-  - Otherwise: window start = yesterday (today - 1 day).
-- Format start as `YYYY-MM-DD`. End = `now`.
-- Announce the window in one sentence before running commands so the dev can correct it.
+Follow **Window: daily (last working day)** in `../_common.md` (yesterday, or Friday after a weekend/Monday; announce the window before running commands).
 
 ### 2. Refresh sibling repos (read-only)
 
-For each of the 3 repos, one per Bash call:
-
-```
-git -C <repo> fetch --quiet
-```
-
-No pulls. If fetch fails, note it and continue.
+For each of the 3 repos, follow **Repo refresh: fetch, never pull** in `../_common.md` (one `git -C <repo> fetch --quiet` per Bash call; note failures and continue).
 
 ### 3. Pull commits per repo
 
@@ -134,9 +121,7 @@ Omit any section that has no items. Omit "Next up" line if In Progress has ≥2 
 
 ### 8. Build the clipboard payload (always)
 
-The clipboard payload is the BLURB ONLY. No `# Daily Standup` title. No `_Generated_` attribution. No file-metadata text.
-
-Write TWO temp files so we can set BOTH HTML and plain-text clipboard formats. Slack prefers HTML (renders hyperlinks with the ticket title as label), but if Slack drops HTML for any reason, the plain-text fallback still gives Slack bare URLs that auto-linkify.
+Write the two temp files per the **Clipboard helper contract** in `../_common.md` (blurb only, both HTML + plain-text formats, paths, escaping, verbatim titles, omit-empty-sections).
 
 **HTML file:** `C:/tmp/work-recap-clipboard.html`
 
@@ -178,23 +163,12 @@ In Progress:
 - [FE] Loan details: Incorrect copy for Deactivated status https://app.shortcut.com/zirtue/story/53794
 ```
 
-Notes:
-- HTML: escape `<`, `>`, `&` inside ticket titles as `&lt;`, `&gt;`, `&amp;`. Plain text: leave as-is.
-- Omit any section whose list is empty (no heading either).
-- Ticket titles come verbatim from the Shortcut `name` field. Do NOT paraphrase them.
+Notes (escaping, verbatim titles, omit-empty: see the contract in `../_common.md`):
 - No verbs anywhere. Each bullet is ONLY the topic.
 
 ### 9. Push to clipboard
 
-Run once (one PowerShell call, no chaining):
-
-```
-powershell -NoProfile -ExecutionPolicy Bypass -File "C:/Users/tecno/.claude/skills/work-recap/set-clipboard-html.ps1" -HtmlPath "C:/tmp/work-recap-clipboard.html" -TextPath "C:/tmp/work-recap-clipboard.txt"
-```
-
-The helper uses `System.Windows.Forms.DataObject` with both HTML (`CF_HTML`) and UnicodeText formats. Slack reads HTML first and pastes hyperlinks with "sc-XXXXX" labels. If HTML is dropped, Slack falls back to the plain-text format, where bare URLs still auto-linkify.
-
-If the PowerShell call fails, note it in the reply but don't fail the whole flow (the markdown file is still written). NEVER use `clip.exe` here: it only writes `CF_TEXT` and loses the HTML hyperlinks.
+Invoke the helper per the **Clipboard helper contract** in `../_common.md` (one PowerShell call; never `clip.exe`; on failure note it but don't fail the flow — the markdown file is still written).
 
 ### 10. Report
 

@@ -25,33 +25,25 @@ Single monorepo (not siblings like other groups' variants):
 
 ### 1. Compute the window
 
-- Read today's date from the environment system reminder (`currentDate`). Do NOT hardcode.
-- Find **previous-week Monday** relative to today (the Monday of LAST calendar week, not the current week):
-  - If today IS Monday, window start = Monday 7 days ago.
-  - Else find this week's Monday, then subtract 7 days.
-  - Never pick a Monday less than 7 days in the past.
-- Format start as `YYYY-MM-DD`. End = `now`.
-- Announce the window in one sentence before running commands so the dev can correct it.
+Follow **Window: weekly (previous-week Monday)** in `../_common.md` (previous Monday of LAST week -> now; announce the window before running commands).
 
 ### 2. Refresh the repo (read-only)
 
-One Bash call:
+Follow **Repo refresh: fetch, never pull** in `../_common.md`, single repo:
 
 ```
 git -C C:/Users/tecno/Desktop/Projects/fibo fetch --quiet
 ```
 
-Do NOT `pull` (read-only recap, and the dev may have dirty state). If it fails, note it and keep going.
-
 ### 3. Pull commits
 
-One Bash call. Use `--branches`, **not** `--all` — `--all` pulls in `refs/stash`, which produces bogus `WIP on <branch>: ...` / `index on <branch>: ...` entries that are stash commits, not real work:
+One Bash call:
 
 ```
 git -C C:/Users/tecno/Desktop/Projects/fibo log --branches --author="JosipMuzicFibo" --since="<YYYY-MM-DD>" --pretty=format:"%h|%ad|%s" --date=short
 ```
 
-**Dedupe by subject.** Squash-merged PRs and un-deleted local feature branches both leave a commit whose subject is identical to one already seen (different hash, same message). Collapse duplicate subjects, keeping the earliest date. Drop any subject starting with `WIP on ` or `index on ` (stash leftovers) and bare `Merge branch 'develop'` noise commits.
+Then apply **Commit dedupe (single-repo `--branches` scans)** from `../_common.md` (`--branches` not `--all`, dedupe by subject keeping earliest date, drop stash/`Merge branch 'develop'` noise).
 
 If output is empty, record "no commits this week".
 

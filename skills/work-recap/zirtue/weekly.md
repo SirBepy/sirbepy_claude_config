@@ -46,25 +46,11 @@ If both MCP and the env token are missing, stop and tell the dev.
 
 ### 1. Compute the window
 
-- Read today's date from the environment system reminder (`currentDate`). Do NOT hardcode.
-- Find **previous-week Monday** relative to today (the Monday of LAST calendar week, not the current week):
-  - If today IS Monday, window start = Monday 7 days ago.
-  - Else find this week's Monday, then subtract 7 days. Example: today Tue 2026-04-21 -> this week's Mon = 2026-04-20 -> window start = **2026-04-13**.
-  - Never pick a Monday less than 7 days in the past.
-- Format start as `YYYY-MM-DD`. End = `now`.
-- Announce the window in one sentence before running commands so the dev can correct it.
+Follow **Window: weekly (previous-week Monday)** in `../_common.md` (previous Monday of LAST week -> now; announce the window before running commands).
 
 ### 2. Refresh sibling repos (read-only)
 
-For each of the 3 repos run, one per Bash call (never chain):
-
-```
-git -C <repo> fetch --quiet
-```
-
-Do NOT `pull` (read-only recap, and the dev may have dirty state). Just fetch so `--all` branches are current for the log.
-
-If a fetch fails (network, auth), note it in the output and keep going.
+For each repo, follow **Repo refresh: fetch, never pull** in `../_common.md` (one `git -C <repo> fetch --quiet` per Bash call; note failures and keep going).
 
 ### 3. Pull commits per repo
 
@@ -260,7 +246,7 @@ Surface 2–4 options in the question. Include `Doing`/`In Progress` tickets as 
 
 #### Payload structure
 
-Write TWO temp files. **Insert a blank `<p>&nbsp;</p>` between sections in HTML, and TWO blank lines in plain text** — single blank line looks cramped in Slack/Teams.
+Write the two temp files per the **Clipboard helper contract** in `../_common.md` (paths, escaping, verbatim titles, omit-empty-sections). Weekly-specific: **insert a blank `<p>&nbsp;</p>` between sections in HTML, and TWO blank lines in plain text** — single blank line looks cramped in Slack/Teams.
 
 **HTML file:** `C:/tmp/work-recap-clipboard.html`
 
@@ -299,22 +285,14 @@ Today:
 - Ticket title verbatim https://app.shortcut.com/zirtue/story/XXXXX
 ```
 
-Rules:
+Rules (escaping, verbatim titles, omit-empty: see the contract in `../_common.md`):
 
-- Escape `<`, `>`, `&` in ticket titles as `&lt;`, `&gt;`, `&amp;` in HTML only. Plain text: leave as-is.
-- Ticket titles come **verbatim** from Shortcut `name` field. Do not rewrite, paraphrase, prefix, or trim. If the title starts with `[FE]`, `[Regression]`, etc., keep it.
+- If a title starts with `[FE]`, `[Regression]`, etc., keep it — verbatim means verbatim.
 - The "no verbs" rule applies only to the rare unticketed noun-phrase bullet (see exception above), never to verbatim ticket titles.
-- Omit any section whose list is empty (no heading either).
 
 ### 8. Push to clipboard (only if `copy` flag passed)
 
-One PowerShell call:
-
-```
-powershell -NoProfile -ExecutionPolicy Bypass -File "C:/Users/tecno/.claude/skills/work-recap/set-clipboard-html.ps1" -HtmlPath "C:/tmp/work-recap-clipboard.html" -TextPath "C:/tmp/work-recap-clipboard.txt"
-```
-
-If it fails, note it but don't fail the whole flow.
+Invoke the helper per the **Clipboard helper contract** in `../_common.md` (one PowerShell call; on failure note it but don't fail the flow).
 
 ### 9. Report
 

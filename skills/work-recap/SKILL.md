@@ -43,6 +43,8 @@ If the file does not exist, list what exists and stop.
 
 Read the variant file in full, then follow its instructions exactly. The variant owns everything: window, data sources, output path, output format.
 
+Variants reference shared rules in `~/.claude/skills/work-recap/_common.md` (window computation, fetch-not-pull, commit dedupe, clipboard helper contract). Read that file too and treat the referenced sections as part of the variant's instructions.
+
 Pass the `copy` flag through to the variant (it decides how to honor it, typically by piping the final file to clipboard at the end).
 
 ## Rules
