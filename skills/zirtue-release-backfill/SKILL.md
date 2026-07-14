@@ -9,10 +9,11 @@ description: Triggers on /zirtue-release-backfill only. Backfills the Shortcut R
 
 ## Why this skill exists
 
-- Tickets often sit in `Ready for deploy` (or get pushed to `Complete`) without a concrete Release value set. PM wants it populated so deploy notes / release summaries are accurate.
+- Tickets often sit in some pre-`Complete` state — `Ready for deploy`, but just as often `Testing`, `Backlog`, `PR Review` — without a concrete Release value set, even after the code already shipped. PM wants it populated so deploy notes / release summaries are accurate.
 - The dev frequently inherits or hands off tickets, so "currently owned by me" misses real work. Source of truth for "I shipped this" is the git author log.
 - The mapping is mechanical but spread across three repos and Shortcut's enum values. Easy to get wrong by hand.
 - Running it as a skill keeps the procedure consistent every time the dev wants to do a pass.
+- **Past incident (2026-07-14):** a run filtered to `Ready for deploy` only and missed tickets 54761/54776, which had already shipped in the same release but were sitting in `Testing`. The dev had to point them out manually. Root cause: the skill used literal Shortcut workflow state as the discovery filter instead of "has this ticket's commit actually landed in a shipped tag." Fixed by making shipped-detection state-independent (see step 4).
 
 ## Args
 
@@ -20,7 +21,8 @@ description: Triggers on /zirtue-release-backfill only. Backfills the Shortcut R
 /zirtue-release-backfill [state]
 ```
 
-- `state` (optional) — Shortcut workflow state name to filter on. Default: `Ready for deploy`. Examples: `Complete`, `Testing`, `PR Review`, `In Development`.
+- `state` (optional) — narrows the run to tickets whose *literal* Shortcut workflow state matches this value, on top of the normal state-independent shipped-detection (step 4). Useful for an audit like "show me what's stuck in Testing" even if not yet shipped. Examples: `Complete`, `Testing`, `PR Review`, `In Development`.
+- Default (no `state` arg): run shipped-detection across **every non-terminal state** (everything except `Complete` and `Won't do`) — this is the normal, comprehensive pass and is what should run for "we just shipped a release" requests.
 - If the dev passes an unknown state, ask with AskUserQuestion listing the actual state names from the `ENG - Core Workflow` (workflow id `500018252`).
 
 ## Required tools
@@ -46,6 +48,8 @@ Never re-derive:
 - Workflow state IDs (ENG - Core Workflow `500018252`):
   - `Ready for deploy`: `500018659`
   - `Complete`: `500018258`
+  - `Won't do`: `500019415`
+  - Terminal states excluded from scope entirely: `Complete`, `Won't do`. Every other state (`Backlog`, `To Do`, `In Progress`, `PR Review`, `Testing`, `Blocked`, `Ready for deploy`, `On hold`) is in scope for shipped-detection.
 - Sentinel Release values (treat as unset):
   - `Next release` — value_id `698b4bce-ecd7-44c3-b62a-2b49b2506c1d`
   - `TBD` — value_id `698b510b-c54a-4adb-b47f-93a06852afe1`
@@ -72,8 +76,9 @@ This is a hard rule. Past incident: an early version of this skill silently wipe
 
 ### 1. Parse args
 
-- Default `state` to `Ready for deploy` if missing.
-- Validate against ENG - Core Workflow states. If unknown, ask via AskUserQuestion; never proceed blindly.
+- No `state` arg = no state filter: shipped-detection runs across every non-terminal state (see Args). Do **not** default to `Ready for deploy` — that was the old behavior and it caused the 2026-07-14 miss.
+- If a `state` arg is present, validate against ENG - Core Workflow states. If unknown, ask via AskUserQuestion; never proceed blindly.
+- Check the invocation text for a move-to-Complete opt-out ("don't move to completed", "no complete", "leave states alone", or similar). If present, set `move_to_complete = off` for this run (see Gate D).
 
 ### 2. Refresh repos
 
@@ -104,61 +109,70 @@ done | sort -u > C:/tmp/sc_dev_ticket_ids.txt
 
 Convention: subjects start with `<id>:` (e.g. `54109: Sort transactions...`). 5-digit ID, colon, space.
 
-### 4. Filter to the requested workflow state
+### 4. Determine eligibility (state-independent shipped detection)
 
-For each ID in the discovery list, GET `/stories/{id}` and keep only those whose `workflow_state_id` matches the target state.
+This is the step that replaces the old "filter to one literal workflow state" approach. Discovery must be based on **whether the ticket has actually shipped**, not on what Shortcut's workflow state field happens to say — a ticket can be fully deployed and still be sitting in `Testing`, `Backlog`, or `PR Review` because nobody moved it forward.
 
-Cache full story JSON to `C:/tmp/sc_story_<id>.json` — needed in step 5 to preserve existing custom_fields on PUT.
+For each ID in the discovery list:
+
+1. GET `/stories/{id}` once. Cache full story JSON to `C:/tmp/sc_story_<id>.json` — needed later to preserve existing custom_fields on PUT.
+2. **Skip entirely** if `workflow_state_id` is `Complete` (`500018258`) or `Won't do` (`500019415`) — terminal, out of scope.
+3. For every remaining ticket, run the shipped-detection lookup (same mechanics as the old step 6, just run earlier and for every non-terminal ticket, not only ones with an unset Release):
+
+   a. **Find merge SHA(s).** Inline mechanical lookup across both Flutter repos:
+
+      ```bash
+      for repo in C:/Users/tecno/Desktop/Projects/zng-app C:/Users/tecno/Desktop/Projects/zng-admin; do
+        git -C "$repo" log --all --oneline -E --grep="^${id}:"
+      done
+      ```
+
+      If no `^<id>:` match: also try a broader `--grep "$id"` (catches "X: ... (also Y)" bundles where the secondary id appears in the body).
+
+   b. **Confirm SHA is on a deploy branch** (`main` or `develop`):
+
+      ```bash
+      git -C <repo> branch -a --contains <sha>
+      ```
+
+   c. **Find first version tag containing the SHA** (chronological order):
+
+      ```bash
+      git -C <repo> tag --contains <sha> --sort=creatordate
+      ```
+
+      First matching `v1.0.0+N` (app/admin) or `v1.0.X` (api) tag wins. Map:
+      - `v1.0.0+N` on `zng-app` → `FE 1.0.0+N`
+      - `v1.0.0+N` on `zng-admin` → `Admin 1.0.0+N`
+      - `v1.0.X` on `zng-api` → `API 1.0.X`
+
+4. **Shipped vs not shipped:**
+   - A version tag was found → **shipped**. Include this ticket in Release categorization (step 5) **regardless of its literal Shortcut state**. This is what catches a ticket stuck in `Testing`/`Backlog`/`PR Review` after it already deployed — the exact miss on 54761/54776.
+   - No version tag found (commit exists but unreleased, or no commit at all) → **not shipped**. Only include it in this run if the dev explicitly passed a `state` arg that matches this ticket's literal state (an intentional narrower audit of in-flight work); otherwise exclude it — it's legitimately still in progress.
+5. **If the dev passed a `state` arg**, additionally filter the shipped set down to tickets whose literal `workflow_state_id` matches that state. No `state` arg = no extra filter, every shipped ticket is in scope.
 
 ### 5. Categorize by Release value
 
-For each candidate:
+For every ticket that passed step 4 eligibility:
 
-- Concrete release (matches `^(FE|Admin) 1\.0\.0\+\d+$` or `^API 1\.0\.\d+$`) — **already set**, but still check other fields (step 7).
+- Concrete release (matches `^(FE|Admin) 1\.0\.0\+\d+$` or `^API 1\.0\.\d+$`) — **already set**, but still check other fields (step 7). If its literal state isn't `Complete`, it's also a **stale-but-shipped** candidate for Gate D (step 9).
 - Empty / `Next release` / `TBD` / `Oneday` / `V1.x` — **needs Release backfill** (steps 6 + 7).
 
 ### 6. Resolve Release for unset tickets
 
-For each ticket needing Release backfill:
+For each ticket needing Release backfill, reuse the merge-SHA / tag lookup already done in step 4.3 — do not redo it.
 
-1. **Find merge SHA(s).** Inline mechanical lookup across both Flutter repos:
+**Confidence:**
+- `high` — single repo, unambiguous SHA from `^<id>:` prefix, one matching version tag.
+- `medium` — bundled commit (e.g. `52627: foo (52630)` matched for ticket 52630), or title-keyword fallback.
+- `low` — multiple candidate matches across repos, or only weak signals.
 
-   ```bash
-   for repo in C:/Users/tecno/Desktop/Projects/zng-app C:/Users/tecno/Desktop/Projects/zng-admin; do
-     git -C "$repo" log --all --oneline -E --grep="^${id}:"
-   done
-   ```
-
-   If no `^<id>:` match: also try a broader `--grep "$id"` (catches "X: ... (also Y)" bundles where the secondary id appears in the body).
-
-2. **Confirm SHA is on a deploy branch** (`main` or `develop` — both repos use `develop` as integration; tags get cut from there or after merging to `main`):
-
-   ```bash
-   git -C <repo> branch -a --contains <sha>
-   ```
-
-3. **Find first version tag containing the SHA** (chronological order):
-
-   ```bash
-   git -C <repo> tag --contains <sha> --sort=creatordate
-   ```
-
-   First matching `v1.0.0+N` (app/admin) or `v1.0.X` (api) tag wins. Map:
-   - `v1.0.0+N` on `zng-app` → `FE 1.0.0+N`
-   - `v1.0.0+N` on `zng-admin` → `Admin 1.0.0+N`
-   - `v1.0.X` on `zng-api` → `API 1.0.X`
-
-4. **Confidence:**
-   - `high` — single repo, unambiguous SHA from `^<id>:` prefix, one matching version tag.
-   - `medium` — bundled commit (e.g. `52627: foo (52630)` matched for ticket 52630), or title-keyword fallback.
-   - `low` — multiple candidate matches across repos, or only weak signals.
-
-5. **Status:**
-   - `resolved` — clear winning tag.
-   - `multi-repo` — strong matches in both zng-app and zng-admin; ask dev which is primary.
-   - `post-latest-tag` — commit found but not yet in any version tag. Leave as-is.
-   - `unmerged` — commit exists but only on a feature branch. Leave as-is.
-   - `needs-human` — no commit found at all (rare with the git-author discovery, but possible if dev's git identity changed historically).
+**Status:**
+- `resolved` — clear winning tag.
+- `multi-repo` — strong matches in both zng-app and zng-admin; ask dev which is primary.
+- `post-latest-tag` — commit found but not yet in any version tag. Leave as-is.
+- `unmerged` — commit exists but only on a feature branch. Leave as-is.
+- `needs-human` — no commit found at all (rare with the git-author discovery, but possible if dev's git identity changed historically).
 
 ### 7. Identify other missing scope fields
 
@@ -176,10 +190,11 @@ Print a markdown table grouped by:
 
 1. Needs Release update (high confidence)
 2. Needs Release update (medium/low confidence — flagged)
-3. Release already set, but missing other fields
-4. `post-latest-tag` / `unmerged` / `needs-human` (no Release update; may still get other-field fills)
+3. Stale-but-shipped — Release already set, literal state still pre-Complete (Gate D candidate)
+4. Release already set and state fine, but missing other fields
+5. `post-latest-tag` / `unmerged` / `needs-human` (no Release update; may still get other-field fills)
 
-For each row include: Story ID, Title, Current Release, Proposed Release, Missing fields, Proposed defaults, Estimate to set (★ if >2, requires confirmation).
+For each row include: Story ID, Title, Literal Shortcut state, Current Release, Proposed Release, Missing fields, Proposed defaults, Estimate to set (★ if >2, requires confirmation).
 
 ### 9. Confirmation gates
 
@@ -193,7 +208,12 @@ For each row include: Story ID, Title, Current Release, Proposed Release, Missin
 
 **Gate C — Other field fills** (AskUserQuestion): bundled gate covering all defaults proposed in step 7 (Skill / Tech / Prod / Priority).
 
-**Gate D — Move to Complete** (AskUserQuestion): "Move all resolved tickets to Complete (workflow state `500018258`)?" — yes / specific subset / no.
+**Gate D — Move to Complete (default ON, opt-out only).** Moving shipped tickets to `Complete` (`500018258`) is the **default action**, not a question. (Past incident 2026-07-14: Release values got backfilled correctly but the tickets were never moved to Complete because the move was framed as an optional extra — this is the fix.)
+
+- **Opt-out:** if the invocation contained a move-to-Complete opt-out (step 1), skip every move this run and note "state moves skipped (dev opt-out)" in the final summary. No question asked.
+- **Default (no opt-out):** every shipped ticket — newly-resolved (step 6) **and** stale-but-shipped (step 5) — gets moved to Complete during apply. The step 8 report must list the full move set with the line "These will be moved to Complete (say 'don't move to completed' to skip)." so the dev sees it before any apply gate is answered.
+- **Confidence guard:** `high`-confidence shipped tickets and stale-but-shipped tickets (Release already concretely set = strong evidence) move unconditionally. A `medium`/`low`-confidence ticket moves only if its Release update was approved in Gate A — if the dev skipped its Release update, the shipped evidence wasn't trusted, so don't trust it for a state move either.
+- Never silently skip the moves just because Gate A/B/C were answered. If the run ends with shipped tickets left pre-`Complete`, the summary must say which ones and why (opt-out, confidence guard, or apply error).
 
 Each gate is independent — dev can approve some and skip others.
 
@@ -270,7 +290,7 @@ curl -s "https://api.app.shortcut.com/api/v3/custom-fields/68f8e559-4a18-4a6e-be
 
 - Never commits in any repo. (Sibling repo rule.)
 - Never invents a new Release enum value.
-- Never applies updates without explicit approval at each gate.
+- Never applies field updates without explicit approval at gates A/B/C. (Gate D moves are default-on but always announced in the report first, and nothing is applied before the gates are answered.)
 - Never PUTs a partial `custom_fields` array (would wipe other fields).
 - Never overwrites already-set scope fields (Pri/Skill/Prod/Tech/Estimate). Insert-only.
-- Never moves a ticket to a workflow state without explicit dev approval (Gate D).
+- Never moves a ticket to any workflow state other than `Complete`, and never moves anything when the dev opted out (Gate D). Moves to Complete are the announced default for shipped tickets — announced in the report, never hidden.
