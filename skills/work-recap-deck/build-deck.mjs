@@ -54,7 +54,11 @@ const builtArcs = [];
 for (const arc of META.arcs) {
   const prs = [];
   for (const entry of arc.prs) {
-    const [num, shortTitle] = entry;
+    const [rawNum, shortTitle] = entry;
+    const num = Number.parseInt(rawNum, 10);
+    if (!Number.isInteger(num) || num <= 0 || String(rawNum).trim() !== String(num)) {
+      throw new Error(`invalid PR number in arc "${arc.title}": ${JSON.stringify(rawNum)} (expected a positive integer)`);
+    }
     process.stderr.write(`fetching #${num}\n`);
     const meta = JSON.parse(sh(`gh pr view ${num}${repoFlag} --json number,title,body,additions,deletions,mergedAt,url,files`));
     const diffText = sh(`gh pr diff ${num}${repoFlag}`);

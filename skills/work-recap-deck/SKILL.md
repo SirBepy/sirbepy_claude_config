@@ -1,6 +1,6 @@
 ---
 name: work-recap-deck
-description: Triggers on /work-recap-deck only. Turns merged GitHub PRs into a self-contained HTML deck with an embedded, syntax-highlighted diff explorer.
+description: Triggers on /work-recap-deck only. Turns merged GitHub PRs into a single-file HTML deck with an embedded diff explorer (syntax highlighting via CDN, needs internet).
 argument-hint: "[author] [since-date]"
 ---
 
@@ -8,9 +8,10 @@ argument-hint: "[author] [since-date]"
 
 > Turn a set of GitHub PRs into a presentation deck with an embedded PR/diff explorer.
 
-Builds a single self-contained `.html` file: a slide deck that groups PRs into narrative
-"arcs" (What/Why/Impact), where each arc slide reveals in two beats then shows an embedded
-viewer with the real, syntax-highlighted diffs. Bundled assets live next to this file:
+Builds a single `.html` file with all deck data baked in: a slide deck that groups PRs into
+narrative "arcs" (What/Why/Impact), where each arc slide reveals in two beats then shows an
+embedded viewer with the real diffs. Not fully offline: syntax highlighting loads highlight.js
+from a CDN, so without internet the diffs render as plain escaped text. Bundled assets live next to this file:
 `build-deck.mjs` (generator), `template.html` (styled shell), `deck.config.example.json` (schema example).
 
 Needs `gh` authenticated and `node`. The generator runs `gh pr view/diff`, so run it from inside
@@ -55,7 +56,7 @@ Run the bundled generator (absolute path to this skill folder):
 node "<skill-dir>/build-deck.mjs" deck.config.json work-recap-deck.html
 ```
 
-It fetches each PR, bakes the diffs in, and writes one self-contained HTML file (typically a few MB).
+It fetches each PR, bakes the diffs in, and writes one HTML file (typically a few MB).
 For a personal recap, write output under a gitignored path (e.g. `.for_bepy/presentations/`).
 
 ## Step 5 - Preview and verify
