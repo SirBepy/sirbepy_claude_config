@@ -305,11 +305,11 @@ if missing):
 ### 11. Finisher check
 
 Re-read INDEX.md. If every task line is now `[x]` or `[!]` (no `[ ]` or `[~]`):
-- Invoke `/next-ai-prompt --caller "cron-run tick" --mode night-run` (this runs as
-  a top-level headless agent, so the Skill tool is available - this is NOT a
-  forbidden `/commit`, it just writes a file). Then `git add
-  .for_bepy/NEXT_AI_PROMPT.md`, `git commit -m "cron-run: next prompt"`,
-  `git push`.
+- Write the morning handoff todos to `.claude/todos/` exactly as night-run's step 10
+  does (one todo per `[!]` failed task + one overall handoff todo pinned to PLAN.md,
+  per `~/.claude/skills/close/ai-todos-format.md`; fold the AI_MESSAGES accumulator
+  into the overall todo's `## Notes` and delete it). Todos are local-only by the
+  contract's git policy - no commit step. The morning AI resumes with `/pickup`.
 - Output the token `CRON_RUN_ALL_DONE` on its own line so the wrapper unregisters
   the scheduled task. (Belt-and-suspenders: the task's window also expires on its
   own, and any later no-op tick re-emits the sentinel from step 2.)

@@ -218,7 +218,7 @@ If review has any BLOCKER: apply targeted fixes, re-dispatch the review subagent
 
 ### 8c. AI_MESSAGES_TO_TOMORROWS_AI.md format
 
-Path: `.for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md` (relative to repo root). This is a **temp accumulator** - the finisher (step 10) reads it, folds it into `NEXT_AI_PROMPT.md`, then deletes it. Morning AI reads one file, not two.
+Path: `.for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md` (relative to repo root). This is a **temp accumulator** - the finisher (step 10) reads it, folds it into the overall handoff todo's `## Notes`, then deletes it. Morning AI reads one file, not two.
 
 If the file doesn't exist, create it with this header:
 ```
@@ -238,10 +238,7 @@ Append a section using this exact shape:
 
 ````
 
-Then commit:
-- `git add .for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md`
-- `git commit -m "night-run: message to tomorrow's AI <slug>"`
-- `git push`
+No commit for the accumulator - `.for_bepy/` is gitignored; it lives locally until the finisher consumes it.
 
 ### 9. Log the run
 Append one line to `docs/night_run/log.md` (create with `# Night Run Log` header if missing):
@@ -250,21 +247,19 @@ Append one line to `docs/night_run/log.md` (create with `# Night Run Log` header
 - `git commit -m "night-run: log <slug>"`
 - `git push`
 
-### 10. Write the morning prompt (only if this was the last task)
+### 10. Write the morning handoff (only if this was the last task)
 After step 9, re-read `docs/night_run/INDEX.md`. If every task line is now `[x]` or `[!]` (no `[ ]` or `[~]` left), this tick is the run's finisher.
 
-Invoke `/next-ai-prompt --caller "night-run tick <N>" --mode night-run`. That skill writes `.for_bepy/NEXT_AI_PROMPT.md` using the canonical template and handles gathering context (git history, INDEX.md, failed plans, tick notes).
+Write handoff todos to `.claude/todos/` per `~/.claude/skills/close/ai-todos-format.md` and pin them to `PLAN.md` (prepend, per the contract's CAS discipline):
 
-Then commit and clean up:
+- One todo per `[!]` failed task: Goal = finish that task; Context = side branch name, last BLOCKER cause, what was tried; `## Verify` starts with checking out / inspecting the side branch.
+- One overall handoff todo for the run: Context = 2-4 sentence run summary + INDEX pointer; `## Verify` = `git pull` + the project's fast checks; `## Notes` = the contents of `.for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md` pasted verbatim (then delete that accumulator file - plain delete, it is gitignored).
 
-- `git add .for_bepy/NEXT_AI_PROMPT.md`
-- `git commit -m "night-run: morning prompt for next AI"`
-- `git push`
-- If `.for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md` exists: `git rm .for_bepy/AI_MESSAGES_TO_TOMORROWS_AI.md`, then commit `night-run: consume tick messages`, then push.
+Todos are local-only by default (the contract's git policy handles excludes) - no commit step for them.
 
 If this tick is NOT the run's finisher (any `[ ]` or `[~]` remains), skip step 10 entirely.
 
-**Note on the old FOR_TOMORROWS_AI.md**: previous versions wrote `FOR_TOMORROWS_AI.md` at the repo root. That file is gone. Use `/next-ai-prompt` now.
+**Note on retired mechanisms**: previous versions wrote `FOR_TOMORROWS_AI.md` (repo root) and later `.for_bepy/NEXT_AI_PROMPT.md` via the now-archived `/next-ai-prompt` skill. Both are gone; the morning AI resumes with `/pickup`.
 
 ```
 

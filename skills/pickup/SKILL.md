@@ -1,41 +1,73 @@
 ---
 name: pickup
-description: Triggers on /pickup only. Reads the next-session handoff written by /next-ai-prompt, runs the verify checklist, then starts tackling suggested next steps.
+description: Triggers on /pickup only. Claims and executes the next unclaimed item from the project's PLAN.md To-Do lane, running its Verify commands first.
+argument-hint: "[--unattended] [<id> to pick a specific todo]"
 ---
 
 # /pickup
 
-> Resume from where the last session left off.
+> Pull the next planned todo off the lane, claim it, and do it.
 
-## Step 1 - Check for handoff
+All mechanics (PLAN.md schema, claim protocol, heartbeat, staleness, done/, pruning, git policy)
+live in `~/.claude/skills/close/ai-todos-format.md` - follow that contract exactly.
 
-Read `.for_bepy/NEXT_AI_PROMPT.md` (use `git rev-parse --show-toplevel` if repo root is unclear).
+## Mode
 
-If not found: output "No handoff found." and stop.
+Interactive by default. `--unattended` is passed ONLY by non-interactive callers (autopilot,
+scheduled runs) - never inferred.
 
-## Step 2 - Surface context
+## Step 1 - Select
 
-Print the **Context** section verbatim.
+Read `.claude/todos/PLAN.md`, pruning vanished ids per the contract.
 
-## Step 3 - Run verify checklist
+- If an explicit `<id>` arg was given: that's the pick (it doesn't need a PLAN.md line).
+- Otherwise: the first plan line, top to bottom, whose id has no active (non-stale) claim in
+  `.claims/`. Claimed-by-a-live-session lines are skipped with a one-line note.
+- No PLAN.md or an empty lane: say so, list up to 5 unplanned backlog ids + titles, and stop
+  (planning is `/plan-todos`'s job). Legacy fallback: if `.for_bepy/NEXT_AI_PROMPT.md` exists,
+  flag it as a pre-migration leftover and offer to convert it into a handoff todo instead.
 
-File has a `## Verify checklist` section with `- [ ]` items. Execute each in order as real shell commands or inspections. Do not just print them.
+## Step 2 - Claim
 
-## Step 4 - Surface open decisions and next steps
+Claim the id per the contract's protocol (temp file + no-overwrite rename, Windows retry
+caveat, stale-claim reclaim rule). Lost the race to a live session: go back to Step 1 for the
+next line.
 
-Combine **Open decisions** and **Suggested next steps** into one AskUserQuestion. Dev picks what to work on or defers all.
+## Step 3 - Brief
 
-If 4 or fewer combined items: one option each. If more than 4: show top 4, list rest as plain text.
+Read the todo file in full. Print a 2-4 sentence summary of Goal + where things stand (for
+handoff todos, this is the "what happened last session" recap).
 
-## Step 5 - Clean up and commit
+## Step 4 - Decisions gate
 
-```
-git rm .for_bepy/NEXT_AI_PROMPT.md
-```
+If the todo records open decisions (in `## Notes` or elsewhere):
 
-Then run `/commit`.
+- **Interactive:** surface them in ONE AskUserQuestion before any work.
+- **`--unattended`:** proceed using only decisions the todo records as already resolved. If an
+  unresolved decision blocks the work, write the blocker per the caller's blocker-log convention
+  (autopilot: `.for_bepy/autopilot-logs/<slug>.md`), release the claim, and stop this todo -
+  never guess, never silently skip the decision.
+
+## Step 5 - Verify
+
+If the todo has a `## Verify` section: execute each `- [ ]` item in order as real commands or
+inspections. Do not just print them. A failing verify item is a blocker: surface it (or log it
+unattended), release the claim, stop.
+
+## Step 6 - Execute
+
+Do the task per the todo's Approach/Acceptance. Touch the claim file's mtime after major steps
+(heartbeat). Follow all global rules (`/commit` only via the skill, testing floor, etc.).
+
+## Step 7 - Complete
+
+Per the contract: move the todo to `done/` (create if missing), delete its PLAN.md line, release
+the claim. Then run `/commit` if the work produced changes.
+
+Finish by naming the next item on the lane (or "lane empty") so the dev knows what another
+`/pickup` would grab.
 
 ## Notes
 
-- Steps 2-4 skip silently if their sections are empty or say "None."
-- Never commit the deletion until step 5. Never bypass `/commit`.
+- One todo per invocation. Chain-run sessions call `/pickup` again for the next item.
+- On any abort path, ALWAYS release the claim - never leave a lock for work that isn't happening.
