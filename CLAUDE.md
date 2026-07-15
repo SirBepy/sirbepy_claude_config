@@ -77,15 +77,15 @@
 - Per-repo run mechanics (env file, login/OTP, ports, web-server vs chrome device, CORS) live in project memories - check them first; don't rediscover them.
 - Throwaway verification screenshots go in `.for_bepy/screenshots/` (gitignored, disposable, `/close` empties it; create the folder if missing). The `/screenshot` skill's portfolio keepers stay in `.portfolio-data/`.
 
+## AI todos + plan - `.claude/todos/` (per project)
+
+- Full contract (backlog format, ids, PLAN.md lane, done/, git policy): `~/.claude/skills/close/ai-todos-format.md`. Written by `/close`, `/create-todo`, `/code-check`, autopilot; ordered by `/plan-todos`; executed via `/pickup`, `/batch-todos`, or Joe naming an id - Claude never auto-acts on the folder.
+- **Claim rule (non-negotiable): before EXECUTING any todo, claim it via `.claude/todos/.claims/<id>.claim` per the contract - every path, including ad-hoc "do todo 07". Release on completion or abort.**
+- Items needing Joe's physical action (browser login, cloud console, credentials, hardware) have no persistent home - try it yourself first (if the project has any test setup, write and run the test rather than handing off), and only if genuinely blocked, surface it directly in the response instead of writing a file.
+
 ## .for_bepy Folder
 
-Cross-session notes live in `.for_bepy/` at the project root (never global; skip if there's no project).
-
-### ai_todos/ - flagged for Claude (one .md per task)
-
-- `/close` writes flagged code-health issues, follow-ups, and skill-improvement candidates here, one file each. Claude never auto-acts; Joe triggers via "do the AI todos", `/batch-todos`, or by naming a specific id.
-- Format spec (filename rules, id-numbering, sections, Type tag): `~/.claude/skills/close/ai-todos-format.md`.
-- Items needing Joe's physical action (browser login, cloud console, credentials, hardware) have no persistent home right now - try it yourself first (if the project has any test setup, write and run the test rather than handing off), and only if genuinely blocked, surface it directly in the response instead of writing a file. (BEPY_TODOS.md was removed 2026-07-07 because it never got read; a proper replacement is TBD.)
+Project-local scratch (never global; skip if there's no project): `screenshots/` (see UI section), `autopilot-logs/` (genuine blockers from unattended runs), other transient artifacts. ai_todos moved OUT of here to `.claude/todos/` on 2026-07-15; treat any remaining `.for_bepy/ai_todos/` as unmigrated legacy.
 
 ## Persistence
 
