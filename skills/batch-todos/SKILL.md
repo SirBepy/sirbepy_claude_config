@@ -1,6 +1,6 @@
 ---
 name: batch-todos
-description: Triggers on /batch-todos only. Dedupes todos, classifies survivors as EASY (auto-execute) or HARD (dev picks), shows dry-run confirmation, batches all EASY todos, then surfaces the HARD queue.
+description: Triggers on /batch-todos only. Dedupes todos, auto-executes EASY ones after a dry-run confirm, then surfaces the HARD queue.
 ---
 
 # /batch-todos

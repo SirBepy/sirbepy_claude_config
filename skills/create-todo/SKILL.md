@@ -1,6 +1,6 @@
 ---
 name: create-todo
-description: Triggers on /create-todo only. Files a single todo mid-session; bare invocation or "continue in another chat" writes a session handoff todo pinned to PLAN.md.
+description: Triggers on /create-todo only. Files one todo mid-session; bare invocation = session handoff pinned to PLAN.md.
 argument-hint: "[next] [what to defer - empty = hand off this session]"
 ---
 

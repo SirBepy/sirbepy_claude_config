@@ -78,7 +78,7 @@ Skip this entire phase if ANY:
 
 Determine scope arg: if commits were made this session, pass `unpushed`; otherwise pass `uncommitted`.
 
-Invoke `/code-check` with that scope arg via the Skill tool. It handles the analysis and writes ai_todos directly. Read its summary line (`code-check: N findings ...`) to extract the finding count for the Phase 4 counter.
+Invoke `/code-check` with that scope arg via the Skill tool. It handles the analysis and writes the todos directly. Read its summary line (`code-check: N findings ...`) to extract the finding count for the Phase 4 counter.
 
 ## Phase 3 - Persist
 
@@ -98,10 +98,10 @@ Note: there is no implicit /commit step anymore. If the dev wants a commit, they
 Print one line, always - this is the one thing Joe reliably sees from Phases 1-3:
 
 ```
-N memory writes . N ai_todos written (M from review, K skill-improvement) . N screenshots cleaned . chain: <list of chained commands or "none"> . closing: yes/no
+N memory writes . N todos written (M from review, K skill-improvement) . N screenshots cleaned . chain: <list of chained commands or "none"> . closing: yes/no
 ```
 
-`M from review` is the count of findings from Phase 2 (size + DRY + dead code). If Phase 2 was skipped, omit the parenthetical and say `review skipped`. `K skill-improvement` is the subset of this close's ai_todos tagged `skill-improvement` in Phase 3 step 2; omit `, K skill-improvement` if zero. `N screenshots cleaned` is the count deleted from `.for_bepy/screenshots/` in Phase 3 step 3 (0 if folder was missing/empty).
+`M from review` is the count of findings from Phase 2 (size + DRY + dead code). If Phase 2 was skipped, omit the parenthetical and say `review skipped`. `K skill-improvement` is the subset of this close's todos tagged `skill-improvement` in Phase 3 step 2; omit `, K skill-improvement` if zero. `N screenshots cleaned` is the count deleted from `.for_bepy/screenshots/` in Phase 3 step 3 (0 if folder was missing/empty).
 
 ## Phase 5 - Run chained commands
 

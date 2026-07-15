@@ -1,6 +1,6 @@
 ---
 name: pickup
-description: Triggers on /pickup only. Claims and executes the next unclaimed item from the project's PLAN.md To-Do lane, running its Verify commands first.
+description: Triggers on /pickup only. Claims and executes the next unclaimed PLAN.md item, running its Verify commands first.
 argument-hint: "[--unattended] [<id> to pick a specific todo]"
 ---
 

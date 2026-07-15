@@ -1,6 +1,6 @@
 ---
 name: plan-todos
-description: Triggers on /plan-todos only. Creates or reorders the project's PLAN.md - the ordered To-Do lane of pointers into the .claude/todos backlog.
+description: Triggers on /plan-todos only. Creates or reorders PLAN.md, the ordered lane of pointers into the todos backlog.
 argument-hint: "[show | free-text ordering like 'do 07 then 03, 09 and 12 in parallel']"
 ---
 

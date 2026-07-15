@@ -1,6 +1,6 @@
 ---
 name: code-check
-description: Triggers on /code-check. Structural code review - file splits, DRY, dead code. Writes findings to ai_todos. Callable standalone or from /close.
+description: Triggers on /code-check. Structural code review - file splits, DRY, dead code. Writes findings to the todos backlog. Callable standalone or from /close.
 argument-hint: "[uncommitted|unpushed|<path>|<hash>]"
 ---
 
@@ -80,7 +80,10 @@ Merge findings from Steps 0-3.
 **If the project has a repo root for `.claude/todos/`:** write each finding as a `.md` file there, per `~/.claude/skills/close/ai-todos-format.md` (filename/id rules, git-policy self-heal; create the folder if missing). Format:
 
 ```markdown
+<!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
 # [title]
+
+**Type:** task
 
 ## Goal
 [what needs to happen]
@@ -100,7 +103,7 @@ Merge findings from Steps 0-3.
 Print a summary line:
 
 ```
-code-check: N findings (A size, B DRY, C dead code, D desc). M written to ai_todos.
+code-check: N findings (A size, B DRY, C dead code, D desc). M written to todos.
 ```
 
 If zero findings: `code-check: No structural issues found.`
