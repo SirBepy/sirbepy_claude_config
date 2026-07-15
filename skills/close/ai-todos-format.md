@@ -40,9 +40,11 @@ Zero-padded numeric prefix + kebab-case slug: `03-tighten-onboarding-step-redire
 The prefix is the stable id; the dev references tasks by id ("do todo 03").
 
 **Picking the next id:** scan `.claude/todos/` and `done/` for the max numeric prefix, add 1.
-Never reuse ids, even after deletion. **Creation race guard:** if the write fails because the
-filename already exists (another session grabbed the id), re-scan and take the next number -
-never overwrite.
+Never reuse ids, even after deletion. **Creation race guard:** immediately after writing,
+re-scan for OTHER files sharing your numeric prefix (a concurrent session may have taken the
+same id with a different slug, so a filename-exists check alone is not enough). If a collision
+exists, rename YOUR file to the next free id and re-check. Never overwrite, never renumber the
+other session's file.
 
 ## Backlog file: content
 
