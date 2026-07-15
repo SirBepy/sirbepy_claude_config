@@ -1,42 +1,71 @@
 ---
 name: create-todo
-description: Triggers on /create-todo only. Writes a single ai_todo mid-session without waiting for /close - for a "note this for later" moment, a deferred fix, or a skill-improvement observation.
-argument-hint: "<what to defer, in your own words>"
+description: Triggers on /create-todo only. Files a single todo mid-session; bare invocation or "continue in another chat" writes a session handoff todo pinned to PLAN.md.
+argument-hint: "[next] [what to defer - empty = hand off this session]"
 ---
 
 # /create-todo
 
-> Write one ai_todo right now, instead of hoping /close catches it later.
+> Write one todo right now. Bare call = hand this session off to the next AI.
 
-## When to use
+All file rules (location `.claude/todos/`, filename/id, template, git-policy self-heal) live in
+`~/.claude/skills/close/ai-todos-format.md` - follow it exactly.
 
-Any time something surfaces that's worth deferring but not worth stopping the current thread for:
+If there's no project (no repo root for `.claude/todos/` to live under), say so and stop.
 
-- Joe says "note this for later" / "we should fix this eventually" / "not now, but flag it".
-- Claude notices a repeated manual step, a skill that got violated or proved wrong, or a "this deserves its own skill" moment - mid-session, not just at /close time.
-- An offer gets made ("want me to do X?") and declined for now but shouldn't be forgotten.
+## Step 1 - Detect mode
 
-If there's no project (`.for_bepy/` has nowhere to live), say so and stop - do not create `.for_bepy/` outside a project.
+Parse the args as natural language, not rigid syntax:
 
-## Step 1 - Determine Type
+- **Handoff mode** when: the invocation is bare, or the dev's message reads as "continue this in
+  another chat" / "let's pick this up later" / frustration with the current session, or the args
+  start with `next`. The deliverable is a handoff of THIS session's work.
+- **Deferral mode** otherwise: the args describe a discrete thing to note for later (a fix, an
+  observation, an offer that was declined for now).
 
-- `task` - something Claude can execute later (code, config, analysis).
-- `skill-improvement` - a skill gap, a "had to do this differently than the skill said" note, or a "this project keeps needing X, maybe a local skill" observation.
+If genuinely ambiguous, ask once via AskUserQuestion.
+
+## Step 2 - Determine Type
+
+- `task` - something Claude can execute later (code, config, analysis). Handoffs are tasks.
+- `skill-improvement` - a skill gap, a "did this differently than the skill said" note, or a
+  "this project keeps needing X" observation. Approach names the skill file involved.
 
 Infer from context; ask only if genuinely ambiguous.
 
-## Step 2 - Write the file
+## Step 3 - Write the file
 
-Follow `~/.claude/skills/close/ai-todos-format.md` exactly: filename (zero-padded id + kebab-case slug, scan `.for_bepy/ai_todos/` and `done/` for max id), required sections (`# title`, `**Type:**`, `## Goal`, `## Context`, `## Approach`, `## Acceptance`), and the off-limits rule (never include git instructions).
+**Deferral mode:** fill Goal/Context/Approach/Acceptance from the discussion. If there isn't
+enough to fill Context/Approach meaningfully, ask one clarifying question rather than write a
+thin file.
 
-The bar is the same as /close's: a future cold AI session must be able to execute the task from the file alone. Don't write a placeholder - if there isn't enough to fill Context/Approach meaningfully yet, ask one clarifying question before writing rather than write a thin file.
+**Handoff mode:** the todo IS the session handoff - be VERY descriptive; length is fine when it
+helps the next AI. Fill from the session itself, no questions:
 
-## Step 3 - Confirm
+- **Goal** - what the dev is ultimately trying to achieve (the original ask, not the last subtask).
+- **Context** - what was tried and in what order, where it failed or stalled, what the
+  misunderstandings were (places the dev corrected course, wrong assumptions made), and any
+  decisions already settled so the next AI doesn't re-litigate them.
+- **Approach** - the concrete next steps as best currently known.
+- **Verify** - up to ~6 real commands the resuming session runs first (start with `git pull` if
+  the repo has a remote; include the project's fast checks if relevant).
+- **Notes** - open decisions the dev still owes answers on, plus anything that fits nowhere else.
 
-Print the filename and a one-line summary. Do not run `/batch-todos` or execute the todo - this skill only files it.
+## Step 4 - Pin handoffs to the plan (handoff mode only)
+
+Prepend `- [ ] <id> - <short label>` to PLAN.md (create it with a `# Plan` header if missing),
+per the contract's CAS edit discipline. Deferral-mode todos are NOT auto-planned - ordering the
+backlog is `/plan-todos`'s job.
+
+## Step 5 - Confirm
+
+Print the filename and a one-line summary (plus "pinned to top of PLAN.md" for handoffs). Do not
+execute the todo - this skill only files it.
 
 ## Anti-patterns
 
-- Writing a todo for something that requires Joe's physical action (credentials, hardware, browser login) - there's no persistent home for those right now, just say it directly instead of filing a file nobody will read.
-- Batching multiple unrelated asks into one file. One todo, one file, per invocation - call `/create-todo` again for a second item.
-- Re-filing something that's already an open todo - skim `.for_bepy/ai_todos/*.md` titles first; if a near-duplicate exists, say so and skip writing (dedup across the whole set is `/batch-todos`'s job, not this skill's).
+- Filing a todo for something that needs the dev's physical action (credentials, hardware,
+  browser login) - say it directly instead.
+- Batching multiple unrelated asks into one file. One todo per invocation.
+- Re-filing an existing todo - skim `.claude/todos/*.md` titles first; if a near-duplicate
+  exists, say so and skip (full dedup is `/batch-todos`'s job).

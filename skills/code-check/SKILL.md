@@ -39,7 +39,7 @@ If scope has no `SKILL.md` files, skip this step.
 
 ## Filter to code files
 
-After resolving, filter to code files only. Drop: `.md`, `.json`, `.toml`, `.yaml`, `.yml`, `.gitignore`, anything under `.for_bepy/` or `memory/`.
+After resolving, filter to code files only. Drop: `.md`, `.json`, `.toml`, `.yaml`, `.yml`, `.gitignore`, anything under `.for_bepy/`, `.claude/todos/`, or `memory/`.
 
 If the filtered list is empty (and Step 0 produced no findings): print "No code files in scope." and stop.
 
@@ -77,7 +77,7 @@ For each new top-level symbol: `Grep pattern: "\\b<symbol>\\b", output_mode: "co
 
 Merge findings from Steps 0-3.
 
-**If `.for_bepy/ai_todos/` exists:** write each finding as a `.md` file. Filename: zero-padded numeric prefix (scan existing files for max id, add 1) + kebab-case slug. Format:
+**If the project has a repo root for `.claude/todos/`:** write each finding as a `.md` file there, per `~/.claude/skills/close/ai-todos-format.md` (filename/id rules, git-policy self-heal; create the folder if missing). Format:
 
 ```markdown
 # [title]
@@ -95,7 +95,7 @@ Merge findings from Steps 0-3.
 [how to verify it is done]
 ```
 
-**If no `.for_bepy/` exists:** print all findings inline, one block per finding.
+**If not in a project (no repo root):** print all findings inline, one block per finding.
 
 Print a summary line:
 
