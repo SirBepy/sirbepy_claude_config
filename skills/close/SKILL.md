@@ -73,7 +73,7 @@ Joe does not read this by default - it exists to feed Phase 3. Print the full bu
 Skip this entire phase if ANY:
 
 - `--skip-review` was passed.
-- Zero code files changed this session (only docs/config/`.for_bepy/`/memory edits).
+- Zero code files changed this session (only docs/config/`.for_bepy/`/`.claude/todos/`/memory edits).
 - Fewer than 50 added lines total across all code files (`git diff --shortstat` insertions). Rationale: small diffs are almost always edits to existing code, not new symbol declarations - DRY/dead-code review finds nothing. Saves tokens on routine closes.
 
 Determine scope arg: if commits were made this session, pass `unpushed`; otherwise pass `uncommitted`.
@@ -85,11 +85,11 @@ Invoke `/code-check` with that scope arg via the Skill tool. It handles the anal
 Run in this order:
 
 1. **Memory writes.** Per the auto-memory protocol in CLAUDE.md. For each correction or non-obvious confirmation from Phase 1, write or update the appropriate memory file and update MEMORY.md index. Skip if nothing qualifies. Never invent memories to look productive.
-2. **`.for_bepy/ai_todos/`** Write a separate `.md` file per item from:
+2. **`.claude/todos/`** Write a separate `.md` file per item from:
    - Phase 1 step 5 (unfinished offers) - tag `**Type:** task`.
    - Phase 1 steps 3-4 (repeated manual steps, skill rule violations) - tag `**Type:** skill-improvement`, Approach section names the skill file involved.
 
-   Use the template in `ai-todos-format.md` (`# title`, `**Type:**`, `## Goal`, `## Context`, `## Approach`, `## Acceptance`). Filename: zero-padded numeric prefix + kebab-case slug (scan existing files for max id, add 1, never reuse). The bar: a future cold AI session must be able to execute the task from the file alone, without re-reading session history. Skip if no items. Note: Phase 2 review findings are written to ai_todos by `/code-check` directly - do not re-write them here.
+   Follow `ai-todos-format.md` (this skill's folder) for everything: template, filename/id rules, git-policy self-heal. The bar: a future cold AI session must be able to execute the task from the file alone, without re-reading session history. Skip if no items. Note: Phase 2 review findings are written to the backlog by `/code-check` directly - do not re-write them here.
 3. **Screenshot cleanup.** Delete the contents of `.for_bepy/screenshots/` (the throwaway verification-screenshot quarantine per CLAUDE.md). Scope is strictly that folder - never touch `.portfolio-data/` (portfolio keepers), committed assets, or any image elsewhere. List each file deleted in the output so the dev sees what went. Delete without a blocking prompt (the folder is disposable by definition, and /close runs autonomously when chained with `/sleep-when-done`). Skip silently if the folder is missing or empty. PowerShell: `Get-ChildItem -File '.for_bepy/screenshots/' | Remove-Item -Force`.
 Note: there is no implicit /commit step anymore. If the dev wants a commit, they chain `/commit` (with whatever subcommand they want) into the /close call.
 

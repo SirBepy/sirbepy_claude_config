@@ -47,7 +47,7 @@ Then dispatch ONE `Agent` call with `subagent_type: "general-purpose"` and this 
 > Memory dir: `C:\Users\tecno\.claude\projects\C--Users-tecno--claude\memory\`
 > For each entry in `memory`: write the file at `<memory dir>/<file>` with the given frontmatter + body. Then append a pointer line to `MEMORY.md` if not already present.
 >
-> `.for_bepy/ai_todos/`: for each entry in `ai_todos`, scan existing files for max numeric prefix, write `<id+1>-<slug>.md` with standard sections including a `**Type:**` line.
+> `.claude/todos/`: for each entry in `ai_todos`, follow `C:\Users\tecno\.claude\skills\close\ai-todos-format.md` - scan existing files (and done/) for max numeric prefix, write `<id+1>-<slug>.md` with standard sections including a `**Type:**` line, and self-heal the `.git/info/exclude` entries per that doc's Git policy.
 >
 > Payload: `<JSON>`
 
