@@ -62,15 +62,19 @@ reviewer could read straight off the diff is noise; cut it.**
      installing any browser harness, probe once for the `SendUserFile` tool
      (`ToolSearch` or check the tool list). **If present:** offer a
      **screenshot**. On yes: bring the app up via `/supervised-run`, capture with
-     the `/screenshot` helper, `SendUserFile` the image to the dev, and add a line to
-     the preview: *"Screenshot saved at `<path>` - drag it into the PR box after
-     create (GitHub needs a manual image upload)."* Do **not** try to embed a
-     local path in the body; it won't render. **If absent:** still capture the
-     screenshot - it remains the verification step - `Read` it to self-verify the
-     change, then give the dev (a) the live `/supervised-run` URL + the exact
-     route to the changed view, and (b) the absolute PNG path to drag into the
-     PR box himself. Say plainly that no image-to-chat channel exists this
-     session; do not silently substitute an existing/repurposed screenshot.
+     the `/screenshot` helper, `SendUserFile` the image to the dev, then **upload
+     it to the pr-assets host and embed it** in the body (see "Image hosting"
+     below) - the same screenshot yes covers the embed, no second question.
+     **If absent:** still capture the screenshot - it remains the verification
+     step - `Read` it to self-verify the change, then upload + embed the same
+     way and give the dev the live `/supervised-run` URL + the exact route to
+     the changed view so he can eyeball it too. Do not silently substitute an
+     existing/repurposed screenshot.
+   - **Sensitive-content guard:** the pr-assets repo is PUBLIC. If the
+     screenshot shows secrets, tokens, customer data, or anything Joe wouldn't
+     want on a public URL, do NOT upload - fall back to the old manual flow
+     (give the local PNG path, dev drags it into the PR box himself, GitHub's
+     own drag-drop upload is private-repo-safe).
    - **Schema / pipeline / data-flow files** (`domain/models/**`,
      `backend/**/pipelines/**`, `schema_manager.py`, `migrations/**`) → offer a
      **mermaid diagram** of the changed flow. On yes: embed a fenced ` ```mermaid `
@@ -82,6 +86,31 @@ reviewer could read straight off the diff is noise; cut it.**
      the step 8 approval gate. Never fold the visual y/n into the final
      approval `AskUserQuestion` alongside other questions - that's the exact
      violation this note exists to prevent. Embed nothing the user didn't approve.
+
+6b. **Slack announcement block (opt-in per repo).** If the repo contains
+   `.github/workflows/slack-announce.yml`, append a collapsed block to the PR
+   body (after the main content):
+
+   ```
+   <details>
+   <summary>📣 Slack announcement (auto-posts on merge)</summary>
+
+   <!-- slack-announce-start -->
+   <blurb>
+   ![screenshot](<pr-assets raw URL, one per line, only if step 6 embedded any>)
+   <!-- slack-announce-end -->
+
+   </details>
+   ```
+
+   The blurb: 1-3 casual first-person sentences from Joe's voice ("Just shipped
+   X - it does Y"), aimed at teammates, not reviewers. **Slack-mrkdwn-safe
+   plain text only**: no markdown links, no `**bold**`, no headers - the
+   workflow posts it verbatim as Slack mrkdwn. Image lines must be exactly
+   `![...](url)` at line start; the workflow parses them into Slack image
+   blocks and strips them from the text. The dev can edit the block on GitHub
+   before merging; the workflow posts whatever is between the markers at merge
+   time. No workflow file in the repo → skip this step entirely, never ask.
 
 7. **Preview locally (before any create).**
    - Write the final body to `.for_bepy/pr_preview/<branch-slug>.md` (gitignored
@@ -132,7 +161,35 @@ reviewer could read straight off the diff is noise; cut it.**
      an outward-facing action and triggers a credential popup.
    - `gh pr create --base <base> --head <branch> --title "<title>" --body-file <preview-file>`
      (add `--draft` if the flag was passed).
-   - Print the PR URL. If a screenshot is pending, remind the dev to drag it in.
+   - Print the PR URL. If the sensitive-content fallback left a screenshot
+     un-embedded, remind the dev to drag it into the PR box.
+
+## Image hosting (pr-assets)
+
+Screenshots embed via the dedicated public repo `SirBepy/pr-assets` - GitHub
+proxies PR-body images through camo, which can't authenticate, so images must
+live at a public URL (this also makes them work in private-repo PRs and in
+Slack). Files are kept forever; they're tiny.
+
+Upload via the contents API, no clone needed (one PowerShell call per image,
+never chained):
+
+```
+$b64 = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes("<abs path>.png"))
+gh api --method PUT /repos/SirBepy/pr-assets/contents/<repo-name>/<branch-slug>/<file>.png -f message="ASSET: <repo> <branch> screenshot" -f content=$b64 --jq .content.download_url
+```
+
+- Path convention: `<repo-name>/<branch-slug>/<descriptive-name>.png`. Unique
+  filenames only - a PUT to an existing path fails without its blob sha; if
+  re-shooting, suffix `-2`, `-3`.
+- The command prints the final `https://raw.githubusercontent.com/...` URL;
+  embed it as `![<what it shows>](<url>)` in the PR body.
+- `gh` account: the global PreToolUse hook switches accounts by the CURRENT
+  repo's origin, but pr-assets lives under SirBepy. From a non-SirBepy repo
+  (zirtue/fibo/revaire cwd), the active account won't have push rights - run
+  `gh auth switch --user SirBepy` first, upload, then switch back (or just
+  re-run any repo-scoped gh command and let the hook restore it).
+- Remember the sensitive-content guard in step 6: public URL, public repo.
 
 ## Anti-bloat rules (the actual point)
 
