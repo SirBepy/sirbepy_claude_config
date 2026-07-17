@@ -11,6 +11,7 @@ description: Triggers on /test-flow only. Drives a Flutter web app via Playwrigh
 
 - the dev develops Flutter web apps and wants AI-assisted manual QA without giving up his VS Code F5 + launch.json + breakpoints flow.
 - He runs the app himself. This skill never starts or stops the dev server.
+- Need unattended automation against Firebase emulators instead (release build, no dev present, auth/data seeding)? Use `/flutter-e2e` instead - this skill assumes a human-run debug session.
 - Flutter web renders to canvas, so normal Playwright selectors don't work. Semantics are enabled in debug builds via `WidgetsBinding.ensureSemantics()` inside an `assert`. This emits a DOM tree Playwright can query by label/role.
 - Browser DevTools console catches ~90% of runtime errors, network failures, and app logs. the dev's Debug Console catches the Dart-specific rest; he watches that himself.
 
