@@ -44,6 +44,16 @@ function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0
 Get-ChildItem $env:USERPROFILE -Directory -Recurse -Depth 5 -Filter node_modules -Force -ErrorAction SilentlyContinue | ForEach-Object { [PSCustomObject]@{ GB=(Get-DirGB $_.FullName); Path=$_.FullName.Replace($env:USERPROFILE,'~') } } | Sort-Object GB -Descending | Select-Object -First 10
 ```
 ```powershell
+# Build-artifact sweep across every repo - MANDATORY, not optional. On 2026-07-19 this single
+# step found 150GB+ (Rust `target` dirs left over from switched CARGO_TARGET_DIR configs, Flutter
+# `build`/.dart_tool, Python venv/.venv) - bigger than every other scan step in this file combined.
+# Scans the full user profile (mirrors the node_modules sweep above) instead of a hand-maintained
+# root list - a mandatory step shouldn't depend on remembering which dev roots exist.
+function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0 /W:0; $l=@($o|Where-Object{$_ -match '^\s*Bytes :'})[0]; if($l -and $l -match 'Bytes :\s+(\d+)'){[math]::Round([int64]$Matches[1]/1GB,2)}else{0} }
+$names = @('target','build','.dart_tool','dist','.venv','venv')
+Get-ChildItem $env:USERPROFILE -Directory -Recurse -Depth 6 -Force -ErrorAction SilentlyContinue | Where-Object { $names -contains $_.Name } | ForEach-Object { [PSCustomObject]@{ GB=(Get-DirGB $_.FullName); Path=$_.FullName.Replace($env:USERPROFILE,'~') } } | Sort-Object GB -Descending | Select-Object -First 25
+```
+```powershell
 # Package-manager caches (correct bases: cargo/gradle live under USERPROFILE, the rest under LOCALAPPDATA)
 function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0 /W:0; $l=@($o|Where-Object{$_ -match '^\s*Bytes :'})[0]; if($l -and $l -match 'Bytes :\s+(\d+)'){[math]::Round([int64]$Matches[1]/1GB,2)}else{0} }
 @(
@@ -115,7 +125,7 @@ Output this exact format and wait for explicit YES before writing anything:
 - `$env:TEMP\*` and `$env:LOCALAPPDATA\Temp\*` - temp files, regenerate. `Get-ChildItem $env:TEMP -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue` (in-use files skip).
 - Recycle Bin - `Clear-RecycleBin -Force`.
 - Browser caches under `$env:LOCALAPPDATA\<Browser>\User Data\*\Cache` - regenerate.
-- Stale-project `node_modules` - `npm i` / `pnpm i` rebuilds. Build artifacts (`build/`, `.dart_tool/`, `dist/`, `.next/`, `target/`) - regenerate.
+- Stale-project `node_modules` - `npm i` / `pnpm i` rebuilds. Build artifacts (`build/`, `.dart_tool/`, `dist/`, `.next/`, `target/`, `venv/`, `.venv/`) - regenerate. The build-artifact sweep step above is the biggest single win found so far (150G+ on 2026-07-19) - always run it, don't skip as optional.
 - Windows Update leftovers / `Windows.old` / Delivery Optimization - via `cleanmgr` or Storage Sense, not manual delete.
 
 ## SCAN LOG
@@ -123,3 +133,4 @@ Output this exact format and wait for explicit YES before writing anything:
 Cap: 5 entries max. When at cap, drop the entry with the earliest date field before appending; if dates tie, drop the topmost entry. Never reorder remaining entries.
 
 - 2026-06-03: First Windows scan. C: free 24.3/930.6G (tight). Home top: Desktop 288.6G, AppData 197.5G, Videos 40G, Downloads 34.3G, .gradle 16.3G, fvm 13.2G. LocalAppData: Packages 20G, Android 15.7G, Docker 14.9G, Google 13.7G. Caches: gradle 16.3G, npm 4.2G, cargo 2.5G. Temp 0.56G, Recycle 0.79G. Top safe wins: gradle cache + Docker prune + npm cache ≈ 35G.
+- 2026-07-19: Deep Windows scan (supersedes 2026-06-03 data). C: free 29.6/930.6G. Added mandatory build-artifact sweep step - found 150G+ across 19 repos in Desktop\Projects (biggest: claude_usage_in_taskbar 90.6G in 3 duplicate src-tauri target dirs from switched CARGO_TARGET_DIR configs, server_supervisor 12.1G, pomodoro-overlay 8.5G, odysseus 13.2G target+venv, revaire-mobile 6.7G build+.dart_tool, 12 more repos 0.5-3G each). Root cause found and fixed: global ~/.cargo/config.toml had no target-dir set, so one-off manual overrides never stuck - added `target-dir = "D:/cargo-target"` globally so this stops recurring. Other safe wins: Docker 26.5G, gradle 19.5G, LocalAppData Temp 17.5G, npm/pip/cargo/pnpm/playwright/recycle ~15G, huggingface hub 60.2G (cleared, unused models), stale node_modules 10 repos ~4G. Judgment calls (Joe's call each time, not auto-safe): game data (PrismLauncher instance 33.4G - Joe approved delete, curseforge 5.3G - kept), Android AVD image 11.6G, ollama models 7.7G idle 6-7wk (Joe kept), Roblox project folders misfiled in Downloads 30.4G (moved to D:\RobloxDev not deleted). Windows-level bloat (SoftwareDistribution, Windows.old) checked clean - not a Windows problem this time. Non-cache real data generally needs a judgment-call question - cache/build-artifact patterns don't.

@@ -23,7 +23,7 @@ Start a long-lived dev server through server_supervisor instead of spawning it i
 
 3. **List first - reuse before you create.** `GET http://127.0.0.1:<port>/procs` (header `Authorization: Bearer <token>`). Look for an existing entry whose `project` equals the current project folder's name AND whose `name`/command is the server you want.
    - **If a matching entry exists:** do NOT `/run` a new one. Reuse it by id:
-     - status `running` and you just want it up: leave it, or `POST /procs/<id>/restart` to pick up code changes.
+     - status `running` and you just want it up: leave it, or pick up code changes with `POST /procs/<id>/restart` - **except for a flutter entry**, where `POST /procs/<id>/reload` is the fast path: it hot-restarts via the flutter daemon instead of a full process respawn, and auto-falls back to `/restart` on its own if the daemon isn't ready yet. Always prefer `/reload` over `/restart` for flutter.
      - status `stopped` or `crashed`: `POST /procs/<id>/start` (or `/restart`).
    - **Only if nothing matches** do you go to step 4. This is what stops the same project from collecting `flutter run` three times.
 
@@ -46,7 +46,8 @@ Start a long-lived dev server through server_supervisor instead of spawning it i
 7. **Manage it afterward** via the same base URL + bearer token:
    - Logs: `GET /procs/<id>/logs`
    - Stop: `POST /procs/<id>/stop`
-   - Restart: `POST /procs/<id>/restart`
+   - Restart: `POST /procs/<id>/restart` (full process respawn - use for non-flutter entries, or a flutter entry whose daemon isn't ready)
+   - Reload (flutter only, fast path): `POST /procs/<id>/reload` - hot-restarts via the flutter daemon instead of respawning the process; for a `web-server` target this also auto-refreshes every open browser tab on the live-reload proxy port (see Port table). Prefer this over `/restart` for any flutter entry.
    - Delete (remove the entry entirely): `DELETE /procs/<id>` (stop it first if running)
    - List everything: `GET /procs`
 
@@ -58,7 +59,7 @@ For a dynamic port to take effect, template the port flag INTO the command with 
 | --- | --- |
 | Vite | `vite --port {PORT}` (or `npm run dev -- --port {PORT}`) |
 | Next.js | `next dev -p {PORT}` |
-| Flutter web (auto-reload) | `flutter run -d web-server --web-port {PORT}` - supervisor fronts it with a live-reload proxy; a `/reload` refreshes every open tab on its own |
+| Flutter web (auto-reload) | `flutter run -d web-server --web-port {PORT}` - after editing source, call `POST /procs/<id>/reload` (not `/restart`) to hot-restart via the daemon; the supervisor's live-reload proxy then refreshes every open tab on its own, no manual F5 |
 | Flutter web (chrome) | `flutter run -d chrome --web-port {PORT}` - flutter owns its chrome; no supervisor proxy, no auto-refresh |
 | Node server reading `process.env.PORT` | no `{PORT}` needed - the env var is set automatically |
 | Tool with no port flag you can find | send `"use_dynamic_port": false` and accept its built-in port |
@@ -92,4 +93,4 @@ Run the server the normal way (in your own background shell), and tell Joe: "ser
 - The API binds 127.0.0.1 only and the token is per-machine; never send it anywhere off-localhost.
 - One-off commands never go through here - this is only for processes that stay running.
 - Manage a process by the `id` from its `/run` (or `/procs`) response. Never blind-`/run` a variant when an entry already exists - reuse it.
-- Endpoints verified against the running supervisor on 2026-06-06: `GET /health`, `GET /procs`, `POST /run`, and per-id `POST /procs/<id>/{start,stop,restart}`, `GET /procs/<id>/logs`, `DELETE /procs/<id>` all exist. Auth is `Authorization: Bearer <token>` on everything except `/health`.
+- Endpoints verified against the running supervisor on 2026-06-06: `GET /health`, `GET /procs`, `POST /run`, and per-id `POST /procs/<id>/{start,stop,restart}`, `GET /procs/<id>/logs`, `DELETE /procs/<id>` all exist. Auth is `Authorization: Bearer <token>` on everything except `/health`. `POST /procs/<id>/reload` (flutter fast path, see Steps) exists in the same router as of the 2026-06-17 flutter daemon work.
