@@ -47,11 +47,33 @@ Honest reviewer, not cheerleader. Same anti-sycophancy bar as /rate-it. If sessi
 
 Manual only. The dev triggers /close when a session reaches a natural end. Never auto-fire on token thresholds: deciding "this session is done" is what makes the retrospective land.
 
-## Lifecycle markers (host app integration)
+## Host app integration (Claude Conductor)
 
-The first line of output, before anything else (before Phase 1, as plain text - not in a code block): emit `<cc-close:starting>`. This is how a hosting app (e.g. claude_usage_in_taskbar) knows the skill is genuinely running and marks the session "closing" - it must never appear anywhere except as the very first line, and never appear at all in a plain terminal session that isn't hosted by such an app's parser (harmless either way: it's a no-op line of text there). Skip this marker entirely if you are not actually going to execute this skill (e.g. arg parsing fails before any phase starts).
+When this session is hosted by Claude Conductor (claude_usage_in_taskbar), the host handles the "Closing" row state and the teardown itself - no text markers:
 
-The closing counterpart `<cc-close:done>` is emitted in Phase 6 below - it confirms the terminal is genuinely about to be killed, and must be skipped whenever Phase 6 itself is skipped.
+- **Closing state:** the host marks the row "Closing" automatically the moment a `/close` turn starts (it sees the prompt began with `/close`). Nothing to emit for this.
+- **Teardown:** confirmed by calling the `close_session` MCP tool in Phase 6 (see below), NOT by any text output. The host then ends the session and kills the process at turn completion.
+
+If the `close_session` tool isn't available (a plain terminal session not hosted by Conductor), just skip it - the Phase 6 script still closes the terminal as usual. Never emit `<cc-close:*>` text markers; they're retired.
+
+## Phase 0 - Safe-to-close check
+
+Runs first, before Phase 1, every time - no flag skips it.
+
+Scan the full session for dev-stated commitments: explicit multi-part asks ("we need to do X, Y, Z"), a numbered plan the dev agreed to, or any request with more than one part. For each, check whether it actually got done by the time `/close` was invoked.
+
+This is distinct from Phase 1 step 5 (Claude's own unexecuted "want me to...?" offers) - this catches things the dev asked for, not things Claude proposed unprompted.
+
+If everything the dev asked for was completed: proceed silently to Phase 1, no output from this phase.
+
+If anything is unfinished AND this `/close` was triggered interactively (the dev typed it, or it's a live chain the dev is watching): print a short list (what was asked, what state it's in), then ask via `AskUserQuestion` with exactly two options:
+
+- **Finish it first** - pause `/close`, do the unfinished work, then resume at Phase 1.
+- **Close anyway** - proceed through the rest of `/close` with the item left unfinished. Hand it to Phase 3 to be filed as a `task` todo (same treatment as an unfinished offer) so it isn't lost.
+
+If anything is unfinished AND `/close` was chained non-interactively (`/sleep-when-done`, autopilot, or any unattended run with nobody to answer a prompt): never block on `AskUserQuestion` - auto-file each unfinished item straight to Phase 3 as a `task` todo (same treatment as "close anyway") and continue.
+
+No silent-drop path either way - every unfinished item either gets done now, or gets filed.
 
 ## Phase 1 - Retrospective
 
@@ -86,6 +108,7 @@ Run in this order:
 
 1. **Memory writes.** Per the auto-memory protocol in CLAUDE.md. For each correction or non-obvious confirmation from Phase 1, write or update the appropriate memory file and update MEMORY.md index. Skip if nothing qualifies. Never invent memories to look productive.
 2. **`.claude/todos/`** Write a separate `.md` file per item from:
+   - Phase 0 (unfinished dev commitments where the dev chose "close anyway") - tag `**Type:** task`.
    - Phase 1 step 5 (unfinished offers) - tag `**Type:** task`.
    - Phase 1 steps 3-4 (repeated manual steps, skill rule violations) - tag `**Type:** skill-improvement`, Approach section names the skill file involved.
 
@@ -123,7 +146,7 @@ If no chained commands, skip this phase.
 - Any chained command in Phase 5 failed.
 - Any background work is still running in this session: spawned `Agent` with `run_in_background: true`, active `/loop`, or pending `ScheduleWakeup`. Check before killing.
 
-If all clear: first emit `<cc-close:done>` on its own line as plain text (this is the host app's confirmation that the terminal is genuinely about to die - never emit it if any skip condition above applies). Then run for your OS (literal paths hardcoded - dynamic `$env:` expressions fail the harness permission matcher and cause per-invocation prompts):
+If all clear: first, if the `close_session` MCP tool is available (Conductor-hosted session), call it once - this is the host's authoritative teardown confirmation, so the session ends and its process is killed at turn completion. Never call it if any skip condition above applies; skip it silently in a plain terminal session where the tool doesn't exist. Then run for your OS (literal paths hardcoded - dynamic `$env:` expressions fail the harness permission matcher and cause per-invocation prompts):
 
 **Mac/Linux:**
 ```sh
