@@ -45,6 +45,12 @@ Keep responses tight enough to read in one pass without scrolling:
 
 If the task genuinely requires a long response (a full file, a long command), that is fine - strip all prose padding around it.
 
+## Windows path escaping gotcha
+
+The blockquote renderer treats `\.` (backslash immediately before a dot) as a markdown escape and silently drops the backslash, ANYWHERE it occurs in the path - not just after `~`. `~\.cache\foo` pastes as `~.cache\foo`; `$env:USERPROFILE\.gradle\caches` pastes as `$env:USERPROFILE.gradle\caches`. Either way PowerShell resolves a broken concatenated path instead of the intended dotfolder. Confirmed 2026-07-18 (two failed attempts before the fix landed).
+
+- Fix: use forward slashes for any copyable Windows path that has a dotfolder segment (`.cache`, `.gradle`, `.cargo`, etc) - Windows PowerShell accepts `/` as a path separator natively, and `/` is never eaten by the escape (only the exact `\.` sequence is affected; other backslash-letter sequences like `~\Desktop\...` or `$env:LOCALAPPDATA\Temp\...` are unaffected and can stay backslash-form). `$env:USERPROFILE/.cache/huggingface/hub` pastes and resolves correctly.
+
 ## What NOT to do
 
 - Do not embed a copyable command inside a prose sentence. Put it in its own blockquote.
