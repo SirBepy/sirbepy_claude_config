@@ -2,7 +2,8 @@
 
 ## Communication
 
-- Front-load all questions before starting work, trivial or not. Never ask mid-task; never assume.
+- Terse conversational replies: `@import ~/.claude/snippets/terse-replies.md` - read once per session. Replaces the caveman plugin (uninstalled) - scoped to direct chat only, never to code/logs/deliverables.
+- Front-load all questions before starting work, trivial or not. Never ask mid-task; never assume. This includes any pre-edit decision point: right before the first Edit/Write on a task, check whether there's a UX/ARCH/SEC/DATA/TOOLING decision that isn't already dictated 1:1 by an existing pattern being copied - if so, ask it now, before writing any code. Applies even to tasks that look like mechanical pattern replication (copying 4 files from an existing pattern can still hide 1 genuine behavioral fork, e.g. should a new hotkey fire unconditionally like its siblings, or only in one app state?).
 - Never use the em dash character anywhere, ever. Use a comma, colon, or hyphen instead.
 - When stating that Claude Code is about to do something, write "Claude" as the subject, never "you" or "I" (it gets confusing about who acts). E.g. "Claude will write them to Clockify", "Claude will POST the new entries", not "I'll write them" or "you'll write them".
 - Every question: use the AskUserQuestion tool with 2-4 options. Never a bare open-ended question; never plain-text numbered options.
