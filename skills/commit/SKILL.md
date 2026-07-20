@@ -144,7 +144,16 @@ If no `package.json` exists, say so and stop.
 - Never add `Co-authored-by: Claude` or any AI attribution.
 - Never chain commands. One command per Bash call. No `&&`, `;`, or `|`.
 - Never use `cd` before git commands. Use `git -C /absolute/path <command>`.
-- Stage files by name. Never `git add -A`.
+- Stage files by name. Never `git add -A`. **Exception - mass deletion/move of tracked files:** when a commit's whole purpose is deleting or moving many tracked files (e.g. a framework rewrite wiping an old tree), staging each path by name is impractical; use `git add -u <path>` scoped to the specific tree being wiped, never a bare repo-wide `git add -u` (which would also sweep in any unrelated uncommitted edits sitting elsewhere in the repo). It only stages changes to already-tracked files (never adds untracked ones), so it stays within the "know what you're staging" intent while `-A` does not. Still never `-A`. Sanity-check `git status` after, and if the deletion set is mixed with unrelated edits, split them.
+
+## Merge commits
+
+Merges go through this skill's flow too - never a raw `git merge` + push that lands an unreviewed merge commit, and never `git commit` directly.
+
+- **When a merge is needed:** a non-fast-forward push (remote has commits local never pulled) or deliberately absorbing superseded remote history into a new line of work.
+- **Prefer the least-surprising resolution.** If a plain `git pull --no-rebase` merges cleanly and the result is what you want, take it. Only reach for `git merge -s ours <remote-ref>` when you intentionally want to KEEP local content and record the remote history as absorbed-but-superseded (e.g. an old framework version preserved on a legacy branch).
+- **Message:** use a `MERGE:` prefix and state plainly what was absorbed and where the superseded content still lives, e.g. `MERGE: absorb remote React v2.7 into history (content preserved on legacy/react-v2; Flutter tree unchanged)`.
+- **Hard stops still apply.** `git rebase` (rewrites shared history) and force-push are NOT merge resolutions - do not reach for them to avoid a merge commit. In an autopilot/unattended run, force-push is a hard stop; park it rather than guessing.
 
 ## Splitting one file across commits (partial staging)
 
