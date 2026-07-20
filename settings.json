@@ -241,7 +241,7 @@
     "padding": 0
   },
   "enabledPlugins": {
-    "caveman@caveman": true,
+    "caveman@caveman": false,
     "rust-analyzer-lsp@claude-plugins-official": true,
     "superpowers@claude-plugins-official": false
   },
@@ -260,7 +260,6 @@
     }
   },
   "alwaysThinkingEnabled": true,
-  "effortLevel": "high",
   "tui": "fullscreen",
   "voice": {
     "enabled": true,
