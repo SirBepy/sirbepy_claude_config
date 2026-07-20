@@ -35,24 +35,47 @@ When in doubt, label HARD.
 
 ## Step 4 - Dry-run confirmation
 
-Show classification before touching anything:
+Show the classification before touching anything, as a clear standalone report. This is a
+**deliverable Joe must read** before approving, so it MUST be delivered correctly:
+
+- **Do NOT wrap it in, or precede it with, an `AskUserQuestion` call.** Joe's client does not
+  render text emitted before/around a tool call (see memory `feedback-no-text-before-question-tool`
+  and todo 80) - a same-turn AUQ erases this report and buries the choice. This gate deliberately
+  overrides the global "every question via AskUserQuestion" rule, exactly as `/rate-it` does.
+- Emit the report as the turn's **FINAL message with no tool call after it**, then stop and wait for
+  Joe's plain-text reply.
+
+The report has three parts:
+
+**1. Dedupe result** - the `deleted <id> - duplicate of <id>` lines from step 2, or "No duplicates found."
+
+**2. EASY set** - a markdown table, one row per EASY todo, so Joe can see at a glance what each one
+touches. Do not just list filenames:
 
 ```
-EASY (will auto-execute in order):
-  01-fix-auth-redirect.md
-  04-rename-button-label.md
+### EASY - will auto-execute in id order (each verified first, then `/commit`)
 
-HARD (queued for you to pick):
-  02-redesign-onboarding-flow.md
-  05-migrate-database-schema.md
+| id | What it does | Area / files touched | Why EASY |
+|----|--------------|----------------------|----------|
+| 99 | CountModal title truncates via CSS instead of a hardcoded 20-char JS cap | `frontend/src/components/CountModal.tsx` | one component, clear acceptance, no decision |
+| 111 | Remove the dead `toggleTheme` export | `frontend/src/hooks/useTheme.ts` | single-file dead-code drop |
 ```
 
-If any listed todo has an active, non-stale claim in `.claims/` (per the contract), mark it `[claimed by another session - will skip]`.
+Keep "What it does" to one plain sentence and "Why EASY" to a short phrase. If a listed todo has an
+active, non-stale claim in `.claims/` (per the contract), add ` [claimed by another session - will
+skip]` in its row.
 
-Ask via AskUserQuestion:
-- "Looks good, run it" - proceed to step 5
-- "Reclassify something" - dev names which todo to move; update and re-present
-- "Cancel" - stop, no changes
+**3. HARD queue** - a compact count plus the ids, so Joe knows what's parked without a wall of text
+(e.g. "62 HARD todos parked for step 7 - refactors, IA/design, tooling/CI, external-service, and
+decision todos"). The full pickable list comes later, in step 7.
+
+Then close the message with a plain-text prompt (NOT a tool call):
+
+> Reply **run it** to execute the EASY batch, **reclassify `<id>`** to move a todo between EASY/HARD
+> first, or **cancel** to stop. Nothing is touched until you reply.
+
+On Joe's reply: `run it` -> step 5; `reclassify <id>` -> update the label, re-emit the report, wait
+again; `cancel` -> stop, no changes.
 
 ## Step 5 - Evaluate EASY todos before executing
 
@@ -78,13 +101,22 @@ If a todo hits a blocker: release its claim, surface the blocker, stop that todo
 
 ## Step 7 - Surface HARD todos
 
-Once all EASY todos are done (or if none existed), ask via AskUserQuestion:
+Once all EASY todos are done (or if none existed), present the HARD queue the same way as step 4 -
+as the turn's **FINAL message with no tool call after it**, never buried in an `AskUserQuestion`
+(same reason: pre-tool text is invisible to Joe). Render it as a table so the full list is readable,
+not capped at 4:
 
-Question: "Which todo do you want to tackle next?"
-Options: one per HARD todo (id + one-line title). Cap at 4 shown; list extras as plain text below.
+```
+### HARD - pick one to tackle next (`/pickup <id>` or just name it)
 
-If dev picks one: execute inline (same flow as step 6, claim included).
-If dev skips: stop. Output remaining HARD todo ids as a reminder.
+| id | What it does | Area |
+|----|--------------|------|
+| ...one row per HARD todo... |
+```
+
+Close with a plain-text prompt: "Name an id to execute it inline now, or say done to stop." On reply:
+a chosen id -> execute inline (same flow as step 6, claim included); done/skip -> stop and leave the
+HARD ids listed as the reminder.
 
 ## Notes
 
