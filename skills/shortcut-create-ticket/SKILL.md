@@ -1,176 +1,176 @@
 ---
 name: shortcut-create-ticket
-description: Triggers on /shortcut-create-ticket only. Files a new Shortcut story for the dev, mirroring defaults from his existing assigned tickets, then logs the result.
+description: Triggers on /shortcut-create-ticket only. Files a new Shortcut story for the dev using pinned defaults (no reference-ticket lookup), then logs the result.
 ---
 
 # /shortcut-create-ticket
 
-> File a new Shortcut story for the dev (`@josipmui`). Infer every default from tickets already assigned to him. Log every ticket you create so we can eventually pin real defaults.
+> File a new Shortcut story for the dev (`@josipmui`). All defaults are PINNED below — do not search other tickets to infer them. Log every ticket you create.
 
 ## Why this skill exists
 
 - Airion (PM) files epics, not tickets. the dev has to file his own.
-- The Shortcut MCP splits creation across two calls: `stories-create` has no custom_fields/estimate/workflow_state params, `stories-update` is where those land. Skipping the update call leaves the ticket half-configured.
-- Custom field values are opaque UUIDs, nobody remembers them.
+- Custom field values are opaque UUIDs, nobody remembers them — so they're pinned here.
 - the dev is solo on the FE side of `zng-admin`, so branch name generation is NOT part of this skill.
 
-## Required tools
+## API access
 
-- `mcp__shortcut__stories-search` (find the dev's reference tickets)
-- `mcp__shortcut__stories-get-by-id` with `full: true` (read custom_fields from a reference)
-- `mcp__shortcut__stories-create`
-- `mcp__shortcut__stories-update` (custom fields, estimate, workflow state)
-- `mcp__shortcut__iterations-get-active` (if no reference ticket supplies one)
+REST is the primary path (the Shortcut MCP is frequently not connected). A single `POST /api/v3/stories` accepts everything: name, description, type, owner, group, epic, workflow state, estimate, AND custom_fields — no two-call split needed.
 
-If `stories-update` is missing/denied, stop and tell the dev to loosen `.claude/settings.local.json`.
+Token (BOM-safe read — `~/.claude/.env` can carry a BOM on any line):
 
-## the dev's fixed identity
+```bash
+TOKEN=$(grep -a SHORTCUT_API_TOKEN ~/.claude/.env | sed 's/^\xef\xbb\xbf//' | cut -d= -f2 | tr -d '\r')
+curl -s -X POST "https://api.app.shortcut.com/api/v3/stories" \
+  -H "Content-Type: application/json" -H "Shortcut-Token: $TOKEN" -d @payload.json
+```
+
+If the MCP tools ARE connected, they work too (`stories-create` + `stories-update` split), but REST is fewer moving parts.
+
+## Pinned identity & defaults
 
 These never change. Hardcode them, don't re-derive:
 
 - User ID: `699c76fe-9076-4424-ba22-2bb3534f417e`
 - Mention name: `josipmui`
-- Team: `ZNG ENG TEAM` (`6880fd7c-2327-429c-9483-f1490a6cfed3`)
-- Default story type: `feature`
-- Default workflow: `ENG - Core Workflow` (id `500018252`). Typical starting state: `To Do` (id `500018254`).
-- 1 story point ≈ 4 hours of work. Estimate accordingly.
+- Team / group_id: `ZNG ENG TEAM` (`6880fd7c-2327-429c-9483-f1490a6cfed3`)
+- Workflow: `ENG - Core Workflow` (`500018252`). States: To Do `500018254`, In Progress `500018255`, Testing `500018257`. Default To Do; use In Progress/Testing when the work is already done (say so in the report).
+- Story type: `feature` for new functionality, `bug` for defects, `chore` for cleanup/analytics/config. Infer from the work; don't ask.
+- 1 story point ≈ 4 hours of work.
+- Iteration: default **none** — no ZNG iteration has been active since Q2'26 started. Only set one if the dev names it. Staleness check: if this assumption is more than one quarter old, call `iterations-get-active` (or `GET /api/v3/iterations?status=started`) once before falling back to none, and update this line's date if an iteration is now active.
+- Stevan (BE) user ID, for BE tickets filed on his behalf: `689917a7-ff0b-4b12-90dc-74bc55ce5915`
+
+### Pinned custom fields (verified 2026-07-16)
+
+Always send all five. `{field_id, value_id}` pairs:
+
+| Field | field_id | Values |
+|---|---|---|
+| Skill Set | `6216069e-0b41-45b7-8f1f-7d5e8b9b5983` | Frontend `6216069e-e3ed-403b-804c-f678c58b61a7` |
+| Technical Area | `6216069e-ae53-4892-a4f2-d9cc796f1484` | Web App `6881029c-3921-4900-ad9a-197d3755d25f` |
+| ZNG: Product Area | `6881002d-700f-4bb7-b919-6cf8880ccdb9` | WebApp: Billers, RPPS, Billing Accounts `688101d5-cf51-4616-8aad-ed52a9b9a45b` |
+| Priority | `6260361c-cc5f-475f-9758-ea5b740e5b81` | High `6260361c-8f25-4cfd-941c-d32094abaca0`, Medium `6260361c-7ae3-4d8f-9594-fdff9c39fe4e` |
+| Release | `68f8e559-4a18-4a6e-be1c-fa2f5aaa4fdb` | ALWAYS **Next release** `698b4bce-ecd7-44c3-b62a-2b49b2506c1d` (the dev renumbers manually later) |
+
+**Repo → field mapping:**
+
+| Repo | Skill Set | Technical Area | Product Area |
+|---|---|---|---|
+| zng-app | Frontend | Web App | pick per feature: `WebApp: Global`, `WebApp: Loan Creation`, `WebApp: Billers, RPPS, Billing Accounts` |
+| zng-admin | Frontend | Admin Portal | usually `AP: Billers` |
+| zng-biller | Frontend | Biller Portal | usually none |
+| zng-api | Backend | Web App | `WebApp: Global` |
+
+**Missing value_id?** Only the UUIDs listed above are pinned. When a needed value (e.g. Technical Area "Admin Portal", Priority "Low") isn't listed: `GET /api/v3/custom-fields`, find it, use it, AND append it to the table above so it's pinned next time. Never invent a UUID.
+
+### Pinned epics (refresh when stale)
+
+Current ZNG-era epics (as of 2026-07-16) — offer the plausible ones as options, don't ask open-ended:
+
+- `53696` — ENG: ZNG - Biller Deeplink + Landing Page UI/UX (biller flow, deeplinks, landing pages)
+- `50688` — ENG: Bug pool:V2 (prod bugs with no feature epic)
+- `53450` — ENG: Implement the AP: Biller Configuration Management (admin portal biller config)
+- `54104` — ENG: ZNG - Design & Implement Biller Portal (zng-biller)
+- `54105` — ENG: ZNG - Non-RPPS Biller Payments & Remittance
+- `53321` — ENG: Loan Creation Funnel Optimizations
+- none — fine for standalone bugs/chores (the dev often files without an epic)
+
+Staleness check: if none of these fit, or the newest pinned epic is >1 quarter old, pull the epics off the dev's 5 most recently updated stories (`search/stories?query=owner:josipmui !is:archived`) and refresh this list.
 
 ## Flow
 
 ### 1. Front-load questions (AskUserQuestion, never open-ended)
 
-Ask the dev in one batch:
+Ask ONLY what can't be inferred, in one batch:
 
-1. **Title** — open input. Hint the usual prefix `FE: AP: ...` unless he says otherwise.
-2. **Description source** — options: "I'll paste it", "Draft from this conversation", "Mirror another ticket and tweak".
-3. **Related ticket** (for epic/iteration inheritance) — options: a specific `sc-XXXXX`, "pick from my recent tickets", "none".
-4. **Priority** — options: Low / Medium / High / Urgent.
-5. **Estimate (story points, 1pt = 4h)** — options: 1 / 2 / 3 / 5 / 8 / "let me think".
+1. **Title** — propose one (see title style below) with an alternative; the dev picks or types his own.
+2. **Epic** — offer 2-3 plausible options from the pinned list (mark a recommendation). Do NOT ask him to name a reference ticket.
+3. **Priority** — Low / Medium / High. Recommend one based on the work.
+4. **Estimate (1pt = 4h)** — 1 / 2 / 3 / 5, with a recommendation.
 
-Never ask mid-task. If the user's initial invocation already provided some of these (e.g. `/shortcut-create-ticket sc-53840 as reference, high priority, 3 points`), skip those questions.
+Description defaults to "drafted from this conversation" — don't ask unless the dev has a spec to paste. Skip any question the invocation already answered (e.g. `/shortcut-create-ticket high priority, 2 points`).
 
-### 2. Pick the reference ticket
+**Title style** (match the dev's existing tickets, not invented conventions):
+- zng-app features/chores: `FE: <verb phrase>` — e.g. `FE: Remove biller address dependency from loan creation`
+- zng-app bugs: `[FE] Area > Sub: symptom` — e.g. `[FE] Login > Sign up: loan link redirect is lost after registration`
+- zng-admin: `FE: AP: ...` — AP means Admin Portal; NEVER use it for zng-app tickets
+- zng-biller: `FE: BP: ...`
+- zng-api (filed for Stevan): `BE: ...`
 
-- If the dev named one, use it.
-- Otherwise call `stories-search` with `owner: "josipmui"` and `isArchived: false`. Take the 3-5 most recently updated. Show them with AskUserQuestion and let him pick.
-- Read the reference with `stories-get-by-id` `full: true`. Pull: `team_id`, `epic_id`, `iteration_id`, `workflow_id`, each `custom_fields[].field_id`/`value_id`, the "Release" value.
+### 2. Duplicate check (MANDATORY — never skip)
 
-### 2.5. Duplicate check (MANDATORY — never skip)
+Before creating, search for an existing ticket covering the same work:
 
-Before calling `stories-create`, search for an existing ticket that covers the same work. Someone else on the team may have already filed one.
+- `GET /api/v3/search/stories?query=<distinctive keyword> !is:archived` — pick a distinctive noun from the work (e.g. `biller address`, `redirect route`), not the boilerplate prefix. Run 1-2 keyword variants.
+- If a plausible match shows up, stop and ask (AskUserQuestion): use existing / file anyway / cancel — include the match's ID + title.
+- If nothing matches, proceed and note in the report that the check ran.
 
-- Call `stories-search` with the reference's `epic` (when set) plus `isArchived: false`, and skim the returned names for overlap with the proposed scope.
-- Run a second `stories-search` with `name: "<distinctive keyword>"` and no epic filter, in case the existing ticket lives elsewhere. Pick a distinctive noun from the proposed work (e.g. `landing page URL`, `redirect route`) — not the boilerplate prefix.
-- If a plausible match shows up, stop and ask with AskUserQuestion whether to (a) use the existing ticket, (b) file a new one anyway because the scope differs, or (c) cancel. Include the existing story ID + title so it's trivially judgeable.
-- If nothing matches, proceed to step 3 and note in the reply that the check was performed ("No existing ticket found for X").
+### 3. Description — pick the smallest shape that fits
 
-### 2.8. Description structure — pick the smallest shape that fits
-
-**Default: keep it short.** The dev consistently feels Claude-generated tickets are too long. When in doubt, write less. Aim for a description you'd write yourself in a hurry — the engineer doing the work can ping you if they need more.
-
-**Pick the shape by ticket type:**
+**Default: keep it short.** The dev consistently feels Claude-generated tickets are too long. When in doubt, write less.
 
 #### Bug filed for a known engineer
-Just the essentials. No headings, no QA acceptance criteria. Plain prose, ≤ 10 lines:
+Plain prose, ≤ 10 lines, no headings, no QA acceptance criteria:
 - One short paragraph: what's happening, what's expected.
-- A "Repro:" section: 3-5 numbered steps OR a tight bullet list (entity IDs, exact API call, observation).
-- (Optional) one line of hypothesis if you have one.
-
-Example shape:
-```
-DELETE /foo/:id returns 200 but the deleted row is still in subsequent GET responses.
-Looks like soft-delete fires but the relation read isn't filtering deletedAt IS NULL.
-
-Repro:
-- Entity X
-- Hit DELETE
-- Observe: still present in masks[] of response AND in fresh GET
-```
-
-That's it. Don't add ACTION ITEMS or ACCEPTANCE CRITERIA blocks for a single-symptom bug.
+- A "Repro:" section: 3-5 numbered steps OR a tight bullet list.
+- (Optional) one line of hypothesis.
 
 #### Chore / small refactor / single tweak
-1-3 sentences. State what, why, where. No headings.
+1-3 sentences. What, why, where. No headings.
 
-#### Feature filed for the dev to pick up later (Airion-style)
-Use the full three-section template ONLY when the ticket may be picked up cold by someone else (PM reference, future engineer, QA hand-off). Heuristic: if this ticket might sit in the backlog for weeks before someone unrelated picks it up, write it for that person.
-
-Template (Airion's standard, 2026-04-14):
-1. **`# CONTEXT`** — plain English, no file paths or jargon. 2-5 sentences.
-2. **`# ACTION ITEMS`** — the *what*, not the *how*. 3-6 bullets naming what should exist when done. No file paths, no implementation steps. Delete any bullet that starts explaining *how*.
-3. **`# ACCEPTANCE CRITERIA (QA)`** — numbered, scenario-grouped, runnable by someone who has never seen the code. Include a **Regression** group.
+#### Feature for cold pickup (Airion-style)
+Full three-section template ONLY when someone unrelated may pick it up cold weeks later:
+1. **`# CONTEXT`** — plain English, no file paths. 2-5 sentences.
+2. **`# ACTION ITEMS`** — the *what*, not the *how*. 3-6 bullets.
+3. **`# ACCEPTANCE CRITERIA (QA)`** — numbered, scenario-grouped, runnable by a stranger. Include a **Regression** group.
 
 Skip this template for anything smaller than a multi-day feature.
 
 #### Relationships
-Do NOT add a `# RELATED` text block. Use native Shortcut story links (they appear in the Relationships panel and stay in sync). The MCP doesn't expose link creation, so call the REST API directly:
+No `# RELATED` text block — use native story links:
 
 ```bash
-source ~/.claude/.env && curl -s -X POST "https://api.app.shortcut.com/api/v3/story-links" \
-  -H "Content-Type: application/json" \
-  -H "Shortcut-Token: $SHORTCUT_API_TOKEN" \
+curl -s -X POST "https://api.app.shortcut.com/api/v3/story-links" \
+  -H "Content-Type: application/json" -H "Shortcut-Token: $TOKEN" \
   -d '{"subject_id":<new_story_id>,"object_id":<related_story_id>,"verb":"relates to"}'
 ```
 
-Verbs: `relates to` (default), `blocks`, `duplicates`. Create a link for every BE/paired-FE ticket the new story depends on or pairs with.
+Verbs: `relates to` (default), `blocks`, `duplicates`. Link every BE/paired-FE counterpart.
 
-**Sizing reminder:**
+**Sizing:** prefer smaller scopes AND smaller descriptions. Two independently shippable chunks = two tickets. If the dev is in a rush, one bigger ticket is fine.
 
-- Prefer smaller scopes AND smaller descriptions. If you find yourself writing acceptance criteria for a single-symptom bug, stop — that's overkill.
-- If a ticket covers two independently shippable chunks (e.g. admin side + app side), split it.
-- If the dev is in a rush, one bigger ticket is fine — trust his judgment.
+### 4. Create — single REST POST
 
-**Reason for the smaller default (2026-05-26):** the dev pushed back that Claude-generated tickets are too big. Bugs filed for known engineers don't need the full Airion template — Stevan asked for "mali ticket" and got a wall of acceptance criteria. Match the audience.
-
-**Reason the full template still exists (Airion 2026-04-14):** "CONTEXT stupid simple, everything else as eng-oriented as you want. Referencing old SC tickets of past engineers has come in handy multiple times." Apply it when the ticket is genuinely cold-pickup material.
-
-### 3. Build the create payload
-
-From the reference, inherit: `team`, `epic`, `iteration`, `owner` (always the dev, regardless of reference), `type: feature` (unless the dev said bug/chore).
-
-Call `stories-create`. Capture the returned story ID.
-
-### 4. Apply everything `stories-create` couldn't
-
-Call `stories-update` with:
-
-- `custom_fields`: array of `{field_id, value_id}` mirroring the reference, EXCEPT override the Priority value_id to match what the dev chose. Known field IDs (verify against `custom-fields-list` if unsure):
-  - Skill Set: `6216069e-0b41-45b7-8f1f-7d5e8b9b5983` — Frontend: `6216069e-e3ed-403b-804c-f678c58b61a7`
-  - Priority: `6260361c-cc5f-475f-9758-ea5b740e5b81` — values vary (High `6260361c-8f25-4cfd-941c-d32094abaca0`, others to be discovered via `custom-fields-list`)
-  - ZNG: Product Area: `6881002d-700f-4bb7-b919-6cf8880ccdb9`
-  - Technical Area: `6216069e-ae53-4892-a4f2-d9cc796f1484` — Web App: `6881029c-3921-4900-ad9a-197d3755d25f`
-  - Release: `68f8e559-4a18-4a6e-be1c-fa2f5aaa4fdb` — ALWAYS set to **Next release** (`698b4bce-ecd7-44c3-b62a-2b49b2506c1d`) regardless of what the reference ticket had. the dev adjusts release numbers manually in the UI afterward.
-- `estimate`: the point value the dev chose
-- `workflow_state_id`: `500018254` ("To Do") unless the dev specifies otherwise
-
-If any custom field ID above looks stale, re-fetch with `custom-fields-list` before proceeding.
+One `POST /api/v3/stories` with: `name`, `description`, `story_type`, `owner_ids`, `group_id`, `epic_id` (if chosen), `workflow_state_id`, `estimate`, and the full 5-field `custom_fields` array. Capture the returned story ID and `app_url`. Then add story links (step 3 shape) if any.
 
 ### 5. Log it
 
-Append to `~/.claude/skills/shortcut-create-ticket/log.md` using this shape:
+Append to `~/.claude/skills/shortcut-create-ticket/log.md`:
 
 ```
 ## sc-XXXXX — <title>
 - Date: YYYY-MM-DD
-- Reference ticket: sc-YYYYY
 - Team: <name>
-- Epic: <id> <name>
-- Iteration: <id> <name>
+- Epic: <id> <name> (or none)
+- Iteration: <id or none>
 - Priority: <value>
 - Estimate: <points>
 - Skill Set / Technical Area / Product Area / Release: <values>
+- Workflow state: <state>
+- Links: <relations or none>
 - URL: https://app.shortcut.com/zirtue/story/XXXXX
+- Notes: <dup-check keywords, anything unusual>
 ```
 
-Why: after ~10 entries, the dev + I review the log and pin real hardcoded defaults so the reference-ticket step becomes optional.
+Why: the log is the audit trail for the pinned defaults. If a run contradicts a pinned value (renamed epic, new field), fix the pinned section in the same session.
 
 ### 6. Report
 
-Tell the dev the new story ID + URL and which reference was used. If the dev also wants a draft comment to post on a related ticket (e.g. the "soft blocker" pattern), offer to draft it but do NOT post without approval.
+Tell the dev the new story ID + URL and which defaults were applied. If he also wants a draft comment on a related ticket, offer to draft it but do NOT post without approval.
 
 ## What this skill never does
 
 - Never posts comments without explicit approval.
 - Never updates existing tickets other than the one just created.
 - Never generates branch names. the dev handles Git.
-- Never invents custom field values. If a value isn't on the reference ticket, ask.
+- Never invents custom field UUIDs. Fetch unknown ones from `custom-fields-list` / `GET /api/v3/custom-fields` and pin them.
