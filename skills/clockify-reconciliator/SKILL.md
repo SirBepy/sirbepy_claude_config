@@ -22,6 +22,7 @@ argument-hint: <project-name> [lookback]
 
 - `CLOCKIFY_API_KEY` env var set (or present in `~/.claude/.env`).
 - If project config has `hubstaff_org_id` set: `HUBSTAFF_REFRESH_TOKEN` must be present in `~/.claude/.env`. If missing, skip HubStaff comparison and warn.
+- For the screenshot preflight auto-login (step 2): `HUBSTAFF_EMAIL` and `HUBSTAFF_PASSWORD` in `~/.claude/.env`. If either is missing, fall back to manual login (wait for the dev in the Playwright window) instead of auto-filling.
 - Project config file exists. If missing, print the template below and abort.
 
 ## Project config template
@@ -53,9 +54,13 @@ Run before any reconciliation work so the dev can fix auth without waiting throu
 - Resolve the window now: if `[lookback]` was given, parse it; else Monday 00:00 of current week to now, in dev's timezone. (Step 3 will skip resolution if already done here.)
 - Compute all Mon-Sun calendar weeks that fall within that window.
 - Open Playwright browser. Navigate to the weekly URL for the first week: `https://app.hubstaff.com/organizations/{hubstaff_org_id}/time_entries/weekly?date={mon}&date_end={sun}&filters%5Buser%5D={hubstaff_user_id}`.
-- If redirected to `account.hubstaff.com/login`: stop immediately. Tell the dev exactly which weeks would be screenshotted. Wait for manual login in the Playwright window, then re-navigate once.
-  - Still on login page after retry: warn that screenshot step will be skipped, close the tab, continue with reconciliation. Mark screenshot step as "skipped - auth failed preflight".
-  - Now authenticated: close the tab, continue.
+- If redirected to `account.hubstaff.com/login`:
+  - If `HUBSTAFF_EMAIL`/`HUBSTAFF_PASSWORD` are both set: fill the email/password fields, submit, wait for navigation, then re-check the URL.
+    - Still on login page after submit (bad creds, 2FA challenge, CAPTCHA): warn that screenshot step will be skipped, close the tab, continue with reconciliation. Mark screenshot step as "skipped - auto-login failed, may need manual re-login". Tell the dev exactly which weeks would have been screenshotted.
+    - Now authenticated: close the tab, continue.
+  - If either env var is missing: stop immediately. Tell the dev exactly which weeks would be screenshotted. Wait for manual login in the Playwright window, then re-navigate once.
+    - Still on login page after retry: warn that screenshot step will be skipped, close the tab, continue with reconciliation. Mark screenshot step as "skipped - auth failed preflight".
+    - Now authenticated: close the tab, continue.
 - Not redirected: close the tab, continue.
 
 ### 3. Resolve window
@@ -85,7 +90,7 @@ For each target:
 - If duration > 3h, plan split into 1-3h chunks (prefer 1h or 2h). Respect original start + end total.
 - Distribute the day's commits across chunks by rough chronology: earliest commits → earliest chunks. Assume the dev worked on things in the order committed, even if the commit timestamp falls outside the chunk (e.g. commit at 18:00 can describe the 15:00-17:00 chunk if it represents that chunk's work in the dev's workflow).
 - Draft description from the chunk's assigned commit subjects. Max 80 chars. Drop filler to fit.
-- If a matched commit subject hits `ticket_regex`, append ` (53794)` using just the captured number.
+- If a matched commit subject hits `ticket_regex`, strip the matched ticket prefix from the description body (don't repeat it in the text) and append ` (53794)` using just the captured number, once, at the end only. Never leave the ticket number both leading the body and trailing in parens.
 - **Never use the same description verbatim on two chunks.** If all commits land in one chunk leaving others empty, split the description on semicolons: assign the pre-semicolon part to the first chunk and the post-semicolon part(s) to the remaining chunk(s). If there are more chunks than semicolon-delimited parts, the last non-ticket part fills the extras.
 - If a day has zero commits at all across all repos, ask the dev what was done before proposing.
 
@@ -158,5 +163,5 @@ Auth already confirmed in step 2 - no login-check needed here. For each Mon-Sun 
 - Never touch an entry that already has a non-empty description.
 - Never create entries in empty time ranges. Only operate on existing entries (splits allowed).
 - Max 80 chars per description.
-- Ticket suffix only if a matched commit carries one. One ticket per description, most relevant.
+- Ticket suffix only if a matched commit carries one. One ticket per description, most relevant. Number appears once, in parens, at the end - never repeated as a leading prefix too.
 - No em dashes. Commas or hyphens.
