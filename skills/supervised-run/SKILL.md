@@ -64,6 +64,8 @@ For a dynamic port to take effect, template the port flag INTO the command with 
 | Node server reading `process.env.PORT` | no `{PORT}` needed - the env var is set automatically |
 | Tool with no port flag you can find | send `"use_dynamic_port": false` and accept its built-in port |
 
+**Proxy port vs raw port (Flutter web auto-reload only):** the port you pass in `cmd` (`--web-port {PORT}`) is the RAW flutter port. The supervisor fronts it with a SEPARATE live-reload proxy on a DIFFERENT port - check `GET /procs/<id>/logs` for the line `[supervisor] live-reload proxy on 127.0.0.1:<proxyPort> -> flutter :<rawPort>` and point any browser/script at `<proxyPort>`, not `<rawPort>`. Hitting the raw port directly can cause DWDS/DDC reconnect stalls - a script or browser tab hangs indefinitely waiting for the app to finish mounting, no error, that looks like a slow cold compile but isn't fixed by waiting longer. Only switching to the proxy port fixes it reliably (restarting the process can appear to fix it once, then recur).
+
 ### Worked example (Vite project)
 
 ```http
