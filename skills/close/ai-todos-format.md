@@ -94,6 +94,34 @@ next session.
 - **Done tasks:** move the file to `done/` (create the folder if missing) and delete the task's
   PLAN.md line if present. All executors do this - never plain-delete a completed todo.
 
+## Handoff mode - shared by `/create-todo`'s bare invocation and `/handoff`
+
+Both entry points produce the exact same artifact; this is the one place that behavior is
+defined, so neither drifts out of sync with the other.
+
+Type is always `task`. The todo IS the session handoff - be VERY descriptive; length is fine
+when it helps the next AI. Fill every section from the session itself, no clarifying questions:
+
+- **Goal** - what the dev is ultimately trying to achieve (the original ask, not the last subtask).
+- **Context** - what was tried and in what order, where it failed or stalled, what the
+  misunderstandings were (places the dev corrected course, wrong assumptions made), and any
+  decisions already settled so the next AI doesn't re-litigate them.
+- **Approach** - the concrete next steps as best currently known.
+- **Verify** - up to ~6 real commands the resuming session runs first (start with `git pull` if
+  the repo has a remote; include the project's fast checks if relevant).
+- **Notes** - open decisions the dev still owes answers on, plus anything that fits nowhere else.
+  If the invoking command was given a short freeform note, it goes here - it never overrides the
+  auto-derived Goal/Context.
+
+Then, always: prepend `- [ ] <id> - <short label>` to PLAN.md (create it with a `# Plan` header
+if missing) per this file's CAS edit discipline below. This is the one backlog-creation path that
+auto-plans; deferral-mode todos are NOT auto-planned - ordering the backlog is `/plan-todos`'s
+job. A handoff never edits, replaces, or deletes a prior handoff todo - each call writes a new
+file with a fresh id and a new PLAN.md line; old handoffs stay as history.
+
+Confirm by printing the filename, a one-line summary, and "pinned to top of PLAN.md". Do not
+execute the todo - filing it is the whole job.
+
 ## PLAN.md - the ordered To-Do lane
 
 Optional per project. Backlog = everything, unordered; PLAN.md = what to pull next, in order.
