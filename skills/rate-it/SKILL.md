@@ -31,37 +31,15 @@ Solo by default - main agent rates alone. Pass an integer to spawn a panel of su
 - `/rate-it N <thing>` (N is an integer 2-5) → N subagents + main, synthesized
 - Subagents do not count main agent. `/rate-it 3` = 3 subs + 1 main = 4 total scores.
 
-If solo mode (no N), skip the Dispatch + Synthesis subsections - main agent just rates and returns.
+If solo mode (no N), stop here - main agent just rates and returns. The rest of panel mode
+(lens assignment, dispatch prompt, synthesis algorithm) lives in `panel.md` next to this file;
+read it only when N was passed. Solo ratings never need that extra context.
 
-### Dispatch
+## Self-check before submitting
 
-Spawn N Agent calls in parallel (`general-purpose` subagent_type). Each gets this prompt:
-
-> You are a rating subagent for /rate-it. Read the skill file at `C:\Users\tecno\.claude\skills\rate-it\SKILL.md` and rate this hypothesis using the Flaw hunt, Role, Anti-sycophancy, Output format, and How-to-raise rules.
->
-> Hypothesis to rate:
-> <thing>
->
-> Hard constraints:
-> - Do NOT spawn further subagents. You are already a subagent.
-> - Do NOT call AskUserQuestion. You don't have access to the user.
-> - Skip the "Panel mode" and "Post-rating prompt" sections of the skill - those are main-agent-only.
-> - Return only the rating block (verdict + reasoning + How to raise).
-
-### Synthesis (main agent runs LAST)
-
-Order matters: main rates AFTER reading subagent outputs. Main rating first contaminates the merge with anchor bias.
-
-1. Wait for all N subagent results.
-2. Run own flaw hunt + own rating, informed by subagent flaws but not bound to their score.
-3. Final score = median of all (N + 1) scores. Ties round down (harsher).
-4. Flaws = union of all flaws found across subagents + main; dedupe near-duplicates, keep the sharpest phrasing.
-5. How-to-raise = best 2-3 lifts across all outputs, ordered ascending by unlocked score.
-6. Surface dissent: if any individual score deviates ≥2 points from the final median, append one line: `Dissent: 1 rater scored X/10 - [one-line reason]`.
-
-### Self-check before submitting
-
-Scan own draft output for opening positives, hedging language, or silver linings before a low score. If found, regenerate. The check is the discipline - no banned-phrase list because string blacklists get routed around with synonyms.
+Applies to every rating, solo or panel. Scan own draft output for opening positives, hedging
+language, or silver linings before a low score. If found, regenerate. The check is the
+discipline - no banned-phrase list because string blacklists get routed around with synonyms.
 
 ## Role
 
