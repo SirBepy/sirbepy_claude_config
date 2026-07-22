@@ -20,7 +20,7 @@ argument-hint: <project-name> [lookback]
 
 ## Prereqs
 
-- `CLOCKIFY_API_KEY` env var set (or present in `~/.claude/.env`).
+- Clockify API key env var set (or present in `~/.claude/.env`). Uses `api_key_env` from the project config if set, else defaults to `CLOCKIFY_API_KEY`.
 - If project config has `hubstaff_org_id` set: `HUBSTAFF_REFRESH_TOKEN` must be present in `~/.claude/.env`. If missing, skip HubStaff comparison and warn.
 - For the screenshot preflight auto-login (step 2): `HUBSTAFF_EMAIL` and `HUBSTAFF_PASSWORD` in `~/.claude/.env`. If either is missing, fall back to manual login (wait for the dev in the Playwright window) instead of auto-filling.
 - Project config file exists. If missing, print the template below and abort.
@@ -34,6 +34,7 @@ clockify_workspace_id: <id>
 clockify_project_id: <id>
 clockify_project_name: <display>
 user_id: <clockify user id>
+api_key_env: CLOCKIFY_API_KEY   # optional, default CLOCKIFY_API_KEY - set to a different var name for accounts other than the default Cinnamon one
 repos:
   - /abs/path/to/repo-1
   - /abs/path/to/repo-2
@@ -46,6 +47,8 @@ hubstaff_org_id: <id>    # optional - enables HubStaff comparison step
 ### 1. Load config
 
 Read the named file. Abort with clear error listing missing required fields.
+
+**Resolve the Clockify API key here, before any API call:** use the env var named by `api_key_env` if the config sets it, else `CLOCKIFY_API_KEY`. Every Clockify request in steps 4 and 9 sends that value as the `X-Api-Key` header. Getting this wrong does not error loudly - the default key against another account's workspace returns 403 or an empty entry list, which looks exactly like "nothing to reconcile", so state which var you resolved in the run's first output line. If the resolved var is unset, abort and name it.
 
 ### 2. HubStaff screenshot preflight (skip if `hubstaff_org_id` not set)
 
@@ -68,6 +71,8 @@ Run before any reconciliation work so the dev can fix auth without waiting throu
 If `[lookback]` given, parse it. Else: Monday 00:00 of current week to now, in dev's timezone.
 
 ### 4. Fetch Clockify entries
+
+Authenticate with the key resolved in step 1 (`api_key_env` or `CLOCKIFY_API_KEY`), not with `CLOCKIFY_API_KEY` by reflex.
 
 Call `GET /workspaces/{ws}/user/{user}/time-entries?start=...&end=...&page-size=200` — do NOT pass `hydrated=true`, it bloats each entry with full user/project objects. Only fields needed: `id`, `description`, `timeInterval`, `projectId`, `billable`, `tagIds`. Bucket:
 
