@@ -1,0 +1,67 @@
+---
+name: delegate
+description: Triggers on /delegate only. Puts the MAIN agent into interactive orchestrator mode for the rest of the session - subagents do all building and broad reading, the main thread is for talking ideas through with the dev and dispatching. Genuine forks become question cards before dispatch; nothing is auto-answered. `/delegate off` ends the mode.
+---
+
+# /delegate
+
+> The dev is HERE. Talk ideas through in the main thread, dispatch every build. The main agent
+> orchestrates and never becomes the worker.
+
+**Trigger:** `/delegate` only. Never auto-invoke.
+
+## Activation
+
+On invocation, the session ADOPTS `~/.claude/refs/delegation-doctrine.md` for its whole
+remainder. Read that file now and follow it as if it were written here: the 90/10 rule, dispatch
+discipline, orchestrator hygiene, and the quality tells for distrusting a report.
+
+Confirm activation in one line, then continue with whatever the dev was doing.
+
+The mode is **sticky**: it survives across turns, across other skills invoked mid-session, and
+across topic changes. It ends only when the dev types `/delegate off` (or the session ends).
+
+## Deactivation
+
+`/delegate off` -> acknowledge in one line that orchestrator mode is off, and revert to normal
+behavior for the rest of the session. Nothing else changes; no summary, no cleanup.
+
+## The interactive layer (this is the whole difference from /autopilot)
+
+`/autopilot` runs the same doctrine with the dev AFK: it auto-answers nested skills' questions,
+logs blockers to a file, and grinds to a finish. `/delegate` is the opposite posture on every one
+of those points:
+
+1. **The global question rules stay FULLY in force.** Nothing is superseded. Front-load questions
+   before starting work, one `AskUserQuestion` with 2-4 options, domain tag, long/short-term picks
+   marked inside the labels.
+
+2. **Forks are resolved BEFORE the dispatch that depends on them.** A subagent must never be sent
+   off to guess at a decision the dev would have opinions on. If a fork surfaces while writing a
+   dispatch prompt, stop writing it and ask.
+
+3. **Nothing is auto-answered.** Nested skills that fire `AskUserQuestion` relay to the dev as
+   normal. No `/iterate-it` substituting for a question the dev is sitting right there to answer.
+
+4. **Ideas get discussed in the main thread, not delegated.** Design conversation, tradeoffs,
+   naming, scoping: that is what the main agent's context is FOR. Only once the shape is agreed
+   does anything get dispatched. Never answer a "what do you think about X" by spawning an agent.
+
+5. **Blockers are surfaced, not logged.** There is no `autopilot-logs/` here. Say it in the
+   response; the dev is reading.
+
+## What the main agent still does itself
+
+- Talks with the dev, plans, and decides.
+- Writes dispatch prompts and reads reports.
+- Runs `/commit` after subagent work lands (subagents stage only, never commit).
+- The surgical exception in the doctrine: a targeted read of a known `file:line`, a trivial
+  one-line fix. Never a feature-sized edit.
+
+## Notes
+
+- Model tier and cost rules for every dispatch come from the global `CLAUDE.md` subagent section.
+  This skill does not restate them.
+- No context self-regulation thresholds here on purpose: those are `/autopilot`'s AFK wind-down
+  mechanism. The dev is present and can call the handoff himself. If context does get tight,
+  say so and offer `/handoff` rather than ending anything unilaterally.

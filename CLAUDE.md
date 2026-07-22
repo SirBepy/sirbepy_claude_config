@@ -113,3 +113,7 @@ Every subagent dispatch passes `model: 'sonnet'` explicitly. Never default-inher
   - it's the FINAL verify/judge pass on a **high-stakes diff** (security-touching, data-loss-capable, DB migrations): one solo top-tier verifier is allowed there by default.
 - Tune `effort` freely (low for mechanical chores, higher for review/verification angles) - it's the cheap knob; model tier is the expensive one.
 - Past incident (2026-07-08): an 8-way code-review fan-out + verifiers all inherited Fable 5 and burned a painful chunk of Joe's tokens.
+
+### Full-orchestrator mode
+
+The rules above govern ordinary dispatches. When a session runs as a pure ORCHESTRATOR (main agent never builds), the mechanics live in `~/.claude/refs/delegation-doctrine.md`: 90/10 rule, scout spec packs, builder-prompt requirements, orchestrator hygiene, report quality tells. That file defers to this section for model tier, so the two never conflict. Adopted by `/delegate` (dev present) and `/autopilot` (dev AFK), not by default.

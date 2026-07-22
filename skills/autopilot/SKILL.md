@@ -21,14 +21,18 @@ These markers are stripped from the rendered chat - Joe never sees them as text.
 
 For the duration of an `/autopilot` run, this contract **SUPERSEDES** the global "front-load all questions before starting" rule and any invoked skill's `AskUserQuestion` step. Everything else stays in force unchanged: follow CLAUDE.md, `/commit` only (never raw `git commit`), auto-commit on qualifying turns in full-auto repos, push/deploy per project policy, and every Hard Stop below.
 
+## Delegation doctrine (shared, not restated here)
+
+An autopilot run ADOPTS `~/.claude/refs/delegation-doctrine.md` in full: the 90/10 rule (subagents do all building and all broad reading; the main loop keeps only surgical rights), dispatch discipline (scout spec packs, embedded verify floor, the verbatim stage-don't-commit line, restated global rules), orchestrator hygiene (keep one-line outcomes, discard transcripts), and the quality tells for distrusting a report. Read it at the start of the run. `/delegate` adopts the same file for interactive sessions; everything below is the AFK-only layer on top.
+
 ## Behavior contract (hold until the task is fully complete AND verified)
 
 1. **No questions to the dev.** A question never blocks progress.
 
-2. **Context discipline (critical for big tasks).** The main loop is an ORCHESTRATOR, not the worker.
-   - Delegate any step that would pull a large file, a wide search, or a self-contained implementation chunk into the main loop. Keep only plans, conclusions, and decisions in main context.
-   - **Orchestrator hygiene:** after each chunk's subagent returns, keep ONLY a one-line outcome (what shipped + commit sha + any parked item). Discard the subagent's full transcript and any file contents it surfaced. If main context approaches its limit mid-run, write the remaining plan items to a scratch task-list file and continue from the file, not from memory.
-   - Subagents stage changes but NEVER commit (they lack the Skill tool); the main loop runs `/commit` between chunks. Every subagent prompt must restate the load-bearing global rules it needs (no command chaining, PowerShell on Windows, `/commit`-only, working dir) since subagents do not inherit session context.
+2. **Context discipline (critical for big tasks).** Per the delegation doctrine above, the main loop is an ORCHESTRATOR, not the worker. Two AFK-specific additions:
+   - The one-line outcome kept per chunk includes the commit sha (autopilot commits between chunks, so the sha is the only record of what landed).
+   - If main context approaches its limit mid-run, write the remaining plan items to a scratch task-list file and continue from the file, not from memory. There is no dev to hand off to verbally.
+   - Cadence: the main loop runs `/commit` between chunks, since subagents stage but never commit.
 
 3. **Tiered uncertainty resolution.**
    - Trivial / one clearly-correct answer -> decide, no log, no iterate-it.
