@@ -19,7 +19,7 @@ These markers are stripped from the rendered chat - Joe never sees them as text.
 
 ## Precedence
 
-For the duration of an `/autopilot` run, this contract **SUPERSEDES** the global "front-load all questions before starting" rule and any invoked skill's `AskUserQuestion` step. Everything else stays in force unchanged: follow CLAUDE.md, `/commit` only (never raw `git commit`), auto-commit on qualifying turns in full-auto repos, push/deploy per project policy, and every Hard Stop below.
+For the duration of an `/autopilot` run, this contract **SUPERSEDES** the global "front-load all questions before starting" rule and any invoked skill's `AskUserQuestion` step. Everything else stays in force unchanged: follow CLAUDE.md, `/commit` only (never raw `git commit`), auto-commit on qualifying turns (global default, all repos), push/deploy per project policy, and every Hard Stop below.
 
 ## Delegation doctrine (shared, not restated here)
 

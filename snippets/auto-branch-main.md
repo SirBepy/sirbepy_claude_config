@@ -29,4 +29,4 @@ If a superpowers skill (or a future version that stops treating `@import`s as a 
 
 ## Composing with auto-commit
 
-If auto-commit.md is also imported, the two compose without a special touchpoint rule. Safety is structural: verification still gates the commit; every change lands as a discrete message-bearing commit so history stays auditable and per-turn revertible; auto-commit's own wrong-commit undo path is the recovery mechanism.
+auto-commit.md is now a universal default (global CLAUDE.md's Git Commits section), so it's always in effect alongside this snippet, not just when also imported. The two compose without a special touchpoint rule. Safety is structural: verification still gates the commit; every change lands as a discrete message-bearing commit so history stays auditable and per-turn revertible; auto-commit's own fold-a-correction path is the recovery mechanism.
