@@ -41,6 +41,7 @@
 ## Packages
 
 - Before suggesting OR adding any package/tool/program: a mandatory, automatic safety check - typosquat (real name?), malicious forks, known malware reports, and the ecosystem advisory DB (RustSec / `npm audit` / OSV); confirm the version you'll pin is past any known fix.
+- The advisory-DB check must run against the ACTUAL RESOLVED dependency tree, not just a registry lookup of the top-level package name: install for real (or resolve into a scratch lockfile), then run `npm audit --json` / `cargo audit` / equivalent post-resolution. A transitive dependency's CVE (filed against the sub-dependency's own name, e.g. a vulnerable package two levels down) will never surface from a pre-install, name-keyed lookup alone. Past incident: `tauri-plugin-clipboard-api` passed a by-name check clean, but post-install `npm audit` immediately flagged its transitive `valibot@0.40.0` for a known high-severity ReDoS.
 - Prefer a subagent for the research; required for anything load-bearing or crypto/network. A quick inline web search is acceptable for a single obvious package.
 - Asking gate: personal projects (those importing `full-auto.md`) auto-add once the check passes; otherwise ask before installing. If the check is inconclusive, finds no patched version, or the package looks risky - stop and ask regardless.
 
@@ -55,6 +56,7 @@
 ## Code Style
 
 - On first encounter with a project's stack, check `~/.claude/code-style/` for a matching file (e.g. `luau.md`, `react.md`) and follow its preferences. Read once per session.
+- **Comments: 2 lines typical, 4 lines HARD CAP per block, and added comment lines stay under ~25% of a file's added lines once it adds 20+ (below that only the block cap applies).** A comment earns its place by naming a constraint, a gotcha, or a measurement the code cannot show (`74px rail, 36px avatar, so 7px centres it`). Never narrate what the next line does, never restate a prop/class/function name, and never park a paragraph of design rationale in code - that belongs in the PR body, a PATTERNS/CLAUDE doc, or the commit message. Over the cap means CUT it, not reword it. Enforced at PR time by `/create-pr`'s comment-noise check. Past incident (2026-07-29): a sidebar PR shipped six- to nine-line block comments on nearly every hunk while the same files on `develop` carried two-liners; the reaction was "STOP WRITING THESE BIGGASS UNNECESSARY ASS COMMENTS".
 
 ## Execution Discipline
 
@@ -92,6 +94,14 @@ Project-local scratch (never global; skip if there's no project): `screenshots/`
 ## Persistence
 
 - Before adding any persistence (localStorage / sessionStorage / cookies / IndexedDB / disk / DB), name the specific cross-refresh/close behavior it preserves; if you can't name it, don't persist - default to in-memory (Riverpod / context / useState / module-scope). When extending an existing persistence layer, re-check the pattern still matches the current UX. Why + past incident: `~/.claude/refs/persistence.md`.
+
+## Global Knowledge Vault
+
+- Cross-project facts (true regardless of which project session it is) live in the real Obsidian vault at `C:\Users\tecno\Documents\ObsidianVault\`, not in Claude Code's per-project Auto Memory. Scope test: would this matter in a totally different project too? If yes, vault. If it's project-local (a bug workaround, a project-specific quirk), keep using native per-project Auto Memory as today, untouched by this section.
+- People: one file per person under `People\`, following the vault's own `Templates\Person.md` schema (frontmatter: name, aliases, birthday, relationship, last_seen, tags; body: `## Notes` bullets, `## Gift Ideas` block). When a name comes up, check `People\*.md` by name and `aliases` before assuming who it is - real entries already live there (e.g. `People\Bruno Kecman.md`). Disambiguation is structural, not semantic: distinct filenames + `aliases` + `tags` (e.g. `[person, friend]` vs `[person, family]`) separate same-named people/companies/projects; if still genuinely ambiguous, ask, never guess silently.
+- Other cross-project facts (preferences, hobbies, ideas) go in a loose vault note following its existing free-form style (see `Moms info.md`, `Cocktails.md`) - no rigid schema required.
+- Write directly, same as native memory - no confirmation gate. The vault's own `obsidian-git` plugin auto-backs-up on its own schedule; Claude never runs git commands inside this repo.
+- Cross-project coding standards (e.g. "always do X in Flutter") belong in `~/.claude/code-style/`, not the vault - that folder is already global and already checked on first encounter with a stack.
 
 ## Subagent-Driven vs Inline Execution
 

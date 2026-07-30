@@ -184,6 +184,14 @@ that is old but whose PID is alive is NOT stale - a long session is working; ski
 **Release:** delete `.claims/<id>.claim` when the todo completes or you abandon it. Completing
 also means: move the todo to `done/`, delete its PLAN.md line.
 
+Preferred mechanism for the completion sequence (move to `done/` + release claim + prune PLAN.md
+line, all three): `~/.claude/skills/close/complete-todo.ps1 -Id <id> [-RepoRoot <path>]`. It finds
+`.claude/todos/<id>-*.md` (errors on 0 or >1 match unless already in `done/`, in which case it
+reports and no-ops), moves it, deletes the matching claim if present, and prunes the PLAN.md line
+under this file's CAS discipline (fresh read immediately before the write). Idempotent - re-running
+against an already-completed id reports clearly and makes no further changes. The manual three-step
+sequence above remains the documented fallback if the script is unavailable.
+
 ## What belongs in the backlog
 
 Tasks Claude can execute in a future session (code, config, skill edits, analysis), including

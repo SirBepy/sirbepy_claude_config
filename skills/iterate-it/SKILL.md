@@ -64,7 +64,9 @@ For each round (regardless of phase):
 
 1. **Write `P_R` clearly.** 1-3 short paragraphs. Mark explicit rejections (things prior rounds killed) so the sub doesn't re-propose them.
 
-2. **Dispatch ONE sub** via Agent tool. Use the prompt template below.
+2. **Dispatch ONE sub** via Agent tool. Use the prompt template below. Pass `model: 'sonnet'`
+   explicitly on the Agent tool call itself (the parameter, not just prompt text) - per global
+   CLAUDE.md's subagent model rule, never rely on inheriting the session's model.
 
 3. **Main audit.** After the sub returns, pick a score 1-10 yourself. Not a vote - a dissent signal vs the sub. If main deviates 1 point from sub, weight the synthesis toward the lower score. If main deviates ≥2, emit the MAIN DISSENT block in the final report.
 
@@ -133,7 +135,13 @@ Skip confirmation if dev passed explicit flags.
 **MAIN DISSENT:** main scored <X>, sub <Y>. <one-paragraph why>. Take this verdict with the dissent in mind.
 ```
 
-Then ask via AskUserQuestion: ship, run another manual round, or abandon.
+Do NOT call `AskUserQuestion` in the same turn as this report. Bundling a tool call with the report text makes the harness swallow the report - the dev ends up with a bare picker and no convergence summary (this has happened before, 2026-07-12). The report is the deliverable; it must always render as the turn's final message.
+
+Close the report with a single plain-text line offering the next move, not a tool call:
+
+> Ship it, run another manual round, or park it?
+
+If the dev replies, act on it the following turn - that's when `AskUserQuestion` is safe to use (e.g. to pick which lift to apply next).
 
 ## Hard rules
 
