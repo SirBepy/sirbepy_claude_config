@@ -94,7 +94,10 @@ For each **DO**-verdict EASY todo in id order:
 1. **Claim it** per the contract's claim protocol. If the claim is lost to a live session, skip with a note and continue.
 2. Read the full file. Announce which todo is starting (id + title).
 3. Execute the task fully. Touch the claim file's mtime after major steps (heartbeat).
-4. Complete per the contract: move the file to `done/` (create if missing), prune its PLAN.md line, release the claim.
+4. Append a Notes line to the todo recording what happened (completed + commit sha), then run
+   `~/.claude/skills/close/complete-todo.ps1 -Id <id>` to move it to `done/`, prune its PLAN.md
+   line, and release the claim in one call. Fall back to doing those three steps by hand per the
+   contract if the helper is unavailable (non-Windows, or missing).
 5. Run `/commit` after each completed todo.
 
 If a todo hits a blocker: release its claim, surface the blocker, stop that todo, continue with the next EASY.

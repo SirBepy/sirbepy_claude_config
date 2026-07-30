@@ -147,7 +147,10 @@ skip only that id, do not abort the batch, continue processing the remaining con
 one line per skipped id to the turn's closing message: "`<id>` - skipped, claimed by another
 session mid-run; re-run /cleanup-todos to retry."
 
-Otherwise: archive to `done/`, prune its PLAN.md line, and append a Notes line depending on origin:
+Otherwise: append a Notes line depending on origin, then run
+`~/.claude/skills/close/complete-todo.ps1 -Id <id>` to archive it to `done/`, prune its PLAN.md
+line, and release any claim in one call (fall back to doing those three steps by hand if the helper
+is unavailable - non-Windows, or missing):
 
 - `origin: dedupe` only: "Duplicate of `<kept-id>` - merged during /cleanup-todos `<date>`.
   Confirmed by dev `<date>`."
