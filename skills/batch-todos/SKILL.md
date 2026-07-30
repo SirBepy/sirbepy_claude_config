@@ -101,17 +101,23 @@ If a todo hits a blocker: release its claim, surface the blocker, stop that todo
 
 ## Step 7 - Surface HARD todos
 
+Before rendering, skim each HARD todo (title + Goal only, not a full triage pass) and assign an
+urgency read: **High** (blocking, time-sensitive, or the dev's own prior notes flag it urgent),
+**Med** (normal backlog), **Low** (nice-to-have). Also flag any todo that looks done/stale/superseded
+per those same notes as a delete candidate. This is a quick skim, not a dedicated triage subagent -
+only escalate to that if the dev explicitly asks what's urgent (mirrors step 5's cost discipline).
+
 Once all EASY todos are done (or if none existed), present the HARD queue the same way as step 4 -
 as the turn's **FINAL message with no tool call after it**, never buried in an `AskUserQuestion`
-(same reason: pre-tool text is invisible to Joe). Render it as a table so the full list is readable,
-not capped at 4:
+(same reason: pre-tool text is invisible to Joe). Render it as a table, ordered High -> Med -> Low
+(id order within a tier) so the full list is readable, not capped at 4:
 
 ```
 ### HARD - pick one to tackle next (`/pickup <id>` or just name it)
 
-| id | What it does | Area |
-|----|--------------|------|
-| ...one row per HARD todo... |
+| id | What it does | Area | Urgency |
+|----|--------------|------|---------|
+| ...one row per HARD todo, High first... | | | High / Med / Low, + "delete candidate?" if flagged |
 ```
 
 Close with a plain-text prompt: "Name an id to execute it inline now, or say done to stop." On reply:
