@@ -7,6 +7,8 @@ const get = (flag, def = null) => { const i = args.indexOf(flag); return i !== -
 function usage() {
   console.error('Usage: --url <url> --plan <plan.json>');
   console.error('   or: --url <url> --screenshot <out.png> [--click <selector>] [--wait <ms>]');
+  console.error('Plan step types: {"type":"click","selector":".."} {"type":"wait","ms":N} {"type":"scroll","to":N} {"type":"screenshot","out":"path.png"} {"type":"waitForSelector","selector":"..","timeout":N} {"type":"refresh"} {"type":"evaluate","js":".."}');
+  console.error('evaluate.js is executed via page.evaluate(step.js) as a string - it must be an IIFE, e.g. "(function(){...})()", not a bare arrow function.');
 }
 
 const url          = get('--url');
