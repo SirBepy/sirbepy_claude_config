@@ -15,6 +15,7 @@ argument-hint: "[v|bump|push|pushbump|pushnbump|onlyv|onlybump]"
 3. Run `git diff` to understand the changes
 4. Infer the right commit prefix (see below, or per project overrides)
 5. Check if a linter exists - if yes, run it and fix all issues first
+5a. **Comment-noise check** (always runs, no size/skip-review gate - unlike `/close`'s conditional `/code-check` pass, this fires on every commit). Run the same mechanical prefilter as `/create-pr`'s Comment-noise check (see `create-pr/SKILL.md` for the cap definition and exact command), scoped to the diff about to be committed (`git diff HEAD -- <files>` in place of `<base>..HEAD`). No output = clean, continue. Flagged = trim the offending blocks now, per that same rule, before committing - don't ask, matching `/create-pr` step 2b's auto-trim.
 6. Check if the repo has a project-level `run-tests` skill at `.claude/skills/run-tests/SKILL.md`. If yes, invoke it and wait for the result. If it fails, **abort the commit**, print the failing output, and explain to the user exactly why the commit was aborted (which command failed, what it printed, and that they need to fix it or tell you to skip). Do not stage or commit anything until the user either fixes it or explicitly says to skip.
 7. **Submodule check:** run `git submodule status` (no flags). For each submodule whose sha is prefixed with `+` (modified) or `-` (uninitialized/not checked out), handle it before committing the parent:
    - If prefixed with `-`: warn the user, do not auto-commit an uninitialized submodule.
