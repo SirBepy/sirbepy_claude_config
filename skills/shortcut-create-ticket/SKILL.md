@@ -37,7 +37,7 @@ These never change. Hardcode them, don't re-derive:
 - Workflow: `ENG - Core Workflow` (`500018252`). States: To Do `500018254`, In Progress `500018255`, Testing `500018257`. Default To Do; use In Progress/Testing when the work is already done (say so in the report).
 - Story type: `feature` for new functionality, `bug` for defects, `chore` for cleanup/analytics/config. Infer from the work; don't ask.
 - 1 story point ≈ 4 hours of work.
-- Iteration: default **none** — no ZNG iteration has been active since Q2'26 started. Only set one if the dev names it. Staleness check: if this assumption is more than one quarter old, call `iterations-get-active` (or `GET /api/v3/iterations?status=started`) once before falling back to none, and update this line's date if an iteration is now active.
+- Iteration: **`54897` — ZNG Iteration Q3'26** (started, 2026-07-01 → 2026-09-30; verified 2026-07-30). Default to it. Staleness check: past 2026-09-30, call `GET /api/v3/iterations?status=started` once and update this line — fall back to none only if nothing is active.
 - Stevan (BE) user ID, for BE tickets filed on his behalf: `689917a7-ff0b-4b12-90dc-74bc55ce5915`
 
 ### Pinned custom fields (verified 2026-07-16)
@@ -46,9 +46,9 @@ Always send all five. `{field_id, value_id}` pairs:
 
 | Field | field_id | Values |
 |---|---|---|
-| Skill Set | `6216069e-0b41-45b7-8f1f-7d5e8b9b5983` | Frontend `6216069e-e3ed-403b-804c-f678c58b61a7` |
+| Skill Set | `6216069e-0b41-45b7-8f1f-7d5e8b9b5983` | Frontend `6216069e-e3ed-403b-804c-f678c58b61a7`, Backend `6216069e-c745-4d0e-9722-39c6071c7e65` |
 | Technical Area | `6216069e-ae53-4892-a4f2-d9cc796f1484` | Web App `6881029c-3921-4900-ad9a-197d3755d25f` |
-| ZNG: Product Area | `6881002d-700f-4bb7-b919-6cf8880ccdb9` | WebApp: Billers, RPPS, Billing Accounts `688101d5-cf51-4616-8aad-ed52a9b9a45b` |
+| ZNG: Product Area | `6881002d-700f-4bb7-b919-6cf8880ccdb9` | WebApp: Billers, RPPS, Billing Accounts `688101d5-cf51-4616-8aad-ed52a9b9a45b`, WebApp: Global `6881002d-2a43-40e9-964b-d72c3f556bcd` |
 | Priority | `6260361c-cc5f-475f-9758-ea5b740e5b81` | High `6260361c-8f25-4cfd-941c-d32094abaca0`, Medium `6260361c-7ae3-4d8f-9594-fdff9c39fe4e` |
 | Release | `68f8e559-4a18-4a6e-be1c-fa2f5aaa4fdb` | ALWAYS **Next release** `698b4bce-ecd7-44c3-b62a-2b49b2506c1d` (the dev renumbers manually later) |
 
