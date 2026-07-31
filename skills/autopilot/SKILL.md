@@ -92,7 +92,7 @@ This folder is reserved for genuine blockers only - never for routine FYI notes.
 ## Order of operations
 
 1. **Restate the task + its success criteria in one line (the completion oracle), then proceed** - do not wait for confirmation. If the prompt is too vague to derive testable criteria, do NOT invent criteria and self-grade against them. Instead: (a) pick the narrowest defensible interpretation, (b) log it as `ASSUMED SCOPE: <X> - revisit`, (c) set the oracle = that scope's fast-check floor green + no regressions, (d) flag the assumption prominently in the final summary. **END THIS FIRST RESPONSE WITH `<cc-autopilot:on>`** (see "Sidebar badge" above) - do not rely on that section alone, this step is where it actually gets emitted.
-2. For a big task, first produce a short plan / task list (delegate or do briefly in main), then execute chunk-by-chunk via subagents, running `/commit` between chunks.
+2. **Check remaining context first** (see "Context self-regulation" below for thresholds and actions) - do not rely on that section alone to remember it, this step is where it actually runs, every chunk including a single-chunk run. Then, for a big task, produce a short plan / task list (delegate or do briefly in main), then execute chunk-by-chunk via subagents, running `/commit` between chunks.
 3. Real judgment call -> bounded iterate-it (within the 3/run cap) -> log. Trivia -> decide.
 4. Verify against the fast-check floor. **Runaway guard:** every loop is 3-strike. If the SAME verification fails 3x consecutively, OR a single chunk makes zero forward progress across 3 consecutive subagent dispatches, stop that loop, park the failure, and continue other unblocked work. There is no infinite retry.
 5. `/commit` (and push/deploy) per project rules.
