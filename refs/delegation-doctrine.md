@@ -47,8 +47,16 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
 - The load-bearing global rules it needs, restated: PowerShell on Windows, never chain commands
   with `&&` / `;` / `|`, the working directory. Subagents do not inherit session context.
 - The orphan-check final step from `~/.claude/refs/process-hygiene.md` if it runs Node commands.
-- The line: "Your final message is your entire return value. Do not end your turn while your own
-  sub-tasks are still running - collect all results first, synchronously if needed."
+- The line: "Your final message is your entire return value. ALL commands, including the verify
+  floor (build/test/lint/typecheck), run synchronously in the same tool call: `run_in_background`
+  is FORBIDDEN in builder subagents, a long build is waited out, not backgrounded. Ending the turn
+  while anything is still running is a failed dispatch."
+- The line: "Never run `git stash`, `git reset`, or `git checkout` on paths you don't own: other
+  agents' uncommitted work shares this tree. To compare against clean state, use `git show
+  HEAD:<file>`."
+
+**Recovery.** If a builder parks itself waiting on a backgrounded command anyway, send one direct
+resume: "deliver the final report now, no waiting." Expect to repeat it once before it complies.
 
 **Parallelism.** Independent chunks fan out concurrently; anything that touches the same files
 runs sequentially, or each builder gets its own worktree. Never let two builders write the same
