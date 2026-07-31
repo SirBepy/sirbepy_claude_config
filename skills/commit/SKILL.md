@@ -102,6 +102,7 @@ When the watcher finishes you are re-invoked with its stdout. Parse the `BUILD_R
 - `BUILD_RESULT=success` -> all runs passed (the marker lists how many + their workflow names). Tell the user the build passed. Delete the `commit-buildwatch-autofixed` marker if present. Done.
 - `BUILD_RESULT=no_run` -> no run registered for the pushed sha within ~3 min. Tell the user you couldn't find a CI run (it may not have triggered) and stop. Do not relaunch the watcher.
 - `BUILD_RESULT=failure` -> the build is red. Run the **gated auto-fix** below.
+- `BUILD_RESULT=watch_error` -> `gh` hit a persistent transient error (auth flip, network blip, rate limit) while polling and could not confirm a completed status for one or more runs after retrying with backoff. This is NOT a build verdict - the run(s) may still be green, red, or in progress. Tell the user the watcher couldn't confirm the result and relaunch it (same command as before) rather than diagnosing a "failure" that might not exist.
 
 ### Gated auto-fix
 

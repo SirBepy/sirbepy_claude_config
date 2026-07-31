@@ -62,23 +62,82 @@ Start-Sleep -Seconds 8
 $runs = Get-RunsForSha
 if ($runs.Count -eq 0) { Write-Output "BUILD_RESULT=no_run SHA=$Sha"; exit 2 }
 
-# Watch every run to completion. They run in parallel on GitHub; watching is sequential
-# but a run that already finished returns immediately. --exit-status -> non-zero on failure.
-$failed = @()
-foreach ($r in $runs) {
-  gh run watch $r.databaseId --exit-status | Out-Null
-  if ($LASTEXITCODE -ne 0) { $failed += $r }
+# `gh run watch --exit-status` exits non-zero both when the run genuinely
+# finished with a failing conclusion AND when gh itself hit a transient API
+# error (e.g. a concurrent session's account-switch hook flipping gh's active
+# account mid-poll, a dropped connection, a rate limit). Those two cases are
+# NOT the same thing - only the first is a real build result. So after watch
+# returns, positively confirm the run's actual status via `gh run view` before
+# deciding anything; if the run isn't actually reported completed, that was a
+# transient watch error, not a failure - retry with backoff instead of
+# concluding failure on a run that's still in progress.
+function Get-RunConclusion {
+  param([Parameter(Mandatory = $true)]$RunId)
+  try {
+    $json = gh run view $RunId --json status,conclusion
+    if (-not $json) { return $null }
+    return ($json | ConvertFrom-Json)
+  } catch {
+    return $null
+  }
 }
 
-if ($failed.Count -eq 0) {
+function Wait-ForRunCompletion {
+  param([Parameter(Mandatory = $true)]$Run)
+  $maxAttempts = 3
+  $backoffSeconds = @(20, 40, 60) # ~2 min total across retries, per todo 198's spec
+  for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    gh run watch $Run.databaseId --exit-status | Out-Null
+    $watchExit = $LASTEXITCODE
+
+    $info = Get-RunConclusion -RunId $Run.databaseId
+    if ($info -and $info.status -eq 'completed') {
+      if ($info.conclusion -eq 'success') {
+        return @{ Outcome = 'success' }
+      }
+      return @{ Outcome = 'failure'; Conclusion = $info.conclusion }
+    }
+
+    # watch exited but gh does not positively confirm completion -> transient
+    # API hiccup, not a build result. Retry unless attempts are exhausted.
+    if ($attempt -lt $maxAttempts) {
+      $statusText = if ($info) { $info.status } else { 'unknown' }
+      Write-Output "NOTE: transient watch error on run $($Run.databaseId) (attempt $attempt/$maxAttempts, watch exit=$watchExit, status=$statusText); retrying in $($backoffSeconds[$attempt - 1])s"
+      Start-Sleep -Seconds $backoffSeconds[$attempt - 1]
+    }
+  }
+  return @{ Outcome = 'watch_error' }
+}
+
+# Watch every run to completion. They run in parallel on GitHub; watching is sequential
+# but a run that already finished returns immediately.
+$failed = @()
+$watchErrors = @()
+foreach ($r in $runs) {
+  $result = Wait-ForRunCompletion -Run $r
+  if ($result.Outcome -eq 'failure') { $failed += $r }
+  elseif ($result.Outcome -eq 'watch_error') { $watchErrors += $r }
+}
+
+if ($failed.Count -eq 0 -and $watchErrors.Count -eq 0) {
   $names = ($runs | ForEach-Object { $_.workflowName }) -join ', '
   Write-Output "BUILD_RESULT=success RUNS=$($runs.Count) ($names)"
   exit 0
 }
 
-Write-Output "BUILD_RESULT=failure FAILED=$($failed.Count)/$($runs.Count)"
-foreach ($r in $failed) {
-  Write-Output "----- FAILED: $($r.workflowName) (run $($r.databaseId)) -----"
-  gh run view $r.databaseId --log-failed
+if ($failed.Count -gt 0) {
+  Write-Output "BUILD_RESULT=failure FAILED=$($failed.Count)/$($runs.Count)"
+  foreach ($r in $failed) {
+    Write-Output "----- FAILED: $($r.workflowName) (run $($r.databaseId)) -----"
+    gh run view $r.databaseId --log-failed
+  }
+  exit 1
 }
-exit 1
+
+# No confirmed failures, but one or more runs never resolved to a completed
+# status after retries - a persistent gh/API problem, not a build verdict.
+# Distinct marker so the agent knows to relaunch the watcher rather than
+# diagnose a build that may not have actually failed.
+$names = ($watchErrors | ForEach-Object { $_.workflowName }) -join ', '
+Write-Output "BUILD_RESULT=watch_error RUNS_UNRESOLVED=$($watchErrors.Count)/$($runs.Count) ($names)"
+exit 3
