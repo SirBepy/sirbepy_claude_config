@@ -71,6 +71,10 @@ per the global subagent-model rule; never inherit.
      **not** an abort the subagent can act on - it must come back and report
      the failing command + output verbatim so the main agent can abort and
      show the dev. Do not draft a PR for a red branch.
+   - **Comment-noise check** (always, not skippable by `--no-checks` - it costs
+     nothing and no linter can do it): see "Comment-noise check" below. Report
+     the offenders as `file:line` + the block's first line + line count, or
+     `clean`. Never rewrite them itself - the main agent gates it.
    - **Auto-tier** (see the tiering rubric below) and **title** (conventional
      prefix, one line).
    - **Visual scan** - inspect the changed-files list and decide what to
@@ -91,11 +95,20 @@ per the global subagent-model rule; never inherit.
      (gitignored personal space - create the folder if missing).
    - **Return** (short - this is what crosses back into the main agent's
      context, keep it to a few lines): title, tier, base, checks status
-     (pass, or the exact failure to show the dev), visual recommendation +
-     reason, and confirmation of the file path written. Do NOT return the
-     full diffs, commit log, or check output in the happy-path case - the
-     file on disk is the artifact; the return value is just enough for the
-     main agent to act on.
+     (pass, or the exact failure to show the dev), the comment-noise verdict
+     (`clean`, or the offender list), visual recommendation + reason, and
+     confirmation of the file path written. Do NOT return the full diffs,
+     commit log, or check output in the happy-path case - the file on disk is
+     the artifact; the return value is just enough for the main agent to act on.
+
+2b. **Comment-noise gate (main agent).** If the verdict was `clean`, continue.
+   Otherwise TRIM THE OFFENDERS FIRST, before the preview - do not ask whether
+   to, do not offer to do it later, and never open the PR with them in. Cut to
+   the constraint/gotcha/measurement the code can't show and delete the rest;
+   if a whole block only restates the code, delete the whole block. Then
+   re-run the project's fast checks, amend or add a commit via `/commit` (per
+   the global rule, never a raw `git commit`), and only then continue. Say what
+   was trimmed in one line - the dev does not need the before/after text.
 
 3. **Visual approval (main agent - live gate, cannot delegate).** If the
    subagent recommended `none`, there's nothing to ask - continue to step 4.
@@ -165,6 +178,39 @@ per the global subagent-model rule; never inherit.
    DOCS TEST STYLE DATA`). Derive from the commits; if they span prefixes, pick
    the one that names the dominant change. One line, no trailing period, says
    what changed - not how.
+
+### Comment-noise check (for the subagent to apply in step 2)
+
+The cap: **2 lines typical, 4 lines hard, per comment block**, and added comment
+lines under **~25%** of a file's added lines once that file adds 20+ lines (below
+that the ratio is noise - a 5-line constants file with one 2-line why-comment is
+fine, and the block cap already covers it). Matches the global CLAUDE.md Code
+Style rule; if a number changes, change it in both. A block earns its place ONLY
+by naming a constraint, a gotcha, or a measurement the code cannot show.
+Restating the next line, narrating steps, labelling JSX sections, or parking
+design rationale in code all fail; rationale goes in the PR body.
+
+1. **Mechanical prefilter** (one command, no judgment, run it verbatim):
+
+   ```
+   git diff <base>..HEAD | awk '
+   /^\+\+\+ b\// { f=substr($0,7); run=0; next }
+   /^\+/ && !/^\+\+\+/ {
+     l=substr($0,2); add[f]++
+     if (l ~ /^[[:space:]]*(\/\/|\/\*|\*|#|--)/) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
+     next
+   }
+   { run=0 }
+   END { for (k in add) if (max[k]>=5 || (add[k]>=20 && c[k]*100/add[k]>=25)) printf "%s %d/%d (%d%%) longest %d\n", k, c[k], add[k], c[k]*100/add[k], max[k] }' | sort
+   ```
+
+   No output = `clean`, and the check is done. Do not read a single comment.
+2. **Judge only the flagged files.** Read those diffs and list the specific
+   offending blocks (`file:line`, first line, line count). A 5+ line block that
+   genuinely documents one hard constraint can survive - say so and why. Do not
+   review comments in files the prefilter didn't flag; they are in budget.
+
+Never edit the comments in the subagent. Report; step 2b trims.
 
 ### Visual scan rules (for the subagent to apply in step 2)
 
