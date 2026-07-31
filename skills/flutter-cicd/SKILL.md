@@ -1,13 +1,13 @@
 ---
 name: flutter-cicd
-description: Triggers on /flutter-cicd only. Scaffolds an Android release pipeline for a Flutter project - generates a signing keystore, wires build.gradle, adds a GitHub Actions workflow that builds a signed APK and publishes a versioned GitHub Release, and sets the repo secrets. Handles single-app repos and melos monorepos.
+description: Triggers on /flutter-cicd only. Scaffolds an Android release pipeline for a Flutter project - generates a signing keystore, wires build.gradle, adds a GitHub Actions workflow that builds a signed APK and publishes a versioned GitHub Release, optionally uploads an AAB to the Google Play internal track, and sets the repo secrets. Handles single-app repos and melos monorepos.
 ---
 
 # /flutter-cicd
 
 > Give a Flutter app a working Android release pipeline: signed APK on every push to main, published as a versioned GitHub Release for sideloading. Optionally wires the launcher icon too.
 
-This is the gate-free, reusable version of what was first built by hand for `pomalo`. It targets **APK -> GitHub Releases** (free, instant, no Play account). Play Store is a later bolt-on (see "Play Store, later").
+This is the gate-free, reusable version of what was first built by hand for `pomalo`. Baseline target is **APK -> GitHub Releases** (free, instant, no Play account). **Play Store upload (AAB -> internal track) is an optional bolt-on** in Step 7 that layers onto the same workflow and the same keystore - it stays dormant until the Play secret exists, so it is safe to wire before the dev has paid for a Play account.
 
 ## Preconditions (check first, don't assume)
 
@@ -157,17 +157,18 @@ jobs:
           else
             echo "::warning::No RELEASE_KEYSTORE_BASE64 secret; release will be debug-signed."
           fi
+      - id: version
+        run: |
+          VERSION=$(grep -m1 '^version:' pubspec.yaml | sed -E 's/version:\s*([^+]+).*/\1/' | tr -d '[:space:]')
+          echo "name=$VERSION" >> "$GITHUB_OUTPUT"
+      # versionCode from the CI run number, NOT pubspec's "+N" - see "versionCode" below.
       - name: Build release APK
         env:
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: flutter build apk --release
+        run: flutter build apk --release --build-number=${{ github.run_number }}
       - run: cp build/app/outputs/flutter-apk/app-release.apk <app>.apk
-      - id: version
-        run: |
-          VERSION=$(grep -m1 '^version:' pubspec.yaml | sed -E 's/version:\s*([^+]+).*/\1/' | tr -d '[:space:]')
-          echo "name=$VERSION" >> "$GITHUB_OUTPUT"
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.name }}
@@ -178,6 +179,8 @@ jobs:
 ```
 
 Note: the tag is the pubspec version (e.g. `v1.0.0`). Re-pushing without bumping `version:` updates the same release rather than making a new one - bump `version:` in pubspec for a fresh tag.
+
+**versionCode.** Always pass `--build-number=${{ github.run_number }}` rather than letting pubspec's `+N` supply it. Play permanently burns every versionCode it accepts and rejects a repeat, so the number has to increase on every upload with no human in the loop; `run_number` is monotonic per repo and free. The version *name* still comes from pubspec, so the GitHub Release tag is unaffected. Do this even on APK-only projects - it costs nothing and means Step 7 can be bolted on later without a versioning migration. (Date-based `YYMMDDHHmm` is the alternative if the repo may move CI hosts and reset `run_number`.)
 
 ## Step 5 - Set repo secrets
 
@@ -242,6 +245,86 @@ Enable Pages with Actions as the source (once): `gh api -X POST repos/<owner/rep
 
 **Firebase apps - one manual step:** if the app uses Firebase Auth (Google popup via `signInWithPopup`), add the hosting domain (e.g. `<user>.github.io`) to Firebase Console -> Authentication -> Settings -> Authorized domains, or sign-in popups are rejected. This is one-time and covers all project pages on that github.io domain.
 
-## Play Store, later (not done by default)
+## Step 7 - Play Store upload (optional, ask first)
 
-Google Play = **$25 one-time** (not annual; Apple is the $99/yr one). Catch: personal accounts opened after Nov 2023 must run a **closed test with 12+ testers for 14 continuous days** before production. When ready: create the dev account, generate a Play service-account JSON, switch the build to `flutter build appbundle` (AAB, not APK), and add an upload step (`r0adkll/upload-google-play`) targeting the `internal` track. Keep the GitHub-Releases APK job alongside it for quick sideloads.
+Ask `[TOOLING]` whether to wire Play now. **Wiring it is safe even with no Play account** - the steps below are gated on a secret that does not exist yet, so they no-op until the dev sets it. Prefer wiring it dormant over leaving it undone.
+
+Keep the APK -> GitHub Release job. Play gets an **AAB**; sideloading still wants the APK. Both come from the same keystore and the same run number.
+
+### What the dev must do by hand (Claude cannot)
+
+Report these as a checklist; do not pretend they are optional.
+
+1. **Pay the $25** one-time Google Play registration (not annual; the $99/yr one is Apple).
+2. **Create the app** in Play Console with the exact `applicationId` from `build.gradle.kts`. The package name is permanent once uploaded.
+3. **Upload the first AAB manually** through the console. The Google Play Developer API refuses to publish to an app that has never received a manual upload, so CI cannot bootstrap a brand-new listing. Build it locally with `fvm flutter build appbundle --release`.
+4. **Service account:** Google Cloud Console (the project linked to Play) -> enable **Google Play Android Developer API** -> create a service account -> create a JSON key. Then Play Console -> **Users and permissions** -> Invite the service account's email -> grant **Release to testing tracks** (plus app access for this app). Permission propagation can take up to 24h - a fresh SA failing with `The caller does not have permission` is usually just this, not a misconfiguration.
+5. **Production access, later:** a personal/individual account created after Nov 2023 must run a **closed test with 12+ testers opted in for 14 continuous days** before it can apply for production. The `internal` track is exempt and works immediately, which is why it is the default here.
+
+### Play App Signing
+
+On by default for new apps: Google holds the real app signing key and your Step 2 keystore becomes the **upload key**. No new keystore is needed, and losing the upload key is recoverable (unlike the pre-2021 model). Nothing in Steps 2-3 changes.
+
+### Secret
+
+```bash
+gh secret set PLAY_SERVICE_ACCOUNT_JSON --repo <owner/repo> < play-service-account.json
+```
+
+Then delete the downloaded JSON from disk. It is a release-capable credential; it does not belong in the repo, in `~/Downloads`, or in a todo file.
+
+### Workflow steps (append to the same job from Step 4)
+
+```yaml
+      # The `secrets` context is NOT available in a step-level `if:`, so the presence
+      # check must run inside a step and export an output. Gated on the keystore too:
+      # Play rejects a debug-signed bundle outright, so uploading one just burns a run.
+      - name: Check for Play Store credentials
+        id: play
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No PLAY_SERVICE_ACCOUNT_JSON secret set; skipping Play Store upload."
+          elif [ -z "$RELEASE_STORE_FILE" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Play credentials present but no release keystore; skipping Play Store upload."
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build release AAB
+        if: steps.play.outputs.enabled == 'true'
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: flutter build appbundle --release --build-number=${{ github.run_number }}
+
+      # SHA-pinned, not @v1: this step is handed a key with Play release permissions,
+      # so a retagged upstream must not be able to silently change what runs here.
+      - name: Upload to Play Store (internal track)
+        if: steps.play.outputs.enabled == 'true'
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: <applicationId>
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
+```
+
+Re-verify the pin before reusing this block: `gh api repos/r0adkll/upload-google-play/releases/latest --jq .tag_name`, then resolve the tag with `gh api repos/r0adkll/upload-google-play/git/ref/tags/<tag> --jq .object.sha`. Bump both the SHA and the trailing `# vX.Y.Z` comment together.
+
+### Tracks and gotchas
+
+- `track`: `internal` (up to 100 testers, live in minutes, no review wait), `alpha` (closed - the one that satisfies the 12-tester/14-day rule), `beta` (open), `production`.
+- `status`: `completed` publishes to that track; use `draft` while the pipeline is unproven so nothing goes live until promoted by hand.
+- **`Changes cannot be sent for review automatically`**: add `changesNotSentForReview: true` to the `with:` block. Common on apps that have never completed a full review.
+- **`APK specifies a version code that has already been used`**: the run-number scheme in Step 4 was skipped, or the repo's CI history was reset.
+- Deobfuscation: add `mappingFile: build/app/outputs/mapping/release/mapping.txt` once the app enables minification.
+
+## Apple / TestFlight
+
+Out of scope here - $99/yr, needs a Mac or a paid macOS runner. `/ios-run` covers the manual build path.
