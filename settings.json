@@ -214,6 +214,18 @@
             "command": "curl -s --connect-timeout 2 --max-time 4 -X POST --data-binary @- -H 'Content-Type: application/json' http://127.0.0.1:27182/hooks/session-start || exit 0"
           }
         ]
+      },
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"C:/Users/tecno/.claude/hooks/flutter-version-check.sh\"",
+            "shell": "bash",
+            "timeout": 15,
+            "statusMessage": "Checking Flutter stable version"
+          }
+        ]
       }
     ],
     "Stop": [
