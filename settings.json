@@ -137,7 +137,7 @@
       "/Users/josipmuzic/projects/cinnamon/sampl-flutter/packages/tiktok_sdk_v2/.git"
     ]
   },
-  "model": "fable",
+  "model": "opus",
   "skillOverrides": {
     "apply-styleguide": "name-only",
     "decouple-file": "off",
