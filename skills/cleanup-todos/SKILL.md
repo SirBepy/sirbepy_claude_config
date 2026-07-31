@@ -170,6 +170,13 @@ comments changed, not just the case where something got archived. This is a sing
 covering the whole run, not one per todo like `/batch-todos`. Most projects don't track this folder
 by default, in which case there is nothing to commit.
 
+## Unattended runs
+
+Under `/autopilot` or an explicit no-input instruction, Step 6 still delivers its full report, but
+Step 7 auto-resolves as `keep all`: no merges, no drops, nothing archived. Every dedupe pair and
+`suggested_drop` candidate from Step 6's confirm list carries into the run's closing summary as
+still-pending, for confirmation on a later run. This never overrides the no-auto-drop rule below.
+
 ## Non-goals (v1)
 
 - No coupling with `/batch-todos` - that skill is untouched; a redesign to consume cached

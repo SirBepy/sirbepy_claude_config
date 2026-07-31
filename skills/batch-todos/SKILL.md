@@ -127,6 +127,13 @@ Close with a plain-text prompt: "Name an id to execute it inline now, or say don
 a chosen id -> execute inline (same flow as step 6, claim included); done/skip -> stop and leave the
 HARD ids listed as the reminder.
 
+## Unattended runs
+
+Under `/autopilot` or an explicit no-input instruction, the invoking message itself counts as
+`run it` for Step 4: the dry-run report still prints, then execution proceeds straight to Step 5
+without waiting for a reply. Step 5's `FLAG` verdicts still re-queue as HARD rather than being
+auto-answered - unattended mode changes the Step 4 gate only, not the FLAG/HARD judgment call.
+
 ## Notes
 
 - Source of truth: `.claude/todos/` only.
