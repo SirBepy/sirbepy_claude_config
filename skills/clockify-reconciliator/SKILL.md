@@ -127,6 +127,10 @@ Body (form-encoded): grant_type=refresh_token&refresh_token=<HUBSTAFF_REFRESH_TO
 ```
 The response includes a new `refresh_token` - write it back to `HUBSTAFF_REFRESH_TOKEN` in `~/.claude/.env` immediately (token rotates on each exchange).
 
+**Always send a browser `User-Agent` header on `account.hubstaff.com` requests.** That host sits behind Cloudflare, which blocks default library agents (python-urllib, curl) with `403 error code: 1010`. This looks exactly like a revoked token and will send you on a long detour minting a replacement PAT that fails the same way. Use e.g. `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36`.
+
+Exchange once per run and cache the `access_token` (valid 24h). Repeated exchanges return `400 {"error":"rate_limit"}` and lock you out for several minutes.
+
 Fetch HubStaff activity using the returned `access_token`. ALWAYS fetch day-by-day (one request per calendar day) - the activities endpoint paginates at 200 records and a busy week easily exceeds that, silently truncating mid-day. Use `time_slot[start]`/`time_slot[stop]` params (NOT `start_time`/`stop_time`), run all day-requests in parallel:
 `GET https://api.hubstaff.com/v2/organizations/{hubstaff_org_id}/activities?time_slot[start]=...&time_slot[stop]=...&user_ids[]={hubstaff_user_id}&page_limit=200`
 Use header `Authorization: Bearer <access_token>`.
