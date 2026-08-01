@@ -23,6 +23,24 @@ found." and stop.
 Read every file's frontmatter (`name`, `description`, `metadata.type`) and full body. Also read
 `MEMORY.md`.
 
+## Step 1.5 - Size and length checks (mechanical, read-only)
+
+- **Encoded-cwd path derivation**: the project memory dir is
+  `~/.claude/projects/<encoded-cwd>/memory/`, where `<encoded-cwd>` replaces path
+  separators and colons with `-` (e.g. `C:\Users\foo\bar` -> `C--Users-foo-bar`).
+  Derive it from the primary working directory shown in the session environment -
+  never assume a hardcoded root.
+- **MEMORY.md line count**: the harness silently truncates at 200 lines, dropping
+  everything after. Warn at 175, flag critical at 195+.
+- **Index entry length**: flag any MEMORY.md bullet over ~150 chars - detail
+  belongs in the linked topic file, not the index.
+- **T0 axiom candidates**: flag entries meeting ALL 3: (1) Claude defaults wrong
+  without it, (2) failure is silent, (3) applies every session. Candidates for a
+  future `axioms.md`; only promote if not already in CLAUDE.md.
+- **CLAUDE.md promotion candidates**: flag memories that apply across ALL
+  projects (editor prefs, communication style, universal workflow rules). Flag
+  only - never auto-write to `~/.claude/CLAUDE.md`.
+
 ## Step 2 - Index/file consistency (mechanical, read-only)
 
 Cross-check `MEMORY.md`'s entries against the files actually on disk:
@@ -79,6 +97,8 @@ swallow the preceding text in this harness.
 
 Contents, in order:
 
+0. Step 1.5 findings: size/length warnings, T0 axiom candidates, CLAUDE.md
+   promotion candidates (or "None.").
 1. Index/file consistency hits from Step 2 (or "Index and files match.").
 2. Dedupe-group count and list.
 3. Broken-link findings (memory `X` links to `[[Y]]`, no memory named `Y` exists).

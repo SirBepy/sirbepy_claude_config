@@ -27,7 +27,13 @@ The template lives in a sibling clone. The skill cannot run without it.
 
 ## Step 1 - Git init
 
-Run `/git-init` if not already a git repo.
+If not already a git repo:
+
+1. Run `git init` with `main` as the initial branch.
+2. If `.gitignore` is missing, create one with `.DS_Store`, `node_modules/`,
+   `dist/`, `.env`.
+3. If there are no commits yet and files exist to stage, run `/commit` with a
+   `CHORE:` prefix for the initial commit.
 
 ## Step 2 - Detect project metadata
 

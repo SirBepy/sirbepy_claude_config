@@ -281,3 +281,121 @@ Checks common to all three:
       no arbitrary Tailwind values.
 - [ ] The reviewer/author read the 3 anchor pages (DocumentsPage,
       PurchasesPage, BankStatementsPage) before deciding anything novel.
+
+---
+
+<!-- vendored_from: vercel-labs/web-interface-guidelines@4e799d45c17aec1498c269287a83b9dba22b966b (command.md); vercel-labs/agent-skills@f8a72b9603728bb92a217a879b7e62e43ad76c81 (SKILL.md shape) -->
+
+## Framework-agnostic web interface guidelines
+
+Ported from the (now-removed) `/web-design-guidelines` skill: the rules below hold
+for any stack, not just React/Tailwind. Framework-specific syntax was stripped and
+replaced with the underlying rule.
+
+### Accessibility
+
+- Icon-only buttons need an accessible name (`aria-label` or equivalent).
+- Form controls need a `<label>` or an accessible name.
+- Interactive elements need keyboard handlers, not just mouse handlers.
+- Use `<button>` for actions and `<a>` for navigation, never a clickable `<div>`.
+- Images need `alt` text (empty `alt=""` if purely decorative).
+- Decorative icons need `aria-hidden="true"`.
+- Async updates (toasts, inline validation) need `aria-live="polite"`.
+- Prefer semantic HTML (`<button>`, `<a>`, `<label>`, `<table>`) over ARIA patches.
+- Headings stay hierarchical (`<h1>`-`<h6>`, no skipped levels); provide a skip
+  link to main content.
+
+### Focus States
+
+- Every interactive element needs a visible focus indicator, never removed
+  without a replacement.
+- Prefer a focus-visible style (keyboard-triggered only) over one that also
+  fires on mouse click.
+- Compound controls (a group acting as one field) get a group-level focus style
+  when any child is focused.
+
+### Forms
+
+- Inputs declare `autocomplete` and a meaningful `name`/id.
+- Use the correct input type (email, tel, url, number) and numeric input mode
+  where relevant.
+- Never block paste into a field.
+- Labels are clickable and target their control.
+- Disable spellcheck on emails, codes, and usernames.
+- A checkbox/radio and its label share one hit target, no dead zones between
+  them.
+- Submit stays enabled until the request starts, then shows a pending state.
+- Errors render inline next to their field; focus moves to the first error on
+  submit.
+- Placeholders that show an example end with an ellipsis.
+- Turn off autofill on non-auth fields so password managers do not misfire.
+- Warn before navigating away from unsaved changes.
+
+### Animation
+
+- Honor the user's reduced-motion preference: provide a reduced variant or
+  disable the animation.
+- Animate only compositor-friendly properties (transform, opacity).
+- Never transition every property at once, list the ones that actually change.
+- Set an intentional transform origin.
+- Animations stay interruptible, they respond to new input mid-animation.
+
+### Typography
+
+- Use a real ellipsis character, not three periods.
+- Use curly quotes, not straight ones.
+- Non-breaking spaces between a number and its unit, or in a keyboard shortcut
+  (`10 MB`, brand names that must not wrap mid-name).
+- Loading states end with an ellipsis: "Loading...", "Saving...".
+- Tabular/monospaced numerals for columns of numbers being compared.
+- Prevent orphan words on headings where the platform supports it.
+
+### Content Handling
+
+- Text containers handle long content: truncate, clamp, or allow wrapping,
+  never overflow silently.
+- A flex child that must truncate needs its min-width relaxed so the ellipsis
+  can apply.
+- Handle empty states explicitly, do not render broken UI for empty
+  strings/arrays.
+- Design for short, average, and very long user-generated content, not just the
+  demo string.
+
+### Locale & i18n
+
+- Format dates and times with the platform's locale-aware formatter
+  (`Intl.DateTimeFormat` or equivalent), never a hardcoded format string.
+- Format numbers and currency with the platform's locale-aware formatter
+  (`Intl.NumberFormat` or equivalent).
+- Detect language from the browser/OS locale, not from IP geolocation.
+- Mark brand names, code tokens, and identifiers as not-translatable so
+  auto-translation leaves them alone.
+
+### Safe Areas
+
+- Full-bleed layouts add padding for device safe areas (`env(safe-area-inset-*)`
+  on notched/rounded-corner devices), so content is not clipped.
+
+### Dark Mode
+
+- Declare `color-scheme: dark` (or `light dark`) on the root element when the
+  page supports a dark theme, so native form controls and scrollbars adapt.
+- Match the browser UI color (`theme-color` meta or equivalent) to the page
+  background.
+- Native `<select>` elements get explicit background and text colors, some
+  platforms otherwise render them unreadable in dark mode.
+
+### Anti-patterns (flag these)
+
+- Disabling pinch-zoom via the viewport meta tag.
+- Blocking paste on an input.
+- Transitioning every CSS property instead of naming the ones that change.
+- Removing the focus outline without a replacement.
+- A clickable `<div>`/`<span>` doing navigation instead of an `<a>`.
+- A clickable `<div>`/`<span>` doing an action instead of a `<button>`.
+- Images rendered without known dimensions, causing layout shift.
+- Large lists rendered in full with no virtualization.
+- Form inputs with no associated label.
+- Icon-only buttons with no accessible name.
+- Hardcoded date/number formats instead of the locale-aware formatter.
+- Autofocus applied without a clear, deliberate reason.

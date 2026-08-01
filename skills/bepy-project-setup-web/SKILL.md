@@ -13,7 +13,14 @@ description: Triggers on /bepy-project-setup-web only. Web/HTML project standard
 
 ## Step 0 - Git init
 
-Run `/git-init` before anything else.
+Before anything else:
+
+1. If not already a git repo (`git status`), run `git init` with `main` as the
+   initial branch.
+2. If `.gitignore` is missing, create one with `.DS_Store`, `node_modules/`,
+   `dist/`, `.env`.
+3. If there are no commits yet and files exist to stage, run `/commit` with a
+   `CHORE:` prefix for the initial commit.
 
 ## Step 1 - Ask what to skip
 

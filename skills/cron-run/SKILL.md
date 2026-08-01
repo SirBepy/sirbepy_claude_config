@@ -1,6 +1,6 @@
 ---
 name: cron-run
-description: Triggers on /cron-run only. Schedules a queue of LOCAL overnight agents via Windows Task Scheduler; PC must stay on and logged in (Claude Code need not be open). For remote/PC-off use /night-run.
+description: Triggers on /cron-run only. Schedules a queue of LOCAL overnight agents via Windows Task Scheduler; PC must stay on and logged in (Claude Code need not be open). For remote/PC-off runs use the cloud /schedule.
 argument-hint: "<count|all> [every] <interval> [till HH[AM|PM]] | tick | cancel"
 ---
 
@@ -35,7 +35,7 @@ Refuse with a clear message if any check fails:
 
 1. Inside a git repo (`git rev-parse --is-inside-work-tree`)
 2. Platform is Windows (this skill uses Task Scheduler). On non-Windows, refuse and
-   suggest `/night-run` (remote) instead.
+   suggest the cloud `/schedule` instead.
 
 Working-tree cleanliness and queue-population are resolved interactively in Steps
 0 and 0.5.
@@ -178,8 +178,8 @@ INDEX.md is the only source of truth.
 > CRITICAL - NO `/commit` IN TICK MODE. The `/commit` skill runs the project test
 > suite and ABORTS waiting for a human if tests fail. Overnight there is no human:
 > the work would never commit, the task would never be marked done, and the next
-> tick would redo it on a dirty tree. Use RAW GIT for every commit below, exactly
-> as `/night-run` does. (Schedule mode may use `/commit`; tick mode may not.)
+> tick would redo it on a dirty tree. Use RAW GIT for every commit below.
+> (Schedule mode may use `/commit`; tick mode may not.)
 
 ### 1. Reclaim stale locks
 
@@ -292,8 +292,8 @@ if missing):
 ### 11. Finisher check
 
 Re-read INDEX.md. If every task line is now `[x]` or `[!]` (no `[ ]` or `[~]`):
-- Write the morning handoff todos to `.claude/todos/` exactly as night-run's step 10
-  does (one todo per `[!]` failed task + one overall handoff todo pinned to PLAN.md,
+- Write the morning handoff todos to `.claude/todos/`
+  (one todo per `[!]` failed task + one overall handoff todo pinned to PLAN.md,
   per `~/.claude/skills/close/ai-todos-format.md`; fold the AI_MESSAGES accumulator
   into the overall todo's `## Notes` and delete it). Todos are local-only by the
   contract's git policy - no commit step. The morning AI resumes with `/pickup`.
@@ -370,5 +370,7 @@ End cap: <HH:MM | none>
 - Optional hardening (not default): run ticks in a dedicated git worktree so the
   failure-path reset can never touch the dev's main checkout. Worth adding if the
   dev edits the same repo while runs are active.
-- For a PC that will be OFF overnight, use `/night-run` (remote) instead.
+- For a PC that will be OFF overnight, use the cloud `/schedule` instead.
+- Archived lineage: earlier overnight mechanisms (`FOR_TOMORROWS_AI.md`, then
+  `/next-ai-prompt`) are gone. Morning resume is `/pickup`.
 ```
