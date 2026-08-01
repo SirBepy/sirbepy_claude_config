@@ -34,9 +34,27 @@ if ([string]::IsNullOrWhiteSpace($Sha) -or ($Sha -notmatch '^[0-9a-fA-F]{40}$'))
   }
 }
 
+# gh has no cwd of its own here - it infers the repo from the CALLING shell's
+# cwd, not from -RepoPath. If the watcher is launched while that shell sits in
+# a different repo (common across a multi-repo session), every gh call below
+# silently targets the wrong repo (or none) and looks like "no run exists".
+# Resolve the slug from -RepoPath once and pin it explicitly on every call.
+Push-Location $RepoPath
+try {
+  $RepoSlug = (gh repo view --json nameWithOwner -q .nameWithOwner).Trim()
+} catch {
+  $RepoSlug = $null
+} finally {
+  Pop-Location
+}
+if ([string]::IsNullOrWhiteSpace($RepoSlug)) {
+  Write-Output "BUILD_RESULT=no_run SHA=$Sha ERROR=could_not_resolve_repo"
+  exit 2
+}
+
 function Get-RunsForSha {
   try {
-    $json = gh run list --branch $Branch --limit 30 --json databaseId,headSha,status,workflowName
+    $json = gh run list -R $RepoSlug --branch $Branch --limit 30 --json databaseId,headSha,status,workflowName
     if (-not $json) { return @() }
     return @(($json | ConvertFrom-Json) | Where-Object { $_.headSha -eq $Sha })
   } catch { return @() }
@@ -74,7 +92,7 @@ if ($runs.Count -eq 0) { Write-Output "BUILD_RESULT=no_run SHA=$Sha"; exit 2 }
 function Get-RunConclusion {
   param([Parameter(Mandatory = $true)]$RunId)
   try {
-    $json = gh run view $RunId --json status,conclusion
+    $json = gh run view $RunId -R $RepoSlug --json status,conclusion
     if (-not $json) { return $null }
     return ($json | ConvertFrom-Json)
   } catch {
@@ -87,7 +105,7 @@ function Wait-ForRunCompletion {
   $maxAttempts = 3
   $backoffSeconds = @(20, 40, 60) # ~2 min total across retries, per todo 198's spec
   for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
-    gh run watch $Run.databaseId --exit-status | Out-Null
+    gh run watch $Run.databaseId -R $RepoSlug --exit-status | Out-Null
     $watchExit = $LASTEXITCODE
 
     $info = Get-RunConclusion -RunId $Run.databaseId
@@ -129,7 +147,7 @@ if ($failed.Count -gt 0) {
   Write-Output "BUILD_RESULT=failure FAILED=$($failed.Count)/$($runs.Count)"
   foreach ($r in $failed) {
     Write-Output "----- FAILED: $($r.workflowName) (run $($r.databaseId)) -----"
-    gh run view $r.databaseId --log-failed
+    gh run view $r.databaseId -R $RepoSlug --log-failed
   }
   exit 1
 }
