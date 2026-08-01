@@ -1,6 +1,7 @@
 ---
 name: autopilot
 description: Triggers on /autopilot only. Dev is AFK and wants maximum autonomous progress: never block - delegate to subagents, resolve judgment calls via a bounded /iterate-it, auto-answer nested skills' questions, log only genuine blockers, and grind to a verified finish.
+argument-hint: "[--sleep]"
 ---
 
 # /autopilot
@@ -98,6 +99,13 @@ This folder is reserved for genuine blockers only - never for routine FYI notes.
 
 Park to the right channel above (do NOT guess) on: destructive/irreversible action not already authorized (force-push, history rewrite, hard reset dropping work, mass delete, DB migration, prod deploy); credential/secret or physical action needed; a choice with major hard-to-reverse blast radius that iterate-it cannot de-risk on available facts. Keep progress on everything not blocked; surface all parked items in the final summary.
 
+## --sleep flag
+
+`/autopilot --sleep` adds one step to the end of a successful run: after step 6's completion oracle passes (stated success criteria met AND fast-check floor green), invoke `/sleep-when-done`'s sleep action as the absolute last thing the run does.
+
+- Only fires on normal completion. If the run ends via a Hard Stop, a parked blocker, or the HARD_STOP_AT context wind-down, do NOT sleep - the dev needs to see the parked items, and a half-finished run is exactly the "never sleep on red" case `/sleep-when-done` guards against.
+- Runs after the final written summary, same as `/sleep-when-done`'s own "no text after it" rule.
+
 ## Relationship to /sleep-when-done
 
-Not equivalent - `/sleep-when-done`'s entire auto-answer contract is one sentence ("pick the option you judge best"), with no verify floor and no completion oracle before it sleeps the PC. Autopilot's contract is everything above: tiered uncertainty resolution (rule 3), nested-question suppression (rule 5), context self-regulation, the completion oracle (step 6), the 3-strike runaway guard (step 4), and the Hard Stops list - none of which `/sleep-when-done` carries. Don't assume parity between the two when reasoning about either.
+Autopilot owns the unattended-work contract (tiered uncertainty resolution, nested-question suppression, context self-regulation, the completion oracle, the 3-strike runaway guard, the Hard Stops list); `/sleep-when-done` owns only the sleep action itself (platform command + the "never sleep on red" precondition). `--sleep` is autopilot invoking that action as its last step - it does not pull in a second contract, since `/sleep-when-done` no longer carries one. `/close /sleep-when-done` keeps working unchanged as its own chain (close/SKILL.md's argument grammar, untouched by this).
