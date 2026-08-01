@@ -1,11 +1,12 @@
 ---
 name: shortcut-priorities
 description: Triggers on /shortcut-priorities only. Pulls Joe's Shortcut notification/activity feed over a lookback window, groups it by ticket, reads full ticket + comment threads for anything actionable, and returns a prioritized "what to work on" list. Report-only — never comments or changes ticket state.
+argument-hint: "[lookback_days]"
 ---
 
 # /shortcut-priorities
 
-> Joe's stand-in for Shortcut's notification bell (there is no public "notifications" endpoint — see [[reference_shortcut_api_token]]). Pulls the private activity feed, groups by ticket, and tells Joe what actually needs a response vs what's just noise.
+> Joe's stand-in for Shortcut's notification bell (there's no public "notifications" endpoint in Shortcut's REST API — the private activity feed below is the closest substitute). Pulls the private activity feed, groups by ticket, and tells Joe what actually needs a response vs what's just noise.
 
 ## Why this skill exists
 
@@ -47,11 +48,8 @@ for line in content.splitlines():
 
 ## Fixed identity & constants
 
-Same as [[reference_shortcut_api_token]] / `shortcut-done-audit`:
+Dev UUID, mention name, and workflow-state IDs: see `~/.claude/refs/shortcut-api.md`.
 
-- Dev Shortcut UUID: `699c76fe-9076-4424-ba22-2bb3534f417e`
-- Dev mention name: `josipmui`
-- ENG - Core Workflow id: `500018252`, states: `500018253` Backlog, `500018254` To Do, `500018255` In Progress, `500018256` PR Review, `500018257` Testing, `500018415` Blocked, `500018659` Ready for deploy, `500019399` On hold, `500018258` Complete (done), `500019415` Won't do (done).
 - Scratch dir: `C:/tmp/shortcut_notif/` — ephemeral, fine to overwrite/clean each run.
 
 ## Flow
@@ -129,7 +127,7 @@ For each item in tiers 1-4: ticket id + title + link, one-line summary of what's
 
 ## What this skill never does
 
-- Never posts a comment or changes ticket/workflow state — report only, matches [[feedback_never_comment_on_tickets]] and [[feedback_dont_post_drafts]].
+- Never posts a comment or changes ticket/workflow state — report only, same rule as the rest of this skill family: no ticket mutation without explicit go-ahead, and never draft-and-post a comment in the same step.
 - Never writes the session cookie into this skill file, a memory file, or a scratch script — `~/.claude/.env` is the one allowed home for it.
 - Never treats the activity feed's truncated comment snippet as ground truth — always re-read the full comment via the public API before calling something unresolved.
 - Never assumes a QA-reported issue is still live without checking git for a same-day-or-later fix commit first.

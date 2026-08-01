@@ -8,7 +8,7 @@ argument-hint: "<ticket-id>"
 
 > Pick up a Shortcut story and get fully briefed on it before starting work.
 
-**Trigger:** `/shortcut-pickup-ticket <ID>` only. Do NOT invoke this skill from natural phrases like "check out 54229" or "pick up ticket 54229" - the dev tracks work across Shortcut, Obsidian, Linear, and Trello too, so a bare number is ambiguous. Outside this explicit trigger, still apply the **Step 2 rule** below (always read every comment) any time you fetch a Shortcut story for any reason.
+**Trigger:** `/shortcut-pickup-ticket <ID>` only — never on bare phrases like "check out 54229" (ambiguous across Shortcut/Obsidian/Linear/Trello); the **Step 2 rule** below still applies any time a Shortcut story is fetched for any reason.
 
 ## Why this skill exists
 
@@ -16,25 +16,7 @@ Reading only a story's `description` misses real requirements. Comments are wher
 
 ## Fixed identity & constants
 
-Same convention as `shortcut-done-audit` - never re-derive:
-
-- Shortcut API token: `~/.claude/.env` as `SHORTCUT_API_TOKEN` (has a BOM, strip it), header `Shortcut-Token`. Never write the token to a file - always inline `TOKEN=$(...)` in the same command that uses it.
-- Dev Shortcut UUID: `699c76fe-9076-4424-ba22-2bb3534f417e`
-- Dev mention name: `josipmui`
-- Dev git author: `JosipMuzicZirtue` (email `josip.muzic+zirtue@cinnamon.agency`)
-- ENG - Core Workflow id: `500018252`, states:
-  - `500018253` Backlog (unstarted)
-  - `500018254` To Do (unstarted)
-  - `500018255` In Progress (started)
-  - `500018256` PR Review (started)
-  - `500018257` Testing (started)
-  - `500018415` Blocked (started)
-  - `500018659` Ready for deploy (started)
-  - `500019399` On hold (started)
-  - `500018258` Complete (done)
-  - `500019415` Won't do (done)
-
-If the Shortcut MCP (`mcp__shortcut__*`) is connected this session, its `stories-get-by-id`/`stories-search` tools are fine substitutes for the curl calls below - use whichever is available. The curl path is the reliable default since the MCP isn't always connected.
+Shared across the shortcut-* skills: `~/.claude/refs/shortcut-api.md` (token extraction, dev UUID/mention/git author, workflow-state IDs).
 
 ## Step 1 - Parse the ID
 

@@ -1,6 +1,7 @@
 ---
 name: linear
 description: Query Linear tickets via the GraphQL API. Triggers on any mention of a Linear ticket ID (e.g. MOB-123, ENG-45), or when the user asks to search, list, or look up Linear issues, projects, or sprints. Read-only - never mutates data.
+argument-hint: "<ticket-id or query>"
 ---
 
 # /linear
@@ -11,7 +12,7 @@ description: Query Linear tickets via the GraphQL API. Triggers on any mention o
 
 Before any API call, read `~/.claude/.env` and confirm `LINEAR_API_KEY` is present.
 
-If missing, stop and tell Joe:
+If missing, stop and tell the dev:
 
 > Linear not set up. Add this to `~/.claude/.env`:
 > ```
@@ -63,78 +64,16 @@ function Invoke-Linear {
 (Invoke-Linear -Query '{ viewer { id name email } }').viewer
 ```
 
-## Primitives
+## Query recipes
 
-### Look up ticket by ID (e.g. MOB-123)
-
-Linear accepts team-prefixed IDs like `MOB-123` directly in `issue(id:)`. Pass the id as a variable:
-
-```powershell
-(Invoke-Linear -Query 'query($id:String!){ issue(id:$id){ identifier title description state{name} assignee{name} priority labels{nodes{name}} url } }' `
-    -Variables @{ id = "MOB-123" }).issue
-```
-
-### Search tickets by keyword
-
-Use **`searchIssues(term:)`**. Do NOT use `issueSearch(query:)` — it is **deprecated** and returns `{ errors: [{ message: "deprecated" }], data: null }` (so the helper above will throw a clear error rather than hand you an empty list).
-
-```powershell
-(Invoke-Linear -Query 'query($t:String!,$n:Int){ searchIssues(term:$t, first:$n){ pageInfo{ hasNextPage endCursor } nodes{ identifier title state{name} assignee{name} url } } }' `
-    -Variables @{ t = "flight change"; n = 50 }).searchIssues.nodes
-```
-
-### List tickets assigned to Joe
-
-```powershell
-(Invoke-Linear -Query '{ issues(filter:{ assignee:{ isMe:{ eq:true } }, state:{ type:{ neq:"completed" } } }){ nodes{ identifier title state{name} priority dueDate url } } }').issues.nodes
-```
-
-### List issues in a project or cycle (sprint)
-
-Find the team's active cycle, then list its issues:
-
-```powershell
-(Invoke-Linear -Query '{ teams { nodes { id name activeCycle { id name startsAt endsAt } } } }').teams.nodes
-```
-```powershell
-(Invoke-Linear -Query 'query($id:String!){ cycle(id:$id){ issues{ nodes{ identifier title state{name} assignee{name} } } } }' `
-    -Variables @{ id = "CYCLE_ID" }).cycle.issues.nodes
-```
-
-### List projects
-
-```powershell
-(Invoke-Linear -Query '{ projects { nodes { id name state description url } } }').projects.nodes
-```
-
-### List issues in a project
-
-```powershell
-(Invoke-Linear -Query 'query($id:String!){ project(id:$id){ issues{ nodes{ identifier title state{name} assignee{name} url } } } }' `
-    -Variables @{ id = "PROJECT_ID" }).project.issues.nodes
-```
-
-## Pagination (don't trust the first page)
-
-Connection fields (`nodes`) return **only the first 50 results by default** - a "complete" list may be silently truncated. To get more, request a larger page with `first:` and follow the cursor:
-
-```powershell
-$all = @(); $after = $null
-do {
-    $page = (Invoke-Linear -Query 'query($t:String!,$a:String){ searchIssues(term:$t, first:50, after:$a){ pageInfo{ hasNextPage endCursor } nodes{ identifier title } } }' `
-        -Variables @{ t = "flight change"; a = $after }).searchIssues
-    $all += $page.nodes; $after = $page.pageInfo.endCursor
-} while ($page.pageInfo.hasNextPage)
-```
-
-For a quick lookup the default 50 is fine - only loop when the user wants the full set or a count.
+See `skills/linear/queries.md` for the ready-made recipes: lookup by ID, keyword search, tickets assigned to the dev, project/cycle listing, project listing, issues-in-project, and pagination.
 
 ## Auto-trigger rules
 
-Automatically invoke this skill (without Joe asking) when:
-- Joe mentions a ticket ID matching pattern `[A-Z]+-\d+` (e.g. MOB-123, ENG-45, REV-7)
-- Joe says "what does [ticket] say", "pull up [ticket]", "look up [ticket]"
-- Joe asks "what's in the sprint", "what are my tickets", "list open issues"
+Automatically invoke this skill (without the dev asking) when:
+- The dev mentions a ticket ID matching pattern `[A-Z]+-\d+` (e.g. MOB-123, ENG-45, REV-7)
+- The dev says "what does [ticket] say", "pull up [ticket]", "look up [ticket]"
+- The dev asks "what's in the sprint", "what are my tickets", "list open issues"
 
 ## Output format
 
@@ -156,6 +95,6 @@ MOB-125  Booking confirmation screen   Done          Low
 ## Rules
 
 - Read-only. Never mutate (no createIssue, updateIssue, etc.)
-- Never print the API key. Never ask Joe for it - read from env only.
+- Never print the API key. Never ask the dev for it - read from env only.
 - Always go through `Invoke-Linear` so the `errors` array is checked - a silent empty result is usually a failed query, not zero matches.
 - Pipe through ConvertFrom-Json / jq as needed (not considered chaining per global rules).
