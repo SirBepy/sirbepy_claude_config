@@ -10,8 +10,8 @@ description: Use when deleting files or directories. Picks the right tool per pl
 ## Rules
 
 **Windows:** Use the `PowerShell` tool with `Remove-Item`.
-- MSYS bash (the `Bash` tool) does not have `Remove-Item` - it will exit 127.
-- Never use the `Bash` tool for deletion on Windows.
+- `Remove-Item` is a PowerShell cmdlet, not a bash command - calling it via the `Bash` tool exits 127.
+- Git Bash's `rm` does actually work on Windows, but prefer PowerShell for deletion here anyway, for consistency.
 
 **Mac / Linux:** Use the `Bash` tool with `rm`.
 

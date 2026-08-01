@@ -12,7 +12,7 @@ const APP_URL = 'http://127.0.0.1:PORT';               // static-served release 
 const FIREBASE_PROJECT_ID = 'YOUR-PROJECT-ID';          // matches firebase.json / firebase_options.dart
 const FIRESTORE_BASE = `http://127.0.0.1:8080/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`;
 const AUTH_EMULATOR_ACCOUNTS = `http://127.0.0.1:9099/emulator/v1/projects/${FIREBASE_PROJECT_ID}/accounts`;
-const SHOT_DIR = 'PATH/TO/PROJECT/.for_bepy/screenshots';
+const SHOT_DIR = 'PATH/TO/PROJECT/.for_bepy/screenshots/<claude-ancestor-pid>';
 const E2E_DIR = 'PATH/TO/PROJECT/.for_bepy/e2e';
 // --------------------------------------------
 

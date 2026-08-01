@@ -33,21 +33,17 @@ Because the default slug is derived deterministically from the filename, just re
    `POST http://127.0.0.1:27182/hooks/preview`
    Body: `{ "title": string, "slug"?: string, "html": string, "source": "terminal", "session_id": string }`
 
-   **PowerShell** (build the body via `ConvertTo-Json` so the HTML is escaped correctly - never hand-splice it into a JSON string). Known quirk: `ConvertTo-Json` sometimes wraps a large raw string value as `{"value": "..."}` instead of a plain string, which the daemon then rejects with "html: invalid type: map, expected a string" - if that happens, use the Node fallback below instead:
+   **Primary: Node body-builder + curl.exe POST** (reliable string escaping on a large HTML string - write the JSON to a temp file, then POST that file so quoting/escaping isn't hand-rolled):
+   ```powershell
+   node -e "const fs=require('fs');const html=fs.readFileSync('C:/path/to/mockup.html','utf8');fs.writeFileSync('C:/tmp/preview-body.json',JSON.stringify({title:'Ring preview',slug:'mockup-ring-preview',html,source:'terminal',session_id:process.env.CLAUDE_CODE_SESSION_ID}))"
+   curl.exe -X POST http://127.0.0.1:27182/hooks/preview -H "Content-Type: application/json" --data-binary "@C:\tmp\preview-body.json"
+   ```
+
+   **No-Node fallback: PowerShell `ConvertTo-Json`** (build the body via `ConvertTo-Json` so the HTML is escaped correctly - never hand-splice it into a JSON string). Known quirk: `ConvertTo-Json` sometimes wraps a large raw string value as `{"value": "..."}` instead of a plain string, which the daemon then rejects with "html: invalid type: map, expected a string" - if that happens, use the Node builder above instead:
    ```powershell
    $html = Get-Content -Raw -Path "C:\path\to\mockup.html"
    $body = @{ title = "Ring preview"; slug = "mockup-ring-preview"; html = $html; source = "terminal"; session_id = $env:CLAUDE_CODE_SESSION_ID } | ConvertTo-Json
    Invoke-RestMethod -Uri "http://127.0.0.1:27182/hooks/preview" -Method Post -ContentType "application/json" -Body $body
-   ```
-
-   **Node fallback for building the body** (reliable string escaping when `ConvertTo-Json` misbehaves on a large HTML string):
-   ```powershell
-   node -e "const fs=require('fs');const html=fs.readFileSync('C:/path/to/mockup.html','utf8');fs.writeFileSync('C:/tmp/preview-body.json',JSON.stringify({title:'Ring preview',slug:'mockup-ring-preview',html,source:'terminal',session_id:process.env.CLAUDE_CODE_SESSION_ID}))"
-   ```
-
-   **curl.exe fallback** (cross-platform; write the JSON to a temp file first, e.g. via the Node one-liner above, so quoting/escaping isn't hand-rolled):
-   ```
-   curl.exe -X POST http://127.0.0.1:27182/hooks/preview -H "Content-Type: application/json" --data-binary "@C:\tmp\preview-body.json"
    ```
 
 3. **Response 200 `{ "id": "<id>" }`** -> success. Tell the dev it's live in Conductor's preview panel, and that re-running `/preview` on the same file will refresh it in place (same slug). Do NOT open a browser tab or start a server.
@@ -60,7 +56,6 @@ Because the default slug is derived deterministically from the filename, just re
 
 ## Rules
 
-- Never auto-trigger on natural language ("show me this HTML", "preview this") - only the literal `/preview` command.
 - Never open a browser or spin up a localhost server when the push succeeds - that's the exact flow this skill replaces.
 - `source` is always `"terminal"` for this skill (the app also accepts `"chat"` pushes from elsewhere; that's not this path).
 - Don't invent a new slug on every push "to be safe" - that defeats the iterate-in-place loop and litters the history rail. Reuse the derived/given slug across edits of the same file.

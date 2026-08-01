@@ -1,6 +1,6 @@
 ---
 name: flutter-cicd
-description: Triggers on /flutter-cicd only. Scaffolds an Android release pipeline for a Flutter project - generates a signing keystore, wires build.gradle, adds a GitHub Actions workflow that builds a signed APK and publishes a versioned GitHub Release, optionally uploads an AAB to the Google Play internal track, and sets the repo secrets. Handles single-app repos and melos monorepos.
+description: Triggers on /flutter-cicd only. Scaffolds an Android release pipeline for a Flutter project - generates a signing keystore, wires build.gradle, adds a GitHub Actions workflow that builds a signed APK and publishes a versioned GitHub Release, optionally uploads an AAB to the Google Play internal track, optionally deploys the Flutter web build to GitHub Pages, and sets the repo secrets. Handles single-app repos and melos monorepos.
 ---
 
 # /flutter-cicd
@@ -23,7 +23,7 @@ Run these and report what's missing before touching anything:
 
 ## Step 1 - Launcher icon (optional, ask first)
 
-Ask `[UX]` whether to set up the icon now. If yes and no source image exists, ask for a square >=1024px PNG (or an SVG you can rasterize via headless Chrome - see the pomalo `render_icons.cjs` pattern: wrap the SVG in an HTML at 1024x1024, `chrome --headless=new --default-background-color=00000000 --screenshot`).
+Ask `[UX]` whether to set up the icon now. If yes and no source image exists, ask for a square >=1024px PNG (or an SVG you can rasterize via headless Chrome: wrap the SVG in an HTML at 1024x1024, `chrome --headless=new --default-background-color=00000000 --screenshot`).
 
 Add to `dev_dependencies`: `flutter_launcher_icons: ^0.14.4` (verified publisher `fluttercommunity.dev`). Add config block to `pubspec.yaml`:
 
@@ -200,130 +200,15 @@ gh secret list --repo "$REPO"
 - Build once locally: `fvm flutter build apk --release`. Confirm it's signed with the release cert, not debug:
   `apksigner verify --print-certs <apk>` -> `Signer #1 certificate DN: CN=<App>...` (NOT `CN=Android Debug`).
 - Run the project's fast floor: `fvm flutter analyze` + `fvm flutter test`.
-- Stage everything, then invoke `/commit` (never commit directly). Pushing to `main` is what first runs the pipeline and publishes the release - treat that push as an outward-facing action and confirm with the dev before pushing.
+- Invoke `/commit`, which commits by pathspec - do not pre-stage. Pushing to `main` is what first runs the pipeline and publishes the release - treat that push as an outward-facing action and confirm with the dev before pushing.
 
 ## Web hosting - GitHub Pages (optional, ask first)
 
-Flutter web compiles to static files, so GitHub Pages serves it fine. Default for the portfolio (uniform across static-HTML and Flutter projects, free, no per-app cloud project).
-
-**Blocker check first:** `gh repo view <owner/repo> --json visibility`. Pages does NOT publish from a **private** repo on the Free plan - it needs the repo public or GitHub Pro. If private + Free, ask the dev: make public, or use Firebase Hosting instead (ignores repo visibility). Before making a repo public, run a secrets pre-flight over the working tree AND git history (`git log --all --name-only` for keystores/service-account JSON/.env; grep for private keys/tokens). Firebase API keys in `firebase_options.dart` / `google-services.json` are public-safe by design.
-
-**Routing:** Flutter web defaults to **hash** URLs (refresh-safe on Pages) unless the app calls `usePathUrlStrategy()`. If it uses path strategy, add a `404.html` = copy of `index.html` fallback.
-
-**base-href:** a project page lives at `<user>.github.io/<repo>/`, so build with `--base-href /<repo>/`. A root/user site (`<user>.github.io`) needs no base-href.
-
-Workflow `.github/workflows/deploy-web.yml`:
-
-```yaml
-name: Deploy Web (GitHub Pages)
-on:
-  push: { branches: [ main ] }
-  workflow_dispatch:
-permissions: { contents: read, pages: write, id-token: write }
-concurrency: { group: pages, cancel-in-progress: true }
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with: { flutter-version: '<from .fvmrc>', channel: stable, cache: true }
-      - run: flutter pub get
-      - run: flutter build web --release --base-href /<repo>/
-      - uses: actions/upload-pages-artifact@v3
-        with: { path: build/web }
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment: { name: github-pages, url: "${{ steps.deployment.outputs.page_url }}" }
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
-```
-
-Enable Pages with Actions as the source (once): `gh api -X POST repos/<owner/repo>/pages -f build_type=workflow`.
-
-**Firebase apps - one manual step:** if the app uses Firebase Auth (Google popup via `signInWithPopup`), add the hosting domain (e.g. `<user>.github.io`) to Firebase Console -> Authentication -> Settings -> Authorized domains, or sign-in popups are rejected. This is one-time and covers all project pages on that github.io domain.
+Ask `[UX]` whether to set up web hosting via GitHub Pages. Flutter web compiles to static files, so Pages serves it fine - default for the portfolio (uniform across static-HTML and Flutter projects, free, no per-app cloud project). If yes, read `references/gh-pages.md` for the blocker check, routing/base-href rules, and the `deploy-web.yml` workflow.
 
 ## Step 7 - Play Store upload (optional, ask first)
 
-Ask `[TOOLING]` whether to wire Play now. **Wiring it is safe even with no Play account** - the steps below are gated on a secret that does not exist yet, so they no-op until the dev sets it. Prefer wiring it dormant over leaving it undone.
-
-Keep the APK -> GitHub Release job. Play gets an **AAB**; sideloading still wants the APK. Both come from the same keystore and the same run number.
-
-### What the dev must do by hand (Claude cannot)
-
-Report these as a checklist; do not pretend they are optional.
-
-1. **Pay the $25** one-time Google Play registration (not annual; the $99/yr one is Apple).
-2. **Create the app** in Play Console with the exact `applicationId` from `build.gradle.kts`. The package name is permanent once uploaded.
-3. **Upload the first AAB manually** through the console. The Google Play Developer API refuses to publish to an app that has never received a manual upload, so CI cannot bootstrap a brand-new listing. Build it locally with `fvm flutter build appbundle --release`.
-4. **Service account:** Google Cloud Console (the project linked to Play) -> enable **Google Play Android Developer API** -> create a service account -> create a JSON key. Then Play Console -> **Users and permissions** -> Invite the service account's email -> grant **Release to testing tracks** (plus app access for this app). Permission propagation can take up to 24h - a fresh SA failing with `The caller does not have permission` is usually just this, not a misconfiguration.
-5. **Production access, later:** a personal/individual account created after Nov 2023 must run a **closed test with 12+ testers opted in for 14 continuous days** before it can apply for production. The `internal` track is exempt and works immediately, which is why it is the default here.
-
-### Play App Signing
-
-On by default for new apps: Google holds the real app signing key and your Step 2 keystore becomes the **upload key**. No new keystore is needed, and losing the upload key is recoverable (unlike the pre-2021 model). Nothing in Steps 2-3 changes.
-
-### Secret
-
-```bash
-gh secret set PLAY_SERVICE_ACCOUNT_JSON --repo <owner/repo> < play-service-account.json
-```
-
-Then delete the downloaded JSON from disk. It is a release-capable credential; it does not belong in the repo, in `~/Downloads`, or in a todo file.
-
-### Workflow steps (append to the same job from Step 4)
-
-```yaml
-      # The `secrets` context is NOT available in a step-level `if:`, so the presence
-      # check must run inside a step and export an output. Gated on the keystore too:
-      # Play rejects a debug-signed bundle outright, so uploading one just burns a run.
-      - name: Check for Play Store credentials
-        id: play
-        env:
-          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-        run: |
-          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No PLAY_SERVICE_ACCOUNT_JSON secret set; skipping Play Store upload."
-          elif [ -z "$RELEASE_STORE_FILE" ]; then
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Play credentials present but no release keystore; skipping Play Store upload."
-          else
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Build release AAB
-        if: steps.play.outputs.enabled == 'true'
-        env:
-          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: flutter build appbundle --release --build-number=${{ github.run_number }}
-
-      # SHA-pinned, not @v1: this step is handed a key with Play release permissions,
-      # so a retagged upstream must not be able to silently change what runs here.
-      - name: Upload to Play Store (internal track)
-        if: steps.play.outputs.enabled == 'true'
-        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: <applicationId>
-          releaseFiles: build/app/outputs/bundle/release/app-release.aab
-          track: internal
-          status: completed
-```
-
-Re-verify the pin before reusing this block: `gh api repos/r0adkll/upload-google-play/releases/latest --jq .tag_name`, then resolve the tag with `gh api repos/r0adkll/upload-google-play/git/ref/tags/<tag> --jq .object.sha`. Bump both the SHA and the trailing `# vX.Y.Z` comment together.
-
-### Tracks and gotchas
-
-- `track`: `internal` (up to 100 testers, live in minutes, no review wait), `alpha` (closed - the one that satisfies the 12-tester/14-day rule), `beta` (open), `production`.
-- `status`: `completed` publishes to that track; use `draft` while the pipeline is unproven so nothing goes live until promoted by hand.
-- **`Changes cannot be sent for review automatically`**: add `changesNotSentForReview: true` to the `with:` block. Common on apps that have never completed a full review.
-- **`APK specifies a version code that has already been used`**: the run-number scheme in Step 4 was skipped, or the repo's CI history was reset.
-- Deobfuscation: add `mappingFile: build/app/outputs/mapping/release/mapping.txt` once the app enables minification.
+Ask `[TOOLING]` whether to wire Play now. **Wiring it is safe even with no Play account** - the steps are gated on a secret that does not exist yet, so they no-op until the dev sets it. Prefer wiring it dormant over leaving it undone. If yes, read `references/play-store.md` for the manual prerequisites checklist, the service-account secret, and the workflow steps to append to Step 4's job.
 
 ## Apple / TestFlight
 

@@ -10,14 +10,7 @@ OS-aware cleanup scan. You **advise**, never delete - Joe runs the delete comman
 
 ## Step 1 — Detect the platform
 
-Determine the OS you are running on. The environment block at session start states the platform (`win32` = Windows, `darwin` = macOS), or run one of:
-
-```powershell
-$PSVersionTable.OS   # PowerShell - contains "Windows" or "Darwin"
-```
-```bash
-uname -s             # bash - "Darwin" = macOS, "Linux"/other otherwise
-```
+The environment block at session start states the platform (`win32` = Windows, `darwin` = macOS).
 
 ## Step 2 — Load and follow the matching platform file
 

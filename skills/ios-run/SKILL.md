@@ -47,29 +47,12 @@ The skill assumes these are done. Each maps to a `FAIL:` message that names the 
 
 Tries, in order: Tailscale IP, Tailscale hostname, then LAN IP, as user `josipmuzic`. Every SSH call uses `-o BatchMode=yes -o ConnectTimeout=8`. To change machines, edit the `HOSTS` / `SSH_USER` vars at the top of `ios-run.sh`.
 
-## Failure modes the script reports (relay verbatim)
-
-| FAIL message | Fix |
-|---|---|
-| `Mac unreachable on any host` | Wake the Mac / open the lid (closed-lid MacBook sleeps; no wake-on-LAN), check Tailscale, re-run |
-| `SSH key auth not working` | Run the printed `ssh-copy-id josipmuzic@<host>` once |
-| `.env missing on Mac after sync` | The project's gitignored `.env` did not sync; confirm it exists locally |
-| `No iPhone detected by Flutter` | Plug the iPhone into the Mac via USB, unlock it, trust the computer |
-| `Multiple iOS devices connected` | Re-run with `--device <name>` (script lists the names) |
-| `keychain unlock failed` / `errSecInternalComponent` in build | Wrong/missing password in `~/.config/ios-run/keychain-pw`, or step 2/3 of setup not done |
-| `flutter build ... failed (signing?)` | Register the iPhone UDID at developer.apple.com, or let Xcode auto-manage signing for the Runner target |
-| `another /ios-run in progress` | Wait, or clear a stale `~/projects/<project>/.ios-run.lock` on the Mac |
-
 ## Guarantees baked into the script
 
 - **No native rsync / no WSL:** sync is `tar`-over-SSH from native Windows (WSL2 does not share the Windows SSH keys or the Tailscale route).
 - **Mandatory paths sync:** the `ios/` tree (Xcode project, Podfile, signing) and the gitignored `.env` always sync (only `ios/Pods`, build artifacts, and VCS/IDE junk are excluded), with a post-sync assertion.
 - **Explicit Mac PATH:** non-interactive SSH gets a minimal PATH, so the script sets flutter (`~/development/flutter/bin`) and Homebrew (`/opt/homebrew/bin`, for `pod`) explicitly rather than relying on the login shell.
 - **No orphans:** `caffeinate -dimsu` is child-scoped to each remote command; a PID lock file with a `trap` cleanup prevents overlapping runs.
-
-## Status
-
-Verified working end-to-end (2026-06-09): built + signed (team `32T22K9BPH`) + installed the Journeys app on a physical iPhone 11 (iOS 16.1.2) over Tailscale. The path to get there pinned down the iOS-16 device path (Flutter, not devicectl), the non-interactive PATH, and the SSH-session keychain unlock.
 
 ## Not in scope (v1)
 

@@ -87,23 +87,7 @@ Hard cap: 3 dirs max regardless of how many exceed the threshold.
 
 ## Self-improvement (only when invoked as /disk-doctor)
 
-At END of scan, propose any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCAN LOG entry using the confirmation gate below. Only edit this file when invoked as `/disk-doctor`. No silent/auto edits, no edits when triggered indirectly.
-
-### Confirmation gate (required before any edit to this file)
-
-Output this exact format and wait for explicit YES before writing anything:
-
-```
-## PLATFORM-FILE-EDIT -- reply YES to apply
-+ [SECTION-NAME] exact line to be added
-```
-
-- `SECTION-NAME` must be one of: `SCAN LOG`, `KNOWN-SAFE`, `NEVER-TOUCH`
-- Claude resolves the section name to the matching header in this file and appends the line there
-- The `## PLATFORM-FILE-EDIT` sentinel line is required and must be reproduced verbatim
-- Only lines beginning with `+` are written to this file
-- No prose above or below the block
-- A single gate block may contain multiple `+` lines targeting different sections
+At END of scan, propose any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCAN LOG entry using the confirmation gate in `gate.md` (in this skill folder). Only edit this file when invoked as `/disk-doctor`. No silent/auto edits, no edits when triggered indirectly.
 
 ---
 

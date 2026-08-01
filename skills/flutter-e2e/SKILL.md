@@ -57,14 +57,14 @@ python -m http.server {PORT} --directory build/web-e2e
 
 Copy `references/e2e-helpers.js` (next to this file) into the project, e.g. `.for_bepy/e2e/helpers.js`, and fill in its `CONFIG` block (`APP_URL` from Step 3, `FIREBASE_PROJECT_ID` from `firebase.json`, `SHOT_DIR`/`E2E_DIR` paths). Then write a driver script (`.for_bepy/e2e/run.js` or similar) that `require()`s it. Non-negotiable rules baked into the helpers, restated here so you don't undo them by hand-rolling around them:
 
-- **Launch `headless: false`.** The auth-emulator Google sign-in popup relay hangs forever under headless chromium - this is the single most common silent hang in this technique.
+- **Launch `headless: false` — required only when the flow signs in through the auth-emulator popup relay** (`signIn()`). That relay hangs forever under headless chromium - this is the single most common silent hang in this technique. Flows that never call `signIn()` may run headless.
 - **Enable semantics once per page load** via `enableSemantics(page)` (clicks `flt-semantics-placeholder`) before querying anything - Flutter web renders to canvas and has no DOM until this fires.
 - **Snapshot with `refreshSemantics(page, tag)` between steps**, not once at the top. It dumps every `flt-semantics` node (aria label, role, x/y center) to `<E2E_DIR>/semantics-<tag>.json` - inspect these when a step can't find its target.
 - **Use `clickNodeAtomic(page, /pattern/i)` for anything just created or changed by the previous action** (confirm bars, toasts, a button whose label/count depends on prior state). It does the find-and-click inside one synchronous `page.evaluate()`. A two-step "get coordinates, then click" - even via MCP `browser_click` - has a round-trip gap where Flutter has already recreated the node; the click lands on a dead reference and silently no-ops. This one cost hours to first diagnose - don't skip it because a step "looks simple."
 - **Use `clickNode(page, node)` (two-step, from a `dumpSemantics` snapshot) only for stable widgets** you have not just interacted with.
 - **Sign in with `signIn(page, context, email, displayName, postSignInBodyPattern)`.** Drives the "Continue with Google" button, then the auth-emulator relay tab (`#add-account-button` -> `#email-input` -> `#sign-in`). Retries up to 3 times; emulator relay popups occasionally fail to load on the first try.
 - **Never rely on a full page reload mid-flow.** Emulator mode has an upstream quirk (flutterfire#5372, wontfix): reload drops the emulator auth session because the JS SDK races restore vs `useAuthEmulator`, hits production `identitytoolkit`, 400s, and wipes IndexedDB. Drive everything through in-app navigation instead (Flutter streams update live without a reload). Production is unaffected - this is emulator-only.
-- Screenshots go to `.for_bepy/screenshots/` via `shot(page, name)` (gitignored, disposable).
+- Screenshots go to `.for_bepy/screenshots/<claude-ancestor-pid>/` via `shot(page, name)` (gitignored, disposable, per-session subfolder).
 
 ## Step 5 - Seed and assert via emulator REST
 
@@ -82,12 +82,12 @@ Summarize pass/fail per driven step, list any new console errors (`page.on('cons
 
 - [ ] Built with `flutter build web` (release), never driven against a `flutter run` debug session
 - [ ] Emulators running with `--dart-define=USE_EMULATORS=true` baked into the build
-- [ ] Browser launched `headless: false`
+- [ ] Browser launched `headless: false` if the flow signs in via the auth-emulator popup relay
 - [ ] `flt-semantics-placeholder` clicked before the first query on every fresh page load
 - [ ] Every click on a just-changed/just-created node used `clickNodeAtomic` (single `page.evaluate`), not a cached locator or two-step query-then-click
 - [ ] No flow step depends on a full page reload while signed in via the emulator
 - [ ] Firestore/Auth state seeded and/or asserted via the emulator REST endpoints, not just eyeballed from screenshots
-- [ ] Screenshots saved under `.for_bepy/screenshots/`
+- [ ] Screenshots saved under `.for_bepy/screenshots/<claude-ancestor-pid>/`
 - [ ] Final report lists pass/fail per step plus any new console errors
 
 ## Reference

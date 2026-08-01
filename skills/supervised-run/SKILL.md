@@ -29,8 +29,9 @@ Start a long-lived dev server through server_supervisor instead of spawning it i
 
 4. **Run it (first launch only).** `POST /run` with header `Authorization: Bearer <token>` and JSON body:
    ```json
-   { "root": "<absolute path of the current project folder>", "cmd": "<the server command>", "kind": "generic", "use_dynamic_port": true }
+   { "root": "<absolute path of the current project folder>", "cmd": "vite --port {PORT}", "kind": "generic", "use_dynamic_port": true }
    ```
+   `cmd` must have `{PORT}` templated into the actual port flag - see the Port table below for the exact flag per tool.
    - Set `"kind": "flutter"` only for `flutter run` commands; otherwise `"generic"`.
    - **Set the port** - see the Port table below. This is the step AIs most often get wrong.
    - The response is the started process's info: `{ id, project, name, kind, status, pid, port, mem_bytes }`. Note the `id` (form: `<project>:<name>`) - you manage everything else by it.
@@ -83,71 +84,23 @@ Run the server the normal way (in your own background shell), and tell Joe: "ser
 
 ## Daily-driver apps - ask before touching
 
-Before you `start`, `restart`, or `stop` ANY entry, stop and ask first if there's reason to think
-the entry IS (or spawns) software the user actively relies on for other live work - not just a
-disposable dev server for something being built. This applies regardless of what `status` the
-supervisor reports: `status: stopped` only means the supervisor isn't currently tracking a live
-process under that id - it says NOTHING about whether starting one is safe or wanted, since the
-user may be about to use it, or the underlying app may already be running outside the supervisor's
-view. Incident (2026-07-16): a `cargo tauri dev` entry showing `status: stopped` was restarted to
-verify a frontend change, reasoning that "stopped" meant safe - it wasn't, and the restart bounced
-the user's live chats app-wide. When in doubt whether an entry is a throwaway dev server or the
-user's real daily-driver app, ask before acting, don't infer safety from `status` alone.
+Before you `start`, `restart`, or `stop` ANY entry, ask first if it might be software Joe
+actively relies on for other live work, not just a disposable dev server. `status: stopped`
+does NOT mean safe - it only means the supervisor isn't tracking a live process under that id,
+not that starting/stopping one won't disrupt something already running outside its view.
 
 ## Tauri dev entries
 
-- **Before `cargo build`/`cargo test` in a repo whose supervised entry runs `cargo tauri dev`:** stop the entry first (`POST /procs/<id>/stop`), run the build/test, then `POST /procs/<id>/start`. The running dev app holds a lock on `target/debug/<app>.exe`; building or testing against it while it's up fails with "failed to remove <app>.exe: Access is denied (os error 5)".
-- **After any `cargo tauri dev` entry crash, before restarting:** the supervisor only kills the `tauri` CLI process, not its `beforeDevCommand` grandchild (vite/node). Check for and kill an orphan vite first, then verify the dev port (1420 by default for Tauri) is free, or the restart will crash again with "Port 1420 is already in use":
-  ```powershell
-  Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -match 'vite' }
-  ```
-  Kill any matches with `Stop-Process -Id <PID> -Force`, then confirm the port is free before `POST /procs/<id>/start` or `/restart`.
+See `tauri.md` (next to this file) before `cargo build`/`cargo test` or a crash-restart in a repo
+whose supervised entry runs `cargo tauri dev` - both have entry-locking / orphan-process gotchas.
 
-## Proxy hub (upstream presets) - only when a live environment swap is actually wanted
+## Proxy hub (upstream presets)
 
-Do not set this up by default when bringing a server up. Reach for it only when the task
-explicitly wants an app to switch between backends (local / develop / prod) without a rebuild.
-
-- **What it is.** A project can own a list of named upstream presets (`name`, `base_url`,
-  `danger`), exactly one active at a time. The supervisor runs one reverse-proxy hub per
-  project, bound to a FIXED loopback port (the project's port block, top slot). An app that
-  bakes that one address into its API client can have its backend swapped live, by switching
-  the active preset - no rebuild, no app restart.
-- **Find the hub port.** There is no dedicated HTTP route for this (only IPC, dashboard-side).
-  Add the project's first preset (below), then `GET /ports` and find the entry whose `owner`
-  is `<project_id>:__proxyhub__` - its `port` is the hub address.
-- **Define presets** (`project_id` is the same id that appears as the project half of a
-  `/procs` entry's `id`, e.g. `"my-app"`):
-  - List: `GET /projects/<project_id>/presets` -> `[{ id, name, base_url, danger }]`
-  - Add: `POST /projects/<project_id>/presets` body `{ "name": "local", "base_url": "http://127.0.0.1:8787", "danger": false }` -> returns the created preset. The FIRST preset added for a project starts its hub listener immediately and becomes active automatically.
-  - Remove: `DELETE /projects/<project_id>/presets/<preset_id>`. Removing the active preset promotes the next-first remaining one; removing the last preset stops the hub entirely.
-- **Switch the active preset (live, no restart):** `POST /projects/<project_id>/presets/<preset_id>/activate`.
-  Takes effect on the very next request the hub handles.
-- **Read the request log:** `GET /projects/<project_id>/proxy-log` -> array of
-  `{ ts, method, path, status, duration_ms, preset }` (which preset served each request),
-  capped ring buffer of the last 500.
-- Auth is the same bearer token as everything else here (`Authorization: Bearer <token>`).
-
-**Limitations - read before reaching for this:**
-- Websocket requests through the hub are rejected with a `501`, not proxied - every request is
-  buffered and reissued, no raw byte passthrough, so anything with `Connection: Upgrade` fails.
-- Scoped to unauthenticated / read-only traffic. Swapping the active preset on an app that is
-  already logged in does not carry auth over - tokens/cookies belong to the old environment, so
-  expect (and warn Joe to expect) a re-login after a swap.
-- `danger: true` on a preset (e.g. a prod URL) only gets a visual warning in the dashboard -
-  nothing backend-side blocks selecting it. It is not a safety gate.
-- Doesn't help Flutter mobile out of the box: an Android emulator or physical device can't reach
-  `localhost` on the host, so a hub URL baked into a mobile build won't resolve there. The
-  workaround is `adb reverse tcp:<hub_port> tcp:<hub_port>` before running the app - the
-  supervisor does not set that tunnel up for you.
-- Useful for Flutter web / Vite / Node frontends hitting unauthenticated endpoints that need a
-  live environment swap. It is not a general-purpose environment switch for authenticated flows
-  or for mobile.
+See `proxy-hub.md` (next to this file) - only needed when a task explicitly wants an app to swap
+backends (local / develop / prod) live, without a rebuild.
 
 ## Notes
 
 - The API binds 127.0.0.1 only and the token is per-machine; never send it anywhere off-localhost.
 - One-off commands never go through here - this is only for processes that stay running.
 - Manage a process by the `id` from its `/run` (or `/procs`) response. Never blind-`/run` a variant when an entry already exists - reuse it.
-- Endpoints verified against the running supervisor on 2026-06-06: `GET /health`, `GET /procs`, `POST /run`, and per-id `POST /procs/<id>/{start,stop,restart}`, `GET /procs/<id>/logs`, `DELETE /procs/<id>` all exist. Auth is `Authorization: Bearer <token>` on everything except `/health`. `POST /procs/<id>/reload` (flutter fast path, see Steps) exists in the same router as of the 2026-06-17 flutter daemon work.
-- Proxy-hub endpoints verified against `src-tauri/src/api.rs`'s `router()` as of the 2026-07-28 hub work: `GET`/`POST /projects/:project_id/presets`, `DELETE /projects/:project_id/presets/:preset_id`, `POST /projects/:project_id/presets/:preset_id/activate`, `GET /projects/:project_id/proxy-log`. Same bearer auth as the rest of the router.

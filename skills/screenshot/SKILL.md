@@ -20,7 +20,7 @@ If it is missing, stop and tell the user to restore it.
 | React/Next in `package.json` | 3000 | `npm run dev` |
 | `index.html`, no `package.json` | 8080 | `python -m http.server 8080` |
 
-Start with `run_in_background: true`. Poll: `curl -s -o /dev/null -w "%{http_code}" http://localhost:PORT` up to 15 tries, 1s apart.
+Start with `run_in_background: true`. Poll: `(Invoke-WebRequest -Uri "http://localhost:PORT" -UseBasicParsing -TimeoutSec 1 -ErrorAction SilentlyContinue).StatusCode` up to 15 tries, 1s apart.
 
 ## Step 3 - Read the project and plan
 
@@ -40,6 +40,8 @@ Plan 1-5 screenshots showing distinct views. Do not plan multiple shots of the s
 
 Write a JSON plan to `.portfolio-data/screenshot-plan.json`. The plan is an ordered list of steps executed in one browser session.
 
+**Output path.** Portfolio-quality keepers (this skill's normal output, never purged by `/close`) go under `.portfolio-data/`. A throwaway verification shot instead goes under `.for_bepy/screenshots/<pid>-<start-ticks>/`, matching `/close`'s Phase 0/3 purge scheme - point `out` there when the screenshot is scratch, not a portfolio asset.
+
 Supported step types:
 
 | Type | Fields | Purpose |
@@ -52,7 +54,7 @@ Supported step types:
 | `wait` | `ms` | Pause |
 | `waitForSelector` | `selector`, `timeout` (optional ms) | Wait for element |
 | `refresh` | - | Reload the page |
-| `evaluate` | `js` (string) | Run arbitrary JS in the page context |
+| `evaluate` | `js` (string) | Run arbitrary JS in the page context - `js` must be an IIFE (`(function(){...})()`), not a bare arrow function; it runs via `page.evaluate(step.js)` as a string |
 
 Example plan:
 ```json
