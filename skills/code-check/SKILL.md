@@ -1,7 +1,7 @@
 ---
 name: code-check
 description: Triggers on /code-check. Structural + convention review - file splits, DRY, dead code, documented project patterns. Writes findings to the todos backlog. Callable standalone or from /close.
-argument-hint: "[uncommitted|unpushed|<path>|<hash>]"
+argument-hint: "[uncommitted|unpushed|<path>|<hash>] (default: uncommitted)"
 ---
 
 # /code-check
@@ -18,14 +18,7 @@ Determine what to review based on args:
 | `unpushed` | `git log @{u}..HEAD --name-only --diff-filter=ACM --format=` |
 | Looks like a file path | treat as single-file list |
 | Looks like a hash or range (`abc1234`, `HEAD~3..HEAD`) | `git diff <arg> --name-only` |
-| No args | ask using AskUserQuestion (see below) |
-
-When asking, options:
-
-- "Uncommitted changes" - files changed but not yet committed
-- "Unpushed commits" - commits made since last push
-- "Specific file or path" - follow up asking the dev to type the path (plain message, not AskUserQuestion)
-- "Commit hash or range" - follow up asking the dev to type the hash or range
+| No args | default to `uncommitted`: `git diff HEAD --name-only --diff-filter=ACM` |
 
 ## Step 0 - Skill description budget
 

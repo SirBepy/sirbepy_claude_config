@@ -69,7 +69,9 @@ export PATH="$HOME/development/flutter/bin:$HOME/.pub-cache/bin:/opt/homebrew/bi
 PROJDIR="$HOME/projects/$PROJ"
 cd "$PROJDIR" || die "project dir missing on Mac"
 [ -d ios/Runner.xcodeproj ] || die "ios/Runner.xcodeproj missing on Mac after sync"
-[ -f .env ]                 || die ".env missing on Mac after sync (envied codegen will fail)"
+if grep -q envied pubspec.yaml; then
+  [ -f .env ] || die ".env missing on Mac after sync (envied codegen will fail)"
+fi
 command -v flutter >/dev/null 2>&1 || die "flutter not found on Mac (looked in ~/development/flutter/bin)"
 
 # overlap lock

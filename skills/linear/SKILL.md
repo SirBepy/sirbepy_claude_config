@@ -1,6 +1,6 @@
 ---
 name: linear
-description: Query Linear tickets via the GraphQL API. Triggers on any mention of a Linear ticket ID (e.g. MOB-123, ENG-45), or when the user asks to search, list, or look up Linear issues, projects, or sprints. Read-only - never mutates data.
+description: Triggers on /linear only. Query Linear tickets via the GraphQL API - search, list, or look up Linear issues, projects, or sprints. Read-only - never mutates data.
 argument-hint: "<ticket-id or query>"
 ---
 
@@ -67,13 +67,6 @@ function Invoke-Linear {
 ## Query recipes
 
 See `skills/linear/queries.md` for the ready-made recipes: lookup by ID, keyword search, tickets assigned to the dev, project/cycle listing, project listing, issues-in-project, and pagination.
-
-## Auto-trigger rules
-
-Automatically invoke this skill (without the dev asking) when:
-- The dev mentions a ticket ID matching pattern `[A-Z]+-\d+` (e.g. MOB-123, ENG-45, REV-7)
-- The dev says "what does [ticket] say", "pull up [ticket]", "look up [ticket]"
-- The dev asks "what's in the sprint", "what are my tickets", "list open issues"
 
 ## Output format
 
