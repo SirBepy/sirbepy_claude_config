@@ -102,6 +102,13 @@ Project-local scratch (never global; skip if there's no project): `screenshots/`
 - Other cross-project facts (preferences, hobbies, ideas) go in a loose vault note following its existing free-form style (see `Moms info.md`, `Cocktails.md`) - no rigid schema required.
 - Write directly, same as native memory - no confirmation gate. The vault's own `obsidian-git` plugin auto-backs-up on its own schedule; Claude never runs git commands inside this repo.
 - Cross-project coding standards (e.g. "always do X in Flutter") belong in `~/.claude/code-style/`, not the vault - that folder is already global and already checked on first encounter with a stack.
+- **Concurrent-write discipline (the vault is shared, Joe often runs 3+ sessions at once).** Nothing locks these files, so a whole-file overwrite from a stale read silently destroys another session's write. Same CAS rule the todos backlog already uses for PLAN.md: re-read the file immediately before every write, apply your change to that fresh content, and keep edits line-scoped (append a bullet, edit one frontmatter field) rather than rewriting the file from an in-memory copy. Prefer appending a dated bullet under `## Notes` over restating the whole note. Never regenerate a person file from a template when it already exists.
+
+## Memory Discipline
+
+- Every memory write, in EITHER store (native per-project Auto Memory or the vault), goes through the rubric in `~/.claude/refs/memory-rubric.md` - read once per session, before the first write.
+- The gist, so it's never skipped: search existing memory for the subject first, then pick **ADD / UPDATE / DELETE / NONE**, where NONE is the most common correct answer. Write only what's confirmed (not merely mentioned), reusable in a future session, and not already knowable from the repo. Record the evidence and an absolute date, never a bare verdict. A conclusion stored without the conditions that produced it is the failure mode that misleads future sessions.
+- Falsified theories are worth saving ("X is not the cause, here's the proof") - they stop future sessions retrying dead ends.
 
 ## Subagent-Driven vs Inline Execution
 

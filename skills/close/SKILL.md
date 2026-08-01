@@ -81,6 +81,22 @@ No silent-drop path either way - every unfinished item either gets done now, or 
 
 Scan the full session. Compute all bullets below internally every time - Phase 3 persists from them regardless of whether anything gets printed.
 
+### Transcript grounding (long sessions only)
+
+"The full session" means the raw transcript on disk, not just what's still in context. Claude Code auto-compacts as it approaches the context limit, so on a long session the early material is already summarized away by the time /close runs - exactly the window where corrections and hard-won facts live. Recalling from a compacted view systematically under-reports them.
+
+Resolve this session's transcript:
+
+1. Read `~/.claude/sessions/*.json` (one per session: `pid`, `sessionId`, `cwd`, `startedAt`). Pick the entry whose `cwd` matches this session's cwd with the newest `startedAt`. That gives `sessionId`.
+2. The transcript is `~/.claude/projects/<sanitized-cwd>/<sessionId>.jsonl`, where the folder name is the absolute cwd with `\`, `/`, `:` and spaces replaced by `-` (e.g. `C:\Users\tecno\Desktop\Projects\fibo` -> `C--Users-tecno-Desktop-Projects-fibo`).
+3. Fallback if step 1 finds no match: in that project folder, take the most recently modified top-level `*.jsonl`. Ignore `<sessionId>/subagents/agent-*.jsonl` - that's commissioned subagent work, not the dev's own turns.
+
+**Skip this entirely if the transcript is under ~500 lines** - the session was short, nothing compacted, in-context history is already complete and re-reading is wasted tokens.
+
+When it does run: `Grep` the file, never `Read` it whole (transcripts embed full tool payloads and run to megabytes). Target the dev's own turns - lines with `"type":"user"` whose content is text rather than a `tool_result` - since bullets 2 and 5 below are about what Joe said. Pull only enough surrounding context to judge each hit.
+
+### What to compute
+
 1. **Detours.** Tool calls, file reads, or directions taken that turned out unneeded. Each = signal of missing context up front or wrong skill firing.
 2. **Corrections.** Places the dev pushed back, rejected, or rewrote your output. What rule was missing or violated?
 3. **Repeated manual steps.** Anything done 2+ times manually that should be a skill. List name + one-line scope. Candidate for a `skill-improvement` ai_todo (persisted in Phase 3). Do NOT draft the skill inline.
@@ -108,7 +124,9 @@ Invoke `/code-check` with that scope arg via the Skill tool. It handles the anal
 
 Run in this order:
 
-1. **Memory writes.** Per the auto-memory protocol in CLAUDE.md. For each correction or non-obvious confirmation from Phase 1, write or update the appropriate memory file and update MEMORY.md index. Skip if nothing qualifies. Never invent memories to look productive.
+1. **Memory writes.** Read `~/.claude/refs/memory-rubric.md` first if it hasn't been read this session - it defines the ADD/UPDATE/DELETE/NONE gate, the bar for writing at all, and the evidence requirement. Then for each correction or non-obvious confirmation from Phase 1, route it through that gate and write to the store CLAUDE.md's Global Knowledge Vault section says it belongs in (vault for cross-project facts and people, native per-project Auto Memory for project-local ones), updating the relevant index. Skip if nothing qualifies; NONE is a normal outcome. Never invent memories to look productive.
+
+   **Dedup against this session's own writes.** Memories written live earlier in this session are already covered - list them before evaluating, and treat a Phase 1 candidate matching one as NONE rather than writing a near-duplicate. The transcript sweep exists to catch what live capture MISSED, not to re-extract what it already got.
 2. **`.claude/todos/`** Write a separate `.md` file per item from:
    - Phase 0 (unfinished dev commitments where the dev chose "close anyway") - tag `**Type:** task`.
    - Phase 1 step 5 (unfinished offers) - tag `**Type:** task`.
