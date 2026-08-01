@@ -60,7 +60,7 @@ If the `close_session` tool isn't available (a plain terminal session not hosted
 
 Runs first, before Phase 1, every time - no flag skips it.
 
-Record this session's start time now (its first message's timestamp, or the nearest available proxy) and keep it - Phase 3 step 3 uses it to scope the screenshot purge to this session only.
+Resolve this session's screenshot-subfolder id now: the claude ancestor PID (same process-tree walk as `rename-session.ps1`/`.sh` - the nearest `claude`-named ancestor process). Also note whether this session captured any screenshots at all. Phase 3 step 3 uses both: the id scopes the purge to files this session can prove it wrote, and the zero-writes flag skips the purge entirely when the answer is none - the exact case that caused the 2026-07-30 incident (a session with zero screenshots of its own still matched and deleted 4 files a concurrent session was actively using).
 
 Scan the full session for dev-stated commitments: explicit multi-part asks ("we need to do X, Y, Z"), a numbered plan the dev agreed to, or any request with more than one part. For each, check whether it actually got done by the time `/close` was invoked.
 
@@ -115,7 +115,7 @@ Run in this order:
    - Phase 1 steps 3-4 (repeated manual steps, skill rule violations) - tag `**Type:** skill-improvement`, Approach section names the skill file involved.
 
    Follow `ai-todos-format.md` (this skill's folder) for everything: template, filename/id rules, git-policy self-heal. The bar: a future cold AI session must be able to execute the task from the file alone, without re-reading session history. Skip if no items. Note: Phase 2 review findings are written to the backlog by `/code-check` directly - do not re-write them here.
-3. **Screenshot cleanup.** Delete only this session's own files from `.for_bepy/screenshots/` (the throwaway verification-screenshot quarantine per CLAUDE.md) - files with an mtime at or after the Phase 0 session-start time. A concurrent session on the same repo can leave its own in-flight verification screenshots in the same folder; anything older than this session's start belongs to one of them and must be left alone, not deleted. Scope is strictly that folder - never touch `.portfolio-data/` (portfolio keepers), committed assets, or any image elsewhere. List each file deleted, plus the count left behind for other sessions. Delete without a blocking prompt (still runs unattended under `/sleep-when-done`/autopilot). Skip silently if the folder is missing or empty. PowerShell: `Get-ChildItem -File '.for_bepy/screenshots/' | Where-Object { $_.LastWriteTime -ge $sessionStart } | Remove-Item -Force`.
+3. **Screenshot cleanup.** Ownership is proven by subfolder, never inferred from mtime - a concurrent session's files can be newer OR older than this session's start and mtime cannot tell them apart, which is exactly what deleted another session's 4 in-flight files on 2026-07-30. This session may delete ONLY files under its own `.for_bepy/screenshots/<pid>/` subfolder (the Phase 0 id) - never files at the folder root, never another pid's subfolder, regardless of age. If Phase 0 recorded zero screenshots captured this session, skip deletion entirely, even if a subfolder happens to exist. Before deleting anything, print the exact filenames about to be removed, then delete - never pipe straight to `Remove-Item` without capturing names first. Loose files at the `.for_bepy/screenshots/` root are legacy (written by skills that don't yet use the per-session subfolder) - never auto-delete them, just report the count. Scope is strictly `.for_bepy/screenshots/` - never touch `.portfolio-data/` (portfolio keepers), committed assets, or any image elsewhere. Delete without a blocking prompt (still runs unattended under `/sleep-when-done`/autopilot). Skip silently if the folder or this session's subfolder is missing or empty. PowerShell: `$files = Get-ChildItem -File ".for_bepy/screenshots/$pid" -ErrorAction SilentlyContinue; $files | ForEach-Object { $_.Name }` to list and print, then `$files | Remove-Item -Force`.
 Note: there is no implicit /commit step anymore. If the dev wants a commit, they chain `/commit` (with whatever subcommand they want) into the /close call.
 
 ## Phase 4 - Counter summary
@@ -123,10 +123,10 @@ Note: there is no implicit /commit step anymore. If the dev wants a commit, they
 Print one line, always - this is the one thing Joe reliably sees from Phases 1-3:
 
 ```
-N memory writes . N todos written (M from review, K skill-improvement) . N screenshots cleaned (M left, other session) . chain: <list of chained commands or "none"> . closing: yes/no
+N memory writes . N todos written (M from review, K skill-improvement) . N screenshots cleaned (M legacy at root, untouched) . chain: <list of chained commands or "none"> . closing: yes/no
 ```
 
-`M from review` is the count of findings from Phase 2 (size + DRY + dead code). If Phase 2 was skipped, omit the parenthetical and say `review skipped`. `K skill-improvement` is the subset of this close's todos tagged `skill-improvement` in Phase 3 step 2; omit `, K skill-improvement` if zero. `N screenshots cleaned` is the count deleted from `.for_bepy/screenshots/` in Phase 3 step 3, scoped to this session's own mtime (0 if folder was missing/empty or nothing qualified). `M left, other session` is the count skipped for predating this session's start; omit the parenthetical if that count is 0.
+`M from review` is the count of findings from Phase 2 (size + DRY + dead code). If Phase 2 was skipped, omit the parenthetical and say `review skipped`. `K skill-improvement` is the subset of this close's todos tagged `skill-improvement` in Phase 3 step 2; omit `, K skill-improvement` if zero. `N screenshots cleaned` is the count deleted from this session's own subfolder in Phase 3 step 3 (0 if this session took no screenshots, its subfolder was missing/empty, or nothing qualified). `M legacy at root, untouched` is the count of loose root-level files left alone because they predate the per-session subfolder scheme; omit the parenthetical if that count is 0.
 
 ## Phase 5 - Run chained commands
 
