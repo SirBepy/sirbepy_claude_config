@@ -5,7 +5,7 @@ description: Triggers on /cleanup-memory only. Audits the current project's auto
 
 # /cleanup-memory
 
-> Dedupe, verify, and triage the auto-memory system (`~/.claude-fibo/projects/<project>/memory/`) - mirrors `/cleanup-todos`'s confirm-gated triage and `/doc-health-check`'s stale-claim/dead-reference checks, applied to Claude's own persistent memory instead of todos or project docs.
+> Dedupe, verify, and triage the auto-memory system (the memory directory named in this session's auto-memory context) - mirrors `/cleanup-todos`'s confirm-gated triage, applied to Claude's own persistent memory instead of todos.
 
 This is a maintenance pass only: it never acts on a memory's advice, only on whether the memory
 itself is still accurate and non-duplicate. Every removal - a dedupe merge or a suggested drop -
@@ -13,9 +13,9 @@ goes through the confirm gate in the Apply step. Nothing moves before the dev re
 
 ## Step 1 - Locate and read
 
-The memory directory for the current project is stated in this session's system context (the
-`# auto memory` section - `~/.claude-fibo/projects/<encoded-cwd>/memory/`). If that section isn't
-present this session, stop and report: "No memory system detected for this project."
+The memory directory for the current project is the one named in this session's auto-memory
+context (the `# auto memory` section). If that section isn't present this session, stop and
+report: "No memory system detected for this project."
 
 Glob `*.md` in that directory, excluding `MEMORY.md` itself. If empty: output "No memory files
 found." and stop.
@@ -46,14 +46,10 @@ Do NOT write or move anything in this step.
 ## Step 4 - Staleness / dead-reference triage
 
 Cap the deep pass at 60 files to bound subagent prompt size - overflow gets the shallow pass
-below. (Fibo-sized projects with ~77 memory files will hit this; most projects won't.) Selection
-must rotate, not fix on alphabetical order: sort by each file's mtime ascending (least-recently
-modified first is a reasonable proxy when no dedicated tracking exists yet), so a different set of
-files gets deep-verified each run instead of the same alphabetically-first 60 forever. After a
-file's deep pass, touch it (e.g. a trivial no-op edit to its `description` line, or append a
-`<!-- last-deep-checked: YYYY-MM-DD -->` comment) so its mtime reflects the check and it rotates
-to the back of the queue for the next run - without this, files never verified this run must still
-surface differently from files verified and confirmed clean, or the rotation has nothing to key off.
+below. Sort candidates by mtime ascending (least-recently modified first) so a different set
+rotates through each run. After a file's deep pass, touch it (e.g. a trivial no-op edit to its
+`description` line, or append a `<!-- last-deep-checked: YYYY-MM-DD -->` comment) so it rotates to
+the back of the queue next run.
 
 **Deep pass (up to 60):** dispatch exactly ONE subagent (`model: 'sonnet'`), full text of each
 memory in one prompt. For each memory, it verifies:

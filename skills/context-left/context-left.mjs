@@ -104,12 +104,16 @@ function scanUsage(path) {
 }
 
 function windowFor(model, maxOcc) {
-  let win, confidence = "heuristic";
+  let win = null, confidence = "heuristic";
+  const has1M = model && /\[1m\]|(?:^|[-_])1m(?:$|[-_])/i.test(model);
   if (model && /claude-3[^0-9]*opus/i.test(model)) win = 200000;
   else if (model && /opus/i.test(model)) win = 1000000;
-  else win = 200000;
+  else if (model && /fable/i.test(model)) win = 1000000;
+  else if (model && /sonnet/i.test(model)) win = has1M ? 1000000 : 200000;
+  // else: unrecognized model - leave win null rather than guessing 200K.
   // sticky correction: any turn exceeding 200K proves the real window is >= 1M.
-  if (maxOcc > 200000) { win = Math.max(win, 1000000); confidence = "proven"; }
+  if (maxOcc > 200000) { win = Math.max(win || 0, 1000000); confidence = "proven"; }
+  if (win == null) confidence = "unknown";
   return { win, confidence };
 }
 
@@ -119,6 +123,10 @@ function selfCompute() {
   const scan = scanUsage(t.path);
   if (!scan) { console.log("context-left: no usage data yet (no completed turn in this session)"); return false; }
   const { win, confidence } = windowFor(scan.model, scan.maxOcc);
+  if (win == null) {
+    console.log(`context-left: unknown/unproven context window for model '${scan.model || "unknown"}' - occupancy is ${human(scan.current)} tokens, but remaining cannot be computed without a known window`);
+    return false;
+  }
   // remaining is driven by `current` (this turn's occupancy), not `maxOcc`: after a
   // context compaction the live window genuinely shrinks, so the latest line is right.
   const remaining = Math.max(0, win - scan.current);

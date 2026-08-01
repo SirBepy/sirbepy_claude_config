@@ -1,6 +1,6 @@
 ---
 name: bepy-skill-creator
-description: Triggers on /bepy-skill-creator only.
+description: Creates a new skill or validates/fixes an existing skill (or all skills) against bepy conventions - frontmatter, structure, description budget, global-mandate compliance. Triggers on /bepy-skill-creator only.
 ---
 
 # /bepy-skill-creator
@@ -27,8 +27,8 @@ Ask the user using AskUserQuestion and open-ended follow-up if needed:
 
 Then ask: where should it live?
 
-- "Global (~/.claude/skills/)"
-- "Project-level (.claude/commands/)"
+- "Global (~/.claude/skills/<name>/SKILL.md)"
+- "Project-level (.claude/skills/<name>/SKILL.md)"
 
 Generate the skill following the conventions below. Before writing to disk, run the **Description budget gate** (see "When creating or fixing"). Then write immediately - do not ask for review first; the dev will tell you what to change after.
 
@@ -80,6 +80,10 @@ Rules are split into two severity levels. FAIL means the skill has a real proble
 - [ ] Each step does one thing
 - [ ] If the skill depends on another skill's conventions, it references that skill by name instead of duplicating rules
 - [ ] No hardcoded user names (e.g. "Joe"). Use "the dev", "the user", or "you" instead. Personal names leak identity and reduce portability.
+- [ ] Every Agent tool dispatch the skill specifies pins `model: 'sonnet'` explicitly (never inherits the session model)
+- [ ] Every subagent dispatch prompt includes the subagents-never-commit boilerplate: "Stage your changes but do NOT commit. The main agent will run `/commit` after your report-back."
+- [ ] No shell command chaining with `&&`, `;`, or `|` in any instructed command - one command per call
+- [ ] Comment-density guidance for any code the skill generates respects the global cap (2 lines typical, 4-line hard cap per block; under ~25% of added lines once a file adds 20+)
 
 ### WARN rules (flag but don't force)
 

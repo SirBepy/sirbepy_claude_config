@@ -1,15 +1,11 @@
 ---
 name: portfolio-data
-description: Triggers on /portfolio-data only.
+description: Generates or updates .portfolio-data/metadata.json and PORTFOLIO.md for a project repo (title, description, stack, screenshots, write-up). Output feeds readme, meta-tags, pwa, and favicon skills. Triggers on /portfolio-data only.
 ---
 
 # /portfolio-data
 
 > Generate or update portfolio metadata and write-up for a project repo.
-
-## Before anything else - detect OS
-
-Run `uname` to detect the OS. If it fails, assume Windows. Keep this in mind for any shell commands throughout.
 
 ## Workflow
 
@@ -37,54 +33,7 @@ Only ask a question if something is genuinely confusing and you cannot make a re
 
 ### Auto-Screenshot Workflow
 
-**Detect type and start command:**
-
-| Check | Type | Port | Command |
-|---|---|---|---|
-| `vite.config.*` | Vite | 5173 | `npm run dev` |
-| `package.json` with React/Next deps | React | 3000 | `npm run dev` |
-| `index.html`, no `package.json` | Static | 8080 | `python -m http.server 8080` |
-
-Use port from `vite.config.*` if specified. Run start command with `run_in_background: true` (one Bash call, no chaining).
-
-Poll for readiness: `curl -s -o /dev/null -w "%{http_code}" http://localhost:PORT` - up to 15 tries, 1s apart.
-
-**Plan screenshots before taking them.** Before capturing anything, read the source code to understand what the app looks like and what would be worth showing. Look for:
-
-- **Routes/pages**: Check the router config (react-router, vue-router, file-based routing) for distinct pages worth capturing. Prioritize pages that show real functionality over empty shells.
-- **Hidden UI**: Look for modals, drawers, dropdowns, settings panels, or UI that only appears after interaction (button clicks, hover states, toggling a feature on). If important UI is hidden behind a click, use Playwright scripting to trigger it before screenshotting.
-- **States**: If the app has distinct visual states (empty vs populated, light vs dark, logged in vs out), pick the most visually interesting one.
-
-Based on this analysis, plan 1-3 screenshots that best represent the project. Prefer variety: don't take 3 shots of the same page at different scroll positions.
-
-**Take screenshots:** Make sure `.portfolio-data/` exists first (`mkdir -p .portfolio-data`).
-
-For simple captures:
-```
-npx --yes playwright screenshot --browser chromium --viewport-size "1280,800" http://localhost:PORT .portfolio-data/screenshot-1.png
-```
-
-For captures that require interaction (clicking buttons, navigating, waiting for elements), write a short Playwright script inline and run it with `node -e`. Example:
-```
-node -e "
-const { chromium } = require('playwright');
-(async () => {
-  const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-  await page.goto('http://localhost:PORT');
-  await page.click('button.open-settings');
-  await page.waitForSelector('.settings-panel');
-  await page.screenshot({ path: '.portfolio-data/screenshot-2.png' });
-  await browser.close();
-})();
-"
-```
-
-Read each screenshot back to verify it captured something useful. Cap at 3 total.
-
-**Stop server:** `npx --yes kill-port PORT`
-
-Set `mainImage` to `"screenshot-1.png"` and `images` to all filenames taken.
+Run `/screenshot` against this repo. Once it produces its output, set `mainImage` and `images` in `metadata.json` from what it produced.
 
 ### Step 3 - Write final files
 

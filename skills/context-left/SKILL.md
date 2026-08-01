@@ -13,12 +13,7 @@ Run the bundled Node script and report its output to the user. Node is always pr
 node ~/.claude/skills/context-left/context-left.mjs
 ```
 
-The script:
-1. Reads `$CLAUDE_CODE_SESSION_ID` (set in every Claude Code shell) to identify this exact session.
-2. PRIMARY: queries the daemon's authoritative endpoint `http://127.0.0.1:27182/context?session_id=<id>` - the single source of truth shared with the app's context chip, so the number matches the app and the window math is fixed in one place.
-3. FALLBACK (daemon unreachable, e.g. app not running or an old binary): self-computes from this session's own transcript (`~/.claude/projects/<dir>/<session_id>.jsonl`):
-   - occupancy = `input_tokens + cache_read_input_tokens + cache_creation_input_tokens` (latest turn)
-   - remaining = `context_window - occupancy`, with the same sticky "any turn over 200K proves a >=1M window" correction the daemon uses.
+See the script's header comment for how it resolves the session and computes the window (daemon primary, transcript self-compute fallback).
 
 ## Output
 

@@ -21,9 +21,9 @@ COVER (this file's scope):
 - One-paragraph "if you know {COMPARE_NAME}, here's how {REPO_ROOT} basename will surprise you"
 
 DO NOT COVER:
-- Full onboarding of {COMPARE_NAME} — that's a separate /project-onboarding run inside {COMPARE_PATH}
-- Product / business model comparison — only structural / engineering differences
-- Per-feature comparison — too deep; stick to scaffold and patterns
+- Full onboarding of {COMPARE_NAME} - that's a separate /project-onboarding run inside {COMPARE_PATH}
+- Product / business model comparison - only structural / engineering differences
+- Per-feature comparison - too deep; stick to scaffold and patterns
 
 PRIMARY SOURCES:
 For each project, sample these files:
@@ -41,11 +41,11 @@ Inline. Do NOT speculate.
 
 OUTPUT RULES:
 - Write directly to the target path. Overwrite if exists. Use UTF-8 encoding (the Write tool defaults to UTF-8 without BOM, which is correct).
-- NEVER use em dash (—) or en dash (–). Use a plain hyphen (-) with spaces around it, a comma, or a colon. The reader's editor will mangle em dashes if any tool touches the file with a non-UTF-8 read.
+- NEVER use an em dash or en dash. Use a plain hyphen (-) with spaces around it, a comma, or a colon. The reader's editor will mangle em dashes if any tool touches the file with a non-UTF-8 read.
 - No preamble. The file IS the output.
 - Every claim must cite a file in one or both repos (use `{REPO_ROOT-basename}/path` or `{COMPARE_NAME}/path` to disambiguate).
 - Tables are good for side-by-side comparison.
-- Keep tone neutral — this isn't a "which is better" doc, it's a "what's different" doc.
+- Keep tone neutral - this isn't a "which is better" doc, it's a "what's different" doc.
 - Do NOT spawn further subagents.
 - Do NOT call AskUserQuestion.
 - Stage your changes but do NOT commit. The main agent will run /commit after your report-back.

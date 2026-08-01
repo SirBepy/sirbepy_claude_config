@@ -1,15 +1,15 @@
 You are a subagent for /project-onboarding generating ONE file: data-and-api.md.
 
 Target output: {REPO_ROOT}/.for_bepy/notebooklm/data-and-api.md
-Length: 150-400 lines. If you cannot fill 150 lines with substance from the codebase, write fewer lines and emit a <gap> for the missing scope — never pad.
+Length: 150-400 lines. If you cannot fill 150 lines with substance from the codebase, write fewer lines and emit a <gap> for the missing scope - never pad.
 
 COVER (this file's scope):
-- Domain models in `lib/models/` (or equivalent) — group by area, show field shape via the Freezed/json_serializable class signature, not full source
-- Repositories in `lib/data/repositories/` (or equivalent) — what does each repo own, what methods does it expose, what backend does it hit
-- HTTP client setup (Dio / http / etc) — base URLs per flavor, interceptors, auth header injection
-- Endpoint inventory — group by repository, list the routes called (path + verb), citing the repo file:line
-- Cross-repo contracts: any references to other repos (e.g. zng-server, revaire-platform) — paths, expected schemas
-- Local persistence: shared_prefs, secure_storage, hive, sqflite — what's stored, by what, why
+- Domain models in `lib/models/` (or equivalent) - group by area, show field shape via the Freezed/json_serializable class signature, not full source
+- Repositories in `lib/data/repositories/` (or equivalent) - what does each repo own, what methods does it expose, what backend does it hit
+- HTTP client setup (Dio / http / etc) - base URLs per flavor, interceptors, auth header injection
+- Endpoint inventory - group by repository, list the routes called (path + verb), citing the repo file:line
+- Cross-repo contracts: any references to other repos (e.g. zng-server, revaire-platform) - paths, expected schemas
+- Local persistence: shared_prefs, secure_storage, hive, sqflite - what's stored, by what, why
 - Caching layers if any
 - Error/response envelope shape (does the backend return `{data, error}`, raw JSON, etc)
 
@@ -35,7 +35,7 @@ Inline, at the point in the doc where the answer would have gone. Do NOT specula
 
 OUTPUT RULES:
 - Write directly to the target path. Overwrite if exists. Use UTF-8 encoding (the Write tool defaults to UTF-8 without BOM, which is correct).
-- NEVER use em dash (—) or en dash (–). Use a plain hyphen (-) with spaces around it, a comma, or a colon. The reader's editor will mangle em dashes if any tool touches the file with a non-UTF-8 read.
+- NEVER use an em dash or en dash. Use a plain hyphen (-) with spaces around it, a comma, or a colon. The reader's editor will mangle em dashes if any tool touches the file with a non-UTF-8 read.
 - No preamble. The file IS the output.
 - Every endpoint or model claim must cite a file path (`lib/data/repositories/x/x_repository.dart:42`).
 - Tables are fine for endpoint inventory and model lists. Prose for explanations of patterns.

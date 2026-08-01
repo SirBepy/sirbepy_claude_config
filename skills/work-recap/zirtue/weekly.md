@@ -309,7 +309,3 @@ One-line reply to the dev: absolute path to the file. If `copy` ran successfully
 - Never uses `clip.exe` (loses hyperlinks). Always go through the PS helper for clipboard.
 - Never rewrites or paraphrases ticket titles. Verbatim from Shortcut `name` field.
 - Never includes unticketed refactors, version bumps, or developer cleanup commits in the clipboard payload (the markdown recap file is fine to list them; the clipboard is for the standup, where it's noise).
-
-## Caveman mode
-
-If caveman mode is active during the run, status updates in chat stay caveman. The **recap file itself** is written normal (the dev reads it later out of context).

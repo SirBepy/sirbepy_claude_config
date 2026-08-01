@@ -18,14 +18,6 @@ argument-hint: "[author <name>] | [import <url-or-path>]"
 
 Never auto-invoke. The dev picks the subcommand explicitly.
 
-## Why this exists
-
-Authored animations are clunky: the dev wants source-controlled, diffable, iteratively-improvable animations. Two import paths cover the realistic library:
-- Roblox Marketplace already has thousands of free animations - just wire the asset ID
-- Mixamo (Adobe) has industry-grade humanoid animations exportable as BVH
-
-The skill ships consistent KeyframeSequence Luau output across both paths so the dev can visually tune any of them in Studio's Animation Editor.
-
 ## Subcommand: author
 
 Generates a placeholder KeyframeSequence module from scratch.
@@ -118,9 +110,6 @@ local function buildPoseTree(kf, poses, easing, dir) ... end
 function Animation.build(): KeyframeSequence
     local seq = Instance.new("KeyframeSequence")
     seq.Name = Animation.NAME
-    seq.AuthoredHipHeight = 2
-    seq.Priority = Animation.PRIORITY
-    seq.Loop = Animation.LOOPED
     -- keyframes here
     return seq
 end
@@ -152,13 +141,3 @@ track.Looped = Animation.LOOPED         -- AnimationTrack.Looped IS runtime-writ
 
 **Valid `Enum.PoseEasingStyle` values are limited:** `Linear`, `Constant`, `Elastic`, `Cubic`, `Bounce`. Do NOT use `Quad`, `Sine`, `Back`, `Exponential` etc. — those are `Enum.EasingStyle` (for tweens), not `Enum.PoseEasingStyle`. Skill output should use `Cubic` as the default smooth ease, `Linear` for sharp transitions.
 
-## Quality limits
-
-The author flow ships placeholders. The import flow ships whatever the source had - Mixamo BVH animations look great after re-targeting; Marketplace varies by author. The skill is best at: discrete short motions, single-character animations. Worst at: paired (two-character) interactions, weight-shifted motion that depends on inverse kinematics.
-
-## Out of scope
-
-- FBX parsing (v2). Use Mixamo's BVH export option for now.
-- Video / YouTube / TikTok URL pose extraction. Possible in theory, low quality in practice.
-- Auto-publish to Roblox marketplace. Requires manual Studio publish step.
-- Animation blending state machines. The dev wires the resulting track into their state code.

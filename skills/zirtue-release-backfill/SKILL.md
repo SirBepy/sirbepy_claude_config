@@ -56,9 +56,9 @@ Never re-derive:
   - `Oneday` — value_id `69247286-4a0c-4fcf-a3c4-85f8bf6af1ea`
   - `V1.0`, `V1.1`, `V2.0` — legacy placeholders
 - Repos (sibling paths):
-  - `C:/Users/tecno/Desktop/Projects/zng-app` — Flutter web consumer app. Tag format: `v1.0.0+N` (build) + `Release-MM-DD-YYYY` (deploy). Shortcut label: `FE 1.0.0+N`.
-  - `C:/Users/tecno/Desktop/Projects/zng-admin` — Flutter web admin. Tags `v1.0.0+N` + `Release-MM-DD-YYYY`. Shortcut label: `Admin 1.0.0+N`.
-  - `C:/Users/tecno/Desktop/Projects/zng-api` — NestJS backend. Tags `v1.0.X`. Shortcut label: `API 1.0.X`. (Read-only here; dev does not author API commits.)
+  - `C:/Users/tecno/Desktop/Projects/zng-app` — Flutter web consumer app. Tag format: `v1.0.0+N` (build) + `Release-M-D-YYYY` (deploy, unpadded, e.g. `Release-7-16-2026`). Shortcut label: `FE 1.0.0+N`.
+  - `C:/Users/tecno/Desktop/Projects/zng-admin` — Flutter web admin. Tags `v1.0.0+N` + `Release-M-D-YYYY` (unpadded). Shortcut label: `Admin 1.0.0+N`.
+  - `C:/Users/tecno/Desktop/Projects/zng-api` — NestJS backend. Tags `v1.0.X`. Shortcut label: `API 1.0.X`. Dev does author API commits; not currently included in the discovery/shipped-detection loops below (steps 3-4 scan zng-app and zng-admin only).
 
 ## CRITICAL: Shortcut PUT semantics
 
@@ -241,7 +241,7 @@ if move_to_complete:
 
 **Never** PUT a partial `custom_fields` array. **Never** PUT without first having read the existing story.
 
-If the proposed Release label is missing from the enum (e.g. repo has new tag the Shortcut field doesn't list), stop and tell the dev to add the enum value in Shortcut UI first — never invent a new value. (See REST fallback below for fetching the enum.)
+If the proposed Release label is missing from the enum (e.g. repo has new tag the Shortcut field doesn't list), stop and tell the dev to add the enum value in Shortcut UI first — never invent a new value. (See `reference.md`'s REST quick reference for fetching the enum.)
 
 ### 11. Final summary
 
@@ -253,44 +253,6 @@ Report:
 
 Include the story URLs for everything updated so the dev can spot-check.
 
-## Shortcut REST quick reference
+## Reference
 
-Token loaded from `~/.claude/.env` (BOM in file, strip with `sed 's/^\xef\xbb\xbf//'`).
-
-```bash
-TOKEN=$(grep -a SHORTCUT_API_TOKEN ~/.claude/.env | sed 's/^\xef\xbb\xbf//' | cut -d= -f2 | tr -d '\r\n')
-
-# Get story
-curl -s "https://api.app.shortcut.com/api/v3/stories/<id>" -H "Shortcut-Token: $TOKEN"
-
-# Search
-curl -s "https://api.app.shortcut.com/api/v3/search/stories?query=<urlencoded>&detail=full&page_size=25" -H "Shortcut-Token: $TOKEN"
-
-# Update story
-curl -s -X PUT "https://api.app.shortcut.com/api/v3/stories/<id>" \
-  -H "Shortcut-Token: $TOKEN" -H "Content-Type: application/json" \
-  -d '{"custom_fields":[...full merged array...],"workflow_state_id":500018258}'
-
-# Get Release enum (uncached — use this if MCP returns stale data)
-curl -s "https://api.app.shortcut.com/api/v3/custom-fields/68f8e559-4a18-4a6e-be1c-fa2f5aaa4fdb" \
-  -H "Shortcut-Token: $TOKEN"
-```
-
-## Edge cases
-
-- **Cross-repo fix (zng-app + zng-admin).** Status `multi-repo`. Ask dev which release is primary; Shortcut only allows one Release value per ticket.
-- **No commit found.** Status `needs-human`. Don't guess from title alone unless dev opts in.
-- **Tag naming drift.** If you see tags that don't match `v1.0.0+N` or `v1.0.X`, flag and stop. Update this skill before proceeding.
-- **Enum value missing.** Do not create new enum values via API. Stop with a clear message: "Release enum lacks `<label>`. Add it in Shortcut UI, then re-run."
-- **Repo working tree dirty.** `git fetch` still works but never `checkout` anything. This skill only reads tags / log.
-- **Estimate already set on ticket.** Never overwrite. Only fill if currently `None`.
-- **Existing field already set to wrong value.** Do not "correct" silently. Other-field fills are insert-only — only touch fields that are currently empty.
-
-## What this skill never does
-
-- Never commits in any repo. (Sibling repo rule.)
-- Never invents a new Release enum value.
-- Never applies field updates without explicit approval at gates A/B/C. (Gate D moves are default-on but always announced in the report first, and nothing is applied before the gates are answered.)
-- Never PUTs a partial `custom_fields` array (would wipe other fields).
-- Never overwrites already-set scope fields (Pri/Skill/Prod/Tech/Estimate). Insert-only.
-- Never moves a ticket to any workflow state other than `Complete`, and never moves anything when the dev opted out (Gate D). Moves to Complete are the announced default for shipped tickets — announced in the report, never hidden.
+REST quick reference, edge cases, and "what this skill never does" live in `reference.md` next to this file — read it on demand (not needed for every run).

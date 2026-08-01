@@ -50,5 +50,4 @@ Pass the `copy` flag through to the variant (it decides how to honor it, typical
 ## Rules
 
 - Never run recap logic in this file. This file only dispatches.
-- Never chain shell commands. One Bash call at a time.
 - The variant file is the source of truth for its behavior.

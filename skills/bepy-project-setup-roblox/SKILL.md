@@ -78,12 +78,7 @@ If the sibling has `luau-lsp` and the project does not, this is where the new pr
 
 1. Glob `../sirbepy_roblox/packages/*/wally.toml`.
 2. For each one, parse `version = "X.Y.Z"` and `name = "sirbepy/<slug>"`.
-3. Map each package's slug to the PascalCase dep alias the rojo project expects:
-   - `core` -> `Core`
-   - `highlight-manager` -> `HighlightManager`
-   - `ui-framework` -> `UIFramework`
-   - `ui-components` -> `UIComponents`
-   - any others present in the sibling -> derive PascalCase from kebab-case automatically
+3. Map each package's slug to the PascalCase dep alias the rojo project expects: PascalCase each hyphen-separated segment; if the leading segment is `ui` or `api`, uppercase it instead of title-casing it (`ui-framework` -> `UIFramework`, `core` -> `Core`, `highlight-manager` -> `HighlightManager`).
 4. Build a `[dependencies]` block:
    ```toml
    [dependencies]
@@ -106,17 +101,7 @@ Run, in order. Stop on first failure.
 
 If any step fails, print the failing stage's stderr and stop. Do NOT proceed to commit.
 
-## Step 7 - Check for /jest-lua skill
-
-Verify `~/.claude/skills/jest-lua/` exists. If missing, print:
-
-```
-WARN: /jest-lua skill is not installed. You will need it to write tests in this project.
-```
-
-Do not abort.
-
-## Step 8 - Commit
+## Step 7 - Commit
 
 If anything was written or modified, run `/commit` with the message:
 
@@ -126,31 +111,9 @@ MAJOR: bepy roblox project setup
 
 If everything was already in place (zero writes), skip the commit step and print "Nothing to commit - project already aligned with template."
 
-## Step 9 - Summary
+## Step 8 - Summary
 
 Print a summary of what ran. For each template file: `created`, `already up to date`, `kept existing (differed)`, or `overwritten`. Also report the auto-pinned wally deps, the smoke verify result, and any warnings.
-
-Example output:
-
-```
-Done. Here is what ran:
-
-template files:
-  default.project.json       - created
-  test.project.json          - created
-  wally.toml                 - kept existing (differed)
-  CLAUDE.md                  - created
-  scripts/check.sh           - already up to date
-  ... (etc)
-
-aftman.toml                  - created (5 tools pinned from sirbepy_roblox)
-wally deps auto-pinned       - Fusion, Core@^0.3.3, UIFramework@^0.1.0, UIComponents@^0.1.0
-
-smoke verify                 - OK
-/jest-lua skill              - present
-
-Don't forget to review the diff before committing.
-```
 
 ## Notes
 

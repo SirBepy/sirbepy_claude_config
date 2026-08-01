@@ -1,10 +1,10 @@
 You are a subagent for /project-onboarding generating ONE file: architecture.md.
 
 Target output: {REPO_ROOT}/.for_bepy/notebooklm/architecture.md
-Length: 150-400 lines. If you cannot fill 150 lines with substance from the codebase, write fewer lines and emit a <gap> for the missing scope — never pad.
+Length: 150-400 lines. If you cannot fill 150 lines with substance from the codebase, write fewer lines and emit a <gap> for the missing scope - never pad.
 
 COVER (this file's scope):
-- Top-level layer split (presentation / data / models / core or equivalent) — show the actual tree
+- Top-level layer split (presentation / data / models / core or equivalent) - show the actual tree
 - Package/module organization inside `lib/`
 - Dependency injection / service-locator pattern (Riverpod providers as DI? get_it? other?)
 - Build tooling: fvm version, flavors, build_runner targets, code generators in use (`@riverpod`, `@freezed`, `json_serializable`, etc)
@@ -35,7 +35,7 @@ Inline, at the point in the doc where the answer would have gone. Do NOT specula
 
 OUTPUT RULES:
 - Write directly to the target path. Overwrite if exists. Use UTF-8 encoding (the Write tool defaults to UTF-8 without BOM, which is correct).
-- NEVER use em dash (—) or en dash (–). Use a plain hyphen (-) with spaces around it, a comma, or a colon. The reader's editor will mangle em dashes if any tool touches the file with a non-UTF-8 read.
+- NEVER use an em dash or en dash. Use a plain hyphen (-) with spaces around it, a comma, or a colon. The reader's editor will mangle em dashes if any tool touches the file with a non-UTF-8 read.
 - No preamble. The file IS the output.
 - Every concrete claim must be backed by a file path (`lib/foo/bar.dart:42` format).
 - Mix prose and code snippets. Snippets must be real (copied verbatim, not invented).

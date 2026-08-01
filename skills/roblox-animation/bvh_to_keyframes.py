@@ -284,9 +284,6 @@ def emit_luau(
         "function Animation.build(): KeyframeSequence",
         "    local seq = Instance.new(\"KeyframeSequence\")",
         "    seq.Name = Animation.NAME",
-        "    seq.AuthoredHipHeight = 2",
-        "    seq.Priority = Animation.PRIORITY",
-        "    seq.Loop = Animation.LOOPED",
         "",
     ])
 

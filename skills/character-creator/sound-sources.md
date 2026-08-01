@@ -75,14 +75,16 @@ Per-character fallback: only when the bulk source missed a slot. Then go to soun
 
 ## Cleanup
 
-- Each kept clip should be 0.5-3 seconds. Trim long ones with `ffmpeg -i in.mp3 -t 3 -c:a copy out.mp3` if available.
+See SKILL.md for the current, authoritative rules - this section only points at them:
+
+- Clip length (HARD, never guillotine): > 10s discard entirely; <= 5s keep the whole clip (silence-trim only, never a mid-word cut); 5-10s keep whole but queue for the user's ear before shipping.
 - Skip clips with intro music or background SFX that don't fit a notification chime.
-- Loader accepts `.wav`, `.mp3`, `.ogg`, `.flac`. No conversion needed.
-- Filename: `<char-slug>-<slot>-<n>.<ext>` (e.g. `sarge-work_finished-1.mp3`). Stable names.
+- Only WAV (PCM), MP3, and Ogg Vorbis play (rodio's enabled features). NOT flac, NOT opus, NOT m4a/aac/webm - those decode to silence with no error. Transcode unsupported codecs before saving.
+- Filename: `<char-slug>-<original-action>-<n>.<ext>` (e.g. `sarge-yesattack-1.mp3`) - preserve the original action, not the slot name.
 
 ## PowerShell shell tips
 
 - `Invoke-WebRequest -UseBasicParsing -Uri <url> -OutFile <path>` for downloads.
 - Never chain commands with `&&` or `;` - one command per call.
 - Temp staging: `$env:TEMP\<game-slug>-sounds\`.
-- Final dest: `$env:APPDATA\claude-usage-tauri\characters\<char-slug>\`.
+- Final dest is grouped by game: `$env:APPDATA\claude-usage-tauri\characters\<game-slug>\<char-slug>\`.

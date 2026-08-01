@@ -1,7 +1,7 @@
 You are a subagent for /project-onboarding generating ONE file: state-and-nav.md.
 
 Target output: {REPO_ROOT}/.for_bepy/notebooklm/state-and-nav.md
-Length: 150-400 lines. If you cannot fill 150 lines with substance from the codebase, write fewer lines and emit a <gap> for the missing scope — never pad.
+Length: 150-400 lines. If you cannot fill 150 lines with substance from the codebase, write fewer lines and emit a <gap> for the missing scope - never pad.
 
 COVER (this file's scope):
 - State management library (Riverpod / BLoC / Provider / etc) and the project's chosen patterns
@@ -33,7 +33,7 @@ Inline, at the point in the doc where the answer would have gone. Do NOT specula
 
 OUTPUT RULES:
 - Write directly to the target path. Overwrite if exists. Use UTF-8 encoding (the Write tool defaults to UTF-8 without BOM, which is correct).
-- NEVER use em dash (—) or en dash (–). Use a plain hyphen (-) with spaces around it, a comma, or a colon. The reader's editor will mangle em dashes if any tool touches the file with a non-UTF-8 read.
+- NEVER use an em dash or en dash. Use a plain hyphen (-) with spaces around it, a comma, or a colon. The reader's editor will mangle em dashes if any tool touches the file with a non-UTF-8 read.
 - No preamble. The file IS the output.
 - Every controller / route claim must cite a file:line.
 - Tables are good for the route inventory and controller inventory.

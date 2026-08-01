@@ -1,16 +1,16 @@
 You are a subagent for /project-onboarding generating ONE file: glossary.md.
 
 Target output: {REPO_ROOT}/.for_bepy/notebooklm/glossary.md
-Length: 80-300 lines. Glossary may be shorter than other files. Quality > length — only include terms that are project-specific and would confuse a new hire.
+Length: 80-300 lines. Glossary may be shorter than other files. Quality > length - only include terms that are project-specific and would confuse a new hire.
 
 COVER (this file's scope):
-- Project-specific vocabulary — domain words, internal jargon, code-named features (e.g. "hot routes", "ephemeral flavor", "decoration arena")
+- Project-specific vocabulary - domain words, internal jargon, code-named features (e.g. "hot routes", "ephemeral flavor", "decoration arena")
 - Acronyms used in the project that are not industry-standard
 - Internal product names / code names for features
 - Stack-relevant terms only if they have a project-specific meaning (e.g. "the auth flow" if the project defines "the auth flow" as something specific)
 
 DO NOT COVER (these belong elsewhere or nowhere):
-- Generic Flutter / Dart terms (Widget, Riverpod, GoRouter — those go in the reader's head from their general training)
+- Generic Flutter / Dart terms (Widget, Riverpod, GoRouter - those go in the reader's head from their general training)
 - Specific model field names (data-and-api.md owns the field shape)
 - Route names (state-and-nav.md owns the route inventory)
 - Personas (what-it-does.md)
@@ -42,7 +42,7 @@ If a term is just a class name with no project-specific semantic meaning, do NOT
 
 OUTPUT RULES:
 - Write directly to the target path. Overwrite if exists. Use UTF-8 encoding (the Write tool defaults to UTF-8 without BOM, which is correct).
-- NEVER use em dash (—) or en dash (–). Use a plain hyphen (-) with spaces around it, a comma, or a colon. The reader's editor will mangle em dashes if any tool touches the file with a non-UTF-8 read.
+- NEVER use an em dash or en dash. Use a plain hyphen (-) with spaces around it, a comma, or a colon. The reader's editor will mangle em dashes if any tool touches the file with a non-UTF-8 read.
 - No preamble. The file IS the output.
 - 15-40 terms is a healthy glossary. More than 60 means you're padding with generic terms.
 - Do NOT include `Riverpod`, `GoRouter`, `Freezed`, etc unless the project has a special meaning for them.

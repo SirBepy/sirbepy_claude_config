@@ -1,7 +1,7 @@
 All content subagents have returned. Run these two steps serially. Do NOT spawn subagents for either.
 
 ENCODING WARNING (critical, do not skip):
-- Subagents write content files as UTF-8 without BOM. PowerShell's `Get-Content` defaults to ANSI (Windows-1252) on Windows 5.1, which mangles UTF-8 multi-byte characters into mojibake (e.g. `—` becomes `â€"`).
+- Subagents write content files as UTF-8 without BOM. PowerShell's `Get-Content` defaults to ANSI (Windows-1252) on Windows 5.1, which mangles UTF-8 multi-byte characters into mojibake (e.g. an em dash becomes `â€"`).
 - When reading or rewriting files in either step below, use either the Edit tool (which handles encoding correctly), the Read tool (which reads UTF-8), or PowerShell with explicit UTF-8: `[System.IO.File]::ReadAllBytes($path)` then `[System.Text.Encoding]::UTF8.GetString($bytes)`. Write back via `[System.IO.File]::WriteAllText($path, $text, [System.Text.UTF8Encoding]::new($false))`.
 - Do NOT use plain `Get-Content` followed by `Set-Content -Encoding UTF8` for any file that may contain non-ASCII characters. This sequence corrupts em dashes and other multi-byte chars.
 
@@ -77,7 +77,7 @@ If `--compare` was passed, `{compare_section}` is:
 
 If not, `{compare_section}` is empty string.
 
-After both steps, stop. Do NOT commit. Joe will run `/commit`.
+After both steps, stop. Do NOT commit. The dev will run `/commit`.
 
 Report to user:
 - Files written (paths)

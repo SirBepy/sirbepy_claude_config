@@ -1,7 +1,7 @@
 ---
 name: work-recap-deck
 description: Triggers on /work-recap-deck only. Turns merged GitHub PRs into a single-file HTML deck with an embedded diff explorer (syntax highlighting via CDN, needs internet).
-argument-hint: "[author] [since-date]"
+argument-hint: "[free-form: who and what window to recap]"
 ---
 
 # /work-recap-deck
@@ -53,7 +53,7 @@ Write `deck.config.json` matching this schema (see `deck.config.example.json` fo
 Run the bundled generator (absolute path to this skill folder):
 
 ```
-node "<skill-dir>/build-deck.mjs" deck.config.json work-recap-deck.html
+node "C:/Users/tecno/.claude/skills/work-recap-deck/build-deck.mjs" deck.config.json work-recap-deck.html
 ```
 
 It fetches each PR, bakes the diffs in, and writes one HTML file (typically a few MB).

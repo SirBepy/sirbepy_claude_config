@@ -160,7 +160,3 @@ Print the blurb as a markdown blockquote in chat — always, regardless of the `
 - Never touches GitHub Issues — this repo doesn't assign them per-dev, so they're not a signal here.
 - Never uses `clip.exe`. Always go through the PS helper for clipboard.
 - Never writes inside the fibo repo (output lives in `~/daily-recaps/`).
-
-## Caveman mode
-
-Status updates in chat stay caveman if active. The recap file itself and the clipboard payload are written normal.

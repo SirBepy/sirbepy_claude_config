@@ -142,7 +142,3 @@ One-line reply: absolute path to the file. No chat dump of the full recap — th
 - Never writes inside the fibo repo (output lives in `~/weekly-recaps/`).
 - Never rewrites or paraphrases PR titles. Verbatim from `gh pr list`'s `title` field.
 - The `copy` flag is a no-op for this variant (no clipboard payload defined) — if passed, note in the reply that it's ignored here.
-
-## Caveman mode
-
-If caveman mode is active during the run, status updates in chat stay caveman. The recap file itself is written normal (the dev reads it later out of context).

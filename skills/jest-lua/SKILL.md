@@ -19,11 +19,9 @@ Show test status overview and available subcommands.
 ### `/jest-lua run [filter]`
 Run tests.
 
-1. Build the test place: `rojo build test.project.json -o TestPlace.rbxl`
-2. Run tests: `run-in-roblox --place TestPlace.rbxl --script scripts/run-tests.lua`
-3. If `filter` provided, note that jest-lua CLI filtering must be configured in `jest.config.luau` or the run script - inform user if not set up.
-4. Parse output, summarize pass/fail counts, show failing test details.
-5. Clean up `TestPlace.rbxl` after run.
+1. Run `bash scripts/check.sh` (rojo build + test build + jest, one token-lean OK line). Fallback, only if `scripts/check.sh` doesn't exist: `run-in-roblox --place build/test.rbxl --script tests/run.server.luau`.
+2. If `filter` provided, note that jest-lua CLI filtering must be configured in `jest.config.luau` or the run script - inform user if not set up.
+3. Parse output, summarize pass/fail counts, show failing test details.
 
 ### `/jest-lua create <module-path>`
 Create a test file for an existing module.
@@ -43,18 +41,6 @@ Set up testing infrastructure for a package that has no tests yet.
 3. Scan the package's `src/` for modules with pure, testable functions.
 4. For each testable module, run the `/jest-lua create` flow.
 5. Report which modules were skipped (too coupled to Roblox runtime) and which got tests.
-
-### `/jest-lua init`
-Bootstrap jest-lua testing in a project that doesn't have it yet.
-
-1. Check for existing setup. If found, report and stop.
-2. Create required files:
-   - `testing/wally.toml` with Jest 3.10.0 dev-dependencies
-   - `tests/jest.config.luau` with `testMatch = { "**/*.spec" }`
-   - `scripts/run-tests.lua` test runner script
-   - `test.project.json` Rojo project mapping DevPackages, Source, and Tests
-3. Instruct user to run `cd testing && wally install` to fetch packages.
-4. Report setup complete.
 
 ---
 
@@ -99,18 +85,6 @@ end)
 - Functions that call `game:GetService()` internally.
 - Event-driven flows (OnClientEvent, OnServerEvent).
 - UI components.
-
----
-
-## Infrastructure Files Reference
-
-| File | Purpose |
-|---|---|
-| `test.project.json` | Rojo project that maps DevPackages, Source modules, and Tests into a test DataModel |
-| `tests/jest.config.luau` | Jest config, `testMatch = { "**/*.spec" }` |
-| `scripts/run-tests.lua` | Entry point script, runs `Jest.runCLI()` and exits with status code |
-| `testing/wally.toml` | Wally manifest for test-only dependencies (Jest 3.10.0, JestGlobals 3.10.0) |
-| `testing/DevPackages/` | Wally-installed test packages (gitignored, run `cd testing && wally install`) |
 
 ---
 

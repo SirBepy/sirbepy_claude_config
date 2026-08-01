@@ -7,8 +7,8 @@ Curated list for `/character-creator`. Try in order. Skip dead ones immediately 
 1. **Wikipedia article infobox image**
    Pattern: fetch `https://en.wikipedia.org/wiki/<Page>` via WebFetch, extract the `upload.wikimedia.org/...` URL of the infobox image, then `Invoke-WebRequest` to download. Often square, clean, and high-res enough to crop to 64x64.
 
-2. **Game-specific fan wikis (Fandom, dedicated wikis)**
-   Most have per-character pages with portrait images hosted on Fandom CDN (`static.wikia.nocookie.net/...`). WebFetch the page to get the image URL, then download.
+2. **Game-specific fan wikis (dedicated, non-Fandom wikis)**
+   Most have per-character pages with portrait images. WebFetch the page to get the image URL, then download. `*.fandom.com` itself is on sound-sources.md's 403-blocklist (deterministic block) - skip Fandom domains here too, even though the CDN host (`static.wikia.nocookie.net`) is technically separate.
 
 3. **archive.org screenshot / sprite sheet items**
    Search archive.org for the game name. Some uploads include sprite sheets, manuals, or screenshots that contain usable portraits. Direct downloads work.

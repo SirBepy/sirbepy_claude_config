@@ -7,7 +7,7 @@
 - Shortcut user ID: `699c76fe-9076-4424-ba22-2bb3534f417e`
 - Shortcut mention: `josipmui`
 - Git author name: `JosipMuzicZirtue`
-- Git author email: `tecnomon99@gmail.com`
+- Git author email: `josip.muzic+zirtue@cinnamon.agency`
 
 ## Repos to scan
 
@@ -42,7 +42,7 @@ For each of the 3 repos, follow **Repo refresh: fetch, never pull** in `../_comm
 For each repo, one Bash call:
 
 ```
-git -C <repo> log --all --author="JosipMuzicZirtue" --author="tecnomon99@gmail.com" --since="<YYYY-MM-DD>" --pretty=format:"%h|%ad|%s" --date=short
+git -C <repo> log --all --author="JosipMuzicZirtue" --since="<YYYY-MM-DD>" --pretty=format:"%h|%ad|%s" --date=short
 ```
 
 Keep the raw list internally. It's used to group bullets and correlate tickets, not printed.
@@ -191,7 +191,3 @@ Example:
 - Never includes the file title or generator attribution in the clipboard payload or in-chat blockquote.
 - Never uses `clip.exe` (loses the hyperlinks, only CF_TEXT). Always go through the PS helper for clipboard.
 - Never writes inside a project repo (output lives in `~/daily-recaps/`).
-
-## Caveman mode
-
-Status updates in chat stay caveman if active. The recap file itself and the clipboard payload are written normal.
