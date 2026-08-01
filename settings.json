@@ -185,6 +185,16 @@
         ]
       },
       {
+        "matcher": "ScheduleWakeup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\schedulewakeup-guard.py\"",
+            "statusMessage": "Checking ScheduleWakeup usage context"
+          }
+        ]
+      },
+      {
         "matcher": "Bash|PowerShell",
         "hooks": [
           {
