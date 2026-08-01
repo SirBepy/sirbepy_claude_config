@@ -56,10 +56,10 @@ per the global subagent-model rule; never inherit.
    skip this step entirely if the size gate above routed to inline drafting.**
    One call, foreground (its report is needed before anything else can happen).
    Give it: the branch name, the base branch, whether a PR already exists
-   (edit vs. create framing), and an instruction to read this skill file
-   (`C:\Users\tecno\.claude-fibo\skills\create-pr\SKILL.md`) in full for the
-   detailed rules (auto-tier thresholds, title prefixes, anti-bloat rules,
-   image-hosting conventions, Slack-block format) rather than re-explaining
+   (edit vs. create framing), and an instruction to read
+   `C:\Users\tecno\.claude\skills\create-pr\drafting-rules.md` in full for the
+   detailed rules (auto-tier thresholds, comment-noise check, visual scan,
+   Slack-block format, image-hosting conventions) rather than re-explaining
    them inline. Its job, all read-only except the final file write:
    - **Gather**: `git log --oneline <base>..HEAD`, `git diff --stat <base>..HEAD`,
      `git diff --name-only <base>..HEAD`, and the actual commit messages - the
@@ -72,14 +72,15 @@ per the global subagent-model rule; never inherit.
      the failing command + output verbatim so the main agent can abort and
      show the dev. Do not draft a PR for a red branch.
    - **Comment-noise check** (always, not skippable by `--no-checks` - it costs
-     nothing and no linter can do it): see "Comment-noise check" below. Report
-     the offenders as `file:line` + the block's first line + line count, or
-     `clean`. Never rewrite them itself - the main agent gates it.
-   - **Auto-tier** (see the tiering rubric below) and **title** (conventional
-     prefix, one line).
+     nothing and no linter can do it): see "Comment-noise check" in
+     `drafting-rules.md`. Report the offenders as `file:line` + the block's
+     first line + line count, or `clean`. Never rewrite them itself - the main
+     agent gates it.
+   - **Auto-tier** (see the auto-tier rubric in `drafting-rules.md`) and
+     **title** (conventional prefix, one line).
    - **Visual scan** - inspect the changed-files list and decide what to
-     *recommend*, per the "Visual scan" rules below, but do NOT capture or
-     upload anything itself:
+     *recommend*, per the "Visual scan rules" in `drafting-rules.md`, but do
+     NOT capture or upload anything itself:
      - Frontend/UI files touched → recommend `screenshot`, name the route to
        capture.
      - Schema/pipeline/data-flow files touched → draft the mermaid block
@@ -89,8 +90,9 @@ per the global subagent-model rule; never inherit.
      If recommending `screenshot`, leave a literal placeholder line
      `<!-- IMAGE_HERE -->` exactly where the image markdown should go once
      captured.
-   - **Draft the body** per the tiering rubric + anti-bloat rules below, and
-     the Slack announcement block below if `.github/workflows/slack-announce.yml` exists.
+   - **Draft the body** per the tiering rubric (`drafting-rules.md`) +
+     anti-bloat rules below, and the Slack announcement block
+     (`drafting-rules.md`) if `.github/workflows/slack-announce.yml` exists.
    - **Write** the final body to `.for_bepy/pr_preview/<branch-slug>.md`
      (gitignored personal space - create the folder if missing).
    - **Return** (short - this is what crosses back into the main agent's
@@ -121,8 +123,9 @@ per the global subagent-model rule; never inherit.
      second, small subagent** (`general-purpose`, `model: 'sonnet'`) to bring
      the app up (reuse a running `/supervised-run` instance if one already
      serves the route, else start one), capture the screenshot, `Read` it to
-     self-verify, run the sensitive-content guard (below), then upload it per
-     the "Image hosting" rules and return ONLY the final embeddable image URL
+     self-verify, run the sensitive-content guard (`drafting-rules.md`), then
+     upload it per the "Image hosting" rules in `drafting-rules.md` and return
+     ONLY the final embeddable image URL
      (or, if the guard tripped, a note to fall back to the manual
      drag-and-drop flow instead). The screenshot bytes and the upload's
      base64 payload never need to touch the main agent's context - only the
@@ -161,113 +164,9 @@ per the global subagent-model rule; never inherit.
      The title must not contain `>` characters. The base64 values must be
      single lines with no spaces or line breaks.
 
-### Auto-tier rubric (for the subagent to apply in step 2)
-
-   Raw line count is a weak signal (a 700-line deletion is still *tiny* to
-   explain). Tier on **how many distinct things a reviewer must understand**:
-   - **Tiny** - one concern (docs, config, a single fix). Body = a TL;DR only:
-     2-4 sentences, what + why. No headers, no bullets, no sections.
-   - **Small/medium** - a few related changes. One-sentence "why" on top, then
-     2-5 "what" bullets (only when there's genuinely more than one thing), then
-     a `**Verify:**` line if there's something to check.
-   - **Large** - multiple concerns / a new subsystem. Same light top, then a
-     collapsed `<details><summary>Detail</summary>…</details>` block for
-     context / approach / risk. The surface stays short; depth hides until clicked.
-
-   **Title.** Conventional prefix reused from `/commit` (`FEAT FIX REFACTOR CHORE
-   DOCS TEST STYLE DATA`). Derive from the commits; if they span prefixes, pick
-   the one that names the dominant change. One line, no trailing period, says
-   what changed - not how.
-
-### Comment-noise check (for the subagent to apply in step 2)
-
-The cap: **2 lines typical, 4 lines hard, per comment block**, and added comment
-lines under **~25%** of a file's added lines once that file adds 20+ lines (below
-that the ratio is noise - a 5-line constants file with one 2-line why-comment is
-fine, and the block cap already covers it). Matches the global CLAUDE.md Code
-Style rule; if a number changes, change it in both. A block earns its place ONLY
-by naming a constraint, a gotcha, or a measurement the code cannot show.
-Restating the next line, narrating steps, labelling JSX sections, or parking
-design rationale in code all fail; rationale goes in the PR body.
-
-1. **Mechanical prefilter** (one command, no judgment, run it verbatim):
-
-   ```
-   git diff <base>..HEAD | awk '
-   /^\+\+\+ b\// { f=substr($0,7); run=0; next }
-   /^\+/ && !/^\+\+\+/ {
-     l=substr($0,2); add[f]++
-     if (l ~ /^[[:space:]]*(\/\/|\/\*|\*|#|--)/) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
-     next
-   }
-   { run=0 }
-   END { for (k in add) if (max[k]>=5 || (add[k]>=20 && c[k]*100/add[k]>=25)) printf "%s %d/%d (%d%%) longest %d\n", k, c[k], add[k], c[k]*100/add[k], max[k] }' | sort
-   ```
-
-   No output = `clean`, and the check is done. Do not read a single comment.
-2. **Judge only the flagged files.** Read those diffs and list the specific
-   offending blocks (`file:line`, first line, line count). A 5+ line block that
-   genuinely documents one hard constraint can survive - say so and why. Do not
-   review comments in files the prefilter didn't flag; they are in budget.
-
-Never edit the comments in the subagent. Report; step 2b trims.
-
-### Visual scan rules (for the subagent to apply in step 2)
-
-   It recommends, it never captures/uploads/embeds itself; that's step 3's
-   job, gated on the dev's yes:
-   - **Frontend / UI files** (`frontend/src/**`, `*.tsx`, `*.css`) → recommend
-     `screenshot`, naming the most representative route to capture.
-   - **Sensitive-content guard (public path only):** the pr-assets repo is
-     PUBLIC. If a captured screenshot shows secrets, tokens, customer data, or
-     anything Joe wouldn't want on a public URL, do NOT upload - fall back to
-     the manual flow (local PNG path, dev drags it into the PR box himself,
-     GitHub's own drag-drop upload is private-repo-safe). The private
-     same-repo path below has no such exposure; the guard doesn't apply there.
-   - **Schema / pipeline / data-flow files** (`domain/models/**`,
-     `backend/**/pipelines/**`, `schema_manager.py`, `migrations/**`) →
-     recommend `mermaid` and draft the fenced ` ```mermaid ` block inline in
-     the body now (cheap, no capture/upload step needed) - GitHub renders it
-     natively. Keep it to the nodes that changed, not the whole system.
-   - Nothing matches → recommend `none`. Silence is correct; never pad with a
-     diagram for its own sake.
-   - Never auto-embed a screenshot or keep a mermaid block without the dev's
-     explicit per-item yes (step 3). Do not silently substitute an
-     existing/repurposed screenshot.
-
-### Slack announcement block (opt-in per repo, for the subagent to apply in step 2)
-
-   If the repo contains `.github/workflows/slack-announce.yml`, append a
-   collapsed block to the PR body (after the main content). Format below is
-   the default; a repo's `.claude/pr-style.md` overrides it where they differ:
-
-   ```
-   <details>
-   <summary>📣 Slack Message on Merge</summary>
-
-   <!-- slack-announce-start -->
-   <blurb>
-   <!-- SLACK_IMAGE_HERE -->
-   <!-- slack-announce-end -->
-
-   </details>
-   ```
-
-   If the visual scan recommended `screenshot`, leave the literal placeholder
-   line `<!-- SLACK_IMAGE_HERE -->` (mirrors `<!-- IMAGE_HERE -->` in the main
-   body - the image doesn't exist yet at draft time) so step 3 can splice the
-   same `![...](url)` line in here too once approved. If no screenshot was
-   recommended, omit the placeholder line entirely - don't leave a stray
-   comment in the rendered block.
-
-   The blurb: 1-3 casual first-person sentences from Joe's voice ("Just shipped
-   X - it does Y"), aimed at teammates, not reviewers. **Slack-mrkdwn-safe
-   plain text only**: no markdown links, no `**bold**`, no headers - the
-   workflow posts it verbatim as Slack mrkdwn. Image lines must be exactly
-   `![...](url)` at line start; the workflow parses them into Slack image
-   blocks and strips them from the text. The dev can edit the block on GitHub
-   before merging; the workflow posts whatever is between the markers at merge
-   time. No workflow file in the repo → skip this step entirely, never ask.
+See `skills/create-pr/drafting-rules.md` for the auto-tier rubric, the
+comment-noise check, the visual-scan rules, and the Slack-announcement-block
+format the drafting subagent applies in step 2.
 
 5. **Confirm, then create (main agent - live gate, cannot delegate).**
    Pre-flight: have you already asked step 3's visual y/n as its OWN question
@@ -289,48 +188,9 @@ Never edit the comments in the subagent. Report; step 2b trims.
    - Print the PR URL. If the sensitive-content fallback left a screenshot
      un-embedded, remind the dev to drag it into the PR box.
 
-## Image hosting
-
-Pick the path by the CURRENT repo's visibility (`gh repo view --json isPrivate`):
-
-- **Public repo → `SirBepy/pr-assets`** (the public path, below).
-- **Private repo → the repo's own orphan `assets` branch**, if its
-  `.claude/pr-style.md` documents one (fibo does) - follow that file exactly:
-  upload via the contents API with `-f branch=assets`, embed via the
-  same-origin blob URL `https://github.com/<owner>/<repo>/blob/assets/<path>?raw=true`.
-  That URL form bypasses GitHub's camo proxy (served off the viewer's own
-  session), so it renders in private-repo PR bodies; `raw.githubusercontent.com`
-  URLs do NOT. No sensitive-content concern - nothing leaves the private repo.
-- **Private repo without a `pr-style.md` hosting convention → manual fallback**
-  (local PNG path, dev drags it into the PR box). Suggest setting up an assets
-  branch as a follow-up rather than inventing one silently.
-
-### The public path (pr-assets)
-
-Screenshots embed via the dedicated public repo `SirBepy/pr-assets` - GitHub
-proxies PR-body images through camo, which can't authenticate, so for public
-hosting images must live at a public URL (this also makes them work in Slack
-webhooks). Files are kept forever; they're tiny.
-
-Upload via the contents API, no clone needed (one PowerShell call per image,
-never chained):
-
-```
-$b64 = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes("<abs path>.png"))
-gh api --method PUT /repos/SirBepy/pr-assets/contents/<repo-name>/<branch-slug>/<file>.png -f message="ASSET: <repo> <branch> screenshot" -f content=$b64 --jq .content.download_url
-```
-
-- Path convention: `<repo-name>/<branch-slug>/<descriptive-name>.png`. Unique
-  filenames only - a PUT to an existing path fails without its blob sha; if
-  re-shooting, suffix `-2`, `-3`.
-- The command prints the final `https://raw.githubusercontent.com/...` URL;
-  embed it as `![<what it shows>](<url>)` in the PR body.
-- `gh` account: the global PreToolUse hook switches accounts by the CURRENT
-  repo's origin, but pr-assets lives under SirBepy. From a non-SirBepy repo
-  (zirtue/fibo/revaire cwd), the active account won't have push rights - run
-  `gh auth switch --user SirBepy` first, upload, then switch back (or just
-  re-run any repo-scoped gh command and let the hook restore it).
-- Remember the sensitive-content guard (Visual scan rules above): public URL, public repo.
+See `skills/create-pr/drafting-rules.md` for the image-hosting conventions
+(public vs. private repo, upload command, account caveats) the drafting
+subagent applies when a screenshot needs embedding.
 
 ## Anti-bloat rules (the actual point)
 

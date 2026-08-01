@@ -11,21 +11,22 @@ argument-hint: "[gh-username] [commit-email]  (run from inside the target repo)"
 
 ## The hard rule (why this skill exists)
 
-**NEVER run `gh auth switch` (or any global account change) to satisfy a
-per-project need.** gh's active account is global; switching it breaks every
-other repo. Per-project account selection is done with the three-part mechanism
-below. If you ever feel tempted to "just switch the account," stop and use this.
+**Never run `gh auth switch` manually or inside a skill - the global hook
+(`~/.claude/hooks/gh-account-switch.sh`) owns the active account**, switching
+it automatically to match the current repo's origin remote on every `gh`
+call. This skill wires only the git-identity layer (commit author + push/pull
+auth), which the hook does not touch. If you ever feel tempted to run `gh auth
+switch`, stop - add a `case` line to the hook instead (see step 5 below).
 
 The dev keeps several GitHub accounts. One is the GLOBAL default (personal);
-specific projects map to other accounts by **git remote URL**. Two concerns,
-two layers - keep them straight:
+specific projects map to other accounts by **git remote URL**. This skill
+owns one concern:
 
 | Concern | Mechanism | Scope |
 |---|---|---|
 | Commit identity + git push/pull auth | `~/.gitconfig-<slug>` (user + gh-backed credential helper) loaded via a remote-URL `includeIf` in `~/.gitconfig` | git only |
-| `gh` CLI account (`gh pr create`, etc.) | a `gh` shadow function in the PS profile that sets `GH_TOKEN` per-call from a remote->account table | gh CLI only |
 
-Neither layer mutates the global active account.
+This layer never mutates the global active account.
 
 ## Inputs
 
@@ -74,58 +75,18 @@ Neither layer mutates the global active account.
    ```
    Idempotent: skip if an entry for this owner already exists.
 
-5. **gh-CLI layer - the PS profile resolver.** Profile lives at `$PROFILE`
-   (today: `…\OneDrive\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1`).
-   - If the `gh` shadow function + `$GhAccountByRemote` table are ABSENT, install
-     the whole block (see "Resolver block" below).
-   - If present, add one line to `$GhAccountByRemote`:
-     `'github.com/<owner>/' = '<gh-username>'` (skip if already there).
+5. **gh-CLI layer.** The global PreToolUse hook (`~/.claude/hooks/gh-account-switch.sh`)
+   owns which `gh` account is active, keyed by the origin remote's owner. Add
+   one `case` line for the new owner: `*<owner>/*) acct=<gh-username> ;;`
+   (see the existing entries in that file for the pattern).
 
 6. **Verify both layers** (do not claim done without this):
    - `git -C <repo> config user.email` -> the new email.
-   - Token routing: in PowerShell, `$env:GH_TOKEN = (gh.exe auth token --user
-     <gh-username> --hostname github.com); gh.exe repo view <owner>/<repo>
-     --json name; Remove-Item Env:GH_TOKEN` -> resolves the repo.
    - `gh.exe auth status` -> global active account is UNCHANGED.
 
-7. **Report.** Tell the dev to open a new terminal (or `. $PROFILE`) for the `gh`
-   function to take effect, and that existing commits keep their old author (this
-   only affects new commits); offer a rewrite only if asked.
-
-## Resolver block (install once into the PS profile)
-
-```powershell
-# --- Per-project GitHub account routing for the gh CLI ----------------------
-# Maps a substring of a repo's origin URL to the gh account `gh` should use.
-# Git push/pull + commit identity are handled separately by the ~/.gitconfig-*
-# credential helpers (includeIf). This only affects the gh CLI, and only for the
-# duration of each call - the GLOBAL default account stays whatever it is.
-# Add a project: one line in the table below.
-$global:GhAccountByRemote = [ordered]@{
-    'github.com/Fibo-Studio/' = 'JosipMuzicFibo'
-}
-function gh {
-    $real = Get-Command gh.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $real) { Write-Error 'gh.exe not found on PATH'; return }
-    $acct = $null
-    $url = (& git config --get remote.origin.url 2>$null)
-    if ($url) {
-        foreach ($k in $global:GhAccountByRemote.Keys) {
-            if ($url -like "*$k*") { $acct = $global:GhAccountByRemote[$k]; break }
-        }
-    }
-    if (-not $acct) { & $real.Source @args; return }
-    $token = (& $real.Source auth token --user $acct --hostname github.com 2>$null)
-    if (-not $token) { & $real.Source @args; return }
-    $had = Test-Path Env:GH_TOKEN
-    $old = $env:GH_TOKEN
-    $env:GH_TOKEN = $token
-    try { & $real.Source @args }
-    finally {
-        if ($had) { $env:GH_TOKEN = $old } else { Remove-Item Env:GH_TOKEN -ErrorAction SilentlyContinue }
-    }
-}
-```
+7. **Report.** Tell the dev that the hook change takes effect on the next `gh`
+   call (no new terminal needed), and that existing commits keep their old
+   author (this only affects new commits); offer a rewrite only if asked.
 
 ## Notes
 
@@ -133,7 +94,8 @@ function gh {
   for clones anywhere and matches the dev's existing `hasconfig` convention. The
   older `gitdir:` entries still work; migrate them to the remote form
   opportunistically, but do not break a working setup unasked.
-- Shell scope: the resolver is Windows PowerShell 5.1 (the dev's only interactive
-  shell). If a Git Bash / pwsh setup appears later, add an equivalent resolver to
-  that profile; the git layer is shell-agnostic and needs no change.
+- Shell scope: the git layer (`includeIf` + `~/.gitconfig-<slug>`) is
+  shell-agnostic - works from any shell. The `gh` CLI layer is owned by the
+  bash hook (`~/.claude/hooks/gh-account-switch.sh`), independent of the
+  dev's interactive shell.
 - One command per call, quote paths with spaces, never chain.

@@ -1,6 +1,7 @@
 ---
 name: update-workflow
-description: Triggers on /update-workflow only.
+description: Syncs .github/workflows/deploy.yml against this skill's template for the detected project type (html, vite, or react), creating it if missing or flagging unrecognized diffs for confirmation before overwriting.
+argument-hint: "[skipVerification]"
 ---
 
 # /update-workflow
@@ -16,7 +17,6 @@ Read `CLAUDE.md` and check the `Type:` field. If CLAUDE.md does not exist or typ
 - `vite.config.*` exists - vite
 - `package.json` with React deps - react
 - `index.html` with no `package.json` - html
-- `default.project.json` or `*.project.json` - roblox
 
 ### Step 2 - Read the correct template
 
@@ -25,8 +25,6 @@ Based on project type, read the corresponding template from this skill's `templa
 - `html` - read `templates/html.yml`
 - `vite` - read `templates/vite.yml`
 - `react` - read `templates/react.yml`
-- `roblox` - read `templates/roblox.yml`
-- `flutter` - read `templates/flutter.yml`
 
 If no template exists for the detected type, tell the user and stop.
 
