@@ -53,7 +53,27 @@ Use AskUserQuestion with these options:
 
 ### Pick up a ticket
 
-Use the `/obsidian-pickup-ticket` skill. It only triggers on its slash command (because the dev also uses Shortcut and other trackers, natural phrases like "tackle FSM-2" must NOT auto-trigger anything). If the dev asks to "pick up a ticket" without an ID inside this `/obsidian` flow, ask which project, list active tickets from its Kanban, let him pick one, then hand off to `/obsidian-pickup-ticket`.
+**Trigger:** direct invocation is `/obsidian-pickup-ticket <ID>` only - natural phrases like "tackle FSM-2" or "pick up CUT-3" must NOT auto-trigger this (the dev also uses Shortcut and other trackers, and ticket-like wording is ambiguous). If the dev asks to "pick up a ticket" without an ID inside this `/obsidian` flow, ask which project, list active tickets from its Kanban, and let him pick one.
+
+1. **Resolve the ticket file.** Glob `Tasks/<ID>*.md` inside the vault. If no match, tell the dev the ID doesn't exist and stop.
+2. **Gather context.** Read in this order:
+   - The ticket note itself.
+   - The project note (find via the ticket's `project:` frontmatter - it's a wiki link, so read `<Project>.md` from vault root).
+   - The project's Kanban file at `Kanbans/<Project>.md`. Note which column the ticket is currently in and its sibling tickets.
+   - Grep `Journal/` for mentions of the ticket ID or ticket title.
+3. **Summarize** in one short paragraph: what the ticket is (from its Notes section), current Kanban column and sibling tickets, and any relevant journal mentions.
+4. **Move to In Progress.**
+   - Remove the ticket's card line from its current Kanban column.
+   - Add it under `## In Progress` in the same Kanban file.
+   - Update the ticket's frontmatter: `status: "in-progress"`.
+5. **Commit and push.** Use `/commit push`. Prefix: `CHORE:`. Message: `CHORE: start <ID> <short title>`.
+6. **Hand off.** Ask the dev what he wants to do next via AskUserQuestion:
+   - Start implementing
+   - Add more notes/subtasks to the ticket
+   - Plan the approach before coding
+   - Something else
+
+Out of scope: creating tickets (use "Add a ticket" above); closing tickets or moving to Done (manual); editing ticket content outside the status field (a separate action).
 
 ### Quick capture to Inbox
 
@@ -63,7 +83,7 @@ Use the `/obsidian-pickup-ticket` skill. It only triggers on its slash command (
 
 ### Update today's journal
 
-1. Open `Journal/<YYYY-MM-DD>.md`. Create from `Templates/Journal.md` if missing.
+1. Open `<YYYY-MM-DD>.md` at the vault root (not `Journal/` - that folder was abandoned 2026-05-03; daily notes live at vault root now). Create from `Templates/Journal.md` if missing.
 2. Add under `## Tasks` or `## Time Blocks` based on what the dev said.
 3. If the dev mentioned time: `- Activity: expected Xmin, actual Y`.
 4. Commit and push.
