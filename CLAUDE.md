@@ -79,7 +79,7 @@
 - Frontend icons: always Phosphor Icons, never inline SVG or custom icon markup. HTML via CDN (`<script src="https://unpkg.com/@phosphor-icons/web"></script>`, `<i class="ph ph-icon-name">`); React via `@phosphor-icons/react`. Browse: https://phosphoricons.com
 - User-facing/visual change: show Joe - bring the app up via `/supervised-run`, give him the URL, and capture a screenshot via SendUserFile. Skip for pure logic/backend/config (noise there).
 - Per-repo run mechanics (env file, login/OTP, ports, web-server vs chrome device, CORS) live in project memories - check them first; don't rediscover them.
-- Throwaway verification screenshots go in `.for_bepy/screenshots/<claude-ancestor-pid>/`, a per-session subfolder (gitignored, disposable; create it if missing). This lets `/close` prove ownership by subfolder and delete only its own session's shots - never by mtime, never another session's files, never loose root-level files. The `/screenshot` skill's portfolio keepers stay in `.portfolio-data/`.
+- Throwaway verification screenshots go in `.for_bepy/screenshots/<claude-ancestor-pid>-<ancestor-start-ticks>/`, a per-session subfolder (start-ticks included because Windows recycles PIDs) (gitignored, disposable; create it if missing). This lets `/close` prove ownership by subfolder and delete only its own session's shots - never by mtime, never another session's files, never loose root-level files. The `/screenshot` skill's portfolio keepers stay in `.portfolio-data/`.
 
 ## AI todos + plan - `.claude/todos/` (per project)
 
