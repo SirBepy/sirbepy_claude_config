@@ -5,6 +5,10 @@ not needed for a plain `/commit`.
 
 After a successful `git push` in `push`, `pushbump`, or `pushnbump`, watch the GitHub Actions run(s) that push triggered. A single push can kick off several workflows (test + lint + build); the watcher tracks **all** runs for the pushed sha and reports failure if any of them fails. **Non-blocking**: launch the watcher in the background, tell the user it's watching, and yield control immediately. The user can ignore it or say "drop it" to stop caring.
 
+**Timeout & killing a stuck watcher:** the watcher has a wall-clock ceiling, default 30 minutes (`-TimeoutMinutes`, override if needed). Past that it stops watching, prints `BUILD_RESULT=timeout`, and exits cleanly - no orphan process. It also writes its own PID to `skills\commit\watch-build.pid` on launch (removed on exit). If the dev says "drop it" and you want it gone immediately rather than waiting for the timeout:
+
+`Stop-Process -Id (Get-Content "C:\Users\tecno\.claude\skills\commit\watch-build.pid") -Force`
+
 Steps:
 
 1. **Clear the loop-breaker marker for a fresh manual push.** If this push was initiated directly by the user (not a re-push from a prior auto-fix), delete `<git-dir>/commit-buildwatch-autofixed` if it exists. (`<git-dir>` = `git -C <path> rev-parse --git-dir`.) This gives each manual push its own one-shot auto-fix budget.
@@ -23,6 +27,7 @@ When the watcher finishes you are re-invoked with its stdout. Parse the `BUILD_R
 - `BUILD_RESULT=api_error` -> every poll in the detection loop errored (`LAST_ERROR` holds the last message) - this is NOT "no run exists", the watcher just couldn't reach/authenticate to the API (e.g. `gh`'s active account flipped mid-poll). Tell the user the watcher hit an auth/API problem, not a missing run, and offer `gh run list` as a direct fallback to check manually.
 - `BUILD_RESULT=failure` -> the build is red. Run the **gated auto-fix** below.
 - `BUILD_RESULT=watch_error` -> `gh` hit a persistent transient error (auth flip, network blip, rate limit) while polling and could not confirm a completed status for one or more runs after retrying with backoff. This is NOT a build verdict - the run(s) may still be green, red, or in progress. Tell the user the watcher couldn't confirm the result and relaunch it (same command as before) rather than diagnosing a "failure" that might not exist.
+- `BUILD_RESULT=timeout` -> the wall-clock ceiling (`TIMEOUT_MINUTES`, default 30) was hit before all runs resolved. Not a build verdict either - CI may still be running. Tell the user the watcher gave up after the timeout and offer to relaunch it (same command as before) if they still want the result.
 
 ### Gated auto-fix
 

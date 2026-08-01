@@ -5,13 +5,29 @@
 # watching only the first would miss a failure in any of the others, so we watch and
 # aggregate all runs for the sha.
 #
-# Run in the BACKGROUND. Exit codes: 0 = all succeeded, 1 = >=1 failed, 2 = no run found.
+# Run in the BACKGROUND. Exit codes: 0 = all succeeded, 1 = >=1 failed, 2 = no run found,
+# 3 = watch_error, 4 = timeout.
 
 param(
   [string]$Sha,
   [Parameter(Mandatory = $true)][string]$Branch,
-  [string]$RepoPath = (Get-Location).Path
+  [string]$RepoPath = (Get-Location).Path,
+  [int]$TimeoutMinutes = 30
 )
+
+# PID file next to this script so a session can kill a stuck watcher:
+# Stop-Process -Id (Get-Content <this file>) -Force. Cleaned up in the
+# top-level `finally` below regardless of which exit path is taken.
+$PidFile = Join-Path $PSScriptRoot "watch-build.pid"
+Set-Content -Path $PidFile -Value $PID
+
+# Wall-clock ceiling for the whole watch: bounds `gh run watch`, which
+# otherwise blocks until the run completes and would leave this background
+# process running indefinitely against a genuinely hung CI job.
+$ScriptStart = Get-Date
+$TimeoutDeadline = $ScriptStart.AddMinutes($TimeoutMinutes)
+
+try {
 
 # -Sha is optional and self-healing: if omitted, or if it doesn't look like a full
 # 40-char hex sha (e.g. a hand-typed/truncated sha), resolve the real HEAD sha from
@@ -57,19 +73,33 @@ function Get-RunsForSha {
     $json = gh run list -R $RepoSlug --branch $Branch --limit 30 --json databaseId,headSha,status,workflowName
     if (-not $json) { return @() }
     return @(($json | ConvertFrom-Json) | Where-Object { $_.headSha -eq $Sha })
-  } catch { return @() }
+  } catch {
+    $script:LastGhError = $_.Exception.Message -replace '[\r\n]+', ' '
+    $script:GhErrorCount++
+    return @()
+  }
 }
 
 # Wait for at least one run keyed to this sha to register (CI lags a push by seconds).
 # ~3 min ceiling so a repo whose push triggered no CI gives up.
 $runs = @()
+$GhErrorCount = 0
+$LastGhError = $null
+$pollCount = 0
 for ($i = 0; $i -lt 30; $i++) {
+  $pollCount++
   $runs = Get-RunsForSha
   if ($runs.Count -gt 0) { break }
   Start-Sleep -Seconds 6
 }
 
 if ($runs.Count -eq 0) {
+  # Every poll erroring (vs. genuinely returning an empty list) means the API
+  # was unreachable, not that no run exists - don't conflate the two.
+  if ($GhErrorCount -ge $pollCount) {
+    Write-Output "BUILD_RESULT=api_error LAST_ERROR=$LastGhError"
+    exit 2
+  }
   Write-Output "BUILD_RESULT=no_run SHA=$Sha"
   exit 2
 }
@@ -105,8 +135,27 @@ function Wait-ForRunCompletion {
   $maxAttempts = 3
   $backoffSeconds = @(20, 40, 60) # ~2 min total across retries, per todo 198's spec
   for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
-    gh run watch $Run.databaseId -R $RepoSlug --exit-status | Out-Null
-    $watchExit = $LASTEXITCODE
+    $remainingSeconds = ($TimeoutDeadline - (Get-Date)).TotalSeconds
+    if ($remainingSeconds -le 0) { return @{ Outcome = 'timeout' } }
+    $remaining = [int][Math]::Ceiling($remainingSeconds)
+
+    # Run `gh run watch` as a job so it can be force-stopped at the deadline -
+    # a bare synchronous call has no timeout of its own and would otherwise
+    # block this whole process against a genuinely hung CI run.
+    $job = Start-Job -ScriptBlock {
+      param($RunId, $Slug)
+      gh run watch $RunId -R $Slug --exit-status | Out-Null
+      $LASTEXITCODE
+    } -ArgumentList $Run.databaseId, $RepoSlug
+
+    $finished = Wait-Job -Job $job -Timeout $remaining
+    if (-not $finished) {
+      Stop-Job -Job $job -ErrorAction SilentlyContinue
+      Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+      return @{ Outcome = 'timeout' }
+    }
+    $watchExit = Receive-Job -Job $job
+    Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
 
     $info = Get-RunConclusion -RunId $Run.databaseId
     if ($info -and $info.status -eq 'completed') {
@@ -119,22 +168,33 @@ function Wait-ForRunCompletion {
     # watch exited but gh does not positively confirm completion -> transient
     # API hiccup, not a build result. Retry unless attempts are exhausted.
     if ($attempt -lt $maxAttempts) {
+      $remaining = ($TimeoutDeadline - (Get-Date)).TotalSeconds
+      if ($remaining -le 0) { return @{ Outcome = 'timeout' } }
       $statusText = if ($info) { $info.status } else { 'unknown' }
-      Write-Output "NOTE: transient watch error on run $($Run.databaseId) (attempt $attempt/$maxAttempts, watch exit=$watchExit, status=$statusText); retrying in $($backoffSeconds[$attempt - 1])s"
-      Start-Sleep -Seconds $backoffSeconds[$attempt - 1]
+      $sleepFor = [Math]::Min($backoffSeconds[$attempt - 1], $remaining)
+      Write-Output "NOTE: transient watch error on run $($Run.databaseId) (attempt $attempt/$maxAttempts, watch exit=$watchExit, status=$statusText); retrying in ${sleepFor}s"
+      Start-Sleep -Seconds $sleepFor
     }
   }
   return @{ Outcome = 'watch_error' }
 }
 
 # Watch every run to completion. They run in parallel on GitHub; watching is sequential
-# but a run that already finished returns immediately.
+# but a run that already finished returns immediately. Stops early on a timeout so
+# remaining unwatched runs don't extend the wall-clock ceiling further.
 $failed = @()
 $watchErrors = @()
+$timedOut = $false
 foreach ($r in $runs) {
   $result = Wait-ForRunCompletion -Run $r
   if ($result.Outcome -eq 'failure') { $failed += $r }
   elseif ($result.Outcome -eq 'watch_error') { $watchErrors += $r }
+  elseif ($result.Outcome -eq 'timeout') { $timedOut = $true; break }
+}
+
+if ($timedOut) {
+  Write-Output "BUILD_RESULT=timeout TIMEOUT_MINUTES=$TimeoutMinutes RUNS=$($runs.Count)"
+  exit 4
 }
 
 if ($failed.Count -eq 0 -and $watchErrors.Count -eq 0) {
@@ -159,3 +219,7 @@ if ($failed.Count -gt 0) {
 $names = ($watchErrors | ForEach-Object { $_.workflowName }) -join ', '
 Write-Output "BUILD_RESULT=watch_error RUNS_UNRESOLVED=$($watchErrors.Count)/$($runs.Count) ($names)"
 exit 3
+
+} finally {
+  Remove-Item -Path $PidFile -Force -ErrorAction SilentlyContinue
+}

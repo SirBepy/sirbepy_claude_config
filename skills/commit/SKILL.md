@@ -10,7 +10,13 @@ argument-hint: "[v|bump|push|pushbump|pushnbump|onlyv|onlybump]"
 
 ## `/commit`
 
-**Commit-guard marker:** a global PreToolUse hook blocks raw `git commit`. Before EVERY `git commit` call this skill issues, without exception, write/touch `C:\Users\tecno\.claude\hooks\.commit-marker` (any content) - the hook needs it written within the last 2 minutes and consumes it per call, so redo this before each individual commit, not once for the whole flow.
+**Commit-guard marker:** a global PreToolUse hook blocks raw `git commit`. Before EVERY `git commit` call this skill issues, without exception, write a uniquely-suffixed marker:
+
+```powershell
+Set-Content -Path "C:\Users\tecno\.claude\hooks\.commit-marker-$([guid]::NewGuid().ToString('N'))" -Value "x"
+```
+
+Each commit writes its own fresh marker; the hook consumes the oldest fresh one and leaves the rest, so two concurrent sessions can no longer consume each other's marker. The hook needs a marker written within the last 2 minutes, so redo this before each individual commit, not once for the whole flow.
 
 1. Check for project-level overrides at `.claude/commit-style.md`. If it exists, read it fully and let its rules override the defaults below (prefixes, grouping, message format, etc.). Only read it once per session.
 2. Run `git status`
