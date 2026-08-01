@@ -1,7 +1,7 @@
 ---
 name: create-todo
 description: Triggers on /create-todo only. Files one todo mid-session; bare invocation = session handoff pinned to PLAN.md.
-argument-hint: "[next] [what to defer - empty = hand off this session]"
+argument-hint: "[what to defer - empty = hand off this session]"
 ---
 
 # /create-todo
@@ -55,5 +55,4 @@ Handoff mode's confirm wording is defined in the contract's "Handoff mode" secti
 - Filing a todo for something that needs the dev's physical action (credentials, hardware,
   browser login) - say it directly instead.
 - Batching multiple unrelated asks into one file. One todo per invocation.
-- Re-filing an existing todo - skim `.claude/todos/*.md` titles first; if a near-duplicate
-  exists, say so and skip (full dedup is `/batch-todos`'s job).
+- Re-filing an existing todo without a title skim first (full dedup is `/batch-todos`'s job).

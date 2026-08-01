@@ -26,14 +26,18 @@ Args are natural language:
 
 - **`show` / bare invocation with an existing plan:** print the current lane - each line as
   `<id> <todo title> [P if marked]` with phase headings, plus how many backlog todos are
-  unplanned. Then ask via AskUserQuestion whether to reorder, add unplanned items, or leave it.
+  unplanned. Emit this as the turn's **FINAL message with no tool call after it**, closed with a
+  plain-text prompt asking whether to reorder, add unplanned items, or leave it - never a
+  same-turn `AskUserQuestion` (it erases prior text for Joe's client; the house pattern
+  `/batch-todos` and `/rate-it` both document). Wait for Joe's plain-text reply.
 - **Free-text ordering** ("do 07 then 03", "09 and 12 can run together", "phase 1 is the auth
   stuff"): translate to plan lines - sequence order, `[P]` for items named as parallel-safe,
   `## Phase` headings when the dev groups. Ids the dev names by topic instead of number: resolve
   against backlog titles, confirm the mapping in the summary.
 - **Bare invocation with NO plan:** propose one - read backlog titles + Goals, suggest a sensible
-  order (handoffs and blockers first, quick wins next, big open-ended items last), present it,
-  and ask via AskUserQuestion: accept, edit (dev says what to change), or cancel.
+  order (handoffs and blockers first, quick wins next, big open-ended items last), and present it
+  the same way as the `show` path above (final plain-text message, no same-turn
+  `AskUserQuestion`), prompting for accept, edit (dev says what to change), or cancel.
 
 ## Step 3 - Write
 

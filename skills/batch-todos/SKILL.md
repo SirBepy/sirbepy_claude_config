@@ -20,7 +20,7 @@ If empty: output "No todos found." and stop.
 
 Read every file's title + Goal section. Flag pairs that describe the same underlying task or the same skill-improvement observation (near-identical titles, overlapping file/target references, same skill pointer for `skill-improvement` type).
 
-For each duplicate pair: keep the one with the more complete Context/Approach (or the lower id if tied), delete the other and prune its PLAN.md line if present. List every deletion: `deleted <id>-<slug>.md - duplicate of <id>-<slug>.md`. If none found, say "No duplicates found."
+For each duplicate pair: keep the one with the more complete Context/Approach (or the lower id if tied), archive the other to `done/` via `~/.claude/skills/close/complete-todo.ps1 -Id <id>` (never plain-delete, per the contract's Release rule). List every archive: `archived <id>-<slug>.md - duplicate of <id>-<slug>.md`. If none found, say "No duplicates found."
 
 ## Step 3 - Classify
 
@@ -38,16 +38,13 @@ When in doubt, label HARD.
 Show the classification before touching anything, as a clear standalone report. This is a
 **deliverable Joe must read** before approving, so it MUST be delivered correctly:
 
-- **Do NOT wrap it in, or precede it with, an `AskUserQuestion` call.** Joe's client does not
-  render text emitted before/around a tool call (see memory `feedback-no-text-before-question-tool`
-  and todo 80) - a same-turn AUQ erases this report and buries the choice. This gate deliberately
-  overrides the global "every question via AskUserQuestion" rule, exactly as `/rate-it` does.
+- **Do NOT wrap it in, or precede it with, an `AskUserQuestion` call** - same-turn AUQ erases prior text for Joe's client; see `/rate-it`'s house pattern for why.
 - Emit the report as the turn's **FINAL message with no tool call after it**, then stop and wait for
   Joe's plain-text reply.
 
 The report has three parts:
 
-**1. Dedupe result** - the `deleted <id> - duplicate of <id>` lines from step 2, or "No duplicates found."
+**1. Dedupe result** - the `archived <id> - duplicate of <id>` lines from step 2, or "No duplicates found."
 
 **2. EASY set** - a markdown table, one row per EASY todo, so Joe can see at a glance what each one
 touches. Do not just list filenames:

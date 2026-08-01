@@ -31,7 +31,7 @@ Remaining args are a chain of slash commands. Each slash command may be followed
 
 - A token starting with `/` opens a new chained command.
 - Tokens between `/foo` and the next `/bar` are `/foo`'s args.
-- Empty remaining args = bare /close (retrospect + persist + rename, then close unless --dont-close).
+- Empty remaining args = bare /close (retrospect + persist, then close unless --dont-close).
 
 Examples:
 
@@ -60,7 +60,7 @@ If the `close_session` tool isn't available (a plain terminal session not hosted
 
 Runs first, before Phase 1, every time - no flag skips it.
 
-Resolve this session's screenshot-subfolder id now: `<ancestor-pid>-<ancestor-start-ticks>`, from the same process-tree walk as `rename-session.ps1`/`.sh` (the nearest `claude`-named ancestor process). The start-time suffix is load-bearing, not decoration: Windows recycles PIDs, and this project kills short-lived `claude` processes constantly, so a bare PID can collide with a dead session that left files behind. PID plus start time cannot. PowerShell: `$p = Get-Process -Id $ancestorPid; $id = "$($p.Id)-$($p.StartTime.Ticks)"`. Also note whether this session captured any screenshots at all. Phase 3 step 3 uses both: the id scopes the purge to this session's own subfolder, and the zero-writes flag skips the purge entirely when the answer is none - the exact case that caused the 2026-07-30 incident (a session with zero screenshots of its own still matched and deleted 4 files a concurrent session was actively using).
+Resolve this session's screenshot-subfolder id now: `<ancestor-pid>-<ancestor-start-ticks>`, from the same process-tree walk as `rename-session.ps1`/`.sh` (the nearest `claude`-named ancestor process). The start-time suffix is load-bearing, not decoration: Windows recycles PIDs, so a bare PID can collide with a dead session that left files behind; PID plus start time cannot. PowerShell: `$p = Get-Process -Id $ancestorPid; $id = "$($p.Id)-$($p.StartTime.Ticks)"`. Also note whether this session captured any screenshots at all. Phase 3 step 3 uses both: the id scopes the purge to this session's own subfolder, and the zero-writes flag skips the purge entirely when the answer is none.
 
 Scan the full session for dev-stated commitments: explicit multi-part asks ("we need to do X, Y, Z"), a numbered plan the dev agreed to, or any request with more than one part. For each, check whether it actually got done by the time `/close` was invoked.
 
@@ -133,7 +133,7 @@ Run in this order:
    - Phase 1 steps 3-4 (repeated manual steps, skill rule violations) - tag `**Type:** skill-improvement`, Approach section names the skill file involved.
 
    Follow `ai-todos-format.md` (this skill's folder) for everything: template, filename/id rules, git-policy self-heal. The bar: a future cold AI session must be able to execute the task from the file alone, without re-reading session history. Skip if no items. Note: Phase 2 review findings are written to the backlog by `/code-check` directly - do not re-write them here.
-3. **Screenshot cleanup.** Ownership is proven by subfolder, never inferred from mtime - a concurrent session's files can be newer OR older than this session's start and mtime cannot tell them apart, which is exactly what deleted another session's 4 in-flight files on 2026-07-30. This session may delete ONLY files under its own `.for_bepy/screenshots/<pid>-<start-ticks>/` subfolder (the Phase 0 id) - never files at the folder root, never another session's subfolder, regardless of age. If Phase 0 recorded zero screenshots captured this session, skip deletion entirely, even if a subfolder happens to exist. Before deleting anything, print the exact filenames about to be removed, then delete - never pipe straight to `Remove-Item` without capturing names first. Loose files at the `.for_bepy/screenshots/` root are legacy (written by skills that don't yet use the per-session subfolder) - never auto-delete them, just report the count. Scope is strictly `.for_bepy/screenshots/` - never touch `.portfolio-data/` (portfolio keepers), committed assets, or any image elsewhere. Delete without a blocking prompt (still runs unattended under `/sleep-when-done`/autopilot). Skip silently if the folder or this session's subfolder is missing or empty. PowerShell: `$files = Get-ChildItem -File ".for_bepy/screenshots/$id" -ErrorAction SilentlyContinue; $files | ForEach-Object { $_.Name }` to list and print, then `$files | Remove-Item -Force` (`$id` is Phase 0's pid-plus-start-ticks, never a bare pid).
+3. **Screenshot cleanup.** Ownership is proven by subfolder, never inferred from mtime - a concurrent session's files can be newer OR older than this session's start and mtime cannot tell them apart. This session may delete ONLY files under its own `.for_bepy/screenshots/<pid>-<start-ticks>/` subfolder (the Phase 0 id) - never files at the folder root, never another session's subfolder, regardless of age. If Phase 0 recorded zero screenshots captured this session, skip deletion entirely, even if a subfolder happens to exist. Before deleting anything, print the exact filenames about to be removed, then delete - never pipe straight to `Remove-Item` without capturing names first. Loose files at the `.for_bepy/screenshots/` root are legacy (written by skills that don't yet use the per-session subfolder) - never auto-delete them, just report the count. Scope is strictly `.for_bepy/screenshots/` - never touch `.portfolio-data/` (portfolio keepers), committed assets, or any image elsewhere. Delete without a blocking prompt (still runs unattended under `/sleep-when-done`/autopilot). Skip silently if the folder or this session's subfolder is missing or empty. PowerShell: `$files = Get-ChildItem -File ".for_bepy/screenshots/$id" -ErrorAction SilentlyContinue; $files | ForEach-Object { $_.Name }` to list and print, then `$files | Remove-Item -Force` (`$id` is Phase 0's pid-plus-start-ticks, never a bare pid).
 Note: there is no implicit /commit step anymore. If the dev wants a commit, they chain `/commit` (with whatever subcommand they want) into the /close call.
 
 ## Phase 4 - Counter summary
@@ -168,7 +168,7 @@ If no chained commands, skip this phase.
 
 If all clear: first, if the `close_session` MCP tool is available (Conductor-hosted session), call it once - this is the host's authoritative teardown confirmation, so the session ends and its process is killed at turn completion. Never call it if any skip condition above applies; skip it silently in a plain terminal session where the tool doesn't exist.
 
-**HARD ORDERING RULE:** running the rename/kill script WITHOUT having called `close_session` first, in a session where that tool exists, is the known failure mode that leaves Conductor chats permanently un-closed (real incident 2026-07-30, session 94c6e8c1): killing the process is MEANINGLESS to the daemon - it respawns the process every turn - so only the tool call actually ends the chat. If `close_session` is in your tool list, the script line below is FORBIDDEN until the tool call has returned.
+**HARD ORDERING RULE:** running the rename/kill script WITHOUT having called `close_session` first, in a session where that tool exists, leaves Conductor chats permanently un-closed - killing the process is MEANINGLESS to the daemon, it respawns the process every turn, so only the tool call actually ends the chat. If `close_session` is in your tool list, the script line below is FORBIDDEN until the tool call has returned.
 
 Then run for your OS (literal paths hardcoded - dynamic `$env:` expressions fail the harness permission matcher and cause per-invocation prompts):
 
@@ -195,4 +195,4 @@ If kill was skipped, print on its own line:
 - Drafting new skills inline. /close surfaces candidates, /bepy-skill-creator builds them.
 - Auto-committing without `/commit` in the chain. Dev opts in explicitly now.
 - Writing memories about ephemeral session state. Re-read auto-memory rules before writing.
-- Trying to invoke `/exit` as a skill or chained command. Terminal kill is now built into Phase 7 by default.
+- Trying to invoke `/exit` as a skill or chained command. Terminal kill is now built into Phase 6 by default.

@@ -24,8 +24,7 @@ Read `.claude/todos/PLAN.md`, pruning vanished ids per the contract.
 - Otherwise: the first plan line, top to bottom, whose id has no active (non-stale) claim in
   `.claims/`. Claimed-by-a-live-session lines are skipped with a one-line note.
 - No PLAN.md or an empty lane: say so, list up to 5 unplanned backlog ids + titles, and stop
-  (planning is `/plan-todos`'s job). Legacy fallback: if `.for_bepy/NEXT_AI_PROMPT.md` exists,
-  flag it as a pre-migration leftover and offer to convert it into a handoff todo instead.
+  (planning is `/plan-todos`'s job).
 
 ## Step 2 - Claim
 
@@ -61,8 +60,9 @@ Do the task per the todo's Approach/Acceptance. Touch the claim file's mtime aft
 
 ## Step 7 - Complete
 
-Per the contract: move the todo to `done/` (create if missing), delete its PLAN.md line, release
-the claim. Then run `/commit` if the work produced changes.
+Run `~/.claude/skills/close/complete-todo.ps1 -Id <id>` to move the todo to `done/`, prune its
+PLAN.md line, and release the claim in one call. Fall back to the contract's manual three-step
+sequence if the script is unavailable. Then run `/commit` if the work produced changes.
 
 Finish by naming the next item on the lane (or "lane empty") so the dev knows what another
 `/pickup` would grab.

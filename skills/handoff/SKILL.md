@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Triggers on /handoff only. Ends the current session by writing a descriptive handoff todo and pinning it to the top of PLAN.md - the dedicated, explicit alias for /create-todo's bare handoff mode. Never overwrites a prior handoff; always appends a new backlog entry.
+description: Triggers on /handoff only. Ends the current session by writing a descriptive handoff todo and pinning it to the top of PLAN.md.
 argument-hint: "[optional short note on where things stand]"
 ---
 
@@ -8,12 +8,7 @@ argument-hint: "[optional short note on where things stand]"
 
 > Wrap this session for a fresh chat to pick up. Same mechanism as `/create-todo`'s bare/handoff mode - this just gives it a name that actually reads as "hand this off."
 
-This skill runs the "Handoff mode" section of `~/.claude/skills/close/ai-todos-format.md` -
-that's the single source of truth for Type, the fill instructions (Goal/Context/Approach/
-Verify/Notes), the PLAN.md pin, and the confirm wording. It's the SAME section `/create-todo`'s
-bare invocation runs, so the two commands can never drift out of sync with each other - this
-file exists only to give the dev a direct, memorable entry point instead of relying on a bare
-`/create-todo` invocation.
+Runs `ai-todos-format.md`'s Handoff mode section - same as bare `/create-todo`.
 
 All other file rules (location, filename/id, template, git-policy self-heal) live in the same
 contract file.

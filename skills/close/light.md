@@ -10,22 +10,7 @@ Same bullets as normal Phase 1, but cap every bullet to 1 sentence max. Skip sub
 
 ## Phase 2
 
-Delegate entirely to one `general-purpose` subagent instead of doing Steps 2a/2c inline. Prompt:
-
-> You are a code-health reviewer. Do the following and return ONE merged JSON array of findings - no prose, no preamble.
->
-> Changed files: `<list from git diff>`
->
-> Step 1 - Size check: for each file, line-count it. If >400 lines AND has an obvious split seam (separate concerns, reusable unit), add finding: `{ "title": "...", "files": [...], "problem": "[file] is N lines, mixes [X] and [Y]", "fix": "split at [boundary] into [new file]" }`.
->
-> Step 2 - Run TWO checks in parallel (dispatch as subagents if possible, else sequential):
->
-> - DRY: for each new component/hook/function/util, grep the repo for equivalents. Finding: `{ "title", "files" [path:line both], "problem", "fix" }`.
-> - Dead code: unused exports, unreachable branches, commented-out blocks, unread vars/imports. Finding: `{ "title", "files" [path:line], "problem", "fix" }`.
->
-> Merge all findings into one JSON array. Empty array if none. Under 400 words total.
-
-Wait for the subagent to return. Use its JSON array as the Phase 2 findings for Phase 3.
+Invoke `/code-check` with scope arg `unpushed` (if commits were made this session) or `uncommitted`, via the Skill tool - same as the main path. It handles the analysis and writes the todos directly. Read its summary line for the Phase 4 counter.
 
 ## Phase 3
 
@@ -40,11 +25,13 @@ Build a compact payload object from Phase 1 output:
 }
 ```
 
-Then dispatch ONE `Agent` call with `subagent_type: "general-purpose"` and this prompt:
+Memory writes go through `~/.claude/refs/memory-rubric.md`'s ADD/UPDATE/DELETE/NONE gate before anything is added to the payload, same as the main path's Phase 3 step 1.
+
+Then dispatch ONE `Agent` call with `subagent_type: "general-purpose"`, `model: 'sonnet'`, and this prompt:
 
 > You are a write-only subagent. Execute the following file writes exactly. No analysis, no extra output.
 >
-> Memory dir: `C:\Users\tecno\.claude\projects\C--Users-tecno--claude\memory\`
+> Memory dir: derive from the current project per the Global Knowledge Vault section of CLAUDE.md (vault for cross-project facts and people, native per-project Auto Memory under `~/.claude/projects/<sanitized-cwd>/memory/` for project-local ones) - never hardcode a project path.
 > For each entry in `memory`: write the file at `<memory dir>/<file>` with the given frontmatter + body. Then append a pointer line to `MEMORY.md` if not already present.
 >
 > `.claude/todos/`: for each entry in `ai_todos`, follow `C:\Users\tecno\.claude\skills\close\ai-todos-format.md` - scan existing files (and done/) for max numeric prefix, write `<id+1>-<slug>.md` with standard sections including a `**Type:**` line, and self-heal the `.git/info/exclude` entries per that doc's Git policy.
