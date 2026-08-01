@@ -1,6 +1,7 @@
 ---
 name: close
-description: Triggers on /close only. Session retrospective, code-health review, persist, close terminal.
+description: Session retrospective, code-health review, persist, close terminal.
+disable-model-invocation: true
 argument-hint: "[--dont-close] [--skip-review] [--light] [/commit ...] [/sleep-when-done]"
 ---
 

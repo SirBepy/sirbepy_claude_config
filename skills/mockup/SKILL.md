@@ -1,6 +1,7 @@
 ---
 name: mockup
-description: Triggers on /mockup only. Previews a UI idea visually before real implementation, reusing existing components where possible. Fires /brainstorm first if unexplored.
+description: Previews a UI idea visually before real implementation, reusing existing components where possible. Fires /brainstorm first if unexplored.
+disable-model-invocation: true
 argument-hint: "<what to preview>"
 ---
 

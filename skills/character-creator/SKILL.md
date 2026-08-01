@@ -1,6 +1,7 @@
 ---
 name: character-creator
-description: Triggers on /character-creator <game-or-char> only, never on natural language. Game-centric by default (batches multiple characters from one game); use `/character-creator <char> from <game>` for a single one-off.
+description: Scaffolds character bundles (icon + per-event sound slots). Game-centric by default (batches multiple characters from one game); use `/character-creator <char> from <game>` for a single one-off.
+disable-model-invocation: true
 ---
 
 # /character-creator

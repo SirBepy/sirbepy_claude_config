@@ -1,6 +1,7 @@
 ---
 name: create-pr
-description: Triggers on /create-pr only. Drafts a human-light PR for the current branch, scales the body to the diff, suggests visuals, previews locally, and creates it on approval.
+description: Drafts a human-light PR for the current branch, scales the body to the diff, suggests visuals, previews locally, and creates it on approval.
+disable-model-invocation: true
 argument-hint: "[base-branch] [--draft] [--no-checks]"
 ---
 

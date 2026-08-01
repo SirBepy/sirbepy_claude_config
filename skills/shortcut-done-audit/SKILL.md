@@ -1,6 +1,7 @@
 ---
 name: shortcut-done-audit
-description: Triggers on /shortcut-done-audit only. Scans Joe's Shortcut tickets in Backlog/To Do/In Progress for ones with matching commits, then checks each for whether it's actually done, partially done, superseded, or misattributed. Always reports first; state changes only after Joe confirms per ticket.
+description: Scans the dev's Shortcut tickets in Backlog/To Do/In Progress for ones with matching commits, then checks each for whether it's actually done, partially done, superseded, or misattributed. Always reports first; state changes only after confirmation per ticket.
+disable-model-invocation: true
 argument-hint: "[states]"
 ---
 

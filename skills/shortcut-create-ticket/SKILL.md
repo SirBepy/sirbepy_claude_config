@@ -1,6 +1,7 @@
 ---
 name: shortcut-create-ticket
-description: Triggers on /shortcut-create-ticket only. Files a new Shortcut story for the dev using pinned defaults (no reference-ticket lookup), then logs the result.
+description: Files a new Shortcut story for the dev using pinned defaults (no reference-ticket lookup), then logs the result.
+disable-model-invocation: true
 argument-hint: "[title/description] [priority] [estimate]"
 ---
 

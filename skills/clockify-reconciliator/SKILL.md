@@ -1,6 +1,7 @@
 ---
 name: clockify-reconciliator
-description: Triggers on /clockify-reconciliator <project> only. Adds descriptions to description-less Clockify entries for a configured project, splitting large blocks into 1-3h chunks using git commits from configured repos.
+description: Adds descriptions to description-less Clockify entries for a configured project, splitting large blocks into 1-3h chunks using git commits from configured repos.
+disable-model-invocation: true
 argument-hint: <project-name> [lookback]
 ---
 

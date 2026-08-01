@@ -1,6 +1,7 @@
 ---
 name: auto-do-todos
-description: Triggers on /auto-do-todos only. Grinds through question-free todos autonomously until ~40% ctx, then tops up by asking, then runs code-check and tests to verify.
+description: Grinds through question-free todos autonomously until ~40% ctx, then tops up by asking, then runs code-check and tests to verify.
+disable-model-invocation: true
 ---
 
 # /auto-do-todos

@@ -1,6 +1,7 @@
 ---
 name: ios-run
-description: Triggers on /ios-run only. Builds the current Flutter project on the dev's Mac over SSH and runs it on a connected iPhone, or builds a TestFlight .ipa.
+description: Builds the current Flutter project on the dev's Mac over SSH and runs it on a connected iPhone, or builds a TestFlight .ipa.
+disable-model-invocation: true
 argument-hint: "[run|ipa] [--logs] [--upload] [--device <name>]"
 ---
 

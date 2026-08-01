@@ -1,6 +1,7 @@
 ---
 name: project-onboarding
-description: Triggers on /project-onboarding only. Generates onboarding docs in .for_bepy/notebooklm/ by detecting the project stack (Flutter supported today; others prompt to scaffold or abort), overwriting existing files. Pass --compare=<path> for a structural diff against another repo. Aborts and asks if the stack is ambiguous or unknown.
+description: Generates onboarding docs in .for_bepy/notebooklm/ by detecting the project stack (Flutter supported today; others prompt to scaffold or abort), overwriting existing files. Pass --compare=<path> for a structural diff against another repo. Aborts and asks if the stack is ambiguous or unknown.
+disable-model-invocation: true
 argument-hint: "[--compare=<path>]"
 ---
 

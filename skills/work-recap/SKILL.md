@@ -1,6 +1,7 @@
 ---
 name: work-recap
-description: Triggers on /work-recap only. Dispatches to a named recap variant (e.g. zirtue weekly, zirtue daily, fibo weekly, fibo daily). Each variant lives in a subfolder under this skill.
+description: Dispatches to a named recap variant (e.g. zirtue weekly, zirtue daily, fibo weekly, fibo daily). Each variant lives in a subfolder under this skill.
+disable-model-invocation: true
 argument-hint: "<zirtue|fibo> [weekly|daily] [copy]"
 ---
 

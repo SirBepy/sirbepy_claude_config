@@ -1,6 +1,7 @@
 ---
 name: bepy-project-setup-web
-description: Triggers on /bepy-project-setup-web only. Web/HTML project standardization flow - runs favicon, meta-tags, PWA, GitHub Pages, styleguide, deploy workflow, etc. For Roblox/Luau projects use /bepy-project-setup-roblox instead.
+description: Web/HTML project standardization flow - runs favicon, meta-tags, PWA, GitHub Pages, styleguide, deploy workflow, etc. For Roblox/Luau projects use /bepy-project-setup-roblox instead.
+disable-model-invocation: true
 ---
 
 # /bepy-project-setup-web

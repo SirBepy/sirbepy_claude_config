@@ -1,6 +1,7 @@
 ---
 name: bepy-project-setup-roblox
-description: Triggers on /bepy-project-setup-roblox only. Scaffolds or fills in a Roblox/Luau project from the sirbepy_roblox template skeleton; idempotent, never clobbers without asking.
+description: Scaffolds or fills in a Roblox/Luau project from the sirbepy_roblox template skeleton; idempotent, never clobbers without asking.
+disable-model-invocation: true
 ---
 
 # /bepy-project-setup-roblox

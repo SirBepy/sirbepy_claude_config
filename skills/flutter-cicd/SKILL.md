@@ -1,6 +1,7 @@
 ---
 name: flutter-cicd
-description: Triggers on /flutter-cicd only. Scaffolds an Android release pipeline for a Flutter project - generates a signing keystore, wires build.gradle, adds a GitHub Actions workflow that builds a signed APK and publishes a versioned GitHub Release, optionally uploads an AAB to the Google Play internal track, optionally deploys the Flutter web build to GitHub Pages, and sets the repo secrets. Handles single-app repos and melos monorepos.
+description: Scaffolds an Android release pipeline for a Flutter project - generates a signing keystore, wires build.gradle, adds a GitHub Actions workflow that builds a signed APK and publishes a versioned GitHub Release, optionally uploads an AAB to the Google Play internal track, optionally deploys the Flutter web build to GitHub Pages, and sets the repo secrets. Handles single-app repos and melos monorepos.
+disable-model-invocation: true
 ---
 
 # /flutter-cicd

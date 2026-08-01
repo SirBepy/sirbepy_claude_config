@@ -1,6 +1,7 @@
 ---
 name: delegate
-description: Triggers on /delegate only. Puts the MAIN agent into interactive orchestrator mode for the rest of the session - subagents do all building and broad reading, the main thread is for talking ideas through with the dev and dispatching. Genuine forks become question cards before dispatch; nothing is auto-answered. `/delegate off` ends the mode.
+description: Puts the MAIN agent into interactive orchestrator mode for the rest of the session - subagents do all building and broad reading, the main thread is for talking ideas through with the dev and dispatching. Genuine forks become question cards before dispatch; nothing is auto-answered. `/delegate off` ends the mode.
+disable-model-invocation: true
 ---
 
 # /delegate

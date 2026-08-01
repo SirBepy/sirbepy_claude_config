@@ -1,6 +1,7 @@
 ---
 name: shortcut-priorities
-description: Triggers on /shortcut-priorities only. Pulls Joe's Shortcut notification/activity feed over a lookback window, groups it by ticket, reads full ticket + comment threads for anything actionable, and returns a prioritized "what to work on" list. Report-only — never comments or changes ticket state.
+description: Pulls the dev's Shortcut notification/activity feed over a lookback window, groups it by ticket, reads full ticket + comment threads for anything actionable, and returns a prioritized "what to work on" list. Report-only, never comments or changes ticket state.
+disable-model-invocation: true
 argument-hint: "[lookback_days]"
 ---
 

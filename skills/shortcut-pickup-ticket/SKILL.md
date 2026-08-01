@@ -1,6 +1,7 @@
 ---
 name: shortcut-pickup-ticket
-description: Triggers on /shortcut-pickup-ticket only. Looks up a Shortcut story by ID, ALWAYS reads its full description and every comment before doing anything else, cross-references existing code/commits, and hands off to the dev. Never auto-triggers on natural phrases (the dev also uses Obsidian, Linear, and Trello - bare ticket numbers/IDs are ambiguous across them).
+description: Looks up a Shortcut story by ID, ALWAYS reads its full description and every comment before doing anything else, cross-references existing code/commits, and hands off to the dev.
+disable-model-invocation: true
 argument-hint: "<ticket-id>"
 ---
 

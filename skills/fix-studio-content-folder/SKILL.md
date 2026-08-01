@@ -1,6 +1,7 @@
 ---
 name: fix-studio-content-folder
-description: Triggers on /fix-studio-content-folder only. Repoints HKCU Roblox Studio ContentFolder at a live Versions/version-<hash>/content/ folder when run-in-roblox panics with "system cannot find the file specified" after Roblox auto-prunes old install dirs.
+description: Repoints HKCU Roblox Studio ContentFolder at a live Versions/version-<hash>/content/ folder when run-in-roblox panics with "system cannot find the file specified" after Roblox auto-prunes old install dirs.
+disable-model-invocation: true
 ---
 
 # /fix-studio-content-folder

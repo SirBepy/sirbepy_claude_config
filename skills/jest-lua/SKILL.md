@@ -1,6 +1,7 @@
 ---
 name: jest-lua
-description: Triggers on /jest-lua only. Manages jest-lua testing for Roblox/Luau projects - running tests, creating test files, scaffolding test suites, and interpreting output.
+description: Manages jest-lua testing for Roblox/Luau projects - running tests, creating test files, scaffolding test suites, and interpreting output.
+disable-model-invocation: true
 ---
 
 # /jest-lua

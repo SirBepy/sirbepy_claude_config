@@ -1,6 +1,7 @@
 ---
 name: cleanup-memory
-description: Triggers on /cleanup-memory only. Audits the current project's auto-memory files for staleness, dead references, and duplication; dedupes and archives, everything confirm-gated before anything moves.
+description: Audits the current project's auto-memory files for staleness, dead references, and duplication; dedupes and archives, everything confirm-gated before anything moves.
+disable-model-invocation: true
 ---
 
 # /cleanup-memory

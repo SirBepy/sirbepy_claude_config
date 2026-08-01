@@ -1,6 +1,6 @@
 ---
 name: rate-it-and-commit
-description: Triggers on /rate-it-and-commit only. Rates a change with /rate-it, then commits if it scores at or above threshold. Below threshold, offers iterate-first or commit-anyway. Default threshold 8.
+description: Rates a change with /rate-it, then commits if it scores at or above threshold. Below threshold, offers iterate-first or commit-anyway. Default threshold 8. Model-invocable on purpose - /autopilot chains it.
 argument-hint: "[file-or-description] [--threshold=N]"
 ---
 

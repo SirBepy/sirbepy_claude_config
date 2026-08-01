@@ -1,6 +1,7 @@
 ---
 name: bepy-skill-creator
-description: Creates a new skill or validates/fixes an existing skill (or all skills) against bepy conventions - frontmatter, structure, description budget, global-mandate compliance. Triggers on /bepy-skill-creator only.
+description: Creates a new skill or validates/fixes an existing skill (or all skills) against bepy conventions - frontmatter, structure, description budget, global-mandate compliance.
+disable-model-invocation: true
 ---
 
 # /bepy-skill-creator
@@ -46,7 +47,7 @@ Ask which skill to validate. Read its SKILL.md and run the full checklist below.
 
 ## Mode 3 - Validate all skills
 
-Read every SKILL.md in `~/.claude/skills/`. Run the validation checklist on each one. Print a summary table:
+Read every SKILL.md in `~/.claude/skills/` via a subagent (fleet-wide reads are context-heavy; dispatch, don't read inline), one `model: 'sonnet'` dispatch per batch. Run the validation checklist on each one. Print a summary table:
 
 ```
 Skill                 Fails  Warns
@@ -72,6 +73,7 @@ Rules are split into two severity levels. FAIL means the skill has a real proble
 
 - [ ] Frontmatter exists with `name` and `description` fields
 - [ ] If the skill accepts arguments or subcommands, `argument-hint` is set in frontmatter (e.g. `argument-hint: "[on|off|push]"` or `argument-hint: "<ticket-id>"`). Skipped only if the skill takes no args.
+- [ ] A slash-only skill (description says or means "Triggers on /X only", no natural-language trigger) has `disable-model-invocation: true` in frontmatter. **Critical exception: if any other skill invokes this one via the Skill tool (skill-to-skill call), do NOT add the field** - model invocation includes those calls, and the field would break the chain. Check for inbound callers before flagging this FAIL.
 - [ ] First line after frontmatter is `# /skill-name`
 - [ ] Second line is `> one liner description`
 - [ ] No em dashes anywhere, use commas, colons, or hyphens instead
@@ -104,6 +106,14 @@ Show the report as a table with three columns: Rule, Status (FAIL/WARN/PASS), Is
 ---
 
 ## When creating or fixing
+
+### Frontmatter surface (modern fields)
+
+- `disable-model-invocation: true` - skill is user-only (slash command, no NL trigger); drops it from the model-facing listing. Skip if any other skill calls it via the Skill tool.
+- `user-invocable: false` - skill is background knowledge only; the model can pull it in but the dev never types the slash command.
+- `allowed-tools: Tool, Tool` - restricts which tools the skill may use once invoked; set when a skill should never touch tools outside a narrow set.
+- `context: fork` - runs the skill in an isolated subagent instead of the main thread; use for read-heavy or side-effect-risky flows that shouldn't burn main context.
+- `agent: <type>` - pins which agent type handles the fork (e.g. `Explore`); only meaningful alongside `context: fork`.
 
 ### Description budget gate (enforced on create and on fix)
 

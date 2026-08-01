@@ -1,6 +1,7 @@
 ---
 name: create-todo
-description: Triggers on /create-todo only. Files one todo mid-session; bare invocation = session handoff pinned to PLAN.md.
+description: Files one todo mid-session; bare invocation = session handoff pinned to PLAN.md.
+disable-model-invocation: true
 argument-hint: "[what to defer - empty = hand off this session]"
 ---
 

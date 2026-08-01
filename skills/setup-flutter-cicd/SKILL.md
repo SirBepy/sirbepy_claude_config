@@ -1,6 +1,7 @@
 ---
 name: setup-flutter-cicd
-description: Triggers on /setup-flutter-cicd only. Alias for /flutter-cicd - sets up a Flutter project's Android release pipeline (signing keystore, signed APK to GitHub Releases, optional Google Play internal-track upload, optional GitHub Pages web deploy).
+description: Alias for /flutter-cicd - sets up a Flutter project's Android release pipeline (signing keystore, signed APK to GitHub Releases, optional Google Play internal-track upload, optional GitHub Pages web deploy).
+disable-model-invocation: true
 ---
 
 # /setup-flutter-cicd

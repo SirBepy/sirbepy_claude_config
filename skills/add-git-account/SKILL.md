@@ -1,6 +1,7 @@
 ---
 name: add-git-account
-description: Triggers on /add-git-account only. Onboards a GitHub account for a project AND wires that project's commit identity + push auth + gh CLI to it, scoped by remote URL, without touching the global default.
+description: Onboards a GitHub account for a project and wires commit identity, push auth, and gh CLI to it, scoped by remote URL, without touching the global default.
+disable-model-invocation: true
 argument-hint: "[gh-username] [commit-email]  (run from inside the target repo)"
 ---
 

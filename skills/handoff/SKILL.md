@@ -1,6 +1,7 @@
 ---
 name: handoff
-description: Triggers on /handoff only. Ends the current session by writing a descriptive handoff todo and pinning it to the top of PLAN.md.
+description: Ends the current session by writing a descriptive handoff todo and pinning it to the top of PLAN.md.
+disable-model-invocation: true
 argument-hint: "[optional short note on where things stand]"
 ---
 

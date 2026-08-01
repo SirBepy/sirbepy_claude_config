@@ -1,6 +1,7 @@
 ---
 name: zirtue-release-backfill
-description: Triggers on /zirtue-release-backfill only. Backfills the Shortcut Release field (and other missing scope metadata) on tickets the dev shipped code for, by matching merge SHAs against git tags. Always reports first, applies only after explicit approval.
+description: Backfills the Shortcut Release field (and other missing scope metadata) on tickets the dev shipped code for, by matching merge SHAs against git tags. Always reports first, applies only after explicit approval.
+disable-model-invocation: true
 ---
 
 # /zirtue-release-backfill

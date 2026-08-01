@@ -1,6 +1,7 @@
 ---
 name: work-recap-deck
-description: Triggers on /work-recap-deck only. Turns merged GitHub PRs into a single-file HTML deck with an embedded diff explorer (syntax highlighting via CDN, needs internet).
+description: Turns merged GitHub PRs into a single-file HTML deck with an embedded diff explorer (syntax highlighting via CDN, needs internet).
+disable-model-invocation: true
 argument-hint: "[free-form: who and what window to recap]"
 ---
 

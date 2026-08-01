@@ -1,6 +1,7 @@
 ---
 name: obsidian-pickup-ticket
-description: Triggers on /obsidian-pickup-ticket only. Named alias for /obsidian's "Pick up a ticket" workflow - looks up a vault ticket by ID, moves it to In Progress, hands off to the dev. Never auto-triggers on natural phrases (the dev also uses Shortcut and other trackers, so ticket-like wording must not activate this skill).
+description: Named alias for /obsidian's "Pick up a ticket" workflow - looks up a vault ticket by ID, moves it to In Progress, hands off to the dev.
+disable-model-invocation: true
 argument-hint: "<ticket-id>"
 ---
 

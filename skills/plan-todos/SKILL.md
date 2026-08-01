@@ -1,6 +1,7 @@
 ---
 name: plan-todos
-description: Triggers on /plan-todos only. Creates or reorders PLAN.md, the ordered lane of pointers into the todos backlog.
+description: Creates or reorders PLAN.md, the ordered lane of pointers into the todos backlog.
+disable-model-invocation: true
 argument-hint: "[show | free-text ordering like 'do 07 then 03, 09 and 12 in parallel']"
 ---
 

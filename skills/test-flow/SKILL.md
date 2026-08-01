@@ -1,6 +1,7 @@
 ---
 name: test-flow
-description: Triggers on /test-flow only. Alias for /flutter-e2e's plan-file mode - drives a Flutter web app via Playwright against a test plan markdown file, marking each step pass/fail/skip inline.
+description: Alias for /flutter-e2e's plan-file mode - drives a Flutter web app via Playwright against a test plan markdown file, marking each step pass/fail/skip inline.
+disable-model-invocation: true
 ---
 
 # /test-flow

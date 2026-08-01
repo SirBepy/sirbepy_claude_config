@@ -1,6 +1,7 @@
 ---
 name: flutter-bump
-description: Triggers on /flutter-bump only. Bumps the pinned Flutter stable SDK across the three ZNG repos (zng-app, zng-admin, zng-biller) sequentially via fvm, verifies each with analyze/test/build, then commits and pushes the bump files per repo (established message style "Bump Flutter to <version>").
+description: Bumps the pinned Flutter stable SDK across the three ZNG repos (zng-app, zng-admin, zng-biller) sequentially via fvm, verifies each with analyze/test/build, then commits and pushes the bump files per repo (established message style "Bump Flutter to <version>").
+disable-model-invocation: true
 ---
 
 # /flutter-bump
