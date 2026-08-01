@@ -47,6 +47,8 @@ Supported step types:
 | `screenshot` | `out` (path) | Capture current view |
 | `scroll` | `to` (px) | Scroll to position |
 | `click` | `selector` | Click an element |
+| `hover` | `selector` | Hover an element (triggers real `:hover` CSS, unlike a dispatched `mouseover` event) |
+| `selectOption` | `selector`, `value` | Pick a `<select>` option, firing its `change`/`input` listeners |
 | `wait` | `ms` | Pause |
 | `waitForSelector` | `selector`, `timeout` (optional ms) | Wait for element |
 | `refresh` | - | Reload the page |
