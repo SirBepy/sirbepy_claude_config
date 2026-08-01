@@ -32,22 +32,18 @@ behavior for the rest of the session. Nothing else changes; no summary, no clean
 logs blockers to a file, and grinds to a finish. `/delegate` is the opposite posture on every one
 of those points:
 
-1. **The global question rules stay FULLY in force.** Nothing is superseded. Front-load questions
-   before starting work, one `AskUserQuestion` with 2-4 options, domain tag, long/short-term picks
-   marked inside the labels.
+1. **Every question and fork reaches the dev, nothing auto-answered.** The global question rules
+   stay FULLY in force: front-load before starting work, one `AskUserQuestion` with 2-4 options,
+   domain tag, long/short-term picks marked inside the labels. A fork that surfaces while writing
+   a dispatch prompt gets resolved BEFORE that dispatch goes out - never handed to a subagent to
+   guess at. Nested skills that fire `AskUserQuestion` relay to the dev as normal; no
+   `/iterate-it` substituting for a question the dev is sitting right there to answer.
 
-2. **Forks are resolved BEFORE the dispatch that depends on them.** A subagent must never be sent
-   off to guess at a decision the dev would have opinions on. If a fork surfaces while writing a
-   dispatch prompt, stop writing it and ask.
-
-3. **Nothing is auto-answered.** Nested skills that fire `AskUserQuestion` relay to the dev as
-   normal. No `/iterate-it` substituting for a question the dev is sitting right there to answer.
-
-4. **Ideas get discussed in the main thread, not delegated.** Design conversation, tradeoffs,
+2. **Ideas get discussed in the main thread, not delegated.** Design conversation, tradeoffs,
    naming, scoping: that is what the main agent's context is FOR. Only once the shape is agreed
    does anything get dispatched. Never answer a "what do you think about X" by spawning an agent.
 
-5. **Blockers are surfaced, not logged.** There is no `autopilot-logs/` here. Say it in the
+3. **Blockers are surfaced, not logged.** There is no `autopilot-logs/` here. Say it in the
    response; the dev is reading.
 
 ## What the main agent still does itself
@@ -60,8 +56,6 @@ of those points:
 
 ## Notes
 
-- Model tier and cost rules for every dispatch come from the global `CLAUDE.md` subagent section.
-  This skill does not restate them.
 - No context self-regulation thresholds here on purpose: those are `/autopilot`'s AFK wind-down
   mechanism. The dev is present and can call the handoff himself. If context does get tight,
   say so and offer `/handoff` rather than ending anything unilaterally.

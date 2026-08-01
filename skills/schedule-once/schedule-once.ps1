@@ -62,7 +62,7 @@ $job = [ordered]@{
 # Register a single-fire task. -StartWhenAvailable runs it on wake if the PC was asleep at fire time.
 $wrapper   = Join-Path $PSScriptRoot 'run-once.ps1'
 $action    = New-ScheduledTaskAction -Execute 'powershell.exe' `
-    -Argument ('-ExecutionPolicy Bypass -WindowStyle Hidden -NoProfile -File "' + $wrapper + '" -TaskName "' + $taskName + '"')
+    -Argument ('-ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $wrapper + '" -TaskName "' + $taskName + '"')
 $trigger   = New-ScheduledTaskTrigger -Once -At $fireAt
 $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
 $settings  = New-ScheduledTaskSettingsSet -StartWhenAvailable `

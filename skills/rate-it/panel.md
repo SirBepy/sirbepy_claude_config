@@ -18,8 +18,9 @@ a full generalist pass, acting as a cross-check against the other four's converg
 
 ## Dispatch
 
-Spawn N Agent calls in parallel (`general-purpose` subagent_type). Each gets this prompt, with
-that subagent's assigned lens swapped in:
+Spawn N Agent calls in parallel (`general-purpose` subagent_type, `model: 'sonnet'` explicitly -
+never inherit the session model). Each gets this prompt, with that subagent's assigned lens
+swapped in:
 
 > You are a rating subagent for /rate-it, one of a panel of N. Read the skill file at `C:\Users\tecno\.claude\skills\rate-it\SKILL.md` and rate this hypothesis using the Flaw hunt, Role, Anti-sycophancy, Output format, and How-to-raise rules.
 >

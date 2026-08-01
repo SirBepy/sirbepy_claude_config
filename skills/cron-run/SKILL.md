@@ -11,20 +11,6 @@ argument-hint: "<count|all> [every] <interval> [till HH[AM|PM]] | tick | cancel"
 > The PC must stay on and the user logged in (screen may be locked). Claude Code
 > does NOT need to remain open: each tick launches a fresh headless `claude -p`.
 
-## Why Task Scheduler (read this)
-
-The previous version used the in-app `CronCreate` tool with `durable: true`. On
-this build that flag is **silently downgraded to a session-only in-memory timer**
-that is never written to `scheduled_tasks.json` and only advances while the REPL
-is actively cycling. Left idle overnight it fires nothing. This was diagnosed and
-proven: a binary self-upgrade or simply closing/idling the REPL kills the timer.
-
-This skill therefore schedules **OS-level Windows Scheduled Tasks** that fire
-independently of any Claude session. Each firing runs a wrapper script
-(`run-tick.ps1`, alongside this file) that launches `claude -p "/cron-run tick"`.
-Verified working live: a scheduled task fired on time while the REPL was idle,
-launched headless claude as the user, authenticated, ran, and exited.
-
 ## Terminology
 
 - **Plans** (source): implementation plans from superpowers. Live in
@@ -238,9 +224,10 @@ Read the linked plan file. Decide subagent-driven vs inline per CLAUDE.md
 
 **Forbidden in tick mode** (no human to supervise): do NOT start any long-lived
 process - no dev servers, watchers, `flutter run`, `npm run dev`, `docker compose
-up` without `-d`+teardown, `/supervised-run`, `/flutter-dev-runner`. If a plan step
-needs a running server to verify, do the build/compile checks only and note the
-skipped runtime check in the commit body.
+up` without `-d`+teardown, or `/supervised-run` (its `flutter` kind covers hot
+reload too, so there's no separate runner to reach for). If a plan step needs a
+running server to verify, do the build/compile checks only and note the skipped
+runtime check in the commit body.
 
 ### 7. Review subagent
 

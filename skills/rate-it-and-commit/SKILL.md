@@ -29,7 +29,7 @@ Determine what to review before rating:
 
 1. **Rate it.** Invoke the `/rate-it` skill, passing the resolved diff content as the thing to rate. Use solo mode (no panel) unless the user explicitly passed a panel size.
 2. **Check threshold.**
-   - Score >= threshold: show a one-line summary `"Score X/10 - committing."` then invoke `/commit` on the target file (or all changes if no file was specified).
+   - Score >= threshold: show a one-line summary `"Score X/10 - committing."` then invoke `/commit`, telling it which paths belong in this commit as context if a target file was specified, and verifying its proposed pathspec matches before it proceeds.
    - Score < threshold: ask via AskUserQuestion (see below). Do NOT auto-commit.
 
 ## Below-threshold question
@@ -49,6 +49,6 @@ Options:
 ## Rules
 
 - Never commit silently. Always show the score before committing.
-- When invoking `/commit`, pass only the target file if one was specified. Don't accidentally commit unrelated dirty files.
+- When invoking `/commit`, tell it which paths belong in this commit as context if a target file was specified, and verify its proposed pathspec matches - `/commit` does not accept a file argument, it derives its own pathspec from `git status`/`git diff`. Don't accidentally commit unrelated dirty files.
 - If `/rate-it` is already running in this session (e.g. user invoked it manually before calling this skill), read the score from context rather than re-running it.
 - If the user passes a panel size (integer before the target), forward it to `/rate-it`.

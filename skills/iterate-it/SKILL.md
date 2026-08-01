@@ -30,8 +30,6 @@ argument-hint: "[--threshold=N] [--floor=N] [--explore-max=N] [--polish-max=N] [
 - `--polish-max=<int>` — max Polish rounds. Default 3.
 - `--research` — main runs WebSearch before round 1 and passes findings into every sub. Off by default.
 
-If dev passes a leading integer like `/iterate-it 3 <hypothesis>` (legacy N-arg form), TREAT IT AS A NO-OP and proceed with default phase counts. Mention briefly in the cost notice.
-
 ## Algorithm
 
 Two phases. Each round = ONE subagent (not parallel — sequential, so each round sees prior rounds' verdicts).
@@ -76,30 +74,9 @@ For each round (regardless of phase):
 
 ### Subagent prompt template
 
-```
-You are the subagent for /iterate-it round <R>, phase <Explore|Polish>. Read ~/.claude/skills/rate-it/SKILL.md and apply the Flaw hunt, Role, Anti-sycophancy rules.
-
-HARD CONSTRAINTS:
-- Do NOT spawn further subagents.
-- Do NOT call AskUserQuestion.
-- Return only the rating block + EVOLVED PROPOSAL section. Be terse.
-
-HYPOTHESIS (P_R):
-<full text of current proposal>
-
-<CONTEXT (--research findings, prior-round rejections, prior scores)>
-
-WHAT I WANT:
-1. Score 1-10.
-2. Highest-risk assumption.
-3. EVOLVED PROPOSAL section labeled "P_{R+1}" with concrete edits and one marker:
-   - REVISION: small edits to the current proposal
-   - PIVOT: different approach, same problem
-   - KILL: abandon the problem framing entirely
-
-ANGLE FOR YOU: <skeptic | steelman | alternative-lens | shippability | misdiagnosis>
-<one-paragraph angle-specific brief>
-```
+The exact prompt to send each sub lives in `templates.md`, next to this file. Read it once, at
+round 1 - every subsequent round reuses the same template with `<R>`, `<phase>`, and the
+hypothesis text swapped in.
 
 ## Cost warning
 
@@ -113,27 +90,8 @@ Skip confirmation if dev passed explicit flags.
 
 ## Output (final report)
 
-```
-# /iterate-it converged in <R> rounds (<explore-rounds> explore + <polish-rounds> polish)
-
-**Final proposal (P_<R+1>):**
-<synthesized final>
-
-**Score trajectory:** P1=<s1> → P2=<s2> → ... (sub scores)
-**Main audit trajectory:** P1=<a1> → P2=<a2> → ...
-**Phase transition:** entered Polish at round <X> with score <Y>
-**Termination reason:** <floor hit | cap hit | thrash | unconverged>
-
-**Evolution log:**
-- P1 → P2: <one-line summary>
-- P2 → P3: ...
-
-**Explicit rejections (never re-propose):**
-- <thing killed in round X>
-
-[If main audit deviates ≥ 2 from sub:]
-**MAIN DISSENT:** main scored <X>, sub <Y>. <one-paragraph why>. Take this verdict with the dissent in mind.
-```
+The exact report format also lives in `templates.md` (read once, at round 1, alongside the
+subagent prompt template).
 
 Do NOT call `AskUserQuestion` in the same turn as this report. Bundling a tool call with the report text makes the harness swallow the report - the dev ends up with a bare picker and no convergence summary (this has happened before, 2026-07-12). The report is the deliverable; it must always render as the turn's final message.
 
@@ -154,14 +112,4 @@ If the dev replies, act on it the following turn - that's when `AskUserQuestion`
 
 ## Example invocation
 
-```
-/iterate-it We should drop the lobby walking flow entirely - country picker has a PLAY button, decoration arena stays, done.
-```
-
-→ Estimates cost. Phase A: skeptic R1 (5/10), steelman R2 (6/10), alternative-lens R3 (8/10 → threshold hit, enter Polish). Phase B: steelman R4 (9/10 → floor hit). Report.
-
-Worst case (no convergence): 6 explore + 3 polish rounds, report best-of with `unconverged` flag.
-
-## Prior art
-
-The pattern is taken from the 2026-05-18 Socka Heads stutter-debug session. The original 3×3 panel design (3 subs × 3 rounds) revealed that 9 sub-views converged to a single answer but cost ~270k tokens with redundant verdicts each round. The single-sub two-phase design produces the same convergence path more cheaply by letting each round see the prior verdict and rotating angles to attack remaining weaknesses, and gives the dev finer control (stop early at "good enough" 7, push for "shippable" 9).
+`/iterate-it <hypothesis>` estimates cost, runs Explore then Polish rounds per the algorithm above, and reports convergence (or `unconverged` if the round caps are hit first).

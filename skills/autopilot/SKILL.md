@@ -63,10 +63,6 @@ Read pct used (= 100 - pct left). Two named thresholds, on context USED (tweak h
 - **SLOW_AT = 50% used:** start winding down. Prefer FINISHING in-flight work over STARTING new chunks; tighten scope; avoid large new investigations or wide subagent fan-out; do not begin anything you cannot also finish AND verify within the remaining budget.
 - **HARD_STOP_AT = 60% used:** STOP taking new work. Immediately, in order: (a) `/commit` anything staged, (b) write every remaining planned item to `.claude/todos/` (one file each, per `close/ai-todos-format.md` - claim rules included) so nothing is lost, (c) write the final summary and END the run. Do NOT start another chunk past this line.
 
-The context-% guard here is the single authoritative run-length guard. Rule 4's cap is orthogonal: it caps iterate-it ESCALATIONS, not tokens (a skill has no runtime token-spend signal - context % via context-left.mjs is the only one). Context % bounds how long a run goes; the escalation cap bounds how often autopilot spends a judgment call.
-
-Caveat: because the orchestrator delegates, its own context % can stay low even on a long run, so this guard may never trip. The 3-strike guard bounds looping and the completion oracle bounds false completion, but neither caps total spend on slow real progress - that aggregate is unbounded BY DESIGN (the AFK "heavy but purposeful" contract), with the orchestrator's own context % as the only soft backstop. Wrapping up cleanly at 60% used and handing off via todos beats a degraded grind.
-
 ## Where decisions and parked items go (use the dev's existing taxonomy)
 
 - **Routine auto-decisions** (trivial picks, bounded-iterate-it verdicts) -> decide and move on, no log. The dev has said he never reads a running decision log; git history + the final summary are the record.
@@ -91,8 +87,8 @@ This folder is reserved for genuine blockers only - never for routine FYI notes.
 
 ## Order of operations
 
-1. **Restate the task + its success criteria in one line (the completion oracle), then proceed** - do not wait for confirmation. If the prompt is too vague to derive testable criteria, do NOT invent criteria and self-grade against them. Instead: (a) pick the narrowest defensible interpretation, (b) log it as `ASSUMED SCOPE: <X> - revisit`, (c) set the oracle = that scope's fast-check floor green + no regressions, (d) flag the assumption prominently in the final summary. **END THIS FIRST RESPONSE WITH `<cc-autopilot:on>`** (see "Sidebar badge" above) - do not rely on that section alone, this step is where it actually gets emitted.
-2. **Check remaining context first** (see "Context self-regulation" below for thresholds and actions) - do not rely on that section alone to remember it, this step is where it actually runs, every chunk including a single-chunk run. Then, for a big task, produce a short plan / task list (delegate or do briefly in main), then execute chunk-by-chunk via subagents, running `/commit` between chunks.
+1. **Restate the task + its success criteria in one line (the completion oracle), then proceed** - do not wait for confirmation. If the prompt is too vague to derive testable criteria, do NOT invent criteria and self-grade against them. Instead: (a) pick the narrowest defensible interpretation, (b) log it as `ASSUMED SCOPE: <X> - revisit`, (c) set the oracle = that scope's fast-check floor green + no regressions, (d) flag the assumption prominently in the final summary. **END THIS FIRST RESPONSE WITH `<cc-autopilot:on>`** (see "Sidebar badge" above).
+2. **Check remaining context first, every chunk including a single-chunk run** (see "Context self-regulation" above for thresholds and actions). Then, for a big task, produce a short plan / task list (delegate or do briefly in main), then execute chunk-by-chunk via subagents, running `/commit` between chunks.
 3. Real judgment call -> bounded iterate-it (within the 3/run cap) -> log. Trivia -> decide.
 4. Verify against the fast-check floor. **Runaway guard:** every loop is 3-strike. If the SAME verification fails 3x consecutively, OR a single chunk makes zero forward progress across 3 consecutive subagent dispatches, stop that loop, park the failure, and continue other unblocked work. There is no infinite retry.
 5. `/commit` (and push/deploy) per project rules.
@@ -104,4 +100,4 @@ Park to the right channel above (do NOT guess) on: destructive/irreversible acti
 
 ## Relationship to /sleep-when-done
 
-Shares `/sleep-when-done`'s auto-answer contract and the same `.for_bepy/autopilot-logs/` blocker format; differs only in not sleeping the PC. Do not fork divergent logic.
+Not equivalent - `/sleep-when-done`'s entire auto-answer contract is one sentence ("pick the option you judge best"), with no verify floor and no completion oracle before it sleeps the PC. Autopilot's contract is everything above: tiered uncertainty resolution (rule 3), nested-question suppression (rule 5), context self-regulation, the completion oracle (step 6), the 3-strike runaway guard (step 4), and the Hard Stops list - none of which `/sleep-when-done` carries. Don't assume parity between the two when reasoning about either.

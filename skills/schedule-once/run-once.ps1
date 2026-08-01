@@ -14,6 +14,13 @@ $logDir  = Join-Path $base 'logs'
 $logFile = Join-Path $logDir "$TaskName.log"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
+# Prune logs older than ~30 days; this folder is otherwise unbounded (never read by anyone).
+try {
+    Get-ChildItem -Path $logDir -Filter '*.log' -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) } |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+} catch {}
+
 function Log($m) {
     "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m" | Tee-Object -FilePath $logFile -Append | Out-Null
 }
