@@ -20,6 +20,9 @@
 !agents/**
 !context/
 !context/**
+!favicon.svg
+!favicon.png
+!favicon.ico
 
 # Per-user ticket log, not shared
 skills/shortcut-create-ticket/log.md
