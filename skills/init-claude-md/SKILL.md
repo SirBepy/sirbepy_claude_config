@@ -51,7 +51,7 @@ Write or update the file at the project root. Follow this structure exactly:
 
 One sentence: what this app does and who it's for.
 
-Type: html | vite | react | roblox | flutter | other
+Type: html | vite | react | roblox | flutter | tauri | other
 Deploy: github-pages | none | other
 
 ## Structure
@@ -75,6 +75,8 @@ Brief one-liner of the source layout, e.g. "src/styles.css, src/script.js, asset
 - [any project-specific rules that are genuinely useful]
 ```
 
+`Type:` must be a bare enum value from the table below - no parenthetical elaboration (e.g. `Type: react`, not `Type: react (Vite 7 + React 19)`). Put any elaboration in the one-sentence description above instead.
+
 ### Type reference
 
 | Value     | When to use                      |
@@ -84,6 +86,7 @@ Brief one-liner of the source layout, e.g. "src/styles.css, src/script.js, asset
 | `react`   | React project (Vite or CRA)      |
 | `roblox`  | Roblox Luau project              |
 | `flutter` | Flutter/Dart project             |
+| `tauri`   | Tauri desktop project            |
 | `other`   | Anything else                    |
 
 ### Rules section guidelines

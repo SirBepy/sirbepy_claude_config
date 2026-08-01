@@ -21,12 +21,12 @@ Add the following just before `</body>` if not already present:
 
 ```html
 <!-- Settings widget - comment out to disable -->
-<script src="https://cdn.jsdelivr.net/gh/sirbepy/bepy-project-init@main/widget/settings.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/sirbepy/bepy-project-init@cb6aebd1b672d69bae3aff91581a0a6c6ab2e695/widget/settings.js"></script>
 ```
 
 The widget always renders in the top-right corner.
 
-Then check if there is any existing page-specific element with `position: fixed` or `position: absolute` in the top-right corner (e.g. a custom menu, a button, a panel). If there is, do not move the widget - instead adjust the page-specific element to sit below the widget. A safe offset is `top: 60px` or similar depending on the widget size.
+Then check if there is any existing page-specific element with `position: fixed` or `position: absolute` in the top-right corner (e.g. a custom menu, a button, a panel). If there is, do not move the widget - instead adjust the page-specific element to sit below the widget. Measure the widget's actual rendered height (e.g. read the element's bounding box after the page loads) and use that as the offset, rather than guessing a fixed value.
 
 ### Step 3 - Inject animated background
 
@@ -34,7 +34,7 @@ Add the following just after the settings widget script, before `</body>`, if no
 
 ```html
 <!-- Animated background. To disable: set window.BEPY_BACKGROUND = false before this tag. To use a custom SVG: set window.BEPY_BG_PATTERN = 'your-pattern.svg' before this tag. -->
-<script src="https://cdn.jsdelivr.net/gh/sirbepy/bepy-project-init@main/widget/background.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/sirbepy/bepy-project-init@cb6aebd1b672d69bae3aff91581a0a6c6ab2e695/widget/background.js"></script>
 ```
 
 ### Step 4 - Confirm

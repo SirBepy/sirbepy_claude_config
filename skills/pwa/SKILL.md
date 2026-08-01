@@ -46,7 +46,7 @@ Create `manifest.json` in the project root:
   "name": "",
   "short_name": "",
   "description": "",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#16151f",
   "theme_color": "#9d7dfc",
@@ -81,16 +81,20 @@ Create `sw.js` in the project root:
 ```javascript
 const CACHE_NAME = "v1";
 const ASSETS = [
-  "/",
-  "/index.html",
-  "/src/styles/style.css",
-  "/src/scripts/script.js",
-  "/assets/images/favicon.png",
-  "/manifest.json",
+  "./",
+  "./index.html",
+  "./src/styles/style.css",
+  "./src/scripts/script.js",
+  "./assets/images/favicon.png",
+  "./manifest.json",
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
+  e.waitUntil(
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => Promise.allSettled(ASSETS.map((asset) => cache.add(asset)))),
+  );
 });
 
 self.addEventListener("fetch", (e) => {
@@ -116,7 +120,7 @@ Add before `</body>` if missing:
 ```html
 <script>
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js");
+    navigator.serviceWorker.register("./sw.js");
   }
 </script>
 ```

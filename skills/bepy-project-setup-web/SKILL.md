@@ -32,7 +32,6 @@ If the user picks "Let me pick what to skip", use AskUserQuestion with multiSele
 
 Options:
 - "/init-claude-md" - Generate or update CLAUDE.md
-- "/migrate-structure" - Normalize file structure, add missing boilerplate
 - "/readme" - Generate or update README.md
 - "/favicon" - Check and generate favicon svg + png + ico
 - "/meta-tags" - Add missing meta tags to index.html
@@ -52,17 +51,7 @@ Run all non-skipped skills in the order listed. For each one:
 
 Do not stop between skills unless a skill requires user input. Handle the input and continue.
 
-## Step 3 - Suggest context compact
-
-After `/apply-styleguide` is done (right before `/portfolio-data`), print:
-
-```
-Heavy context steps done. Consider running /compact before continuing if context feels large.
-```
-
-Then continue automatically unless the user says to pause.
-
-## Step 4 - Ask about PWA
+## Step 3 - Ask about PWA
 
 If `auto` flag is passed, run `/pwa` without asking.
 
@@ -73,19 +62,19 @@ Otherwise, ask using AskUserQuestion:
 
 If yes, run `/pwa`.
 
-## Step 5 - Commit
+## Step 4 - Commit
 
-After everything is done (including PWA if selected), run `/commit` with the message:
+After everything is done (including PWA if selected), run `/commit`:
 
 ```
-MAJOR: bepy project setup
+CHORE: bepy project setup
 ```
 
-## Step 6 - GitHub Pages (web projects only)
+## Step 5 - GitHub Pages (web projects only)
 
 Run `/github-pages-init`. It will skip automatically if not a web project.
 
-## Step 7 - Summary
+## Step 6 - Summary
 
 Print a summary of everything that ran:
 
@@ -93,7 +82,6 @@ Print a summary of everything that ran:
 Done. Here's what ran:
 
 /init-claude-md     - created
-/migrate-structure  - moved script.js to src/scripts/, added .prettierrc
 /readme             - generated
 /favicon            - generated svg + png + ico
 /meta-tags          - added og:title, og:description, og:image
@@ -101,8 +89,6 @@ Done. Here's what ran:
 /inject-widgets     - injected both scripts
 /apply-styleguide   - replaced 14 hardcoded values, applied .card to 3 elements
 /portfolio-data     - updated, screenshots taken
-
-Don't forget to review and commit when ready.
 ```
 
 ## Notes

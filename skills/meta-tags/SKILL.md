@@ -27,7 +27,7 @@ Check for the following:
 
 - `.portfolio-data/metadata.json` - for title, shortDescription, mainImage
 - `assets/images/favicon.png` - for og:image fallback
-- `git remote get-url origin` - to construct the live URL for og:url
+- `git remote get-url origin` - to derive the GitHub Pages base URL (`https://{username}.github.io/{repo}/`), used for both og:url and og:image
 - Existing meta tags in `index.html` - do not duplicate anything already there
 
 ### Step 2 - Add missing tags
@@ -38,7 +38,7 @@ Open `index.html` and check for each of these. Add only the ones that are missin
 <meta name="description" content="..." />
 <meta property="og:title" content="..." />
 <meta property="og:description" content="..." />
-<meta property="og:image" content="assets/images/favicon.png" />
+<meta property="og:image" content="https://username.github.io/repo/assets/images/favicon.png" />
 <meta property="og:url" content="https://username.github.io/repo/" />
 <meta name="twitter:card" content="summary" />
 ```
@@ -49,10 +49,13 @@ Place all meta tags inside `<head>`, grouped together after any existing meta ta
 
 - `description` and `og:description` - use shortDescription from metadata.json if it exists, otherwise infer from the project
 - `og:title` - use title from metadata.json if it exists, otherwise use the page title tag
-- `og:image` - use mainImage from metadata.json if it exists, otherwise fall back to `assets/images/favicon.png`
-- `og:url` - construct from git remote, fall back to placeholder if remote not set
+- `og:image` - absolute URL built from the same Pages base as og:url (mainImage from metadata.json if it exists, otherwise `assets/images/favicon.png`), e.g. `https://username.github.io/repo/assets/images/favicon.png`. If the Pages base can't be derived (no git remote), omit the og:image tag entirely rather than emit a relative URL.
 
-### Step 3 - Confirm
+### Step 3 - Verify absolute URLs
+
+Re-read the written `<head>`. Confirm `og:image` (if present) and `og:url` both start with `https://`. If og:image was omitted per the fallback above, note that in the Step 4 summary rather than treating it as a failure.
+
+### Step 4 - Confirm
 
 Tell the user which tags were added and which were already present.
 Do not commit - the user handles that.

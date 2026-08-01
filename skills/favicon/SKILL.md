@@ -9,24 +9,13 @@ description: Triggers on /favicon only.
 
 ## Scripts
 
-Both scripts live in the same folder as this SKILL.md.
+Three scripts live in the same folder as this SKILL.md.
 
-- `svg-to-png.js` - converts SVG to PNG. Usage: `node <path-to-skill>/svg-to-png.js <input.svg> <output.png> <size>`
-- `png-to-ico.js` - converts PNG to ICO. Usage: `node <path-to-skill>/png-to-ico.js <input.png> <output.ico>`
+- `svg-to-png.js` - converts SVG to PNG. Requires the `sharp` npm package. Usage: `node <path-to-skill>/svg-to-png.js <input.svg> <output.png> <size>`
+- `png-to-ico.js` - converts PNG to ICO. Requires the `png-to-ico` npm package. Usage: `node <path-to-skill>/png-to-ico.js <input.png> <output.ico>`
+- `_resolve.js` - shared helper both scripts use to resolve their npm dependency, checking global installs too.
 
-`png-to-ico.js` requires the `png-to-ico` npm package. **Before running it, always check and install if missing:**
-
-```
-npm list -g png-to-ico
-```
-
-If not found:
-
-```
-npm install -g png-to-ico
-```
-
-Do this every time, without asking the user.
+If a required package (`sharp` or `png-to-ico`) is missing, the script exits with the exact `npm install -g` command to run - run it and retry.
 
 ## Flags
 

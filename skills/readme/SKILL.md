@@ -60,8 +60,6 @@ Optional, include if it adds value:
 Follow this structure exactly:
 
 ```markdown
-<!-- TODO: one day consider stylized SVG title headers instead of plain markdown headings -->
-
 <img src="assets/images/favicon.png" width="48" alt="project icon" />
 
 # Project Title
@@ -102,7 +100,11 @@ See [PORTFOLIO.md](.portfolio-data/PORTFOLIO.md) for the full project write-up.
 
 Skip any section that has no content. Keep it clean over keeping it complete.
 
-### Step 4 - Confirm
+### Step 4 - Verify no leaked TODOs
+
+Re-read the written README.md and confirm no `<!-- TODO` comment survives. If one does, remove it.
+
+### Step 5 - Confirm
 
 Tell the user what was written and flag any assumptions.
 Do not commit - the user handles that.
