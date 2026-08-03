@@ -7,6 +7,26 @@ description: Triggers on /screenshot only. Takes portfolio-quality screenshots o
 
 > Capture screenshots of the dev project, one per distinct view or state.
 
+## Native windows - the Playwright flow does not apply
+
+Desktop shells (Tauri/Electron windows, tray icons, taskbar strips, OS dialogs) are unreachable
+from the browser helper below. Capture them with an ad-hoc PowerShell `System.Drawing` grab
+instead - but the output path rule is the SAME one Step 4 states, and it is the part that keeps
+getting missed:
+
+```powershell
+$dir = ".for_bepy/screenshots/<claude-ancestor-pid>-<ancestor-start-ticks>"
+New-Item -ItemType Directory -Force $dir | Out-Null
+Add-Type -AssemblyName System.Drawing
+$b = New-Object Drawing.Bitmap 1920, 1080
+[Drawing.Graphics]::FromImage($b).CopyFromScreen(0, 0, 0, 0, $b.Size)
+$b.Save("$dir/strip.png", [Drawing.Imaging.ImageFormat]::Png)
+```
+
+**Never write a capture to `.for_bepy/screenshots/` root.** `/close` treats root-level files as
+unowned legacy and refuses to delete them, so they accumulate forever. Past incident (2026-08-01):
+25 loose captures from one Tauri icon session had to be cleared by hand.
+
 ## Step 1 - Verify helper script
 
 The script must exist at `C:/Users/tecno/.claude/skills/screenshot/screenshot-helper.cjs`.
