@@ -29,6 +29,14 @@ When the watcher finishes you are re-invoked with its stdout. Parse the `BUILD_R
 - `BUILD_RESULT=watch_error` -> `gh` hit a persistent transient error (auth flip, network blip, rate limit) while polling and could not confirm a completed status for one or more runs after retrying with backoff. This is NOT a build verdict - the run(s) may still be green, red, or in progress. Tell the user the watcher couldn't confirm the result and relaunch it (same command as before) rather than diagnosing a "failure" that might not exist.
 - `BUILD_RESULT=timeout` -> the wall-clock ceiling (`TIMEOUT_MINUTES`, default 30) was hit before all runs resolved. Not a build verdict either - CI may still be running. Tell the user the watcher gave up after the timeout and offer to relaunch it (same command as before) if they still want the result.
 
+### Reporting discipline
+
+Applies whenever you inspect runs yourself (e.g. `gh run list`), not just when parsing the watcher's marker:
+
+- A push can trigger more than one workflow. Enumerate and report every triggered run's conclusion, not the first or newest: `gh run list --json workflowName,status,conclusion,databaseId` over all rows from that push, never `--limit 1`.
+- Never report "CI is green" while any triggered run is still `in_progress` or `queued` - name what's still pending instead.
+- A `success` conclusion with `skipped` jobs is not automatically benign - state WHY it skipped. For a tauri release workflow, the usual cause is a pre-existing `<tag-prefix><version>` tag, possibly left behind by an earlier failed run.
+
 ### Gated auto-fix
 
 The watcher prints the failed-step logs after a `failure` marker. Diagnose from them, then branch:
