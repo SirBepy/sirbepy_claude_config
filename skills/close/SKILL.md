@@ -63,7 +63,9 @@ Runs first, before Phase 1, every time - no flag skips it.
 
 Resolve this session's screenshot-subfolder id now: `<ancestor-pid>-<ancestor-start-ticks>`, from the same process-tree walk as `rename-session.ps1`/`.sh` (the nearest `claude`-named ancestor process). The start-time suffix is load-bearing, not decoration: Windows recycles PIDs, so a bare PID can collide with a dead session that left files behind; PID plus start time cannot. PowerShell: `$p = Get-Process -Id $ancestorPid; $id = "$($p.Id)-$($p.StartTime.Ticks)"`. Also note whether this session captured any screenshots at all. Phase 3 step 3 uses both: the id scopes the purge to this session's own subfolder, and the zero-writes flag skips the purge entirely when the answer is none.
 
-Scan the full session for dev-stated commitments: explicit multi-part asks ("we need to do X, Y, Z"), a numbered plan the dev agreed to, or any request with more than one part. For each, check whether it actually got done by the time `/close` was invoked.
+**Visual-work check.** If any file changed this session matches `.css`/`.scss`/`.less`, or is otherwise a user-facing visual/layout change, and the zero-screenshots flag above is true, add "show Joe a live screenshot of the visual change" to the unfinished-commitments list below. CLAUDE.md's UI & visual changes section already requires this; a green headless/e2e test pass is not a substitute, since it cannot detect "this looks wrong" (2026-08-01: an AUQ card-height CSS fix shipped on a passing Playwright regression test alone, never shown live).
+
+Scan the full session for dev-stated commitments: explicit multi-part asks ("we need to do X, Y, Z"), a numbered plan the dev agreed to, or any request with more than one part, plus the visual-work item above if it triggered. For each, check whether it actually got done by the time `/close` was invoked.
 
 This is distinct from Phase 1 step 5 (Claude's own unexecuted "want me to...?" offers) - this catches things the dev asked for, not things Claude proposed unprompted.
 
