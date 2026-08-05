@@ -23,7 +23,21 @@ Each commit writes its own fresh marker; the hook consumes the oldest fresh one 
 3. Run `git diff` to understand the changes
 4. Infer the right commit prefix (see below, or per project overrides)
 5. Check if a linter exists - if yes, run it and fix all issues first
-5a. **Comment-noise check** (always runs, no size/skip-review gate - unlike `/close`'s conditional `/code-check` pass, this fires on every commit). Read `skills/commit/comment-noise.md` for the cap definition and the mechanical prefilter command (shared with `/create-pr`), scoped to the diff about to be committed (`git diff HEAD -- <files>` in place of `<base>..HEAD`). No output = clean, continue. Flagged = trim the offending blocks now, per that same rule, before committing - don't ask, matching `/create-pr` step 2b's auto-trim.
+5a. **Comment-noise check** (always runs, no size/skip-review gate - unlike `/close`'s conditional `/code-check` pass, this fires on every commit, no exception for a small diff). Run this exact command, replacing `<files>` with the paths this commit will touch, including not-yet-`git add`ed new files - the untracked-file pass below is what makes those visible, since a bare `git diff HEAD` cannot see them:
+
+    ```
+    { git diff HEAD -- <files>; git status --porcelain -- <files> | awk '$1=="??"{print substr($0,4)}' | while IFS= read -r f; do git diff --no-index -- /dev/null "$f"; done; } | awk '
+    /^\+\+\+ b\// { f=substr($0,7); run=0; next }
+    /^\+/ && !/^\+\+\+/ {
+      l=substr($0,2); add[f]++
+      if (l ~ /^[[:space:]]*(\/\/|\/\*|\*|#|--|<!--)/) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
+      next
+    }
+    { run=0 }
+    END { for (k in add) if (max[k]>=5 || (add[k]>=20 && c[k]*100/add[k]>=25)) printf "%s %d/%d (%d%%) longest %d\n", k, c[k], add[k], c[k]*100/add[k], max[k] }' | sort
+    ```
+
+    No output = clean, continue. Flagged = trim the offending blocks now - per the cap in `skills/commit/comment-noise.md` (2 lines typical, 4 hard per block, 25% ratio once a file adds 20+ lines) - before committing, don't ask, matching `/create-pr` step 2b's auto-trim. `comment-noise.md` stays the one place the cap number and `/create-pr`'s range-mode variant of this command are defined; this copy is kept in sync with it, not a separate rule.
 6. Check if the repo has a project-level `run-tests` skill at `.claude/skills/run-tests/SKILL.md`. If yes, invoke it and wait for the result. If it fails, **abort the commit**, print the failing output, and explain to the user exactly why the commit was aborted (which command failed, what it printed, and that they need to fix it or tell you to skip). Do not stage or commit anything until the user either fixes it or explicitly says to skip.
 7. **Submodule check:** run `git submodule status` (no flags). For each submodule whose sha is prefixed with `+` (modified) or `-` (uninitialized/not checked out), handle it before committing the parent:
    - If prefixed with `-`: warn the user, do not auto-commit an uninitialized submodule.
@@ -34,7 +48,7 @@ Each commit writes its own fresh marker; the hook consumes the oldest fresh one 
      3. Include `<submodule-path>` in step 8's commit pathspec — a gitlink path commits the submodule's current HEAD, so no `git add` is needed in the parent.
      4. Then continue to step 8 as normal; the parent commit will include the pointer bump.
    - If no submodules or all are clean: skip this step silently.
-8. **Commit by pathspec, never stage-then-commit.** Run `git commit -m "<message>" -- <file> <file> ...`, naming every path this commit should contain. This commits exactly those paths' current working-tree state and never reads the index, so it is correct whether or not a concurrent session sharing this repo's `.git/index` has its own work staged there. No shared-index check is needed and none should be run - the form is unconditional.
+8. **Commit by pathspec, never stage-then-commit.** Precondition, checked right here, not skimmed past earlier: has step 5a's prefilter actually been run against this exact pathspec, this turn, and come back clean or already-trimmed? If not, stop and run it now - do not call `git commit` first and rationalize the check afterward. Then run `git commit -m "<message>" -- <file> <file> ...`, naming every path this commit should contain. This commits exactly those paths' current working-tree state and never reads the index, so it is correct whether or not a concurrent session sharing this repo's `.git/index` has its own work staged there. No shared-index check is needed and none should be run - the form is unconditional.
    - **Untracked files are the one exception:** a pathspec cannot name a file git doesn't know yet, so `git add <new-file> <new-file>` them first, then include them in the same pathspec commit. That add only ever touches your own paths.
    - Never `git reset` or unstage entries you didn't stage - that disrupts another session's commit prep.
    - Accepted trade-off: there is no `git diff --staged` review before the commit, so check the file list against the `git status` / `git diff` output from steps 2-3 before running it.
