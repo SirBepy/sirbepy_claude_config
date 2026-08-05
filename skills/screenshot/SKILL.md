@@ -108,3 +108,28 @@ npx --yes kill-port PORT
 ## Step 7 - Return results
 
 List the screenshots taken and their paths. Do not modify `metadata.json`. Delete the plan file.
+
+## Batch mode - a folder of static HTML files
+
+Trigger: "screenshot every mockup/HTML file in folder X and show them", e.g. a `/mockup` round
+that produced several standalone variant files (v1.html, v2.html, ...). This replaces N manually
+typed single-file invocations with one documented loop.
+
+1. `Glob` the folder for `*.html`. Confirm the set with the dev if the match looks wrong (wrong
+   folder, unexpected count).
+2. Prefer this Playwright helper over a chrome-devtools MCP attempt for local files - an MCP
+   Chrome instance can fail on a locked profile (wasted a subagent round-trip, 2026-07-31 mockup
+   session); this helper launches its own isolated browser every time.
+3. For each file, one command, one invocation, no chaining (`;`/`&&`/pipes are never used to
+   combine these):
+   ```
+   node "C:/Users/tecno/.claude/skills/screenshot/screenshot-helper.cjs" --url "file:///<abs-path-to-file.html>" --screenshot ".for_bepy/screenshots/<pid>-<start-ticks>/<basename>.png" --viewport 1920x1080
+   ```
+   If a file needs interaction before it's ready to shoot (a click, a wait for animation), use
+   `--plan` for that file instead of `--click`/`--wait`, same rule as Step 4 - still one command
+   per file.
+4. Output path: throwaway verification shots go under
+   `.for_bepy/screenshots/<pid>-<start-ticks>/`, never the folder root (see the top-of-file rule).
+   A batch that's a portfolio keeper instead goes under `.portfolio-data/`, matching Step 4.
+5. After the loop, `Read` every PNG back inline (same verification bar as Step 5: not blank, not
+   mid-animation). Report the full list of files captured with their paths.
