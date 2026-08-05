@@ -46,6 +46,10 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
   your report-back.` Subagents cannot invoke skills, so they must never commit.
 - The load-bearing global rules it needs, restated: PowerShell on Windows, never chain commands
   with `&&` / `;` / `|`, the working directory. Subagents do not inherit session context.
+- If the dispatch captures screenshots: the already-resolved
+  `.for_bepy/screenshots/<ancestor-pid>-<ancestor-start-ticks>/` path, computed by the
+  orchestrator. A subagent cannot derive the ancestor PID itself, so a bare path or a
+  description of how to compute it silently degrades to root, which `/close` can never claim.
 - The orphan-check final step from `~/.claude/refs/process-hygiene.md` if it runs Node commands.
 - The line: "Your final message is your entire return value. ALL commands, including the verify
   floor (build/test/lint/typecheck), run synchronously in the same tool call: `run_in_background`
@@ -54,6 +58,8 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
 - The line: "Never run `git stash`, `git reset`, or `git checkout` on paths you don't own: other
   agents' uncommitted work shares this tree. To compare against clean state, use `git show
   HEAD:<file>`."
+- Stage changed files by name, never `git add -A` (parallel agents cross-stage each other's work
+  otherwise).
 
 **Recovery.** If a builder parks itself waiting on a backgrounded command anyway, send one direct
 resume: "deliver the final report now, no waiting." Expect to repeat it once before it complies.
@@ -87,3 +93,12 @@ report is suspect when it is:
 Response: a targeted re-check (cheap, scoped to the doubt) or, for a high-stakes diff, one solo
 higher-tier verifier per the global CLAUDE.md escalation triggers. Never accept a suspect report
 just because re-checking costs tokens.
+
+## Visual work
+
+A builder whose task was visual (UI, layout, styling, mockup match) is never accepted on a green
+verify floor alone: typecheck, tests and build cannot detect "this looks wrong". Its report must
+include a rendered artifact, or the orchestrator renders one before accepting. Facing "it doesn't
+look right", reach for a render before reaching for an explanation. (Table Night redesign,
+2026-08-03: an 11/11-typecheck, 105-test, 4/4-build report shipped a screen nothing like the
+approved mockup - a stale Vite dependency shadow that no automated check could see.)
