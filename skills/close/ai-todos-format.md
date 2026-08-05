@@ -46,6 +46,10 @@ same id with a different slug, so a filename-exists check alone is not enough). 
 exists, rename YOUR file to the next free id and re-check. Never overwrite, never renumber the
 other session's file.
 
+**If a collision slips through anyway** (both helper scripts below support this): pass `-Slug
+<slug>` or the full filename stem as `-Id` to `claim-todo.ps1` / `complete-todo.ps1`; an
+ambiguous id with no disambiguator errors naming both candidate filenames rather than guessing.
+
 ## Backlog file: content
 
 ```md
@@ -171,6 +175,13 @@ Reading/browsing todos needs no claim - only execution does. Creation needs no c
      lost race. Retry once after ~2s before concluding anything.
 4. Clean up your temp file if the rename lost.
 
+Scripted mechanism for the whole sequence above: `~/.claude/skills/close/claim-todo.ps1 -Id <id>
+[-Slug <slug>] [-RepoRoot <path>]`. Implements steps 1-4 verbatim, including the retry and the
+staleness rule below. When the id matches more than one backlog file (a known collision case -
+see below), pass `-Slug <slug>` or the full filename stem as `-Id`; the claim is then named
+`<id>-<slug>.claim` so the two files claim independently. Exits 0 on a fresh or reclaimed-stale
+claim, exits 1 (informational, not an error) when someone else already holds a non-stale claim.
+
 **Heartbeat:** while working, touch the claim file's mtime (PowerShell:
 `(Get-Item <file>).LastWriteTime = Get-Date`) at natural checkpoints - after finishing a step,
 after each todo in a batch. Never parse timestamps from the content; mtime is the liveness signal
@@ -185,12 +196,14 @@ that is old but whose PID is alive is NOT stale - a long session is working; ski
 also means: move the todo to `done/`, delete its PLAN.md line.
 
 Preferred mechanism for the completion sequence (move to `done/` + release claim + prune PLAN.md
-line, all three): `~/.claude/skills/close/complete-todo.ps1 -Id <id> [-RepoRoot <path>]`. It finds
-`.claude/todos/<id>-*.md` (errors on 0 or >1 match unless already in `done/`, in which case it
-reports and no-ops), moves it, deletes the matching claim if present, and prunes the PLAN.md line
-under this file's CAS discipline (fresh read immediately before the write). Idempotent - re-running
-against an already-completed id reports clearly and makes no further changes. The manual three-step
-sequence above remains the documented fallback if the script is unavailable.
+line, all three): `~/.claude/skills/close/complete-todo.ps1 -Id <id> [-Slug <slug>] [-RepoRoot
+<path>]`. It finds `.claude/todos/<id>-*.md` (errors on >1 match unless `-Slug` or a full filename
+stem as `-Id` disambiguates it, naming both candidate files so the caller can retry; 0 matches is
+an error unless already in `done/`, in which case it reports and no-ops), moves it, deletes the
+matching claim (plain or slug-suffixed) if present, and prunes the PLAN.md line under this file's
+CAS discipline (fresh read immediately before the write). Idempotent - re-running against an
+already-completed id reports clearly and makes no further changes. The manual three-step sequence
+above remains the documented fallback if the script is unavailable.
 
 ## What belongs in the backlog
 
