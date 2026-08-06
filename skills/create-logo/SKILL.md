@@ -58,6 +58,8 @@ Across the set, vary density, symmetry vs intentional asymmetry, and visual weig
 
 **Generation:** write the SVGs inline (they are small). Fan out subagents only for a big batch request (5+ new directions at once), and then per global rules: `model: 'sonnet'`, full conventions + brief in every prompt, no commits.
 
+**Raster assist:** when a concept needs pictorial elements SVG hand-authoring does badly (hands, mascots, faces, organic or painterly forms), use the `generate` skill (free Pollinations API) to produce raster concepts or trace references instead of drawing blind.
+
 ## Phase 3: Showcase
 
 Build ONE self-contained HTML file:
