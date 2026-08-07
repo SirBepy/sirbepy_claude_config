@@ -151,6 +151,38 @@ async function pollinationsGenerate({ prompt, seed, aspect, key }) {
   return { buf: Buffer.from(await res.arrayBuffer()), model: res.headers.get('x-model-used') || 'unknown' };
 }
 
+const CF_DAILY_NEURONS = 10000;
+
+// Needs Account Analytics:Read on the token; the Workers AI template alone returns an authz error.
+async function cloudflareQuota() {
+  const token = process.env.CLOUDFLARE_API_TOKEN;
+  const acct = process.env.CLOUDFLARE_ACCOUNT_ID;
+  if (!token || !acct) return null;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const query = `query { viewer { accounts(filter: {accountTag: "${acct}"}) {
+    aiInferenceAdaptiveGroups(filter: {date_geq: "${today}"}, limit: 1000) { sum { totalNeurons } }
+  } } }`;
+
+  try {
+    const res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+    const body = await res.json();
+    if (body.errors?.length) {
+      const msg = body.errors[0].message;
+      return { error: /not authorized/i.test(msg) ? 'token lacks Account Analytics:Read' : msg };
+    }
+    const groups = body?.data?.viewer?.accounts?.[0]?.aiInferenceAdaptiveGroups || [];
+    const used = groups.reduce((n, g) => n + (g.sum?.totalNeurons || 0), 0);
+    return { used, limit: CF_DAILY_NEURONS, remaining: Math.max(0, CF_DAILY_NEURONS - used) };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
 function resolveProvider(requested) {
   const gem = process.env.GEMINI_API_KEY;
   const cfT = process.env.CLOUDFLARE_API_TOKEN;
@@ -183,9 +215,7 @@ const seeds = args.seed !== undefined
   ? Array.from({ length: args.n }, (_, i) => args.seed + i)
   : Array.from({ length: args.n }, (_, i) => 1000 + i * 137);
 
-const written = [];
-for (const seed of seeds) {
-  let saved = false;
+async function runSeed(seed) {
   for (const provider of chain) {
     try {
       let buf;
@@ -220,15 +250,42 @@ for (const seed of seeds) {
 
       const path = seeds.length > 1 ? seedName(args.out, seed, ext) : args.out;
       await writeFile(path, buf);
-      written.push({ provider, model, seed, path, bytes: buf.length });
       if (!args.quiet) console.log(`ok  ${provider} (${model})  seed=${seed}  ${buf.length} bytes  -> ${path}`);
-      saved = true;
-      break;
+      return { provider, model, seed, path, bytes: buf.length };
     } catch (err) {
-      if (!args.quiet) console.error(`--  ${provider} failed: ${err.message}`);
+      if (!args.quiet) console.error(`--  ${provider} failed (seed ${seed}): ${err.message}`);
     }
   }
-  if (!saved) die(`all providers failed for seed ${seed}`);
+  throw new Error(`all providers failed for seed ${seed}`);
 }
 
-console.log(JSON.stringify({ written }, null, 2));
+const pool = Math.max(1, Math.min(Number(args.concurrency) || 4, seeds.length));
+const queue = [...seeds];
+const written = [];
+const failed = [];
+
+await Promise.all(
+  Array.from({ length: pool }, async () => {
+    while (queue.length) {
+      const seed = queue.shift();
+      try {
+        written.push(await runSeed(seed));
+      } catch (err) {
+        failed.push({ seed, error: err.message });
+      }
+    }
+  }),
+);
+
+written.sort((a, b) => a.seed - b.seed);
+const quota = await cloudflareQuota();
+if (quota && !args.quiet) {
+  console.log(
+    quota.error
+      ? `quota  cloudflare: unavailable (${quota.error})`
+      : `quota  cloudflare: ${quota.remaining} of ${quota.limit} neurons left today (${quota.used} used)`,
+  );
+}
+
+console.log(JSON.stringify({ written, failed, quota }, null, 2));
+if (!written.length) process.exit(1);

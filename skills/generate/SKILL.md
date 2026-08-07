@@ -24,6 +24,7 @@ gets a `-<seed>` suffix.
 | `--out` | Required. Target path; parent dirs are created. |
 | `--aspect` | `1:1` (default), `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`. |
 | `--n` | Variant count (default 1). Seeds auto-spread unless `--seed` is given. |
+| `--concurrency` | Parallel requests (default 4). `--n 6 --concurrency 6` returns 6 images in ~15s. |
 | `--seed` | First seed; `--n` counts up from it. Reproduces an exact image on Cloudflare/Pollinations. |
 | `--provider` | Force `gemini` / `cloudflare` / `pollinations`, skipping the cascade. |
 | `--model` | Override the Gemini model id. |
@@ -46,6 +47,11 @@ POST https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/run
      {"prompt":"...", "steps":8, "seed":1000}     steps max 8, prompt max 2048 chars
   -> result.image                                  (base64 JPEG)
 ```
+
+Every run prints remaining daily neurons. That query (`aiInferenceAdaptiveGroups { sum { totalNeurons } }`
+on the GraphQL endpoint) needs **Account Analytics: Read** on the token - the Workers AI template
+alone returns `not authorized for that account`, and the script then prints the reason instead of a
+number. Gemini and Pollinations expose no comparable usage endpoint, so only Cloudflare is reportable.
 
 **2. Gemini "nano banana"** - `GEMINI_API_KEY`, key from [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
 
