@@ -16,6 +16,8 @@ Manual trigger only, `/mockup <what to preview>`. Never auto-offered mid-`/brain
 ## Process
 
 1. **Brainstorm gate.** Check whether THIS specific idea (not some unrelated thing earlier in the session) has already been brainstormed, including via a settled spec in `.claude/todos/` (backlog or `done/`) - `/brainstorm`'s own process checks there first. If not, run `/brainstorm` on it first - a mockup of an unexplored idea just previews the wrong thing faster.
+
+   **Narrow exemption.** Skip `/brainstorm` only when ALL THREE hold: (a) the dev's own message already states the content requirements - what data or elements must appear; (b) every unresolved question is visual (layout, spacing, hierarchy, colour), which the mockup itself is the better instrument for answering; (c) no behavioral, architectural, or data question is entangled with the visual one. If any one fails, the gate stands. Disclosing the skip and naming the three conditions in the response is MANDATORY - an undisclosed skip is indistinguishable from the improvised override this exemption exists to replace.
 2. **Pick the branch** based on the project:
    - **Web stack with an existing, running component library** → Real-component branch (step 3).
    - **Flutter/mobile, or a web project with nothing reusable yet (greenfield)** → Standalone-file branch (step 4).
@@ -76,5 +78,5 @@ Preview pages are frequently already dark-themed by design (matching the target 
 
 - No dedicated `mockup-style.md` convention file. When real components exist, the existing codebase already IS the style reference. When falling back to the standalone file, Tailwind CDN + Phosphor Icons is the default - no extra file needed for that either.
 - Never wire a standalone-file mockup into real implementation code, even if it looked exactly right - rebuild it clean.
-- Don't skip the brainstorm gate because the ask "sounds simple" - that judgment call is `/brainstorm`'s to make, not `/mockup`'s.
+- Don't skip the brainstorm gate because the ask "sounds simple" - that judgment call is `/brainstorm`'s to make, not `/mockup`'s. Step 1's three-condition exemption is the ONLY sanctioned skip, and only when disclosed in the response.
 - Don't skip the Staging section because the real-component branch felt like it should be "just render the real thing" - an under-staged real-component preview is worse than a well-staged standalone one; the dev is judging what they can see, not which branch produced it.
