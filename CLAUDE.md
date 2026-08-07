@@ -33,6 +33,7 @@
 
 - Default to PowerShell (Joe's fvm/dart/flutter/node/gh tooling is configured for PowerShell on Windows). Fall back to Bash only if a PowerShell attempt fails or the command is genuinely POSIX-only.
 - Never chain commands with `&&`, `;`, or `|` - one command per call, always, git included.
+- Never write file CONTENT through the shell - not `Set-Content`, not `Out-File`, not `>`/`>>`. Use the `Write` tool, or `[System.IO.File]::WriteAllText($path, $text)` when a script must do it. Windows PowerShell 5.1 prepends a UTF-8 BOM even with `-Encoding utf8`, and most parsers (`serde_json`, `gh secret set`, TOML/YAML readers) reject it. This is a hard ban on the write mechanism, not a "be careful with encoding" nudge - the shell path is what makes the bug reachable. If a shell write is genuinely unavoidable, verify the first bytes are not `239,187,191` before trusting it. Past incidents: `gh secret set` (2026-07) and `%APPDATA%\com.sirbepy.taskbar-widgets\settings.json` (2026-08-05), where the BOM made the app fall back to `Settings::default()` and silently rewrite Joe's strip.
 
 ## File Editing
 
