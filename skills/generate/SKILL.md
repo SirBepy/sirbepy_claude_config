@@ -1,28 +1,94 @@
 ---
 name: generate
-description: Generates images with free AI models (Pollinations.ai, FLUX) via plain curl - no API key, no signup. Use for raster references, logo/mascot concepts, hero images, placeholders, or whenever SVG hand-authoring can't reach the needed style (hands, faces, organic or painterly looks). Triggers - /generate, "generate an image", "AI image", "make a picture of".
+description: Generates images with free AI models via a provider cascade - Cloudflare Workers AI FLUX-1-schnell (~10k neurons/day free, the default), Gemini "nano banana" (needs billing; no free image tier), Pollinations as a keyless last resort. Use for raster references, logo/mascot concepts, hero images, placeholders, or whenever SVG hand-authoring can't reach the needed style (hands, faces, organic or painterly looks). Triggers - /generate, "generate an image", "AI image", "make a picture of".
 argument-hint: "<what to generate>"
 ---
 
 # /generate
 
-> Free AI image generation from the CLI. Pollinations.ai, keyless, curl in, PNG out.
+> Free AI image generation from the CLI. One script, three providers, best-available first.
 
-## Primary API: Pollinations.ai (no key, no signup)
+## The one command
 
 ```powershell
-curl.exe -sL "https://image.pollinations.ai/prompt/<URL-ENCODED-PROMPT>?model=flux&width=1024&height=1024&seed=42&nologo=true" -o out.png
+node "$env:USERPROFILE\.claude\skills\generate\generate.mjs" --prompt "<prompt>" --out ".for_bepy\generated\<slug>.png" --aspect 1:1 --n 4
 ```
 
-- URL-encode the prompt first: `[uri]::EscapeDataString($prompt)` in PowerShell, or `node -e "console.log(encodeURIComponent(...))"`.
-- **Params:** `model` (check `GET https://image.pollinations.ai/models` FIRST - unknown names are silently substituted, not rejected), `width`/`height` (up to ~2048), `seed` (same prompt+seed reproduces the image; vary seed for variants), `nologo=true`, `enhance=true` (server-side LLM prompt expansion - skip it when the prompt is already precise), `private=true` (keeps it off their public feed).
-- **Quality reality check (measured 2026-08-07):** the anonymous catalog exposed ONLY `sana` - a small fast model whose output is soft and low-detail, fine for rough references, not for finished art. FLUX-class models need the free registered key. If quality matters and no key is set, say so instead of burning seeds hoping for better.
-- **Rate limit:** anonymous tier is ~1 request per 15s. Space batch requests 15s apart and keep batches small (2-4 variants). A free key from enter.pollinations.ai raises limits and truly removes the watermark - if `POLLINATIONS_API_KEY` is set, send it as `Authorization: Bearer` and ignore the spacing.
-- **Caveats:** best-effort service, no SLA; anonymous outputs may carry a small corner watermark; raster RGB only - no real transparency, so for icon work request a solid known background color and remove/trace it afterwards.
+It picks the best provider whose env vars are set, falls through to the next on any failure, verifies
+the bytes are a real image, and prints a JSON summary of what was written. With `--n > 1` each file
+gets a `-<seed>` suffix.
 
-## Prompt framework (adapted from the 5-part pattern)
+| Flag | Meaning |
+|---|---|
+| `--prompt` | Required. The full prompt (see framework below). |
+| `--out` | Required. Target path; parent dirs are created. |
+| `--aspect` | `1:1` (default), `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`. |
+| `--n` | Variant count (default 1). Seeds auto-spread unless `--seed` is given. |
+| `--seed` | First seed; `--n` counts up from it. Reproduces an exact image on Cloudflare/Pollinations. |
+| `--provider` | Force `gemini` / `cloudflare` / `pollinations`, skipping the cascade. |
+| `--model` | Override the Gemini model id. |
+| `--steps` | Cloudflare FLUX steps, capped at 8 (default 8). |
+| `--list-models` | Print the Gemini image models this key can see, plus the auto-pick. |
+| `--allow-paid` | Required before any paid-tier model is used. See the billing gate below. |
 
-Build prompts as narrative direction, not keyword soup, in this order:
+## Provider cascade (measured 2026-08-07)
+
+**1. Cloudflare Workers AI FLUX-1-schnell** - `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`.
+
+**The default, and the only provider here that is actually free and actually good.** 10,000
+neurons/day free, resetting 00:00 UTC (~2,000 small images), shared across all Workers AI models.
+Sharp flat-vector and icon work, clean silhouettes, fast (~3s). A 1-8 step model, so it is weaker on
+photoreal faces and busy scenes than a full diffusion model.
+
+```
+POST https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/run/@cf/black-forest-labs/flux-1-schnell
+     Authorization: Bearer $CLOUDFLARE_API_TOKEN
+     {"prompt":"...", "steps":8, "seed":1000}     steps max 8, prompt max 2048 chars
+  -> result.image                                  (base64 JPEG)
+```
+
+**2. Gemini "nano banana"** - `GEMINI_API_KEY`, key from [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
+
+**There is no free tier for image generation, whatever the blog posts say.** Measured on a fresh key
+2026-08-07: `gemini-flash-latest` TEXT returns 200, while every image model
+(`gemini-2.5-flash-image`, `gemini-3.1-flash-image`, `gemini-3-pro-image`, all `imagen-4.0-*`)
+returns 429 `generate_content_free_tier_requests, limit: 0`. Text is free, images are not. Do not
+re-test this hoping for a different answer - it needs billing enabled on the Cloud project, which is
+a `[BILLING]` question for Joe first. The widely-repeated "500 images/day free" figure did not hold.
+
+```
+POST https://generativelanguage.googleapis.com/v1beta/models/<model>:generateContent
+     x-goog-api-key: $GEMINI_API_KEY
+     {"contents":[{"role":"user","parts":[{"text":"..."}]}],
+      "generationConfig":{"responseModalities":["TEXT","IMAGE"],"imageConfig":{"aspectRatio":"1:1"}}}
+  -> candidates[0].content.parts[].inlineData.data   (base64 PNG)
+```
+
+The script discovers model ids from `GET /v1beta/models` (they move often) and skips paid markers.
+Quotas are per Google Cloud **project**, not per key - extra keys in one project share a pool. There
+is no seed parameter, so `--n` batches vary via a per-seed nonce appended to the prompt.
+
+**3. Pollinations** - keyless, optional `POLLINATIONS_API_KEY`. Last resort only.
+
+The catalog is `["sana"]` and has stayed that way: a small model whose output is soft abstract mush,
+usable for rough silhouette references and nothing finished. Unknown `model=` values are **silently
+substituted**, not rejected, so trust the `x-model-used` response header over what you asked for. The
+account key Joe minted returns `x-auth-status: unauthenticated` and does not unlock FLUX - assume
+that stays true unless their APIDOCS says otherwise. Anonymous rate limit ~1 request/15s.
+
+**Not wired: Hugging Face Inference Providers.** The free tier is $0.10/month of credit, a handful of
+images. Not worth the token plumbing; revisit only if that number changes.
+
+## Billing gate - non-negotiable
+
+Only genuinely free tiers run by default. The script refuses paid-tier Gemini models
+(`gemini-3-pro-image` / nano banana Pro is **0 RPM, 0 RPD** on free; `imagen`, `ultra`) unless
+`--allow-paid` is passed. Never pass it without asking Joe a `[BILLING]` question first. Same for
+OpenAI GPT Image - metered from the first call, so it is not in the cascade at all.
+
+## Prompt framework
+
+Narrative direction, not keyword soup, in this order:
 
 1. **Image type** - "A flat vector-style app icon", "A photorealistic photograph", "An isometric illustration"
 2. **Subject** - who/what with concrete details
@@ -30,23 +96,25 @@ Build prompts as narrative direction, not keyword soup, in this order:
 4. **Technical specs** - lighting, lens, style anchors ("clean geometric shapes, uniform stroke weight, high contrast")
 5. **Constraints** - always end with "no text, no watermark, no border"
 
-Same prompt + different seeds = cheap variant exploration. Different prompts per creative direction = real variety.
+Same prompt + different seeds = cheap variant exploration. Different prompts per creative direction =
+real variety. For icon work bake the target background color in - every provider here outputs opaque
+raster, so there is no real transparency to ask for.
 
 ## Process
 
-1. Build the prompt (framework above). For icon/logo use, bake the target background color in.
-2. Pick size: 1024x1024 default; match the destination's aspect otherwise.
-3. Download with curl to the project's scratch convention (`.for_bepy/generated/` where that exists, else `generated/`), filename `<slug>-<seed>.png`.
-4. **Verify before showing, always:** the file must be a real image of plausible size (an error page is small text/HTML - check with `Get-Item` length, a real PNG is 50KB+), then Read the PNG back to confirm it matches the ask. Rate-limited (429) or 5xx: wait 15s, retry once, then report honestly.
-5. Show the result inline (Read) and give the file path.
-6. Iterate: tweak prompt or reroll seed. When a variant wins, note its exact prompt+seed so it can be regenerated at other sizes reproducibly.
-
-## Keyed fallbacks (only if the user provides keys - never sign up on their behalf)
-
-- **Cloudflare Workers AI** FLUX-1-schnell: `POST https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/ai/run/@cf/black-forest-labs/flux-1-schnell` with `Authorization: Bearer $CF_API_TOKEN`, JSON `{"prompt": "..."}`. Free tier ~10k neurons/day.
-- **Hugging Face / Together / Gemini / OpenAI**: all need accounts and have costs or metered tiers. Before using ANY keyed provider, surface it as a [BILLING] question first - Pollinations stays the default precisely because it is free.
+1. Build the prompt with the framework above.
+2. Run the script into the project's scratch convention (`.for_bepy/generated/` where it exists, else `generated/`).
+3. **Verify before showing, always.** The script already rejects non-images and sub-5KB responses, but
+   that only proves a file arrived - Read the PNG back to confirm it actually matches the ask.
+4. Show the result inline (Read) and give the full absolute path.
+5. Iterate: tweak prompt or reroll seed. When a variant wins, record its exact prompt + seed + provider
+   so it can be regenerated at other sizes.
+6. Report the provider that actually served each image. A silent fall-through to Pollinations is the
+   difference between a usable reference and mush, so never let it pass unmentioned.
 
 ## Scope notes
 
-- Output is raster. For logo pipelines, treat generations as references or trace targets; final logo delivery still wants SVG (see the `create-logo` skill).
-- Generated-image licensing on Pollinations is permissive (open-source platform), fine for personal projects; anything shipped commercially deserves a fresh check.
+- Output is raster. For logo pipelines these are references or trace targets; final delivery still
+  wants SVG (see the `create-logo` skill).
+- Licensing: Gemini and Cloudflare outputs follow their respective terms and are fine for personal
+  work; anything shipped commercially deserves a fresh check.
