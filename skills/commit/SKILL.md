@@ -30,7 +30,7 @@ Each commit writes its own fresh marker; the hook consumes the oldest fresh one 
     /^\+\+\+ b\// { f=substr($0,7); run=0; next }
     /^\+/ && !/^\+\+\+/ {
       l=substr($0,2); add[f]++
-      if (l ~ /^[[:space:]]*(\/\/|\/\*|\*|#|--|<!--)/) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
+      if (l ~ /^[[:space:]]*(\/\/|\/\*|\*|#[^[!]|#$|--|<!--)/) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
       next
     }
     { run=0 }

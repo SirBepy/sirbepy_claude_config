@@ -23,7 +23,7 @@ design rationale in code all fail; rationale goes in the PR body.
      /^\+\+\+ b\// { f=substr($0,7); run=0; next }
      /^\+/ && !/^\+\+\+/ {
        l=substr($0,2); add[f]++
-       if (l ~ /^[[:space:]]*(\/\/|\/\*|\*|#|--|<!--)/) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
+       if (l ~ /^[[:space:]]*(\/\/|\/\*|\*|#[^[!]|#$|--|<!--)/) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
        next
      }
      { run=0 }
@@ -40,7 +40,7 @@ design rationale in code all fail; rationale goes in the PR body.
      /^\+\+\+ b\// { f=substr($0,7); run=0; next }
      /^\+/ && !/^\+\+\+/ {
        l=substr($0,2); add[f]++
-       if (l ~ /^[[:space:]]*(\/\/|\/\*|\*|#|--|<!--)/) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
+       if (l ~ /^[[:space:]]*(\/\/|\/\*|\*|#[^[!]|#$|--|<!--)/) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
        next
      }
      { run=0 }
@@ -50,7 +50,8 @@ design rationale in code all fail; rationale goes in the PR body.
    No output = `clean` in either mode, and the check is done. Do not read a
    single comment. Regex covers `//`, `/* */`, `*`, `#`, `--`, and `<!--`; a
    language using none of those line-comment markers isn't covered - flag it
-   by eye if one shows up.
+   by eye if one shows up. The `#` branch deliberately excludes `#[` and `#!`
+   so Rust attributes and shebangs count as code, not comments.
 2. **Judge only the flagged files.** Read those diffs and list the specific
    offending blocks (`file:line`, first line, line count). A 5+ line block that
    genuinely documents one hard constraint can survive - say so and why. Do not
