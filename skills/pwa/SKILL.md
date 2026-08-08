@@ -17,6 +17,31 @@ If `src-tauri/` exists or `CLAUDE.md` lists `Type: tauri`, print:
 
 And stop.
 
+## Step 0b - Skip for bundler-based projects
+
+If `vite.config.ts`, `vite.config.js`, `next.config.js`, `next.config.ts`, or an equivalent
+bundler/framework config exists in the project root, this skill's hand-rolled `manifest.json` +
+`sw.js` template will conflict with that stack's own PWA plugin ecosystem (no asset-hashing
+awareness, wrong `public/` conventions). Don't generate it. Instead:
+
+1. Check sibling packages in the same repo for an existing working PWA setup (e.g. `vite-plugin-pwa`
+   or `next-pwa`/`@ducanh2912/next-pwa` in a sibling `package.json`). If found, print:
+
+```
+/pwa - this is a <Vite/Next.js> project. Skipping the static-site template.
+<sibling package> already has a working PWA setup via <plugin> - mirror its config in
+<vite.config.ts/next.config.js> rather than starting from scratch.
+```
+
+2. If no sibling setup exists, print:
+
+```
+/pwa - this is a <Vite/Next.js> project. Skipping the static-site template - use
+<vite-plugin-pwa/next-pwa> instead, the idiomatic tool for this stack.
+```
+
+And stop either way.
+
 ## Step 1 - Check if already done
 
 If the user passed `skipVerification`, skip this step entirely and proceed to Step 2.

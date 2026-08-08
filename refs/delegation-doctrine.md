@@ -43,7 +43,10 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
 - Its verify floor: the project's fast checks (typecheck, unit, lint, build) with the instruction
   to run them and report the actual output, not a claim of success.
 - The verbatim line: `Stage your changes but do NOT commit. The main agent will run /commit after
-  your report-back.` Subagents cannot invoke skills, so they must never commit.
+  your report-back.` Subagents cannot invoke skills, so they must never commit. Include this line
+  even when the dispatch provably touches zero git-tracked files (e.g. a gitignored scratch dir):
+  the line is static boilerplate, not a judgment call, and omitting it on a case-by-case read is
+  itself the failure mode - no exception, ever.
 - The load-bearing global rules it needs, restated: PowerShell on Windows, never chain commands
   with `&&` / `;` / `|`, the working directory. Subagents do not inherit session context.
 - If the dispatch captures screenshots: the already-resolved
@@ -60,6 +63,41 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
   HEAD:<file>`."
 - Stage changed files by name, never `git add -A` (parallel agents cross-stage each other's work
   otherwise).
+
+## Canonical builder preamble
+
+The block below is the literal text every builder dispatch prompt pastes for the "embeds, without
+exception" list above, so it stops getting hand-retyped (and drifting) per dispatch. Fill in the two
+placeholders; everything else is copy-verbatim. The per-dispatch parts - task, scope, OFF LIMITS
+file list, verify floor specifics - stay hand-written, since those are the parts that actually need
+thought.
+
+```
+Windows. PowerShell for shell commands. NEVER chain commands with `&&`, `;` or `|` - one command
+per call. Working directory: <WORKING_DIR>.
+
+Stage your changes but do NOT commit. The main agent will run `/commit` after your report-back.
+
+Never run `git stash`, `git reset`, or `git checkout` on paths you don't own - other agents'
+uncommitted work shares this tree. To compare against clean state, use `git show HEAD:<file>`.
+Stage changed files by name, never `git add -A`.
+
+If this dispatch captures screenshots, save them under
+`.for_bepy/screenshots/<ancestor-pid>-<ancestor-start-ticks>/` (the orchestrator resolves this
+path, a subagent cannot derive its own ancestor PID) - never a bare or hand-picked subfolder name,
+that's what leaves files `/close` can never prove ownership of and therefore never clean up.
+
+<OFF_LIMITS>
+
+Your final message is your entire return value. ALL commands, including the verify floor
+(build/test/lint/typecheck), run synchronously in the same tool call: `run_in_background` is
+FORBIDDEN in builder subagents, a long build is waited out, not backgrounded. Ending the turn while
+anything is still running is a failed dispatch.
+```
+
+`<WORKING_DIR>` and `<OFF_LIMITS>` are the only fields the orchestrator fills in per dispatch; the
+`.for_bepy/screenshots/` path is resolved by the orchestrator (see above), not left for the
+subagent to compute.
 
 **Recovery.** If a builder parks itself waiting on a backgrounded command anyway, send one direct
 resume: "deliver the final report now, no waiting." Expect to repeat it once before it complies.
