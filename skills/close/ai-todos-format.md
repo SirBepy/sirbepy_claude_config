@@ -195,15 +195,18 @@ that is old but whose PID is alive is NOT stale - a long session is working; ski
 **Release:** delete `.claims/<id>.claim` when the todo completes or you abandon it. Completing
 also means: move the todo to `done/`, delete its PLAN.md line.
 
-Preferred mechanism for the completion sequence (move to `done/` + release claim + prune PLAN.md
-line, all three): `~/.claude/skills/close/complete-todo.ps1 -Id <id> [-Slug <slug>] [-RepoRoot
-<path>]`. It finds `.claude/todos/<id>-*.md` (errors on >1 match unless `-Slug` or a full filename
-stem as `-Id` disambiguates it, naming both candidate files so the caller can retry; 0 matches is
-an error unless already in `done/`, in which case it reports and no-ops), moves it, deletes the
-matching claim (plain or slug-suffixed) if present, and prunes the PLAN.md line under this file's
-CAS discipline (fresh read immediately before the write). Idempotent - re-running against an
-already-completed id reports clearly and makes no further changes. The manual three-step sequence
-above remains the documented fallback if the script is unavailable.
+Preferred mechanism for the completion sequence (append a Notes bullet + move to `done/` +
+release claim + prune PLAN.md line, all four): `~/.claude/skills/close/complete-todo.ps1 -Id <id>
+[-Slug <slug>] [-RepoRoot <path>] [-Note "<text>"]`. It finds `.claude/todos/<id>-*.md` (errors on
+>1 match unless `-Slug` or a full filename stem as `-Id` disambiguates it, naming both candidate
+files so the caller can retry; 0 matches is an error unless already in `done/`, in which case it
+reports and no-ops). When `-Note` is passed, it appends `- <text>` under the file's `## Notes`
+heading (creating one after `## Acceptance`, before any `## Open questions` block, if none exists)
+before moving it - BOM-less UTF8, so a session never hand-writes this append. It then moves the
+file, deletes the matching claim (plain or slug-suffixed) if present, and prunes the PLAN.md line
+under this file's CAS discipline (fresh read immediately before the write). Idempotent -
+re-running against an already-completed id reports clearly and makes no further changes. The
+manual three-step sequence above remains the documented fallback if the script is unavailable.
 
 ## What belongs in the backlog
 

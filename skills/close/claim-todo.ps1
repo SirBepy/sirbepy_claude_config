@@ -105,7 +105,8 @@ $claimContent = @(
     "started: $((Get-Date).ToUniversalTime().ToString('o'))"
 ) -join "`n"
 
-Set-Content -Path $tempPath -Value $claimContent -Encoding utf8
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText($tempPath, $claimContent, $utf8NoBom)
 
 function Try-Rename {
     param([string]$From, [string]$To)

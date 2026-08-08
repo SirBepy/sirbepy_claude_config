@@ -24,14 +24,17 @@ For each duplicate pair: keep the one with the more complete Context/Approach (o
 
 ## Step 3 - Classify
 
-Read each file. Label as EASY or HARD:
+Read each file. Check PRODUCT first - it overrides EASY/HARD when it applies. Label as PRODUCT, EASY, or HARD:
 
 | Label | Criteria |
 |-------|----------|
+| PRODUCT | Adds, removes, or alters user-facing functionality or behavior, OR the file carries a `Type: product-change` header (authoritative when present - don't re-litigate) |
 | EASY | Self-contained: single file or tightly scoped, no open design questions, no external service calls, no new decisions required, acceptance criteria is clear |
 | HARD | Anything else: multi-file, open design question, external service, requires dev input before starting |
 
-When in doubt, label HARD.
+When in doubt between EASY and HARD, label HARD. PRODUCT todos are never auto-executed and never
+enter the HARD queue's "important" urgency ranking (step 7) - they're only offered when Joe
+explicitly says he's doing product work.
 
 ## Step 4 - Dry-run confirmation
 
@@ -42,7 +45,7 @@ Show the classification before touching anything, as a clear standalone report. 
 - Emit the report as the turn's **FINAL message with no tool call after it**, then stop and wait for
   Joe's plain-text reply.
 
-The report has three parts:
+The report has four parts:
 
 **1. Dedupe result** - the `archived <id> - duplicate of <id>` lines from step 2, or "No duplicates found."
 
@@ -62,7 +65,12 @@ Keep "What it does" to one plain sentence and "Why EASY" to a short phrase. If a
 active, non-stale claim in `.claims/` (per the contract), add ` [claimed by another session - will
 skip]` in its row.
 
-**3. HARD queue** - a compact count plus the ids, so Joe knows what's parked without a wall of text
+**3. PRODUCT set** - a compact count plus the ids and one-line descriptions, listed separately from
+EASY/HARD so they never read as actionable in this pass (e.g. "3 PRODUCT todos parked - not
+auto-executed, not in the HARD queue: `04` wire-or-hide the Approve Orders button, ..."). Offered
+only when Joe explicitly says he's doing product work, never picked up from this report.
+
+**4. HARD queue** - a compact count plus the ids, so Joe knows what's parked without a wall of text
 (e.g. "62 HARD todos parked for step 7 - refactors, IA/design, tooling/CI, external-service, and
 decision todos"). The full pickable list comes later, in step 7.
 
@@ -91,15 +99,18 @@ For each **DO**-verdict EASY todo in id order:
 1. **Claim it** per the contract's claim protocol. If the claim is lost to a live session, skip with a note and continue.
 2. Read the full file. Announce which todo is starting (id + title).
 3. Execute the task fully. Touch the claim file's mtime after major steps (heartbeat).
-4. Append a Notes line to the todo recording what happened (completed + commit sha), then run
-   `~/.claude/skills/close/complete-todo.ps1 -Id <id>` to move it to `done/`, prune its PLAN.md
-   line, and release the claim in one call. Fall back to doing those three steps by hand per the
-   contract if the helper is unavailable (non-Windows, or missing).
+4. Run `~/.claude/skills/close/complete-todo.ps1 -Id <id> -Note "completed, commit <sha>"` to
+   append the Notes line, move the todo to `done/`, prune its PLAN.md line, and release the claim
+   in one call. Fall back to doing those steps by hand per the contract if the helper is
+   unavailable (non-Windows, or missing).
 5. Run `/commit` after each completed todo.
 
 If a todo hits a blocker: release its claim, surface the blocker, stop that todo, continue with the next EASY.
 
 ## Step 7 - Surface HARD todos
+
+PRODUCT todos never appear here, in any urgency tier - they were already parked separately in step
+4 and stay out of this "important todos that need doing" ranking entirely.
 
 Before rendering, skim each HARD todo (title + Goal only, not a full triage pass) and assign an
 urgency read: **High** (blocking, time-sensitive, or the dev's own prior notes flag it urgent),

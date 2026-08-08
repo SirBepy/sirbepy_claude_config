@@ -25,11 +25,17 @@
 .PARAMETER RepoRoot
   Project root containing .claude/todos/. Defaults to the current directory.
 
+.PARAMETER Note
+  Optional completion note. Appended as a "- <text>" bullet under the todo file's ## Notes
+  heading before it's moved to done/ - matching an existing heading, or creating one right
+  after ## Acceptance (and before any ## Open questions block) when absent. Written BOM-less.
+
 .EXAMPLE
   ~/.claude/skills/close/complete-todo.ps1 -Id 286
   ~/.claude/skills/close/complete-todo.ps1 -Id 07 -RepoRoot C:\Users\joe\Projects\my-app
   ~/.claude/skills/close/complete-todo.ps1 -Id 434 -Slug chat-row-style-decide-and-delete-loser
   ~/.claude/skills/close/complete-todo.ps1 -Id 434-chat-row-style-decide-and-delete-loser
+  ~/.claude/skills/close/complete-todo.ps1 -Id 286 -Note "completed, commit abc1234"
 #>
 param(
     [Parameter(Mandatory = $true)]
@@ -37,13 +43,54 @@ param(
 
     [string]$Slug,
 
-    [string]$RepoRoot = (Get-Location).Path
+    [string]$RepoRoot = (Get-Location).Path,
+
+    [string]$Note
 )
 
 $ErrorActionPreference = 'Stop'
 
 function Write-Info($msg) { Write-Host $msg }
 function Write-Fail($msg) { Write-Error $msg }
+
+# Inserts "- $Note" under an existing "## Notes" heading, or creates one right after
+# "## Acceptance" (naturally landing before any later "## Open questions" block) when
+# no Notes heading exists yet. Line-array surgery, not a regex rewrite, so unrelated
+# formatting survives untouched.
+function Add-NoteBullet {
+    param([string[]]$Lines, [string]$Note)
+
+    $bullet = "- $Note"
+    $notesIdx = ($Lines | Select-String -Pattern '^##\s*Notes\s*$').LineNumber
+    if ($notesIdx) { $notesIdx = $notesIdx[0] - 1 }
+
+    if ($notesIdx) {
+        $insertAt = $Lines.Count
+        for ($i = $notesIdx + 1; $i -lt $Lines.Count; $i++) {
+            if ($Lines[$i] -match '^##\s') { $insertAt = $i; break }
+        }
+        while ($insertAt -gt $notesIdx + 1 -and $Lines[$insertAt - 1].Trim() -eq '') { $insertAt-- }
+        $insert = @($bullet)
+    }
+    else {
+        $accIdx = ($Lines | Select-String -Pattern '^##\s*Acceptance\s*$').LineNumber
+        if (-not $accIdx) {
+            # No Acceptance section either - append a fresh Notes section at EOF.
+            return ($Lines + '' + '## Notes' + '' + $bullet)
+        }
+        $accIdx = $accIdx[0] - 1
+        $insertAt = $Lines.Count
+        for ($i = $accIdx + 1; $i -lt $Lines.Count; $i++) {
+            if ($Lines[$i] -match '^##\s') { $insertAt = $i; break }
+        }
+        while ($insertAt -gt $accIdx + 1 -and $Lines[$insertAt - 1].Trim() -eq '') { $insertAt-- }
+        $insert = @('', '## Notes', '', $bullet)
+    }
+
+    $before = if ($insertAt -gt 0) { $Lines[0..($insertAt - 1)] } else { @() }
+    $after = if ($insertAt -lt $Lines.Count) { $Lines[$insertAt..($Lines.Count - 1)] } else { @() }
+    return ($before + $insert + $after)
+}
 
 $todosDir  = Join-Path $RepoRoot '.claude\todos'
 $doneDir   = Join-Path $todosDir 'done'
@@ -86,6 +133,15 @@ if ($backlogMatches -and $backlogMatches.Count -gt 1) {
 
 if ($backlogMatches -and $backlogMatches.Count -eq 1) {
     $todoFile = $backlogMatches[0]
+
+    if ($Note) {
+        $rawContent = Get-Content -Path $todoFile.FullName -Raw
+        $originalLines = $rawContent -split "`r?`n"
+        $newLines = Add-NoteBullet -Lines $originalLines -Note $Note
+        $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+        [System.IO.File]::WriteAllText($todoFile.FullName, ($newLines -join "`r`n"), $utf8NoBom)
+        Write-Info "Appended Notes bullet to $($todoFile.Name)"
+    }
 
     if (-not (Test-Path $doneDir)) {
         New-Item -ItemType Directory -Path $doneDir -Force | Out-Null
@@ -172,7 +228,8 @@ if (Test-Path $planPath) {
     }
     else {
         $keptLines = $lines | Where-Object { $_ -notmatch $lineIdPattern }
-        Set-Content -Path $planPath -Value $keptLines -Encoding utf8
+        $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+        [System.IO.File]::WriteAllText($planPath, (($keptLines -join "`r`n") + "`r`n"), $utf8NoBom)
         Write-Info "Pruned PLAN.md line(s) for todo $Id"
     }
 }
