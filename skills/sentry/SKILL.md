@@ -15,9 +15,19 @@ Triage open Sentry issues across all 3 ZNG projects.
 
 ## Drill-in
 
-Run:
+`Get-SentryIssue.ps1` only accepts a numeric issue ID or a full issue URL — NOT the short ID shown in the Sentry UI (e.g. `ZNG-APP-96`). Resolve short IDs first:
+
 ```powershell
-& "C:\Users\tecno\.claude\scripts\Get-SentryIssue.ps1" <id> -Org zirtue-nk
+$token = $env:SENTRY_AUTH_TOKEN
+if (-not $token) { $token = [Environment]::GetEnvironmentVariable('SENTRY_AUTH_TOKEN','User') }
+$headers = @{ Authorization = "Bearer $token" }
+$r = Invoke-RestMethod -Uri "https://sentry.io/api/0/organizations/zirtue-nk/shortids/ZNG-APP-96/" -Headers $headers -Method Get
+$r.group.id
+```
+
+Then run:
+```powershell
+& "C:\Users\tecno\.claude\scripts\Get-SentryIssue.ps1" <numeric-id> -Org zirtue-nk
 ```
 
 ## Full triage run
@@ -50,3 +60,29 @@ Example option labels:
 - "Investigate LateInitializationError + GoRouter crash (14 + 5 events, both app-init)"
 - "Close WKWebView noise (1 event, benign iOS)"
 - "Nothing for now"
+
+## Per-issue write-up (when analyzing/drilling into specific issues)
+
+For each issue, check the noise gate first — if it's third-party/extension noise, stop there; the rest of the fields don't apply. Two independent noise signals, either is sufficient:
+- Stack trace is entirely non-app frames, e.g. `chrome-extension://...`, MetaMask, `runtime.sendMessage`, `Object Not Found Matching Id`.
+- **Sparse-tag signature** (confirmed 2026-08-06): event has only `dist/environment/handled/interface_type/level/mechanism/release` tags — no `browser`, `url`, `user`, `breadcrumbs`, or `request` entry — AND the single stack frame has `filename: "undefined"` (literal string) with `function: null`. Real app errors (Dart/JS) always carry a resolved filename and rich context even when the message itself is generic. This signature held even when source maps were confirmed uploaded for that release — the browser itself never reported a filename, which happens for cross-origin/extension-injected scripts caught by the page's global `onerror`/`onunhandledrejection` handlers, not failed source-map resolution.
+
+Each field is its own bullet on its own line — never collapse fields into one paragraph or one run-on line (plain `\n` alone renders as a single line in markdown; use a bullet list, which forces real line breaks). Separate each issue with a `---` divider and a `###` heading.
+
+```
+### Sentry Issue Name (ID)
+
+- **Noise (third-party/extension, not app code):** true/false — if true, stop here
+- **Events / Users / Pattern:** e.g. 20 events, 0 users, Ongoing 4wk
+- **Breaking bug:** true/false
+- **Should it be rushed:** true/false
+- **Where:** screen/flow
+- **Why:** recent FE change / BE change / new feature / Flutter issue / unknown (confidence: confirmed from code / inferred from stack trace / speculative)
+- **Can it be fixed on FE:** true/false
+- **Disposition:** Fixed / Won't-fix (external, e.g. Plaid) / Blocked-upstream (e.g. tracked Flutter issue) / Needs fix / Ignored-noise
+- **Fix / next step:** ...
+
+---
+```
+
+Carry disposition across `/sentry` runs when re-triaging the same issue — don't re-diagnose an issue already marked Fixed/Won't-fix/Blocked-upstream unless its event count jumped since the last snapshot.

@@ -169,6 +169,8 @@ If no chained commands, skip this phase.
 - Any chained command in Phase 5 failed.
 - Any background work is still running in this session: spawned `Agent` with `run_in_background: true`, active `/loop`, or pending `ScheduleWakeup`. Check before killing.
 
+**Explicit non-blocker: a CI/release build watcher.** `commit/build-watch.md`'s watcher (launched after `/commit push`/`pushbump`/`pushnbump`) does NOT count as background work above and must NEVER hold Phase 6 open, even mid-watch. It is fire-and-forget by design - the dev checks the result later via `gh run list`/GitHub directly, not by keeping this terminal alive. Closing kills the watcher process; that is accepted, not a bug. Proceed through Phase 6 normally regardless of watcher state.
+
 If all clear: first, if the `close_session` MCP tool is available (Conductor-hosted session), call it once - this is the host's authoritative teardown confirmation, so the session ends and its process is killed at turn completion. Never call it if any skip condition above applies; skip it silently in a plain terminal session where the tool doesn't exist.
 
 **HARD ORDERING RULE:** running the rename/kill script WITHOUT having called `close_session` first, in a session where that tool exists, leaves Conductor chats permanently un-closed - killing the process is MEANINGLESS to the daemon, it respawns the process every turn, so only the tool call actually ends the chat. If `close_session` is in your tool list, the script line below is FORBIDDEN until the tool call has returned.

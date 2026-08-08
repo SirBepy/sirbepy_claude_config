@@ -42,7 +42,7 @@ Manual trigger only, `/mockup <what to preview>`. Never auto-offered mid-`/brain
    - An animation or transition needs to settle before the shot - add `--wait <ms>` in screenshot mode, or a `{"type":"wait","ms":...}` step in plan mode.
    - Never combine `--click` or `--wait` with `--plan` in the same invocation - the script rejects that combination and tells you to move them into plan steps instead.
 
-   When using `--plan`, write the plan JSON to the fixed path `.for_bepy/mockup-step.json`. Reuse and overwrite this same path every round of a session instead of naming a new file per round. Delete it once, at session end, alongside the rest of the `.for_bepy` scratch cleanup, not after each round.
+   When using `--plan`, write the plan JSON to `.for_bepy/mockup-step-<claude-ancestor-pid>.json` (same ancestor-pid derivation the screenshot convention uses) - a fixed shared name collides when two concurrent sessions in the same repo both run mockup rounds (Music Guesser session, 2026-08-01, found the file already owned by a concurrent favicon session). Reuse and overwrite this same per-session path every round; don't name a new file per round. Delete it once, at session end, alongside the rest of the `.for_bepy` scratch cleanup, not after each round.
 6. **Show it to the dev.**
    - **Standalone-file branch:** push it with `/preview <file>` so it auto-opens in Claude Conductor's in-app preview panel (Joe 2026-07-30, after verifying the panel's push-render path works: "i want all /mockup to always do /preview" - this re-reverses the 2026-07-24 browser-open default, which existed only because pushed previews used to silently never appear). If `/preview` reports Conductor unreachable (connection refused on 127.0.0.1:27182), follow its own fallback (open the file directly in the browser), then still capture a screenshot via `SendUserFile` so the dev has it in-chat too.
    - **Real-component branch:** unchanged - bring the scratch route up via `/supervised-run` (it's a live dev-server route, not a static file `/preview` can push), give the dev the URL, and capture a screenshot via `SendUserFile`.
@@ -55,6 +55,7 @@ A preview is not just the component - it's the component made legible. Never shi
 - **A title + one-sentence context blurb** at the top: what this is previewing and why, so the dev doesn't have to reconstruct context from a naked screenshot.
 - **A padded "stage"**: the component sits inside a contrasting, bordered container with generous padding (not touching the viewport edges, not floating in a giant blank void). This is what makes a small card or control actually readable at a glance.
 - **Labeled side-by-side sections when comparing options** (e.g. "V1" / "V2", or named variants) - each option gets its own full stage, generously sized. Cap it at 2-3 options shown at once; a dense multi-variant grid shrinks everything below legibility (a past incident with an 8-variant board drew "i cant see anything properly" - see project memory on focused mockups). Iterate one direction at a time rather than dumping every idea in one crowded pass.
+  - **Explicit-request exception:** if the dev directly names a specific count above 2-3 (e.g. "give me 12 icons to look at"), honor it - don't refuse or silently cap. Still give every option its own clearly-labeled, generously-padded full card (title, one-line pitch, size ladder or relevant states) rather than a cramped grid; this mitigation is what makes a larger count legible (Hubbub favicon session, 2026-08-01: 12 concepts, each a full card, held up legible at 16px in a tab-strip check).
 - **Live simulator controls for interactive/time-dependent states** (hover, urgent/error, empty, loading, countdown-style live values) - buttons/sliders that flip the actual rendered state live, rather than prose describing what it would look like, or a single static snapshot that hides the states that matter most (an urgency/escalation state is often the whole point of the preview).
 - **A "Today" vs "Proposed" comparison when the mockup replaces or fixes existing shipped UI.** Render the CURRENT real component/markup (reuse the actual existing function/route, don't hand-describe it) side by side with the new one, both labeled. An improvement argued in the abstract is far weaker than one shown as a visible before/after - this is especially true for a bugfix-flavored redesign, where the "before" IS the bug.
 - **A realistic-size stage in addition to the generously-padded one**, whenever the target surface has a fixed real-world container (a taskbar popup, a sidebar of known width, a phone viewport). The wide/spacious stage is for judging detail; a second stage clamped to the actual real width/height is for judging whether it still holds up cramped into where it will actually live. Skip this second stage only when the surface has no fixed constraint (e.g. a full responsive web page).
@@ -62,6 +63,23 @@ A preview is not just the component - it's the component made legible. Never shi
 - A short closing note under each stage explaining the behavior/logic it demonstrates, when that isn't obvious from looking (e.g. what triggers a color or state change).
 
 This staging scaffolding is intentionally the same regardless of which branch built the component - the dev's ability to *judge* the design shouldn't depend on which technical path was cheaper to reuse.
+
+## Breaking a rejection loop (icon/logo rounds)
+
+After 2 rounds of icon/logo concepts get rejected with no specific, actionable feedback (just "I
+hate these" / "ugly", not "make X bigger" or "try blue instead"), stop generating another round
+blind. Ask a diagnostic question card that splits the critique into execution / subject / palette
+/ reference-style, so precise answers surface without the dev needing to already know what they
+want - a reference-image ask or a tool switch is not the escalation, the question card is. Keep
+the hand-coded SVG flow as the default for the first round or two; this is the escalation point,
+not a ban on the technique. (Hubbub favicon session, 2026-08-01: a reference-image ask and an
+AI-tool pivot both failed to break a 4-round rejection deadlock; the question card broke it in the
+same session, using neither.)
+
+When re-showing icon concepts after a rejected round, include the previously-rejected version as
+an explicit labelled baseline alongside the new ones, not just new variants shown in isolation.
+Also render a solid-black silhouette of each icon concept: a shape that reads at a glance in
+silhouette is doing the actual work, color and detail can hide a weak base shape.
 
 ## Dark-mode / forced-theme extension guard
 
