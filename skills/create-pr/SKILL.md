@@ -55,7 +55,8 @@ per the global subagent-model rule; never inherit.
 
 2. **Dispatch the drafting subagent (`general-purpose`, `model: 'sonnet'`) -
    skip this step entirely if the size gate above routed to inline drafting.**
-   One call, foreground (its report is needed before anything else can happen).
+   One call, **`run_in_background: false`** (foreground - its report is needed
+   before anything else can happen).
    Give it: the branch name, the base branch, whether a PR already exists
    (edit vs. create framing), and an instruction to read
    `C:\Users\tecno\.claude\skills\create-pr\drafting-rules.md` in full for the
@@ -121,8 +122,9 @@ per the global subagent-model rule; never inherit.
      block from the preview file (small `Edit`, main agent does this itself -
      it's a few lines, not worth a subagent round-trip). On yes: leave it.
    - `screenshot` → "embed a screenshot of `<route>`?" On yes: **dispatch a
-     second, small subagent** (`general-purpose`, `model: 'sonnet'`) to bring
-     the app up (reuse a running `/supervised-run` instance if one already
+     second, small subagent** (`general-purpose`, `model: 'sonnet'`,
+     `run_in_background: false` - same live-gate dependency as step 2) to
+     bring the app up (reuse a running `/supervised-run` instance if one already
      serves the route, else start one), capture the screenshot, `Read` it to
      self-verify, run the sensitive-content guard (`drafting-rules.md`), then
      upload it per the "Image hosting" rules in `drafting-rules.md` and return
@@ -178,9 +180,21 @@ format the drafting subagent applies in step 2.
    bundled phrasing is not pre-approval. Always show the preview and wait for
    an explicit `AskUserQuestion` answer for THIS preview before calling `gh pr
    create`, every single time, no exceptions for how the invocation was phrased.
+   An earlier same-session "don't ask me things" instruction never suspends this
+   gate either, even for a new push to an already-approved PR - it still asks,
+   every time, for every preview.
 
    Ask the dev to approve the previewed body (AskUserQuestion).
    Only on approval:
+   - **Mandatory pre-publish grep, before any `gh pr create --body-file` or
+     `gh pr edit --body-file` call, no exceptions**: grep the preview file
+     (body text and any embedded image caption) for the em dash character
+     (U+2014). A hand-authored caption like `![Scope switcher open — searchable...]`
+     is exactly the string most likely to carry a stray one, and this file
+     never goes through a commit step where the usual grep habit would catch
+     it. Fix any hit before publishing, not after - replace the em dash with a
+     comma, colon, or hyphen (`Edit`, main agent, not a shell text write) and
+     re-render the preview.
    - Push the branch if it isn't on the remote yet (`git push -u origin <branch>`).
      This is implied by the dev invoking `/create-pr`; still announce it, since it's
      an outward-facing action and triggers a credential popup.
