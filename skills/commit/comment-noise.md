@@ -15,11 +15,13 @@ design rationale in code all fail; rationale goes in the PR body.
 1. **Mechanical prefilter** (one command, no judgment, run it verbatim). Two
    forms - pick the one matching what's being diffed, both share the same awk:
 
-   - **Range mode** (`/create-pr`, comparing two commits - a branch diff
-     already contains every file the branch added, so untracked files aren't
-     a concern here):
+   - **Range mode** (`/create-pr`, comparing the branch against its base -
+     a branch diff already contains every file the branch added, so
+     untracked files aren't a concern here). Diffs `<base>` against the
+     working tree, not `<base>..HEAD`, so a re-run after step 2b's trims
+     sees the trim instead of reporting the same stale hits:
      ```
-     git diff <base>..HEAD | awk '
+     git diff <base> | awk '
      /^\+\+\+ b\// { f=substr($0,7); run=0; next }
      /^\+/ && !/^\+\+\+/ {
        l=substr($0,2); add[f]++

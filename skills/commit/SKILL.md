@@ -19,6 +19,7 @@ Set-Content -Path "C:\Users\tecno\.claude\hooks\.commit-marker-$([guid]::NewGuid
 Each commit writes its own fresh marker; the hook consumes the oldest fresh one and leaves the rest, so two concurrent sessions can no longer consume each other's marker. The hook needs a marker written within the last 2 minutes, so redo this before each individual commit, not once for the whole flow.
 
 1. Check for project-level overrides at `.claude/commit-style.md`. If it exists, read it fully and let its rules override the defaults below (prefixes, grouping, message format, etc.). Only read it once per session.
+1a. **Branch-protection check** - convention-driven, not branch-name-driven, so it only fires where a repo has actually opted in. Run `git rev-parse --abbrev-ref HEAD`. If ALL three hold - the branch matches a protected-trunk name (`main`, `master`, `develop`, or a project override), the repo has a remote (`git remote` is non-empty), and a `GIT_FLOW.md` (or an equivalent documented trunk-protection rule in root `CLAUDE.md`) exists at the repo root - stop and ask via `AskUserQuestion`: branch first, commit anyway (explicit override), or abort. Repos with no such documented convention are unaffected, protected-sounding branch name or not - this explicitly does NOT fire on `~/.claude` itself, which commits to `master` by design and has no `GIT_FLOW.md`.
 2. Run `git status`
 3. Run `git diff` to understand the changes
 4. Infer the right commit prefix (see below, or per project overrides)
@@ -48,6 +49,7 @@ Each commit writes its own fresh marker; the hook consumes the oldest fresh one 
      3. Include `<submodule-path>` in step 8's commit pathspec — a gitlink path commits the submodule's current HEAD, so no `git add` is needed in the parent.
      4. Then continue to step 8 as normal; the parent commit will include the pointer bump.
    - If no submodules or all are clean: skip this step silently.
+7a. **Peer check:** call `list_peers`. If it shows another active session in this repo, call `post_message` naming the pathspec about to be committed, then proceed - this applies even inside a dedicated worktree, since collisions happen at merge time, not on disk. Both are MCP tools that may not exist in a plain terminal session; if either tool is unavailable, skip this step silently.
 8. **Commit by pathspec, never stage-then-commit.** Precondition, checked right here, not skimmed past earlier: has step 5a's prefilter actually been run against this exact pathspec, this turn, and come back clean or already-trimmed? If not, stop and run it now - do not call `git commit` first and rationalize the check afterward. Then run `git commit -m "<message>" -- <file> <file> ...`, naming every path this commit should contain. This commits exactly those paths' current working-tree state and never reads the index, so it is correct whether or not a concurrent session sharing this repo's `.git/index` has its own work staged there. No shared-index check is needed and none should be run - the form is unconditional.
    - **Untracked files are the one exception:** a pathspec cannot name a file git doesn't know yet, so `git add <new-file> <new-file>` them first, then include them in the same pathspec commit. That add only ever touches your own paths.
    - Never `git reset` or unstage entries you didn't stage - that disrupts another session's commit prep.
@@ -135,6 +137,7 @@ If no `package.json` exists, say so and stop.
 - Never add `Co-authored-by: Claude` or any AI attribution.
 - Never chain commands. One command per Bash call. No `&&`, `;`, or `|`.
 - Never use `cd` before git commands. Use `git -C /absolute/path <command>`.
+- **Target repo other than cwd:** if the dev or a prior instruction names a repo path other than the current project, use `git -C <path>` for every git command this run issues, not just some of them, and state that repo path back in the first line of output so it's unambiguous which repo is being committed to.
 - Name every path in the commit pathspec (step 8). Never `git add -A`, never `git commit -a`. **Exception - mass deletion/move of tracked files:** when a commit's whole purpose is deleting or moving many tracked files (e.g. a framework rewrite wiping an old tree), naming each path is impractical; pass the containing tree instead - `git commit -m "<message>" -- <tree-path>` - never a bare repo-wide pathspec (which would also sweep in any unrelated uncommitted edits sitting elsewhere in the repo). A pathspec only picks up already-tracked files, never untracked ones, so it stays within the "know what you're committing" intent while `-A` does not. Sanity-check `git status` after, and if the deletion set is mixed with unrelated edits, split them.
 
 ## Edge cases: merges, partial staging, backdating
