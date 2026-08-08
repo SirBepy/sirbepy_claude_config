@@ -36,6 +36,9 @@ If genuinely ambiguous, ask once via AskUserQuestion.
 
 Infer from context; ask only if genuinely ambiguous.
 
+`**Origin:**` is always `dev` for this skill, both modes - `/create-todo` only fires on the dev's
+own invocation (`disable-model-invocation: true`), so the dev is always the one asking.
+
 ## Step 3 - Write the file
 
 **Deferral mode:** fill Goal/Context/Approach/Acceptance from the discussion. If there isn't

@@ -188,7 +188,8 @@ Dispatch subagents to verify the run's whole diff (`git diff START_SHA..HEAD`):
    Playwright/Cypress config) - best effort, skip with a one-line note if there is no headless way.
 
 Fix anything trivial and re-verify inline, then `/commit`. Anything else found becomes an
-`## Open questions` entry or a new todo - never a mid-run question.
+`## Open questions` entry or a new todo - never a mid-run question. A new todo filed here is a
+verification finding Claude made on its own: `**Origin:** ai`.
 
 Then the written summary: todos completed with commit shas, todos parked and why, every fork the run
 auto-decided and what it picked, questions asked and answers applied, `/cleanup-todos`'s still-pending

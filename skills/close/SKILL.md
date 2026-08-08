@@ -131,9 +131,12 @@ Run in this order:
 
    **Dedup against this session's own writes.** Memories written live earlier in this session are already covered - list them before evaluating, and treat a Phase 1 candidate matching one as NONE rather than writing a near-duplicate. The transcript sweep exists to catch what live capture MISSED, not to re-extract what it already got.
 2. **`.claude/todos/`** Write a separate `.md` file per item from:
-   - Phase 0 (unfinished dev commitments where the dev chose "close anyway") - tag `**Type:** task`.
-   - Phase 1 step 5 (unfinished offers) - tag `**Type:** task`.
-   - Phase 1 steps 3-4 (repeated manual steps, skill rule violations) - tag `**Type:** skill-improvement`, Approach section names the skill file involved.
+   - Phase 0 (unfinished dev commitments where the dev chose "close anyway") - tag `**Type:** task`,
+     `**Origin:** dev` (the dev asked for it; Claude just didn't finish it in time).
+   - Phase 1 step 5 (unfinished offers) - tag `**Type:** task`, `**Origin:** ai` (Claude proposed it
+     unprompted and it never got executed).
+   - Phase 1 steps 3-4 (repeated manual steps, skill rule violations) - tag `**Type:**
+     skill-improvement`, `**Origin:** ai`, Approach section names the skill file involved.
 
    Follow `ai-todos-format.md` (this skill's folder) for everything: template, filename/id rules, git-policy self-heal. The bar: a future cold AI session must be able to execute the task from the file alone, without re-reading session history. Skip if no items. Note: Phase 2 review findings are written to the backlog by `/code-check` directly - do not re-write them here.
 3. **Screenshot cleanup.** Ownership is proven by subfolder, never inferred from mtime - a concurrent session's files can be newer OR older than this session's start and mtime cannot tell them apart. This session may delete ONLY files under its own `.for_bepy/screenshots/<pid>-<start-ticks>/` subfolder (the Phase 0 id) - never files at the folder root, never another session's subfolder, regardless of age. If Phase 0 recorded zero screenshots captured this session, skip deletion entirely, even if a subfolder happens to exist. Before deleting anything, print the exact filenames about to be removed, then delete - never pipe straight to `Remove-Item` without capturing names first. Loose files at the `.for_bepy/screenshots/` root are legacy (written by skills that don't yet use the per-session subfolder) - never auto-delete them, just report the count. Scope is strictly `.for_bepy/screenshots/` - never touch `.portfolio-data/` (portfolio keepers), committed assets, or any image elsewhere. Delete without a blocking prompt (still runs unattended under `/sleep-when-done`/autopilot). Skip silently if the folder or this session's subfolder is missing or empty. PowerShell: `$files = Get-ChildItem -File ".for_bepy/screenshots/$id" -ErrorAction SilentlyContinue; $files | ForEach-Object { $_.Name }` to list and print, then `$files | Remove-Item -Force` (`$id` is Phase 0's pid-plus-start-ticks, never a bare pid).

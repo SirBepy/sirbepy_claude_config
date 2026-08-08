@@ -56,11 +56,20 @@ regardless of how many dedupe-losers exist.
 each of these todos in one prompt. It returns one verdict per todo:
 
 - `complexity`: EASY or HARD, same criteria table as `/batch-todos` step 3.
-- `still_valid`: does the premise still hold against a quick read of referenced files/paths? A
-  spot-check, not a full re-implementation-level investigation.
+- `still_valid`: does the premise still hold? The check depth depends on the todo's `**Origin:**`:
+  - `dev`-origin: a quick read of referenced files/paths, same spot-check as before - the premise
+    is the dev's own intent, which cannot go stale the same way a Claude-noticed observation can.
+  - `ai`-origin, or the field is absent (unknown, treated as `ai` per the contract): an actual
+    re-verification against the current tree, not a spot-read - re-run the check the todo describes
+    (grep the symbol, re-read the referenced lines, re-run the command it cites) and the verdict
+    must cite the concrete evidence, `file:line` or the command run, rather than asserting validity.
 - `suggested_drop`: true/false + one-line reason. Flag ONLY if the todo looks genuinely stale,
   superseded, or no-longer-relevant. Never flag on age or "not important" alone - that judgment
-  belongs to the dev. Age is a report-level signal only (Step 6), never a triage verdict.
+  belongs to the dev. Age is a report-level signal only (Step 6), never a triage verdict. An
+  `ai`/unknown-origin todo whose re-verification comes back `still_valid: false` is ALWAYS
+  `suggested_drop: true`, with the re-verification evidence as the reason - this is exactly the
+  failure mode `**Origin:**` exists to catch. This still only flags it; Step 7's confirm gate still
+  applies, per the no-auto-drop rule below.
 
 This must stay a single batched call for the deep tier, never one dispatch per todo.
 
@@ -121,8 +130,9 @@ Contents, in order:
 3. Staleness nag: "`<N>` todos not reconfirmed in `CLEANUP_STALE_DAYS` (14) days or more," computed
    from the PRE-refresh `last-checked` snapshot Step 5 recorded before overwriting it - never from
    the value Step 5 just wrote, which would always read as fresh.
-4. A status table, fixed columns: `id | title | complexity | still_valid | reconfirm-count |
-   triage-depth | claim-status`. `triage-depth` is `deep` or `shallow`. `claim-status` is blank or
+4. A status table, fixed columns: `id | title | origin | complexity | still_valid |
+   reconfirm-count | triage-depth | claim-status`. `origin` is the todo's `**Origin:**` value, or
+   `unknown` if absent. `triage-depth` is `deep` or `shallow`. `claim-status` is blank or
    `claimed - marker skipped`.
 5. A unified confirm list: every `origin: dedupe` loser appears here regardless of triage tier
    (Step 2 identifies duplicates across the whole backlog, independent of Step 4's 40-id cap),

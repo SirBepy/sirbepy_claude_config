@@ -57,6 +57,7 @@ ambiguous id with no disambiguator errors naming both candidate filenames rather
 # <one-line task title>
 
 **Type:** task | skill-improvement
+**Origin:** ai | dev
 
 ## Goal
 
@@ -91,6 +92,13 @@ next session.
 - `**Type:**` values: `task` (default; absence means task) - code/config/analysis Claude can
   execute later. `skill-improvement` - skill gaps, "did this differently than the skill said",
   "this keeps coming up, maybe a skill" observations; its Approach names the skill file involved.
+- `**Origin:**` values: `ai` - Claude noticed this on its own (a `/close` sweep, `/code-check`, an
+  autopilot observation, a "this keeps coming up" note); the dev never asked for it in these
+  words. `dev` - the dev asked for it directly, or it captures a decision he made; includes
+  handoff todos, since those record his own in-flight work. Absent field on an older todo means
+  unknown, and unknown is treated exactly like `ai` - nothing silently escapes the `/cleanup-todos`
+  gate. Whoever WRITES the todo sets `Origin`; it is never upgraded from `ai` to `dev` just because
+  the dev later read it or approved executing it - approval to execute is not authorship.
 - Skip a section only if it genuinely doesn't apply. Never just a title and a one-liner.
 - The bar: a future cold AI session must execute from the file alone. Handoff todos ("continue
   this in another chat") should be VERY descriptive - what was tried, where it failed, what the
@@ -103,8 +111,10 @@ next session.
 Both entry points produce the exact same artifact; this is the one place that behavior is
 defined, so neither drifts out of sync with the other.
 
-Type is always `task`. The todo IS the session handoff - be VERY descriptive; length is fine
-when it helps the next AI. Fill every section from the session itself, no clarifying questions:
+Type is always `task`. Origin is always `dev` - a handoff records the dev's own in-flight work,
+never Claude's independent observation. The todo IS the session handoff - be VERY descriptive;
+length is fine when it helps the next AI. Fill every section from the session itself, no
+clarifying questions:
 
 - **Goal** - what the dev is ultimately trying to achieve (the original ask, not the last subtask).
 - **Context** - what was tried and in what order, where it failed or stalled, what the

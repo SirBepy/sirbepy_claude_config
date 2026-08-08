@@ -115,6 +115,7 @@ Merge findings from Steps 0-4.
 # [title]
 
 **Type:** task
+**Origin:** ai
 
 ## Goal
 [what needs to happen]

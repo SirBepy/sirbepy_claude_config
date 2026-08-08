@@ -21,9 +21,12 @@ Build a compact payload object from Phase 1 output:
 ```
 {
   "memory": [ { "file": "path", "frontmatter": "...", "body": "..." } ],  // only entries that qualify
-  "ai_todos": [ { "slug": "...", "title": "...", "type": "task | skill-improvement", "goal": "...", "context": "...", "approach": "...", "acceptance": "..." } ]
+  "ai_todos": [ { "slug": "...", "title": "...", "type": "task | skill-improvement", "origin": "ai | dev", "goal": "...", "context": "...", "approach": "...", "acceptance": "..." } ]
 }
 ```
+
+`origin` follows the main path's Phase 3 step 2 rule per source: Phase 0 items are `dev`, Phase 1
+step 5 (unfinished offers) and steps 3-4 (skill-improvement) are `ai`.
 
 Memory writes go through `~/.claude/refs/memory-rubric.md`'s ADD/UPDATE/DELETE/NONE gate before anything is added to the payload, same as the main path's Phase 3 step 1.
 
@@ -34,7 +37,7 @@ Then dispatch ONE `Agent` call with `subagent_type: "general-purpose"`, `model: 
 > Memory dir: derive from the current project per the Global Knowledge Vault section of CLAUDE.md (vault for cross-project facts and people, native per-project Auto Memory under `~/.claude/projects/<sanitized-cwd>/memory/` for project-local ones) - never hardcode a project path.
 > For each entry in `memory`: write the file at `<memory dir>/<file>` with the given frontmatter + body. Then append a pointer line to `MEMORY.md` if not already present.
 >
-> `.claude/todos/`: for each entry in `ai_todos`, follow `C:\Users\tecno\.claude\skills\close\ai-todos-format.md` - scan existing files (and done/) for max numeric prefix, write `<id+1>-<slug>.md` with standard sections including a `**Type:**` line, and self-heal the `.git/info/exclude` entries per that doc's Git policy.
+> `.claude/todos/`: for each entry in `ai_todos`, follow `C:\Users\tecno\.claude\skills\close\ai-todos-format.md` - scan existing files (and done/) for max numeric prefix, write `<id+1>-<slug>.md` with standard sections including `**Type:**` and `**Origin:**` lines (the entry's own `origin` value), and self-heal the `.git/info/exclude` entries per that doc's Git policy.
 >
 > Payload: `<JSON>`
 
