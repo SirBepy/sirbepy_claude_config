@@ -14,45 +14,32 @@ Start a long-lived dev server through server_supervisor instead of spawning it i
 
 ## Steps
 
-1. **Discover the API.** Read the data dir `%APPDATA%\com.sirbepy.server-supervisor\supervisor\`:
-   - token = contents of `api_token.txt`
-   - port = contents of `api_port.txt`
-   If either file is missing, treat the supervisor as not running -> go to Fallback.
-
-2. **Probe health.** `GET http://127.0.0.1:<port>/health` (no auth). If it does not return 200 -> go to Fallback.
-
-3. **List first - reuse before you create.** `GET http://127.0.0.1:<port>/procs` (header `Authorization: Bearer <token>`). Look for an existing entry whose `project` equals the current project folder's name AND whose `name`/command is the server you want.
-   - **If a matching entry exists:** do NOT `/run` a new one. Reuse it by id:
-     - status `running` and you just want it up: leave it, or pick up code changes with `POST /procs/<id>/restart` - **except for a flutter entry**, where `POST /procs/<id>/reload` is the fast path: it hot-restarts via the flutter daemon instead of a full process respawn, and auto-falls back to `/restart` on its own if the daemon isn't ready yet. Always prefer `/reload` over `/restart` for flutter.
-     - status `stopped` or `crashed`: `POST /procs/<id>/start` (or `/restart`).
-   - **Only if nothing matches** do you go to step 4. This is what stops the same project from collecting `flutter run` three times.
-
-4. **Run it (first launch only).** `POST /run` with header `Authorization: Bearer <token>` and JSON body:
-   ```json
-   { "root": "<absolute path of the current project folder>", "cmd": "vite --port {PORT}", "kind": "generic", "use_dynamic_port": true }
+1. **Ensure it's up - one call.** Run `sv.ps1` (next to this file) instead of re-deriving the token/health/list/reuse dance by hand:
    ```
-   `cmd` must have `{PORT}` templated into the actual port flag - see the Port table below for the exact flag per tool.
-   - Set `"kind": "flutter"` only for `flutter run` commands; otherwise `"generic"`.
-   - **Set the port** - see the Port table below. This is the step AIs most often get wrong.
-   - The response is the started process's info: `{ id, project, name, kind, status, pid, port, mem_bytes }`. Note the `id` (form: `<project>:<name>`) - you manage everything else by it.
+   powershell -File "<this skill's dir>\sv.ps1" ensure -Project <folder-name> -Cmd "<cmd>" [-Kind flutter] [-Restart]
+   ```
+   `cmd` must have `{PORT}` templated into the actual port flag - see the Port table below for the exact flag per tool. `sv.ps1` reuses a matching entry (running: left alone, or reloaded/restarted with `-Restart`; stopped/crashed: started/restarted), or `/run`s a new one if nothing matches.
+   - **Reuse is matched by project name AND absolute root** (from `projects.json`), not name alone - so a git worktree of the same project (e.g. Fibo's `frontend`/`frontend-2`/`frontend-3`) never reuses another worktree's process and serves stale code.
+   - **Zero exit:** stdout is `<id> status=<status> port=<port>`. Note the `id` - you manage everything else by it.
+   - **Non-zero exit:** supervisor unreachable (or a real error) -> go to Fallback.
 
-5. **On failure, clean up before you retry.** If the started process is `crashed` (check `GET /procs` or `GET /procs/<id>/logs`):
-   - Read `GET /procs/<id>/logs` to see why.
-   - **Retrying the SAME command** (e.g. it was a transient port clash): `POST /procs/<id>/restart`. Reuses the entry, keeps its log history. Do NOT `/run` again.
-   - **Trying a DIFFERENT command** (different flags/port/target): `DELETE /procs/<id>` to remove the failed attempt FIRST, then `/run` the new command. This is what prevents leaving dead variants behind.
+2. **On failure, clean up before you retry.** If the process is `crashed` (`sv.ps1 ls` or `sv.ps1 logs -Id <id>`):
+   - Read the logs to see why.
+   - **Retrying the SAME command** (e.g. a transient port clash): `sv.ps1 restart -Id <id>`. Reuses the entry, keeps its log history. Do NOT re-`ensure`/`/run`.
+   - **Trying a DIFFERENT command** (different flags/port/target): `sv.ps1 rm -Id <id>` to remove the failed attempt FIRST, then `ensure` the new command. This is what prevents leaving dead variants behind.
    - (The backend also auto-prunes dead-on-arrival variants on the next successful `/run`, but delete explicitly - do not rely on it.)
 
-6. **Report.** Tell Joe it's running, on which port, and that it's in the supervisor dashboard.
+3. **Report.** Tell Joe it's running, on which port, and that it's in the supervisor dashboard.
 
-7. **Manage it afterward** via the same base URL + bearer token:
-   - Logs: `GET /procs/<id>/logs`
-   - Stop: `POST /procs/<id>/stop`
-   - Restart: `POST /procs/<id>/restart` (full process respawn - use for non-flutter entries, or a flutter entry whose daemon isn't ready)
-   - Reload (flutter only, fast path): `POST /procs/<id>/reload` - hot-restarts via the flutter daemon instead of respawning the process; for a `web-server` target this also auto-refreshes every open browser tab on the live-reload proxy port (see Port table). Prefer this over `/restart` for any flutter entry.
-   - Delete (remove the entry entirely): `DELETE /procs/<id>` (stop it first if running)
-   - List everything: `GET /procs`
+4. **Manage it afterward** via `sv.ps1`:
+   - Logs: `sv.ps1 logs -Id <id>`
+   - Stop: `sv.ps1 stop -Id <id>`
+   - Restart: `sv.ps1 restart -Id <id>` (full process respawn - use for non-flutter entries, or a flutter entry whose daemon isn't ready)
+   - Reload (flutter only, fast path - no `sv.ps1` subcommand yet, raw API): `POST /procs/<id>/reload` with header `Authorization: Bearer <token>` - hot-restarts via the flutter daemon instead of respawning the process; for a `web-server` target this also auto-refreshes every open browser tab on the live-reload proxy port (see Port table). Prefer this over `/restart` for any flutter entry - `ensure -Restart` already does this automatically.
+   - Delete (remove the entry entirely): `sv.ps1 rm -Id <id>` (stop it first if running)
+   - List everything: `sv.ps1 ls`
 
-## Port table (do this in step 4)
+## Port table (do this in step 1)
 
 For a dynamic port to take effect, template the port flag INTO the command with the literal `{PORT}` placeholder. The supervisor substitutes it AND sets the `PORT` env var.
 
