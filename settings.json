@@ -140,15 +140,12 @@
   "model": "opus",
   "skillOverrides": {
     "apply-styleguide": "name-only",
-    "decouple-file": "off",
     "favicon": "name-only",
-    "fix-studio-content-folder": "off",
+    "fix-studio-content-folder": "name-only",
     "github-pages-init": "name-only",
     "init-claude-md": "name-only",
     "inject-widgets": "name-only",
     "meta-tags": "name-only",
-    "migrate-structure": "off",
-    "next-ai-prompt": "name-only",
     "portfolio-data": "name-only",
     "pwa": "name-only",
     "readme": "name-only",
@@ -204,6 +201,16 @@
             "statusMessage": "Syncing gh account to repo"
           }
         ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\commit-guard.py\"",
+            "statusMessage": "Checking commit-guard marker"
+          }
+        ]
       }
     ],
     "SessionEnd": [
@@ -252,6 +259,18 @@
           {
             "type": "command",
             "command": "curl -s --connect-timeout 2 --max-time 4 -X POST --data-binary @- -H 'Content-Type: application/json' http://127.0.0.1:27182/hooks/stop || exit 0"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"C:/Users/tecno/.claude/hooks/flagged-skill-mention.sh\"",
+            "shell": "bash",
+            "statusMessage": "Checking for disable-model-invocation skill mentions"
           }
         ]
       }
