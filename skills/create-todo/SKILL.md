@@ -56,4 +56,7 @@ Handoff mode's confirm wording is defined in the contract's "Handoff mode" secti
 - Filing a todo for something that needs the dev's physical action (credentials, hardware,
   browser login) - say it directly instead.
 - Batching multiple unrelated asks into one file. One todo per invocation.
-- Re-filing an existing todo without a title skim first (full dedup is `/batch-todos`'s job).
+- Finalizing new todo content without a backlog-overlap check: before finalizing, grep the
+  destination backlog for keywords tied to the new todo's subject (tool/component names, the
+  specific question being posed) and read any hits in full. A match: fold its findings in, or
+  explicitly supersede it (note the old id and why). Never leave two todos silently disagreeing.

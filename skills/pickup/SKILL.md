@@ -22,8 +22,13 @@ scheduled runs) - never inferred.
 Read `.claude/todos/PLAN.md`, pruning vanished ids per the contract.
 
 - If an explicit `<id>` arg was given: that's the pick (it doesn't need a PLAN.md line).
-- Otherwise: the first plan line, top to bottom, whose id has no active (non-stale) claim in
-  `.claims/`. Claimed-by-a-live-session lines are skipped with a one-line note.
+- If args were given but aren't a bare id (free text): check whether they plausibly match an
+  existing backlog item by slug or title. A match - confirm it in one line before proceeding
+  ("this looks like todo NN - <title>, continuing with that?"). No match - do not infer a target
+  from the git branch, project memory, or working-tree state; state plainly that the args don't
+  correspond to any backlog item and ask what to do via `AskUserQuestion`.
+- Otherwise (no args): the first plan line, top to bottom, whose id has no active (non-stale)
+  claim in `.claims/`. Claimed-by-a-live-session lines are skipped with a one-line note.
 - No PLAN.md or an empty lane: say so, list up to 5 unplanned backlog ids + titles, and stop
   (planning is `/plan-todos`'s job).
 
