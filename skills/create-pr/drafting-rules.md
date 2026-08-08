@@ -115,12 +115,20 @@ proxies PR-body images through camo, which can't authenticate, so for public
 hosting images must live at a public URL (this also makes them work in Slack
 webhooks). Files are kept forever; they're tiny.
 
-Upload via the contents API, no clone needed (one PowerShell call per image,
-never chained):
+Upload via the contents API, no clone needed. `-f content=$b64` fails past a
+small size (PowerShell's per-argument limit), and `-f`/`--raw-field` never
+reads `@<path>` from a file - it sends the literal string. Use a JSON payload
+file with `--input` instead, written BOM-less or `gh` rejects it (one
+PowerShell call per image, never chained):
 
 ```
-$b64 = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes("<abs path>.png"))
-gh api --method PUT /repos/SirBepy/pr-assets/contents/<repo-name>/<branch-slug>/<file>.png -f message="ASSET: <repo> <branch> screenshot" -f content=$b64 --jq .content.download_url
+$payload = @{
+  message = "ASSET: <repo> <branch> screenshot"
+  content = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes("<abs path>.png"))
+} | ConvertTo-Json
+$payloadPath = "<temp path>\payload.json"
+[System.IO.File]::WriteAllText($payloadPath, $payload, [System.Text.UTF8Encoding]::new($false))
+gh api --method PUT repos/SirBepy/pr-assets/contents/<repo-name>/<branch-slug>/<file>.png --input $payloadPath --jq .content.download_url
 ```
 
 - Path convention: `<repo-name>/<branch-slug>/<descriptive-name>.png`. Unique
