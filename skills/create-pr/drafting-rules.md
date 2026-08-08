@@ -25,8 +25,9 @@ full when dispatched as that subagent.
 ### Comment-noise check (for the subagent to apply in step 2)
 
 See `skills/commit/comment-noise.md` for the cap definition and the mechanical
-prefilter command (shared with `/commit`'s step 5a). Run it against
-`<base>..HEAD`. No output = `clean`, and the check is done - do not read a
+prefilter command (shared with `/commit`'s step 5a) - its range mode is
+`git diff <base>`, not `<base>..HEAD`, so a re-run after step 2b's trims sees
+the trim instead of stale hits. No output = `clean`, and the check is done - do not read a
 single comment. Otherwise **judge only the flagged files**: read those diffs
 and list the specific offending blocks (`file:line`, first line, line count).
 A 5+ line block that genuinely documents one hard constraint can survive - say

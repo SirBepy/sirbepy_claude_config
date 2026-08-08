@@ -97,7 +97,17 @@ if ($DryRun) {
 
 foreach ($rp in $reparsePoints) {
     Write-Info "Unlinking reparse point: $($rp.FullName)"
-    & cmd /c rmdir "$($rp.FullName)" 2>&1 | ForEach-Object { Write-Info "  $_" }
+    # rmdir is directory-only; a symlinked FILE matches the ReparsePoint filter but survives it,
+    # and would then be followed by git worktree remove.
+    if ($rp.PSIsContainer) {
+        & cmd /c rmdir "$($rp.FullName)" 2>&1 | ForEach-Object { Write-Info "  $_" }
+    }
+    else {
+        & cmd /c del /f /q "$($rp.FullName)" 2>&1 | ForEach-Object { Write-Info "  $_" }
+    }
+    if (Test-Path -LiteralPath $rp.FullName) {
+        Write-Fail "Reparse point '$($rp.FullName)' survived unlinking - refusing to continue, removal could follow it into the target."
+    }
 }
 
 # --- Step 3: git worktree remove, with fallbacks for stubborn/long-path cases ---

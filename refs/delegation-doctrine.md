@@ -89,15 +89,20 @@ that's what leaves files `/close` can never prove ownership of and therefore nev
 
 <OFF_LIMITS>
 
+<ORPHAN_CHECK>
+
 Your final message is your entire return value. ALL commands, including the verify floor
 (build/test/lint/typecheck), run synchronously in the same tool call: `run_in_background` is
 FORBIDDEN in builder subagents, a long build is waited out, not backgrounded. Ending the turn while
 anything is still running is a failed dispatch.
 ```
 
-`<WORKING_DIR>` and `<OFF_LIMITS>` are the only fields the orchestrator fills in per dispatch; the
-`.for_bepy/screenshots/` path is resolved by the orchestrator (see above), not left for the
-subagent to compute.
+`<WORKING_DIR>`, `<OFF_LIMITS>` and `<ORPHAN_CHECK>` are the only fields the orchestrator fills in
+per dispatch; the `.for_bepy/screenshots/` path is resolved by the orchestrator (see above), not
+left for the subagent to compute. `<ORPHAN_CHECK>` is the mandatory final-step text from
+`~/.claude/refs/process-hygiene.md`, included whenever the dispatch runs Node commands and deleted
+outright when it does not - it is a placeholder rather than verbatim text precisely so a
+Node-running dispatch cannot lose it by pasting the block unread.
 
 **Recovery.** If a builder parks itself waiting on a backgrounded command anyway, send one direct
 resume: "deliver the final report now, no waiting." Expect to repeat it once before it complies.

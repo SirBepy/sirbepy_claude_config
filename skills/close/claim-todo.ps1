@@ -103,7 +103,8 @@ $claimContent = @(
     "session: $sessionId"
     "pid: $PID"
     "started: $((Get-Date).ToUniversalTime().ToString('o'))"
-) -join "`n"
+) -join "`r`n"
+$claimContent += "`r`n"
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 [System.IO.File]::WriteAllText($tempPath, $claimContent, $utf8NoBom)
