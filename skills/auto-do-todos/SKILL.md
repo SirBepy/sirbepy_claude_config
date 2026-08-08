@@ -126,8 +126,8 @@ High to Low priority. Per todo:
 
 1. Claim it per `close/ai-todos-format.md`.
 2. Execute via a subagent under the adopted contracts above. Heartbeat the claim at checkpoints.
-3. Append a Notes line recording what happened, then `~/.claude/skills/close/complete-todo.ps1
-   -Id <id>` to archive it, prune its PLAN.md line, and release the claim.
+3. `~/.claude/skills/close/complete-todo.ps1 -Id <id> -Note "<what happened>"` - one call records
+   the Notes line, archives it, prunes its PLAN.md line, and releases the claim.
 4. `/commit`.
 5. Run `node ~/.claude/skills/context-left/context-left.mjs` and read pct used.
    - **>= 40% used (HARD_STOP_AT):** stop taking new todos immediately, even with queue left, and
