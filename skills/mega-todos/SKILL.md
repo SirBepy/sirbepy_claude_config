@@ -1,0 +1,226 @@
+---
+name: mega-todos
+description: Wide parallel backlog burn-down. Drives .claude/todos/ through the Workflow tool - many builder agents at once in file-ownership lanes, each committing its own todo via an injected /commit procedure, with tiered verification barriers. The heavy sibling of /auto-do-todos.
+disable-model-invocation: true
+---
+
+# /mega-todos
+
+> `/auto-do-todos` was capped by the MAIN THREAD's context, not by agent capability. This skill moves
+> the whole grind into a Workflow script so the main thread only ever holds lane assignments,
+> barrier results, and the summary.
+
+**Trigger:** `/mega-todos` only. Never auto-invoke.
+
+## Relationship to `/auto-do-todos`
+
+`/auto-do-todos` stays as the CHEAP sequential mode for a small backlog. This skill is the wide one.
+
+Steps 2-5 of `/auto-do-todos` are **adopted by reference, not restated**: `/cleanup-todos`
+unattended, `/batch-todos` unattended, the AUTO/DEV triage with its lean-AUTO bar, and the one
+question round with its 8-question cap. Read that file and run those steps as written. Triage logic
+lives in exactly one place so the two skills cannot drift.
+
+Everything from Step 6 onward is replaced by this file.
+
+## Also adopted
+
+- `~/.claude/refs/delegation-doctrine.md` in full, with ONE deliberate override: the verbatim
+  stage-don't-commit line is replaced by the injected commit block below. Every other clause holds -
+  scout spec packs, orchestrator hygiene, report quality tells, the no-`run_in_background` rule.
+- `/autopilot`'s behavior contract: bounded `/iterate-it`, nested-question suppression, the 3-strike
+  runaway guard.
+- `~/.claude/refs/process-hygiene.md` for anything spawning Node.
+
+## Sidebar badge
+
+Emit `<cc-autopilot:on>` at the end of the first response, `<cc-autopilot:off>` at the end of the
+final one. Same markers `/autopilot` uses.
+
+## Prerequisite: explicit opt-in
+
+The Workflow tool spawns dozens of billed agents and requires the dev's explicit request. Typing
+`/mega-todos` IS that request; no separate confirmation is needed. But if the Workflow tool is
+unavailable in this session, do NOT silently fall back to sequential dispatch pretending to be this
+skill - say so and offer `/auto-do-todos` instead.
+
+## Order of operations
+
+1. Preflight (Step A) - record `START_SHA`, verify the repo's commit preconditions, emit
+   `<cc-autopilot:on>`.
+2. `/cleanup-todos` and `/batch-todos`, unattended, per `/auto-do-todos` Steps 2-3.
+3. Triage and the one question round, per `/auto-do-todos` Steps 4-5.
+4. Exclusion pass (Step B) - drop what must not be automated.
+5. Lane assignment (Step C) - a scout partitions the AUTO queue by file ownership.
+6. The workflow run (Step D) - lanes execute in parallel, barriers verify.
+7. Archival and wrap-up (Step E).
+
+## Step A - Preflight
+
+Record `START_SHA` (`git rev-parse HEAD`). Then verify, in the target repo, the four conditions the
+injected commit block depends on. Each is a one-line check and each has a defined consequence:
+
+| Check | If present | Consequence |
+|---|---|---|
+| `GIT_FLOW.md` at repo root | branch-protection fires | agents would each stall on `AskUserQuestion`. **Abort the run** and tell the dev to branch first. |
+| `.claude/commit-style.md` | overrides prefixes/grouping | read it once and paste its rules INTO the injected block. |
+| `.claude/skills/run-tests/SKILL.md` | `/commit` step 6 | 45 agents would each run the full suite. Strip step 6 from the injected block; the barrier runs it once instead. |
+| `list_peers` shows another session | shared tree | post once from the main thread naming the whole run's scope, then let agents skip their own peer check. |
+
+Also confirm the working tree is clean of other people's uncommitted work (`git status`). A wide
+parallel run over a dirty shared tree is how another session's work gets swept into a pathspec.
+
+## Step B - Exclusions
+
+Remove from the AUTO queue, regardless of what triage said:
+
+- **Anything targeting the global `~/.claude` tree.** Global CLAUDE.md forbids doing global work from
+  a project session. Those belong in `~/.claude/todos/` and are not this run's business.
+- **`live-verify` / `verify ... live` todos.** They need the running app and the dev's eyes. A green
+  verify floor cannot see "this looks wrong" (delegation doctrine, Visual work). Park them.
+- **Anything a Hard Stop covers:** credentials, destructive or irreversible ops, physical action.
+- **Todos whose fix is a UI/visual judgment call** with no approved mockup to match.
+- **Anything already claimed in `.claude/todos/.claims/`.** Another session is executing it right
+  now. A run this long outlives a single snapshot, so re-read the claims directory at every barrier
+  and drop newly-claimed todos from lanes that have not started yet - a claim appearing mid-run means
+  a peer took it while we were building.
+
+Report the exclusion counts in the Step E summary. Never drop silently.
+
+## Step C - Lane assignment
+
+This is the step that makes parallel commits safe, so it is not optional and not eyeballed.
+
+Dispatch ONE read-only scout (`model: 'sonnet'`, `effort: 'high'`) with the full text of every AUTO
+todo. It returns, per todo: the exact set of files the fix will touch (`file:line` where known), and
+a one-paragraph spec pack a builder can act on without re-deriving the map.
+
+The main thread then partitions into **lanes** by the transitive closure of file overlap:
+
+- Two todos sharing ANY file are in the SAME lane and run **sequentially** within it.
+- Lanes share no files, so they run **in parallel** with no possibility of one agent's pathspec
+  commit capturing another's half-written file.
+- A todo whose file set the scout could not pin down goes in its own lane, alone. Never guess.
+
+Expect the backlog's structural cluster (the daemon-link / `main.ts` / `bootstrap.rs` split-and-dedupe
+todos) to collapse into a few large lanes. That is correct and is the honest ceiling on parallelism:
+**lane count, not agent count, is what bounds concurrency.** The harness independently caps
+concurrent agents at `min(16, cores - 2)` regardless.
+
+`log()` the lane map at run start so the dev can see the shape.
+
+## Step D - The workflow run
+
+Author the script inline. Shape:
+
+- `pipeline()` over LANES, never over todos. Each lane's stage runs its todos in sequence inside one
+  agent call chain, so ordering within a lane is guaranteed.
+- One builder agent per todo, `model: 'sonnet'`, `agentType` default. Tune `effort` down for
+  mechanical splits, up for anything with judgment.
+- A **barrier** every batch for the cheap ladder, and a second, rarer barrier for the full one.
+
+**Verify ladder** (settled with the dev 2026-08-10):
+
+- **Per todo, by the agent itself, before it commits:** the cheap check scoped to what it touched.
+  Frontend - `pnpm tsc --noEmit` plus the relevant vitest file. Rust - nothing yet; cargo is too slow
+  to run per todo.
+- **Per batch barrier:** `cargo check --manifest-path src-tauri/Cargo.toml`, plus `pnpm tsc --noEmit`
+  repo-wide.
+- **Every 10-15 completed todos:** the full floor - `cargo build --manifest-path src-tauri/Cargo.toml`,
+  the test suite, and e2e if the project has a runnable headless one.
+
+**A barrier failure is fixed forward, never reverted.** Other sessions share this tree and this
+branch; `git revert` / `git reset` on master is the one thing guaranteed to hurt someone else's work.
+Dispatch a repair agent scoped to the failing lane, and if it hits the 3-strike guard, park the todo
+and note the broken commit in the summary.
+
+Return from the script only condensed data: per todo the id, what changed, its commit sha, and
+pass/fail. Never file bodies, never transcripts.
+
+## The injected commit block
+
+This is the deliberate divergence from the delegation doctrine. `/commit` is pure procedure - git
+commands, one awk prefilter, and a marker file - so it CAN be followed by an agent that cannot invoke
+skills. Paste this verbatim into every builder prompt, with `<FILES>` left as-is (the agent fills it):
+
+```
+COMMITTING IS PART OF YOUR JOB. You cannot invoke /commit as a skill, so follow this procedure
+exactly. Do not improvise around it and do not skip a step because the change looks small.
+
+1. A global PreToolUse hook BLOCKS raw `git commit`. Immediately before EVERY commit, write a fresh
+   marker (the hook needs one written within the last 2 minutes, and consumes only the oldest, so
+   concurrent agents do not steal each other's):
+   Set-Content -Path "C:\Users\tecno\.claude\hooks\.commit-marker-$([guid]::NewGuid().ToString('N'))" -Value "x"
+
+2. Run `git status` and `git diff` scoped to YOUR files only.
+
+3. Run the comment-noise prefilter against exactly the paths you are about to commit, replacing
+   <FILES>. If it prints anything, TRIM those blocks to the cap (2 lines typical, 4 hard per block)
+   before committing. Do not ask, just trim.
+
+   { git diff HEAD -- <FILES>; git status --porcelain -- <FILES> | awk '$1=="??"{print substr($0,4)}' | while IFS= read -r f; do git diff --no-index -- /dev/null "$f"; done; } | awk '
+   /^\+\+\+ b\// { f=substr($0,7); run=0; next }
+   /^\+/ && !/^\+\+\+/ {
+     l=substr($0,2); add[f]++
+     if (l ~ /^[[:space:]]*(\/\/|\/\*|\*|#[^[!]|#$|--|<!--)/) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
+     next
+   }
+   { run=0 }
+   END { for (k in add) if (max[k]>=5 || (add[k]>=20 && c[k]*100/add[k]>=25)) printf "%s %d/%d (%d%%) longest %d\n", k, c[k], add[k], c[k]*100/add[k], max[k] }' | sort
+
+4. `git add` any UNTRACKED file you created, by name. Tracked files need no add.
+
+5. Commit BY PATHSPEC, naming every one of your paths:
+   git commit -m "<PREFIX>: <title>" -- <FILES>
+   This form commits those paths' working-tree state and never reads the index, which is what makes
+   it safe while other agents work in this same tree.
+
+HARD RULES, no exceptions:
+- Commit ONLY files assigned to you. Another agent owns every other file in this repo right now.
+- NEVER `git add -A`, NEVER `git commit -a`, NEVER a bare repo-wide pathspec.
+- NEVER `git stash`, `git reset`, `git checkout`, or `git revert` on ANY path. To see clean state,
+  use `git show HEAD:<file>`.
+- NEVER bump a version. Plain commit only, no `v` / `bump` / `push` variant. Do not push.
+- Do NOT touch `.claude/todos/PLAN.md` or move anything into `.claude/todos/done/`. The orchestrator
+  archives todos in a barrier; editing PLAN.md from a parallel agent clobbers other agents' edits.
+- One purpose per commit. Prefix from: FEAT, FIX, REFACTOR, CHORE, DOCS, TEST, STYLE, DATA.
+- No commit body unless something genuinely needs explaining. Never add AI attribution.
+```
+
+Alongside it, every builder prompt still carries the doctrine's canonical preamble minus its
+stage-don't-commit line: working dir, PowerShell, never chain commands with `&&` / `;` / `|`, the
+`<OFF_LIMITS>` file list (this is where the lane's non-owned files are named), `<ORPHAN_CHECK>` when
+it runs Node, and the no-`run_in_background` clause.
+
+**The `<OFF_LIMITS>` list is load-bearing here in a way it is not in a normal dispatch.** In a
+stage-only dispatch a stray edit is caught at review; here it goes straight into history. Name the
+lane's owned files explicitly and state that everything else in the repo is another agent's.
+
+## Step E - Archival, verification, wrap-up
+
+Archival is **main-thread only**, because `complete-todo.ps1` prunes the shared `PLAN.md`:
+
+1. At each barrier, for every todo that passed: `~/.claude/skills/close/complete-todo.ps1 -Id <id>
+   -Note "<what happened>"`. One call per todo, sequential.
+2. Commit the archival as one `CHORE: archive completed todos` commit per barrier, via `/commit`
+   (the main thread CAN invoke skills, so it uses the real one).
+
+Then the wrap-up, per `/auto-do-todos` Step 9: `/code-check START_SHA..HEAD`, the full fast-check
+floor, e2e if runnable. Park every unresolved DEV fork into its todo's `## Open questions` block per
+`/auto-do-todos` Step 8.
+
+**Summary must report:** todos completed with shas, todos parked and why, exclusion counts by
+category from Step B, the lane map and actual achieved parallelism, every fork auto-decided and what
+it picked, barrier failures and how they were repaired, final ctx% used, and the verification result.
+End with `<cc-autopilot:off>`.
+
+## Notes
+
+- Context thresholds do NOT apply the way they do in `/auto-do-todos`. The main thread holds lane
+  assignments and barrier results only, so a run is bounded by the token budget and the lane map, not
+  by a 40% context stop. Still check `node ~/.claude/skills/context-left/context-left.mjs` at each
+  barrier; if it climbs past 50%, something is leaking full reports into the main thread - tighten the
+  workflow's return shape rather than ending the run.
+- Never invoke `/autopilot` or `/auto-do-todos` as literal slash commands. Their contracts are adopted
+  by reference.
+- Source of truth for the backlog: `.claude/todos/` per `~/.claude/skills/close/ai-todos-format.md`.
