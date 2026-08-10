@@ -57,8 +57,12 @@ skill - say so and offer `/auto-do-todos` instead.
 
 ## Step A - Preflight
 
-Record `START_SHA` (`git rev-parse HEAD`). Then verify, in the target repo, the four conditions the
-injected commit block depends on. Each is a one-line check and each has a defined consequence:
+Record `START_SHA` (`git rev-parse HEAD`) and `EXPECTED_BRANCH` (`git rev-parse --abbrev-ref HEAD`).
+`EXPECTED_BRANCH` is substituted into every builder's branch guard, so a peer session moving HEAD
+mid-run stops the agents instead of scattering commits onto someone else's branch (see
+`~/.claude/todos/55-commit-must-recheck-branch-before-each-commit.md`; a long wide run is the worst
+case for that hazard). Then verify, in the target repo, the four conditions the injected commit block
+depends on. Each is a one-line check and each has a defined consequence:
 
 | Check | If present | Consequence |
 |---|---|---|
@@ -141,7 +145,8 @@ pass/fail. Never file bodies, never transcripts.
 
 This is the deliberate divergence from the delegation doctrine. `/commit` is pure procedure - git
 commands, one awk prefilter, and a marker file - so it CAN be followed by an agent that cannot invoke
-skills. Paste this verbatim into every builder prompt, with `<FILES>` left as-is (the agent fills it):
+skills. Paste this verbatim into every builder prompt. Substitute `<EXPECTED_BRANCH>` from Step A;
+leave `<FILES>` as-is, the agent fills that with its own owned paths:
 
 ```
 COMMITTING IS PART OF YOUR JOB. You cannot invoke /commit as a skill, so follow this procedure
@@ -170,7 +175,12 @@ exactly. Do not improvise around it and do not skip a step because the change lo
 
 4. `git add` any UNTRACKED file you created, by name. Tracked files need no add.
 
-5. Commit BY PATHSPEC, naming every one of your paths:
+5. BRANCH GUARD, immediately before every commit. Run `git rev-parse --abbrev-ref HEAD`. If it is
+   not `<EXPECTED_BRANCH>`, or if it prints `HEAD` (detached), STOP: do not commit, and report the
+   branch you saw. Another session sharing this checkout can move HEAD mid-run, and pathspec commits
+   protect the INDEX, not the BRANCH - the two hazards look alike and only one is handled for you.
+
+6. Commit BY PATHSPEC, naming every one of your paths:
    git commit -m "<PREFIX>: <title>" -- <FILES>
    This form commits those paths' working-tree state and never reads the index, which is what makes
    it safe while other agents work in this same tree.
