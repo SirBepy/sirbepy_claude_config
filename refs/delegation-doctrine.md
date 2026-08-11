@@ -42,13 +42,20 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
 
 - Its verify floor: the project's fast checks (typecheck, unit, lint, build) with the instruction
   to run them and report the actual output, not a claim of success.
-- The verbatim line: `Stage your changes but do NOT commit. The main agent will run /commit after
-  your report-back.` Subagents cannot invoke skills, so they must never commit. Include this line
-  even when the dispatch provably touches zero git-tracked files (e.g. a gitignored scratch dir):
-  the line is static boilerplate, not a judgment call, and omitting it on a case-by-case read is
+- The staging line, conditional on whether the repo shares a git index with concurrent sessions:
+  default `Stage your changes but do NOT commit. The main agent will run /commit after your
+  report-back.`; for a shared-index repo (e.g. zng-app, zng-biller) substitute `Leave all changes
+  unstaged. The main agent will run /commit by pathspec after your report-back.` Subagents cannot
+  invoke skills, so they must never commit, except `/mega-todos` agents, which commit via a
+  branch-guarded procedure - see `~/.claude/skills/mega-todos/SKILL.md`. Include this line even
+  when the dispatch provably touches zero git-tracked files (e.g. a gitignored scratch dir): the
+  line is static boilerplate, not a judgment call, and omitting it on a case-by-case read is
   itself the failure mode - no exception, ever.
 - The load-bearing global rules it needs, restated: PowerShell on Windows, never chain commands
   with `&&` / `;` / `|`, the working directory. Subagents do not inherit session context.
+- Any load-bearing project memory already known to the orchestrator (a prior fix, workaround, or
+  failure recorded for this repo), restated inline. A subagent re-solving a problem memory already
+  answered is a wasted dispatch.
 - If the dispatch captures screenshots: the already-resolved
   `.for_bepy/screenshots/<ancestor-pid>-<ancestor-start-ticks>/` path, computed by the
   orchestrator. A subagent cannot derive the ancestor PID itself, so a bare path or a
@@ -67,16 +74,16 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
 ## Canonical builder preamble
 
 The block below is the literal text every builder dispatch prompt pastes for the "embeds, without
-exception" list above, so it stops getting hand-retyped (and drifting) per dispatch. Fill in the two
-placeholders; everything else is copy-verbatim. The per-dispatch parts - task, scope, OFF LIMITS
-file list, verify floor specifics - stay hand-written, since those are the parts that actually need
-thought.
+exception" list above, so it stops getting hand-retyped (and drifting) per dispatch. Fill in the
+four placeholders; everything else is copy-verbatim. The per-dispatch parts - task, scope, OFF
+LIMITS file list, verify floor specifics - stay hand-written, since those are the parts that
+actually need thought.
 
 ```
 Windows. PowerShell for shell commands. NEVER chain commands with `&&`, `;` or `|` - one command
 per call. Working directory: <WORKING_DIR>.
 
-Stage your changes but do NOT commit. The main agent will run `/commit` after your report-back.
+<STAGING_LINE>
 
 Never run `git stash`, `git reset`, or `git checkout` on paths you don't own - other agents'
 uncommitted work shares this tree. To compare against clean state, use `git show HEAD:<file>`.
@@ -97,9 +104,13 @@ FORBIDDEN in builder subagents, a long build is waited out, not backgrounded. En
 anything is still running is a failed dispatch.
 ```
 
-`<WORKING_DIR>`, `<OFF_LIMITS>` and `<ORPHAN_CHECK>` are the only fields the orchestrator fills in
-per dispatch; the `.for_bepy/screenshots/` path is resolved by the orchestrator (see above), not
-left for the subagent to compute. `<ORPHAN_CHECK>` is the mandatory final-step text from
+`<WORKING_DIR>`, `<STAGING_LINE>`, `<OFF_LIMITS>` and `<ORPHAN_CHECK>` are the only fields the
+orchestrator fills in per dispatch; the `.for_bepy/screenshots/` path is resolved by the
+orchestrator (see above), not left for the subagent to compute. `<STAGING_LINE>` is `Stage your
+changes but do NOT commit. The main agent will run /commit after your report-back.` by default, or
+`Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.`
+for a repo that shares a git index with concurrent sessions (e.g. zng-app, zng-biller).
+`<ORPHAN_CHECK>` is the mandatory final-step text from
 `~/.claude/refs/process-hygiene.md`, included whenever the dispatch runs Node commands and deleted
 outright when it does not - it is a placeholder rather than verbatim text precisely so a
 Node-running dispatch cannot lose it by pasting the block unread.
