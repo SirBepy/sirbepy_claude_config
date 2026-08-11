@@ -60,6 +60,8 @@ If `hubstaff_org_id` is set, read `skills/clockify-reconciliator/hubstaff.md` no
 
 If `[lookback]` given, parse it. Else: Monday 00:00 of current week to now, in dev's timezone.
 
+For a single-day lookback (`today`, `yesterday`, or an explicit single `YYYY-MM-DD`), the window is always a full local calendar day, true midnight-to-midnight: `<day> 00:00:00` to `<day+1> 00:00:00`, dev's timezone. `today` = the current calendar date; `yesterday` = current calendar date minus 1 calendar day. Compute the calendar date first, then take that date's midnight-to-midnight span - never derive the boundary as "now minus 24h", and never use a rounded/approximate cutoff (e.g. `22:00`) in place of true midnight. This window feeds both the Clockify entry fetch (step 4) and the git-log bounds (step 6). See `~/.claude/projects/c--Users-tecno-Desktop-Projects-zng-app/memory/feedback_verify_date_calculations.md` for the 2026-07-28 incident this rule fixes.
+
 ### 4. Fetch Clockify entries
 
 Authenticate with the key resolved in step 1 (`api_key_env` or `CLOCKIFY_API_KEY`), not with `CLOCKIFY_API_KEY` by reflex.
@@ -75,7 +77,9 @@ Target = in-project entry with empty or whitespace-only description.
 
 ### 6. Read commits
 
-For each repo in config: `git -C <repo> log --author="<user_id or name>" --since=... --until=... --pretty=format:...`. Capture sha, ISO timestamp, subject, body, branch (best-effort via `git branch --contains`).
+For each repo in config: `git -C <repo> log --author="<user_id or name>" --since=... --until=... --pretty=format:...`, using the window resolved in step 3. Capture sha, ISO timestamp, subject, body, branch (best-effort via `git branch --contains`).
+
+Then run one more pass per repo covering the first 4 hours after the window's END: `--since="<end>" --until="<end> + 4h"`. For a single-day lookback that is `<day+1> 00:00:00` to `<day+1> 04:00:00`; for a multi-day range it is the same 4 hours past the range's final midnight. Flag hits as "late-night spillover from <last day in window>" and split them across the boundary by each commit's real wall-clock minutes on its own calendar day. Never drop them, never fold the whole session onto one side.
 
 ### 7. Build proposals
 
