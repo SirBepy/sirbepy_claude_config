@@ -6,7 +6,11 @@ ad-hoc "do todo 07" runs) follows this file instead of restating its rules.
 
 ## Layout
 
-All per-project, at the project root:
+All per-project, at the project root - EXCEPT when the project root IS the global Claude config
+tree (`C:\Users\tecno\.claude`): there the backlog is `C:\Users\tecno\.claude\todos\` directly,
+never a nested `.claude/todos/` inside it. `.claude/todos/` is a relative path and only resolves
+correctly for other projects; a session working on the global tree itself must use the absolute
+form.
 
 ```
 .claude/todos/

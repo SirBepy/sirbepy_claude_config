@@ -201,5 +201,7 @@ test/e2e pass-fail). End with `<cc-autopilot:off>`.
 - Never invoke `/autopilot` as a literal slash command - this skill ADOPTS its contract by
   reference (see above) and layers the backlog-specific flow on top, the same way `/delegate` does.
 - Never commit directly. `/commit` after each completed todo, same cadence as `/batch-todos`.
-- Source of truth for the backlog: `.claude/todos/` per `close/ai-todos-format.md`.
+- Source of truth for the backlog: `.claude/todos/` per `close/ai-todos-format.md` - if this run's
+  project root IS `~/.claude` itself, that's `C:\Users\tecno\.claude\todos\` directly, no nested
+  `.claude/` (see the contract's Layout section).
 - Thresholds live in Step 6 (`HARD_STOP_AT = 40%`) and Step 7 (`SLOW_AT = 30%`) - tune there.
