@@ -195,6 +195,18 @@ format the drafting subagent applies in step 2.
      it. Fix any hit before publishing, not after - replace the em dash with a
      comma, colon, or hyphen (`Edit`, main agent, not a shell text write) and
      re-render the preview.
+   - **PR-guard marker:** a global PreToolUse hook blocks raw `gh pr
+     create`/`gh pr edit`. Immediately before that call, and no earlier,
+     write a uniquely-suffixed marker:
+     ```powershell
+     Set-Content -Path "C:\Users\tecno\.claude\hooks\.pr-marker-$([guid]::NewGuid().ToString('N'))" -Value "x"
+     ```
+     Each call writes its own fresh marker; the hook consumes the oldest
+     fresh one and leaves the rest, so two concurrent sessions can't consume
+     each other's. The hook needs a marker written within the last 2
+     minutes, so redo this before every individual `gh pr create`/`gh pr
+     edit` call, not once for the whole flow (this includes edit-mode
+     regenerations of an already-created PR).
    - Push the branch if it isn't on the remote yet (`git push -u origin <branch>`).
      This is implied by the dev invoking `/create-pr`; still announce it, since it's
      an outward-facing action and triggers a credential popup.
@@ -227,8 +239,7 @@ subagent applies when a screenshot needs embedding.
 
 - One PR = one logical change. If the branch holds two unrelated things, say so
   and suggest splitting rather than papering over it with a long description.
-- Never chain shell commands. One per call. Use `git -C <path>` / quote paths
-  with spaces.
+- Use `git -C <path>` / quote paths with spaces.
 - Never create or push without the explicit approval gate in step 5.
 - Edit mode (existing PR) regenerates the body the same way (subagent drafts,
   main agent gates); it never silently overwrites - it shows the new body and

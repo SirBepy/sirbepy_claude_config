@@ -211,6 +211,46 @@
             "statusMessage": "Checking commit-guard marker"
           }
         ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\pr-guard.py\"",
+            "statusMessage": "Checking pr-guard marker"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\shell-content-write-guard.py\"",
+            "statusMessage": "Checking for shell content-write patterns"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\package-manager-guard.py\"",
+            "statusMessage": "Checking packageManager pin"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\flutter-workdir-guard.py\"",
+            "statusMessage": "Checking Flutter/Dart working-directory pin"
+          }
+        ]
       }
     ],
     "SessionEnd": [
