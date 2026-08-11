@@ -120,8 +120,7 @@ typed single-file invocations with one documented loop.
 2. Prefer this Playwright helper over a chrome-devtools MCP attempt for local files - an MCP
    Chrome instance can fail on a locked profile (wasted a subagent round-trip, 2026-07-31 mockup
    session); this helper launches its own isolated browser every time.
-3. For each file, one command, one invocation, no chaining (`;`/`&&`/pipes are never used to
-   combine these):
+3. For each file, one command, one invocation:
    ```
    node "C:/Users/tecno/.claude/skills/screenshot/screenshot-helper.cjs" --url "file:///<abs-path-to-file.html>" --screenshot ".for_bepy/screenshots/<pid>-<start-ticks>/<basename>.png" --viewport 1920x1080
    ```

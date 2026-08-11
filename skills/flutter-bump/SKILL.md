@@ -100,8 +100,7 @@ re-run `fvm use` or the verify steps for that repo.
 
 ### 2d. Verify
 
-Run each as its own command (never chained with `&&`/`;`/`|`), from the repo
-root. Call the **pinned SDK's binary directly**, never `fvm flutter` — the
+Run each from the repo root. Call the **pinned SDK's binary directly**, never `fvm flutter` — the
 whole point of this step is proving the code is valid under `<version>`, and
 `fvm flutter` can silently execute a different SDK (see below), which would
 make every PASS meaningless:

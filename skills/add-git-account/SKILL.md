@@ -99,4 +99,4 @@ This layer never mutates the global active account.
   shell-agnostic - works from any shell. The `gh` CLI layer is owned by the
   bash hook (`~/.claude/hooks/gh-account-switch.sh`), independent of the
   dev's interactive shell.
-- One command per call, quote paths with spaces, never chain.
+- Quote paths with spaces.

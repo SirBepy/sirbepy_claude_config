@@ -90,4 +90,4 @@ MOB-125  Booking confirmation screen   Done          Low
 - Read-only. Never mutate (no createIssue, updateIssue, etc.)
 - Never print the API key. Never ask the dev for it - read from env only.
 - Always go through `Invoke-Linear` so the `errors` array is checked - a silent empty result is usually a failed query, not zero matches.
-- Pipe through ConvertFrom-Json / jq as needed (not considered chaining per global rules).
+- Pipe through ConvertFrom-Json / jq as needed.

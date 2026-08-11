@@ -28,7 +28,7 @@ read the sections it references and treat them as part of the variant's instruct
 
 ## Repo refresh: fetch, never pull
 
-- One Bash call per repo, never chained:
+- One Bash call per repo:
 
   ```
   git -C <repo> fetch --quiet
@@ -58,7 +58,7 @@ title as label; if HTML is dropped, the plain-text fallback still gives bare URL
 - HTML fragment: `C:/tmp/work-recap-clipboard.html`
 - Plain text: `C:/tmp/work-recap-clipboard.txt`
 
-**Invocation** — one PowerShell call, no chaining:
+**Invocation** — one PowerShell call:
 
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File "C:/Users/tecno/.claude/skills/work-recap/set-clipboard-html.ps1" -HtmlPath "C:/tmp/work-recap-clipboard.html" -TextPath "C:/tmp/work-recap-clipboard.txt"

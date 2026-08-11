@@ -135,7 +135,6 @@ If no `package.json` exists, say so and stop.
 - Message title alone should make clear what was done.
 - No body unless something genuinely needs explanation.
 - Never add `Co-authored-by: Claude` or any AI attribution.
-- Never chain commands. One command per Bash call. No `&&`, `;`, or `|`.
 - Never use `cd` before git commands. Use `git -C /absolute/path <command>`.
 - **Target repo other than cwd:** if the dev or a prior instruction names a repo path other than the current project, use `git -C <path>` for every git command this run issues, not just some of them, and state that repo path back in the first line of output so it's unambiguous which repo is being committed to.
 - Name every path in the commit pathspec (step 8). Never `git add -A`, never `git commit -a`. **Exception - mass deletion/move of tracked files:** when a commit's whole purpose is deleting or moving many tracked files (e.g. a framework rewrite wiping an old tree), naming each path is impractical; pass the containing tree instead - `git commit -m "<message>" -- <tree-path>` - never a bare repo-wide pathspec (which would also sweep in any unrelated uncommitted edits sitting elsewhere in the repo). A pathspec only picks up already-tracked files, never untracked ones, so it stays within the "know what you're committing" intent while `-A` does not. Sanity-check `git status` after, and if the deletion set is mixed with unrelated edits, split them.

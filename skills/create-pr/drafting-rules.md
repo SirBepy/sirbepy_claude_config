@@ -120,7 +120,7 @@ Upload via the contents API, no clone needed. `-f content=$b64` fails past a
 small size (PowerShell's per-argument limit), and `-f`/`--raw-field` never
 reads `@<path>` from a file - it sends the literal string. Use a JSON payload
 file with `--input` instead, written BOM-less or `gh` rejects it (one
-PowerShell call per image, never chained):
+PowerShell call per image):
 
 ```
 $payload = @{

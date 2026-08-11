@@ -23,7 +23,7 @@ function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0
 
 ## How to run a scan
 
-Run these (PowerShell, one per call - never chain with `;`/`&&`), then rank findings by payoff (GB freed × ease × reversibility). All read-only.
+Run these (PowerShell), then rank findings by payoff (GB freed × ease × reversibility). All read-only.
 
 ```powershell
 Get-Volume C | Select-Object DriveLetter, @{n='FreeGB';e={[math]::Round($_.SizeRemaining/1GB,1)}}, @{n='TotalGB';e={[math]::Round($_.Size/1GB,1)}}

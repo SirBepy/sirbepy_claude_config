@@ -51,8 +51,8 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
   when the dispatch provably touches zero git-tracked files (e.g. a gitignored scratch dir): the
   line is static boilerplate, not a judgment call, and omitting it on a case-by-case read is
   itself the failure mode - no exception, ever.
-- The load-bearing global rules it needs, restated: PowerShell on Windows, never chain commands
-  with `&&` / `;` / `|`, the working directory. Subagents do not inherit session context.
+- The load-bearing global rules it needs, restated: PowerShell on Windows, the working directory.
+  Subagents do not inherit session context.
 - Any load-bearing project memory already known to the orchestrator (a prior fix, workaround, or
   failure recorded for this repo), restated inline. A subagent re-solving a problem memory already
   answered is a wasted dispatch.
@@ -80,8 +80,7 @@ LIMITS file list, verify floor specifics - stay hand-written, since those are th
 actually need thought.
 
 ```
-Windows. PowerShell for shell commands. NEVER chain commands with `&&`, `;` or `|` - one command
-per call. Working directory: <WORKING_DIR>.
+Windows. PowerShell for shell commands. Working directory: <WORKING_DIR>.
 
 <STAGING_LINE>
 

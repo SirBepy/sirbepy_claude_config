@@ -84,7 +84,6 @@ Rules are split into two severity levels. FAIL means the skill has a real proble
 - [ ] No hardcoded user names (e.g. "Joe"). Use "the dev", "the user", or "you" instead. Personal names leak identity and reduce portability.
 - [ ] Every Agent tool dispatch the skill specifies pins `model: 'sonnet'` explicitly (never inherits the session model)
 - [ ] Every subagent dispatch prompt includes the subagents-never-commit boilerplate: "Stage your changes but do NOT commit. The main agent will run `/commit` after your report-back."
-- [ ] No shell command chaining with `&&`, `;`, or `|` in any instructed command - one command per call
 - [ ] Comment-density guidance for any code the skill generates respects the global cap (2 lines typical, 4-line hard cap per block; under ~25% of added lines once a file adds 20+)
 
 ### WARN rules (flag but don't force)

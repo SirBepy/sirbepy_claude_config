@@ -198,7 +198,7 @@ HARD RULES, no exceptions:
 ```
 
 Alongside it, every builder prompt still carries the doctrine's canonical preamble minus its
-stage-don't-commit line: working dir, PowerShell, never chain commands with `&&` / `;` / `|`, the
+stage-don't-commit line: working dir, PowerShell, the
 `<OFF_LIMITS>` file list (this is where the lane's non-owned files are named), `<ORPHAN_CHECK>` when
 it runs Node, and the no-`run_in_background` clause.
 
