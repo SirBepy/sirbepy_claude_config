@@ -15,19 +15,10 @@ Triage open Sentry issues across all 3 ZNG projects.
 
 ## Drill-in
 
-`Get-SentryIssue.ps1` only accepts a numeric issue ID or a full issue URL, NOT the short ID shown in the Sentry UI (e.g. `ZNG-APP-96`). Resolve short IDs first:
+`Get-SentryIssue.ps1` takes a short ID directly (e.g. `ZNG-APP-96`), a numeric issue ID, or a full issue URL. It resolves short IDs itself via the shortIDLookup API:
 
 ```powershell
-$token = $env:SENTRY_AUTH_TOKEN
-if (-not $token) { $token = [Environment]::GetEnvironmentVariable('SENTRY_AUTH_TOKEN','User') }
-$headers = @{ Authorization = "Bearer $token" }
-$r = Invoke-RestMethod -Uri "https://sentry.io/api/0/organizations/zirtue-nk/shortids/ZNG-APP-96/" -Headers $headers -Method Get
-$r.group.id
-```
-
-Then run:
-```powershell
-& "C:\Users\tecno\.claude\scripts\Get-SentryIssue.ps1" <numeric-id> -Org zirtue-nk
+& "C:\Users\tecno\.claude\scripts\Get-SentryIssue.ps1" ZNG-APP-96 -Org zirtue-nk
 ```
 
 ## Full triage run
