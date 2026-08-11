@@ -6,11 +6,7 @@ ad-hoc "do todo 07" runs) follows this file instead of restating its rules.
 
 ## Layout
 
-All per-project, at the project root - EXCEPT when the project root IS the global Claude config
-tree (`C:\Users\tecno\.claude`): there the backlog is `C:\Users\tecno\.claude\todos\` directly,
-never a nested `.claude/todos/` inside it. `.claude/todos/` is a relative path and only resolves
-correctly for other projects; a session working on the global tree itself must use the absolute
-form.
+All per-project, at the project root:
 
 ```
 .claude/todos/
@@ -20,6 +16,12 @@ form.
   done/                        # completed todos (moved here, ids stay burned)
   .claims/                     # active-claim lock files (NEVER git-tracked)
 ```
+
+`.claude/todos/` is ALWAYS resolved relative to the repo root, with no exceptions. That includes
+the global config repo itself: a session working on `C:\Users\tecno\.claude` writes to
+`C:\Users\tecno\.claude\.claude\todos\`, never to `C:\Users\tecno\.claude\todos\`. The Conductor
+app reads the repo-relative path, so a backlog anywhere else is invisible in the UI. Merged
+2026-08-11 after the two locations split; the top-level copy no longer exists.
 
 Historical note: this folder replaced `.for_bepy/ai_todos/` (migrated 2026-07-15). If a stray
 `.for_bepy/ai_todos/` still exists in some repo, treat it as unmigrated legacy: move its files

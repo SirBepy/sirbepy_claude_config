@@ -108,7 +108,7 @@ that breaks a rule the repo spent a page explaining.
 
 Merge findings from Steps 0-4.
 
-**If the project has a repo root for `.claude/todos/`:** write each finding as a `.md` file there, per `~/.claude/skills/close/ai-todos-format.md` (filename/id rules, git-policy self-heal; create the folder if missing). If the project root IS `~/.claude` itself, that "there" is `C:\Users\tecno\.claude\todos\` directly, no nested `.claude/` - see the contract's Layout section. Format:
+**If the project has a repo root for `.claude/todos/`:** write each finding as a `.md` file there, per `~/.claude/skills/close/ai-todos-format.md` (filename/id rules, git-policy self-heal; create the folder if missing). Format:
 
 ```markdown
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->

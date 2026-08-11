@@ -130,9 +130,7 @@ Run in this order:
 1. **Memory writes.** Read `~/.claude/refs/memory-rubric.md` first if it hasn't been read this session - it defines the ADD/UPDATE/DELETE/NONE gate, the bar for writing at all, and the evidence requirement. Then for each correction or non-obvious confirmation from Phase 1, route it through that gate and write to the store CLAUDE.md's Global Knowledge Vault section says it belongs in (vault for cross-project facts and people, native per-project Auto Memory for project-local ones), updating the relevant index. Skip if nothing qualifies; NONE is a normal outcome. Never invent memories to look productive.
 
    **Dedup against this session's own writes.** Memories written live earlier in this session are already covered - list them before evaluating, and treat a Phase 1 candidate matching one as NONE rather than writing a near-duplicate. The transcript sweep exists to catch what live capture MISSED, not to re-extract what it already got.
-2. **`.claude/todos/`** (session's project root IS `~/.claude` itself? Write to
-   `C:\Users\tecno\.claude\todos\` directly, no nested `.claude/` - see ai-todos-format.md's Layout
-   section.) Write a separate `.md` file per item from:
+2. **`.claude/todos/`** Write a separate `.md` file per item from:
    - Phase 0 (unfinished dev commitments where the dev chose "close anyway") - tag `**Type:** task`,
      `**Origin:** dev` (the dev asked for it; Claude just didn't finish it in time).
    - Phase 1 step 5 (unfinished offers) - tag `**Type:** task`, `**Origin:** ai` (Claude proposed it

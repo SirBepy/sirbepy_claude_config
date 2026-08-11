@@ -63,7 +63,7 @@ node ~/.claude/skills/context-left/context-left.mjs
 Read pct used (= 100 - pct left). Two named thresholds, on context USED (tweak here if the dev changes them):
 
 - **SLOW_AT = 50% used:** start winding down. Prefer FINISHING in-flight work over STARTING new chunks; tighten scope; avoid large new investigations or wide subagent fan-out; do not begin anything you cannot also finish AND verify within the remaining budget.
-- **HARD_STOP_AT = 60% used:** STOP taking new work. Immediately, in order: (a) `/commit` anything staged, (b) write every remaining planned item to `.claude/todos/` (one file each, per `close/ai-todos-format.md` - claim rules included, `**Origin:** dev` since these are pieces of the dev's own approved run deferred by the context stop) so nothing is lost, (c) write the final summary and END the run. Do NOT start another chunk past this line. If this run's project root IS `~/.claude` itself, that path is `C:\Users\tecno\.claude\todos\` directly, no nested `.claude/` - see ai-todos-format.md's Layout section.
+- **HARD_STOP_AT = 60% used:** STOP taking new work. Immediately, in order: (a) `/commit` anything staged, (b) write every remaining planned item to `.claude/todos/` (one file each, per `close/ai-todos-format.md` - claim rules included, `**Origin:** dev` since these are pieces of the dev's own approved run deferred by the context stop) so nothing is lost, (c) write the final summary and END the run. Do NOT start another chunk past this line.
 
 ## Where decisions and parked items go (use the dev's existing taxonomy)
 
