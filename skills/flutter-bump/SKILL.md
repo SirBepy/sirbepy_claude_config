@@ -81,13 +81,7 @@ re-run `fvm use` or the verify steps for that repo.
    PATH — the stale global install — producing real compile errors in the
    editor for APIs the pinned version genuinely has (verified by grepping the
    pinned SDK's own source). Absolute paths bypass this entirely.
-4. Also add/update `dart.flutterSdkPath` in `zng-admin.code-workspace`'s
-   top-level `settings` block (`C:\Users\tecno\Desktop\Projects\zng-admin.code-workspace`)
-   to the same absolute path — see step 3 of the new "Multi-root workspace
-   file" section below. Both need to happen together: the per-folder value
-   for when a repo is opened standalone, the workspace-level value as the
-   belt-and-suspenders fix for when it's opened via the bundled workspace.
-5. **Confirm the pin actually took (mandatory — see "fvm falls back silently"
+4. **Confirm the pin actually took (mandatory — see "fvm falls back silently"
    below).** Read `.dart_tool/package_config.json` and check its `flutterRoot`:
 
    ```
@@ -119,7 +113,7 @@ make every PASS meaningless:
 Record PASS/FAIL for each. On FAIL, capture the last ~20-30 lines of that
 command's output for the report.
 
-**Before believing a FAIL, re-check `flutterRoot` (2c step 5).** These commands
+**Before believing a FAIL, re-check `flutterRoot` (2c step 4).** These commands
 run `pub get` themselves when dependencies drift, which can re-point it
 mid-verify. A compile error naming an API that genuinely exists in `<version>`
 (grep that SDK's own source to confirm) means the resolution broke again, not
@@ -193,12 +187,12 @@ Full post-mortem (two stacked fvm bugs, consequences, PATH root cause) is in
   can silently execute against whatever plain `flutter` resolves to on PATH
   instead of the project's pin.
 - Always call the pinned SDK's binary directly for verify and repair (2d,
-  2c step 5).
+  2c step 4).
 - Always verify `flutterRoot` in `.dart_tool/package_config.json` after
-  `fvm use` (2c step 5) — a correctly symlinked `.fvm/flutter_sdk` and a
+  `fvm use` (2c step 4) — a correctly symlinked `.fvm/flutter_sdk` and a
   correct `fvm flutter --version` both prove nothing; only `flutterRoot` does.
-- Always use the absolute `dart.flutterSdkPath` (2c steps 3-4), never the
-  relative value `fvm use` writes.
+- Always use the absolute `dart.flutterSdkPath` (2c step 3, workspace-level
+  write in Section 3), never the relative value `fvm use` writes.
 
 **New skill step:** whenever a bump changes the version, after step 2 of the
 per-repo loop completes for all three repos, also run `fvm global <version>`
@@ -233,7 +227,7 @@ Then:
 
 - Reminder: reload the VS Code window (Dart/Flutter language server) before
   trusting in-editor analysis.
-- Whether any repo needed the `flutterRoot` repair in 2c step 5, and whether
+- Whether any repo needed the `flutterRoot` repair in 2c step 4, and whether
   the `Can't load Kernel binary` fallback fired — if either did, say plainly
   that fvm is broken on this machine and needs reinstalling.
 - Per repo: the commit sha + push result, or "not committed — verify failed"
