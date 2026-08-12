@@ -139,7 +139,13 @@ gh api --method PUT repos/SirBepy/pr-assets/contents/<repo-name>/<branch-slug>/<
   embed it as `![<what it shows>](<url>)` in the PR body.
 - `gh` account: the global PreToolUse hook switches accounts by the CURRENT
   repo's origin, but pr-assets lives under SirBepy. From a non-SirBepy repo
-  (zirtue/fibo/revaire cwd), the active account won't have push rights - run
-  `gh auth switch --user SirBepy` first, upload, then switch back (or just
-  re-run any repo-scoped gh command and let the hook restore it).
+  (zirtue/fibo/revaire cwd), the active account won't have push rights - scope
+  the token instead of switching the active account, so the hook's
+  cwd-based inference never gets involved and never needs restoring:
+  ```
+  $env:GH_TOKEN = gh auth token --user SirBepy
+  gh api --method PUT repos/SirBepy/pr-assets/contents/<repo-name>/<branch-slug>/<file>.png --input $payloadPath --jq .content.download_url
+  ```
+  Set `$env:GH_TOKEN` in the SAME PowerShell call as the `gh api` call -
+  shell state doesn't persist across separate tool calls.
 - Remember the sensitive-content guard (Visual scan rules above): public URL, public repo.

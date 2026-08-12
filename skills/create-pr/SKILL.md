@@ -42,6 +42,11 @@ per the global subagent-model rule; never inherit.
    - Check whether a PR already exists for this branch (`gh pr view`) - just
      note yes/no, don't fetch its body yet. Existing PR → the subagent will
      regenerate (edit mode) instead of drafting fresh.
+   - **GIT_FLOW gate:** if `GIT_FLOW.md` exists at repo root, read it fully
+     before asking anything, then batch every decision it implies for this PR
+     (branch/base, reviewer, any deviation confirmation) into ONE
+     `AskUserQuestion` call - never a first question now and a second
+     "oh, also" round later for something already readable from the file.
    - **Size gate:** run `git diff --stat <base>..HEAD` (one command, cheap).
      If it touches a single file with a small hunk count - the shape of a
      Tiny-tier PR per the Auto-tier rubric below - skip the subagent dispatch
@@ -166,6 +171,10 @@ per the global subagent-model rule; never inherit.
      ```
      The title must not contain `>` characters. The base64 values must be
      single lines with no spaces or line breaks.
+   - **Step 4 must be the FINAL action of its turn - no tool call after it.**
+     Text emitted right before a tool call can be invisible to the dev, so the
+     rendered preview and the markers have to land in a turn with nothing
+     after them. Step 5's `AskUserQuestion` opens a NEW turn, never the same one.
 
 See `skills/create-pr/drafting-rules.md` for the auto-tier rubric, the
 comment-noise check, the visual-scan rules, and the Slack-announcement-block
