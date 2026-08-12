@@ -12,6 +12,23 @@ Start a long-lived dev server through server_supervisor instead of spawning it i
 - The command is a server / watcher that STAYS RUNNING (dev server, API, file watcher).
 - NOT one-off commands that exit (tests, builds, lint, git) - run those normally.
 
+## Handoff from the built-in /run skill
+
+`/run` is a built-in harness skill, not a file in this repo, so its own discovery/launch internals
+are not visible here - nothing in this section is confirmed behavior, only the intended handoff.
+
+`/run`'s own description says it "first looks for a project skill that already covers launching the
+app," then falls back to spawning the server itself. `/supervised-run` is global, not
+project-level, so `/run`'s own-skill search won't surface it unprompted. The intended handoff: a
+project's own CLAUDE.md (or a project-level launch skill, if one exists) should state plainly that
+starting this project's dev server means invoking `/supervised-run`, not a bare command.
+
+**Unverified: whether this actually changes `/run`'s behavior.** To confirm: invoke `/run` on a
+project whose CLAUDE.md carries that line and has no dedicated project-level launch skill, then
+check `GET http://127.0.0.1:<port>/procs` for the launched process. If it's absent, the CLAUDE.md
+line doesn't reach `/run` and a shim skill (a project-level skill file whose only job is "launching
+this app means: invoke /supervised-run") is the fallback to try next.
+
 ## Steps
 
 1. **Ensure it's up - one call.** Run `sv.ps1` (next to this file) instead of re-deriving the token/health/list/reuse dance by hand:

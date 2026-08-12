@@ -96,16 +96,30 @@ the time the reload lands (worst case: an emulator-backed auth session gets
 wiped). If a route seems stuck on first paint, that is a boot-timing issue
 to retry/wait on, not a reason to reload.
 
-## Release build, not DWDS
+## Release build vs a live debug (DWDS) session
 
-`flutter run` web (debug) serves through DWDS, which needs its own CDP
-debugger attachment. Playwright's own CDP session conflicts with it and the
-page hangs forever at "DDC is about to load ... scripts" - no error, no
-timeout. Drive a `flutter build web` release bundle served statically
-instead; debug/DWDS sessions are not drivable by raw Playwright. (Playwright
-MCP against a human's own already-running debug session is a different,
-supported shape - see plan-file mode - because the human owns that session
-and Claude never touches DWDS's CDP attachment.)
+The old flat rule here was "debug/DWDS sessions are not drivable by raw
+Playwright, build release instead" - a `flutter run` web (debug) session
+serves through DWDS, and a raw Playwright CDP session attaching cold to it
+can hang forever at "DDC is about to load ... scripts", no error, no
+timeout.
+
+**One counter-observation, not yet re-tested broadly:** a 2026-08-10
+zng-admin session found `page.getByRole(...)`/`page.getByText(...)` locators
+working immediately against an already-running `flutter run -d web-server`
+debug session, with no manual `flt-semantics-placeholder` activation at all -
+manual activation attempts (evaluate-click, synthetic PointerEvent, a real
+`page.mouse.click()`) all failed with 0 semantics nodes, but the plain
+locator calls worked regardless. Unverified guess at why: Playwright's own
+accessibility-tree query may itself trigger Flutter's semantics activation.
+
+This is a single app, single session, not re-tested across other Flutter
+apps/versions - treat it as "try this first," not a replacement absolute.
+If role/text locators hang or return nothing against a live debug session,
+fall back to a `flutter build web` release bundle served statically
+(`flutter-e2e`'s Mode A checks for this). Playwright MCP against a human's
+own already-running debug session remains a separately-supported shape (see
+plan-file mode) because the human owns that session.
 
 ## Headless guidance
 

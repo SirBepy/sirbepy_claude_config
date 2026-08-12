@@ -8,6 +8,8 @@ argument-hint: "<flow-description-or-script> | <path-to-test-plan.md> [free-form
 
 > Drive a Flutter web app through a flow with Playwright, without rediscovering the semantics/staleness/DWDS/headless landmines.
 
+Native Android app via adb (not Flutter web)? Use `android-drive` instead - a different surface.
+
 ## Two modes - pick one
 
 - **Scripted mode**: no test-plan file given. Ad hoc or unattended runs from cold - overnight verification, CI-style smoke tests, "drive the app through X and tell me what happens." Builds and serves its own release bundle, writes a raw-Playwright driver script.
@@ -24,10 +26,13 @@ Node + Playwright reachable (`npx playwright` or the project's own `node_modules
 ## Mode A - Scripted
 
 1. Check whether the app uses Firebase (`firebase.json` has an `emulators` block). If yes, read `references/firebase-emulators.md` first and layer its boot/build/sign-in/seed steps in. If no - which is every current zng repo (zng-app/admin/biller run a local zng-api + Postgres instead) - skip that file entirely.
-2. Build the RELEASE web bundle: `fvm flutter build web -o build/web-e2e` (add `--dart-define=USE_EMULATORS=true` only under the Firebase layer). Rebuild whenever app code changes; the static bundle does not hot-reload.
-3. Serve it statically via `/supervised-run` (kind `generic`, dynamic port): `python -m http.server {PORT} --directory build/web-e2e` (or `npx serve build/web-e2e -l {PORT}`). Note the URL as `APP_URL`.
-4. Copy `references/e2e-helpers.js` into the project (e.g. `.for_bepy/e2e/helpers.js`), fill in its `CONFIG` block, and write a driver script that `require()`s it. The helpers already implement every rule from refs/flutter-web-playwright.md (`enableSemantics`, `clickNodeAtomic`, `refreshSemantics`, `shot`) plus the Firebase-only ones (`signIn`, `fetchJson`, `getUidFromIndexedDb`) - only call the latter if Step 1 loaded that layer.
-5. Run the script, capture `page.on('console')`/`page.on('pageerror')`, and report per the checklist below.
+2. Check the project for existing `.for_bepy/*.cjs` or `.for_bepy/e2e/*.cjs` driver scripts before
+   writing a new one - reuse their locator style and auth-seeding pattern instead of re-deriving
+   driving mechanics from scratch.
+3. Build the RELEASE web bundle: `fvm flutter build web -o build/web-e2e` (add `--dart-define=USE_EMULATORS=true` only under the Firebase layer). Rebuild whenever app code changes; the static bundle does not hot-reload.
+4. Serve it statically via `/supervised-run` (kind `generic`, dynamic port): `python -m http.server {PORT} --directory build/web-e2e` (or `npx serve build/web-e2e -l {PORT}`). Note the URL as `APP_URL`.
+5. Copy `references/e2e-helpers.js` into the project (e.g. `.for_bepy/e2e/helpers.js`), fill in its `CONFIG` block, and write a driver script that `require()`s it. The helpers already implement every rule from refs/flutter-web-playwright.md (`enableSemantics`, `clickNodeAtomic`, `refreshSemantics`, `shot`) plus the Firebase-only ones (`signIn`, `fetchJson`, `getUidFromIndexedDb`) - only call the latter if Step 1 loaded that layer.
+6. Run the script, capture `page.on('console')`/`page.on('pageerror')`, and report per the checklist below.
 
 ## Mode B - Plan-file
 
