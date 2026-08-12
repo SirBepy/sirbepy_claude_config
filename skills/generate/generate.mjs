@@ -5,6 +5,29 @@
 import { writeFile } from 'node:fs/promises';
 import { basename, dirname, join, extname } from 'node:path';
 import { mkdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+
+// setx writes to HKCU\Environment, but tool calls inherit the env snapshotted at Claude
+// process launch, so a freshly-set key is invisible to process.env until relaunch.
+const registryCache = new Map();
+
+function resolveKey(name) {
+  if (process.env[name]) return process.env[name];
+  if (process.platform !== 'win32') return undefined;
+  if (registryCache.has(name)) return registryCache.get(name);
+  let value;
+  try {
+    value = execFileSync(
+      'powershell',
+      ['-NoProfile', '-Command', `[Environment]::GetEnvironmentVariable('${name}','User')`],
+      { encoding: 'utf8' },
+    ).trim() || undefined;
+  } catch {
+    value = undefined;
+  }
+  registryCache.set(name, value);
+  return value;
+}
 
 const GEMINI_HOST = 'https://generativelanguage.googleapis.com/v1beta';
 const POLLI_HOST = 'https://image.pollinations.ai';
@@ -155,8 +178,8 @@ const CF_DAILY_NEURONS = 10000;
 
 // Needs Account Analytics:Read on the token; the Workers AI template alone returns an authz error.
 async function cloudflareQuota() {
-  const token = process.env.CLOUDFLARE_API_TOKEN;
-  const acct = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const token = resolveKey('CLOUDFLARE_API_TOKEN');
+  const acct = resolveKey('CLOUDFLARE_ACCOUNT_ID');
   if (!token || !acct) return null;
 
   const today = new Date().toISOString().slice(0, 10);
@@ -184,9 +207,9 @@ async function cloudflareQuota() {
 }
 
 function resolveProvider(requested) {
-  const gem = process.env.GEMINI_API_KEY;
-  const cfT = process.env.CLOUDFLARE_API_TOKEN;
-  const cfA = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const gem = resolveKey('GEMINI_API_KEY');
+  const cfT = resolveKey('CLOUDFLARE_API_TOKEN');
+  const cfA = resolveKey('CLOUDFLARE_ACCOUNT_ID');
   if (requested !== 'auto') return requested;
   if (cfT && cfA) return 'cloudflare';
   if (gem) return 'gemini';
@@ -196,7 +219,7 @@ function resolveProvider(requested) {
 const args = parseArgs(process.argv.slice(2));
 
 if (args.listModels) {
-  const key = process.env.GEMINI_API_KEY;
+  const key = resolveKey('GEMINI_API_KEY');
   if (!key) die('GEMINI_API_KEY not set');
   const models = await geminiModels(key);
   console.log(JSON.stringify({ imageModels: models, autoPick: pickGeminiModel(models, false) }, null, 2));
@@ -222,7 +245,7 @@ async function runSeed(seed) {
       let model = provider;
 
       if (provider === 'gemini') {
-        const key = process.env.GEMINI_API_KEY;
+        const key = resolveKey('GEMINI_API_KEY');
         if (!key) throw new Error('GEMINI_API_KEY not set');
         model = args.model || pickGeminiModel(await geminiModels(key), !!args.allowPaid);
         if (!model) throw new Error('no free image model available on this key');
@@ -233,13 +256,13 @@ async function runSeed(seed) {
         const varied = seeds.length > 1 ? `${args.prompt}\n\n(Variation ${seed}: change composition and angle.)` : args.prompt;
         buf = await geminiGenerate({ key, model, prompt: varied, aspect: args.aspect });
       } else if (provider === 'cloudflare') {
-        const token = process.env.CLOUDFLARE_API_TOKEN;
-        const account = process.env.CLOUDFLARE_ACCOUNT_ID;
+        const token = resolveKey('CLOUDFLARE_API_TOKEN');
+        const account = resolveKey('CLOUDFLARE_ACCOUNT_ID');
         if (!token || !account) throw new Error('CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not set');
         model = 'flux-1-schnell';
         buf = await cloudflareGenerate({ token, account, prompt: args.prompt, seed, steps: args.steps });
       } else {
-        const r = await pollinationsGenerate({ prompt: args.prompt, seed, aspect: args.aspect, key: process.env.POLLINATIONS_API_KEY });
+        const r = await pollinationsGenerate({ prompt: args.prompt, seed, aspect: args.aspect, key: resolveKey('POLLINATIONS_API_KEY') });
         buf = r.buf;
         model = `pollinations/${r.model}`;
       }
