@@ -125,7 +125,11 @@ Skip that line entirely if the verdict is 1-2/10 with no lift (nothing to act on
 
 If the dev then replies choosing a path, act on it on the following turn:
 
-- "apply all" → implement the How-to-raise lifts now.
+- "apply all" → for a 7+ verdict, implement the lifts now - that score means the bullets are
+  refinements, not open questions. For a 3-6/10 verdict whose top bullet reads as a design/
+  architecture pivot rather than a mechanical swap, say so and switch to running `/iterate-it` on
+  that bullet instead of writing code directly - same judgment this skill already applies when
+  picking bullets. Otherwise (mechanical bullets, any score), implement now.
 - "apply some" → then use `AskUserQuestion` (now safe - it's a standalone turn with no rating text to swallow) with one option per lift bullet.
 - "ignore" → drop the rating thread and wait for the next instruction.
 

@@ -25,6 +25,10 @@ This is a maintenance pass, not an execution skill: it never implements or execu
 Archiving is never deletion - every removal goes to `done/` with a Notes line recording the reason,
 so a wrong call is one `Move-Item` from undone.
 
+Relocating a todo to a different repo's backlog (Step 4's `suggested_relocate`, Step 7) follows the
+same origin gate as archiving - `ai`/absent-origin relocates without asking, `dev`-origin waits on
+the Step 6 confirm list.
+
 ## Step 1 - Read todos
 
 Glob `.claude/todos/*.md`. Skip `PLAN.md` and any `done/` subfolder.
@@ -67,10 +71,11 @@ backlog past 40 - exactly the half most likely to still be wrong. Chunking repla
 **Deep pass:** dispatch one subagent per chunk (`model: 'sonnet'`, `effort: 'high'`), all chunks in
 a single parallel dispatch, each carrying the full text of its own todos. Each returns one verdict
 per todo, as prose (evidence, reasons) AND as one CSV row per todo appended at the end of its
-report, header `file,complexity,worth,still_valid` (exactly `update-markers.ps1`'s columns, `file`
-is the exact backlog filename). The main agent concatenates chunk CSVs (one shared header) straight
-into Step 5's DataFile - it never retypes a verdict field by hand, the transcription step that
-caused the 2026-08-12 corruption.
+report, header `file,complexity,worth,still_valid,relocate_dest` (the first four columns exactly
+match `update-markers.ps1`'s columns, `file` is the exact backlog filename; `relocate_dest` is
+Step 6/7's own field, ignored by `update-markers.ps1`). The main agent concatenates chunk CSVs (one
+shared header) straight into Step 5's DataFile - it never retypes a verdict field by hand, the
+transcription step that caused the 2026-08-12 corruption.
 
 - `complexity`: EASY or HARD, same criteria table as `/batch-todos` step 3.
 - `still_valid`: does the premise still hold? The check depth depends on the todo's `**Origin:**`:
@@ -87,6 +92,12 @@ caused the 2026-08-12 corruption.
   `suggested_drop: true`, with the re-verification evidence as the reason - this is exactly the
   failure mode `**Origin:**` exists to catch. For an `ai`/absent-origin todo this flag is what
   Step 7 acts on directly; for a `dev`-origin one it only lands on the confirm list.
+- `suggested_relocate`: blank, or `<dest-repo-root>|<reason>` when the todo's own subject names a
+  different repo's files as its target, or names the global `~/.claude` tree while this backlog's
+  own repo isn't `~/.claude` (the misfiled-global-todo case root `CLAUDE.md` documents). Cite the
+  concrete path evidence. Only flag when the destination's `.claude/todos/` already exists on this
+  machine - an unverifiable destination stays blank; note the suspicion in prose only, never guess
+  a repo path.
 - `worth`: an integer 1-10, plus a one-line `worth_reason`. This answers a question none of the
   other three do: **the premise can hold and the fix can be easy and it can still be a bad change
   to make.** Anchor to this rubric, never a vibe:
@@ -196,17 +207,21 @@ Contents, in order:
    when it is zero.
 4b. An **archived** list: everything Step 7's Pass A already moved to `done/`, as `id - title -
    reason`. This is a record, not a proposal - it has already happened.
+4c. A **relocated** list: everything Step 7's Pass A already moved to another repo's backlog, as
+   `id -> new-id@dest-repo - reason`. Also a record, not a proposal.
 5. A unified confirm list, `dev`-origin ONLY: every `origin: dedupe` loser appears here regardless of triage tier
    (Step 2 identifies duplicates across the whole backlog, independent of Step 4's deep-tier cap),
    plus every `origin: drop` suggestion (these are deep-tier only by construction, since shallow
    rows always have `suggested_drop` forced to `false` - not an extra exclusion rule, just a
-   consequence of Step 4). Each entry: id, title, one-line reason, origin(s).
+   consequence of Step 4), plus every `dev`-origin `suggested_relocate` candidate (destination +
+   reason). Each entry: id, title, one-line reason, origin(s).
 6. A claims-check note: the check in Step 7 narrows but does not close a race with another session
    claiming a todo between this report and the dev's reply - worst case is a claimed todo gets
    archived, recoverable by moving it back out of `done/`.
 
-Close by REPORTING what Step 7 already archived (ids + one-line reason each), then, only if any
-`dev`-origin todo is pending: "Reply with ids to confirm the dev-origin items, or `keep all`."
+Close by REPORTING what Step 7 already archived or relocated (ids + one-line reason each), then,
+only if any `dev`-origin todo is pending: "Reply with ids to confirm the dev-origin items, or `keep
+all`."
 When nothing dev-origin is pending, close with no question at all - the run is finished.
 
 ## Step 7 - Apply confirmed items
@@ -247,19 +262,35 @@ non-Windows, or missing):
 
 Never plain-delete, per the contract.
 
+**Relocate.** For a confirmed (or Pass-A, `ai`/absent-origin) `suggested_relocate` id:
+
+1. Scan the destination's `.claude/todos/` and `done/` for the max numeric prefix, add 1, then
+   re-check for a same-id collision per `ai-todos-format.md`'s creation race guard.
+2. Write `<dest-repo>\.claude\todos\<new-id>-<same-slug>.md` via Edit/Write (never a shell
+   redirect), same content plus a Notes line: "Relocated from `<old-id>` in `<source-repo>` via
+   /cleanup-todos `<date>`: `<reason>`."
+3. Run `complete-todo.ps1 -Id <old-id> -Note "Relocated to <new-id> in <dest-repo> via
+   /cleanup-todos <date>."` on the SOURCE repo - archives the source copy to its own `done/`,
+   releases its claim, prunes its PLAN.md line. Never delete the source file directly.
+4. Self-heal the destination's `.git/info/exclude` per this file's Git policy section if it's
+   missing there - the destination may be a different repo with its own policy state.
+
+Bounded to destinations whose `.claude/todos/` already exists - relocate never invents a new
+backlog folder.
+
 If this project has opted into tracking `.claude/todos/` in git (per the contract's git policy -
 check `git ls-files .claude/todos/`), run `/commit` once at the end of this run if EITHER Step 5
-refreshed any marker OR Step 7 moved/pruned any file - covers a "keep all" reply where only marker
-comments changed, not just the case where something got archived. This is a single batched commit
-covering the whole run, not one per todo like `/batch-todos`. Most projects don't track this folder
-by default, in which case there is nothing to commit.
+refreshed any marker OR Step 7 moved/pruned/relocated any file - covers a "keep all" reply where
+only marker comments changed, not just the case where something got archived. This is a single
+batched commit covering the whole run, not one per todo like `/batch-todos`. Most projects don't
+track this folder by default, in which case there is nothing to commit.
 
 ## Unattended runs
 
 Under `/autopilot` or an explicit no-input instruction, Step 6 still delivers its full report, but
-Step 7 behaves exactly as in an attended run for `ai`/absent-origin todos - they are archived on
-judgement, since no confirm was ever required for them. `dev`-origin candidates carry into the
-closing summary as still-pending, for confirmation on a later run.
+Step 7 behaves exactly as in an attended run for `ai`/absent-origin todos - they are archived or
+relocated on judgement, since no confirm was ever required for them. `dev`-origin candidates carry
+into the closing summary as still-pending, for confirmation on a later run.
 
 ## Non-goals (v1)
 
