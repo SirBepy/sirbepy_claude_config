@@ -1,17 +1,18 @@
 param(
     [Parameter(Mandatory=$false)]
     [string]$Name = "",
-    [switch]$Close
+    [switch]$Close,
+    [switch]$GetId
 )
 
-# Resolve the current session's jsonl by:
-# 1. Walking up the process tree from this script to find the claude.exe ancestor PID
-# 2. Matching that PID against session JSON files in ~/.claude/sessions/
-# 3. Globbing ~/.claude/projects/*/<sessionId>.jsonl to locate the actual transcript
+# Resolve the current session by matching $env:CLAUDE_CODE_SESSION_ID against
+# ~/.claude/sessions/*.json - stable per session, unlike a process-tree walk (todo 60: the walk
+# returned two different PIDs at two different points in the SAME session). Falls back to the
+# old walk only when the env var is unset (older harness / plain terminal).
 #
-# Then appending two JSONL records the harness recognizes as a session rename:
-#   {"type":"custom-title","customTitle":"<name>","sessionId":"<id>"}
-#   {"type":"agent-name","agentName":"<name>","sessionId":"<id>"}
+# -GetId prints "<pid>-<procStart-ticks>" for the current session and exits - the canonical
+# screenshot-subfolder id other skills (/close Phase 0, /screenshot, /mockup) should call instead
+# of hand-rolling their own walk.
 
 $ErrorActionPreference = 'Stop'
 
@@ -24,7 +25,7 @@ if (-not (Test-Path $sessionsDir)) {
     exit 1
 }
 
-# Walk up the process tree from $PID to find the claude.exe ancestor
+# Fallback only, best-effort/unstable (todo 60) - used when CLAUDE_CODE_SESSION_ID is unset.
 function Get-AncestorClaudePid {
     $p = $PID
     for ($i = 0; $i -lt 8; $i++) {
@@ -38,37 +39,56 @@ function Get-AncestorClaudePid {
     return $null
 }
 
-$claudePid = Get-AncestorClaudePid
+# Resolves this session's own record from sessions/*.json. sessionId match is authoritative;
+# the pid-walk match only runs when the env var is unset.
+function Resolve-SessionRecord {
+    $sid = $env:CLAUDE_CODE_SESSION_ID
+    if ($sid) {
+        $match = Get-ChildItem -Path $sessionsDir -Filter '*.json' -File -ErrorAction SilentlyContinue |
+            ForEach-Object {
+                try {
+                    $d = Get-Content -Raw -Path $_.FullName | ConvertFrom-Json
+                    if ($d.sessionId -eq $sid) { $d }
+                } catch {}
+            } | Select-Object -First 1
+        if ($match) { return $match }
+    }
 
-if (-not $claudePid) {
-    Write-Error "Could not find a claude ancestor process from PID $PID"
-    exit 1
+    $claudePid = Get-AncestorClaudePid
+    if (-not $claudePid) { return $null }
+
+    Get-ChildItem -Path $sessionsDir -Filter '*.json' -File -ErrorAction SilentlyContinue |
+        ForEach-Object {
+            try {
+                $d = Get-Content -Raw -Path $_.FullName | ConvertFrom-Json
+                if ($d.pid -and ([int]$d.pid -eq $claudePid)) { $d }
+            } catch {}
+        } | Sort-Object -Property UpdatedAt -Descending | Select-Object -First 1
+}
+
+if ($GetId) {
+    $record = Resolve-SessionRecord
+    if (-not $record) {
+        Write-Error "Could not resolve this session's own record (sessionId env var unset and pid-walk fallback failed)."
+        exit 1
+    }
+    $ticks = $record.procStart
+    if (-not $ticks) {
+        # Older session json with no procStart - derive it from the already-known pid, no walk needed.
+        $ticks = (Get-Process -Id ([int]$record.pid)).StartTime.Ticks
+    }
+    Write-Output "$($record.pid)-$ticks"
+    exit 0
 }
 
 if ($Name) {
-    $candidates = Get-ChildItem -Path $sessionsDir -Filter '*.json' -File -ErrorAction SilentlyContinue |
-        ForEach-Object {
-            try {
-                $data = Get-Content -Raw -Path $_.FullName | ConvertFrom-Json
-                if ($data.pid -and ([int]$data.pid -eq $claudePid)) {
-                    [pscustomobject]@{
-                        SessionId = $data.sessionId
-                        Pid       = $data.pid
-                        UpdatedAt = $data.updatedAt
-                        Status    = $data.status
-                        File      = $_.FullName
-                    }
-                }
-            } catch {}
-        } | Sort-Object -Property UpdatedAt -Descending
-
-    if (-not $candidates -or $candidates.Count -eq 0) {
-        Write-Error "No session found with pid matching claude ancestor pid $claudePid"
+    $record = Resolve-SessionRecord
+    if (-not $record) {
+        Write-Error "Could not resolve this session's own record to rename."
         exit 1
     }
 
-    $sessionId   = $candidates[0].SessionId
-    $sessionPid  = $candidates[0].Pid
+    $sessionId = $record.sessionId
     $jsonlMatches = Get-ChildItem -Path $projectsDir -Recurse -Filter "$sessionId.jsonl" -File -ErrorAction SilentlyContinue
 
     if (-not $jsonlMatches -or $jsonlMatches.Count -eq 0) {
@@ -84,11 +104,11 @@ if ($Name) {
     $maxAttempts = 8
     $retryMs     = 250
 
-    foreach ($record in @($titleRecord, $agentRecord)) {
+    foreach ($line in @($titleRecord, $agentRecord)) {
         $written = $false
         for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
             try {
-                Add-Content -Path $jsonlPath -Value $record -Encoding utf8
+                Add-Content -Path $jsonlPath -Value $line -Encoding utf8
                 $written = $true
                 break
             } catch {
@@ -102,15 +122,17 @@ if ($Name) {
         }
     }
 
-    Write-Host "Renamed session $sessionId (claude pid $claudePid) to '$Name'"
+    Write-Host "Renamed session $sessionId (pid $($record.pid)) to '$Name'"
     Write-Host "  jsonl: $jsonlPath"
 }
 
 if ($Close) {
-    if (-not $claudePid) {
-        Write-Warning "Close requested but no claude pid resolved. Skipping kill."
+    $record = Resolve-SessionRecord
+    if (-not $record) {
+        Write-Warning "Close requested but session record could not be resolved. Skipping kill."
         exit 0
     }
+    $claudePid = [int]$record.pid
     # Kill claude.exe directly. VS Code closes the terminal tab when its hosted process exits.
     $killCmd = "Start-Sleep -Milliseconds 800; try { Stop-Process -Id $claudePid -Force -ErrorAction Stop } catch {}"
     Start-Process -FilePath 'powershell.exe' `

@@ -61,7 +61,15 @@ If the `close_session` tool isn't available (a plain terminal session not hosted
 
 Runs first, before Phase 1, every time - no flag skips it.
 
-Resolve this session's screenshot-subfolder id now: `<ancestor-pid>-<ancestor-start-ticks>`, from the same process-tree walk as `rename-session.ps1`/`.sh` (the nearest `claude`-named ancestor process). The start-time suffix is load-bearing, not decoration: Windows recycles PIDs, so a bare PID can collide with a dead session that left files behind; PID plus start time cannot. PowerShell: `$p = Get-Process -Id $ancestorPid; $id = "$($p.Id)-$($p.StartTime.Ticks)"`. Also note whether this session captured any screenshots at all. Phase 3 step 3 uses both: the id scopes the purge to this session's own subfolder, and the zero-writes flag skips the purge entirely when the answer is none.
+Resolve this session's screenshot-subfolder id now: run `rename-session.ps1 -GetId` (or `.sh
+--get-id`), which prints `<pid>-<procStart-ticks>` - resolved via `$env:CLAUDE_CODE_SESSION_ID`
+matched against `~/.claude/sessions/*.json`, not a process-tree walk (todo 60: the walk resolved
+to two different PIDs at two points in the SAME session; the sessionId match is stable). The
+start-time suffix is load-bearing, not decoration: Windows recycles PIDs, so a bare PID can
+collide with a dead session that left files behind; PID plus start time cannot. Also note whether
+this session captured any screenshots at all. Phase 3 step 3 uses both: the id scopes the purge to
+this session's own subfolder, and the zero-writes flag skips the purge entirely when the answer is
+none.
 
 **Visual-work check.** If any file changed this session matches `.css`/`.scss`/`.less`, or is otherwise a user-facing visual/layout change, and the zero-screenshots flag above is true, add "show Joe a live screenshot of the visual change" to the unfinished-commitments list below. CLAUDE.md's UI & visual changes section already requires this; a green headless/e2e test pass is not a substitute, since it cannot detect "this looks wrong" (2026-08-01: an AUQ card-height CSS fix shipped on a passing Playwright regression test alone, never shown live).
 
@@ -119,7 +127,20 @@ Skip this entire phase if ANY:
 - Zero code files changed this session (only docs/config/`.for_bepy/`/`.claude/todos/`/memory edits).
 - Fewer than 50 added lines total across all code files (`git diff --shortstat` insertions). Rationale: small diffs are almost always edits to existing code, not new symbol declarations - DRY/dead-code review finds nothing. Saves tokens on routine closes.
 
-Determine scope arg: if commits were made this session, pass `unpushed`; otherwise pass `uncommitted`.
+Determine scope arg - identify THIS session's own commits, never everything unpushed (a shared
+branch with concurrent sessions makes `unpushed` review other sessions' work; an in-session push
+makes it resolve empty - two symptoms of one root cause):
+
+- Recall every sha THIS session's own `/commit`/`git commit` calls produced earlier in this
+  conversation (each reports its sha on success) - never re-derive from `git log` timestamps or
+  `@{u}..HEAD`, both of which conflate concurrent sessions or go empty post-push.
+- Zero recalled: pass `uncommitted` (unchanged - covers working-tree-only changes).
+- One or more recalled: pass the space-separated sha list as the scope arg - `/code-check`
+  resolves it to the union of files each commit touched, reviewing exactly this session's commits
+  regardless of push state or how many other sessions share the branch.
+- Can't determine this session's own commits at all (e.g. resumed/forked, no commit history
+  visible in context): SKIP Phase 2 and print why, rather than falling back to
+  `unpushed`/`uncommitted` and silently reviewing the wrong scope.
 
 Invoke `/code-check` with that scope arg via the Skill tool. It handles the analysis and writes the todos directly. Read its summary line (`code-check: N findings ...`) to extract the finding count for the Phase 4 counter.
 

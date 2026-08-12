@@ -14,8 +14,12 @@ from the browser helper below. Capture them with an ad-hoc PowerShell `System.Dr
 instead - but the output path rule is the SAME one Step 4 states, and it is the part that keeps
 getting missed:
 
+Derive the id via `C:/Users/tecno/.claude/skills/close/rename-session.ps1 -GetId` (prints
+`<pid>-<start-ticks>`) - never a hand-rolled process-tree walk, which is unreliable (todo 60).
+
 ```powershell
-$dir = ".for_bepy/screenshots/<claude-ancestor-pid>-<ancestor-start-ticks>"
+$id = & "C:/Users/tecno/.claude/skills/close/rename-session.ps1" -GetId
+$dir = ".for_bepy/screenshots/$id"
 New-Item -ItemType Directory -Force $dir | Out-Null
 Add-Type -AssemblyName System.Drawing
 $b = New-Object Drawing.Bitmap 1920, 1080
