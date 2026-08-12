@@ -1,8 +1,8 @@
-# clockify-reconciliator — HubStaff steps
+# clockify-reconciliator - HubStaff steps
 
 Read this file at steps 2, 11, and 12 of the main skill flow whenever `hubstaff_org_id` is set in the project config. Also read the "HubStaff update mode" section (between Step 11 and Step 12) whenever the dev asks to update/sync HubStaff rather than just compare. Skip this file entirely otherwise.
 
-## Step 2 — HubStaff screenshot preflight (skip if `hubstaff_org_id` not set)
+## Step 2 - HubStaff screenshot preflight (skip if `hubstaff_org_id` not set)
 
 Run before any reconciliation work so the dev can fix auth without waiting through the full reconciliation.
 
@@ -30,7 +30,7 @@ assumed - do not wait for `browser_wait_for`/`browser_take_screenshot` to appear
     preflight", tell the dev which weeks would have been screenshotted, then continue.
   - `authOk:true`: continue, auth confirmed for step 12.
 
-## Step 11 — HubStaff comparison (skip if `hubstaff_org_id` not set or `HUBSTAFF_REFRESH_TOKEN` missing)
+## Step 11 - HubStaff comparison (skip if `hubstaff_org_id` not set or `HUBSTAFF_REFRESH_TOKEN` missing)
 
 First exchange the refresh token for an access token - no client credentials needed:
 ```
@@ -123,7 +123,7 @@ flagged something outside tolerance - never run it unprompted.
   - Full field-by-field detail and edge cases for all three cases: `reference_hubstaff_ui_time_edit.md`
     (zng-app project memory) - this section only covers entry points, not the full selector recipe.
 
-## Step 12 — HubStaff weekly screenshot (skip if `hubstaff_org_id` not set or preflight marked auth as failed)
+## Step 12 - HubStaff weekly screenshot (skip if `hubstaff_org_id` not set or preflight marked auth as failed)
 
 Auth already confirmed in step 2 - no login-check needed here. Same orphan-browser guard as step 2
 applies before opening the browser here too.

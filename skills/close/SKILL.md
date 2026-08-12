@@ -135,7 +135,9 @@ makes it resolve empty - two symptoms of one root cause):
   conversation (each reports its sha on success) - never re-derive from `git log` timestamps or
   `@{u}..HEAD`, both of which conflate concurrent sessions or go empty post-push.
 - Zero recalled: pass `uncommitted` (unchanged - covers working-tree-only changes).
-- One or more recalled: pass the space-separated sha list as the scope arg - `/code-check`
+- One or more recalled: pass the list as the scope arg with a `shas:` prefix, e.g.
+  `shas:abc1234 def5678`. The prefix is required even for a single sha: a bare lone sha is read
+  as a range and diffs sha-to-working-tree, which is empty right after a commit. `/code-check`
   resolves it to the union of files each commit touched, reviewing exactly this session's commits
   regardless of push state or how many other sessions share the branch.
 - Can't determine this session's own commits at all (e.g. resumed/forked, no commit history

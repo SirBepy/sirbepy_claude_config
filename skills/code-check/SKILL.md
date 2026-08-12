@@ -16,9 +16,9 @@ Determine what to review based on args:
 |-----|-------------|
 | `uncommitted` | `git diff HEAD --name-only --diff-filter=ACM` |
 | `unpushed` | `git log @{u}..HEAD --name-only --diff-filter=ACM --format=` |
-| Space-separated list of 2+ hashes (`abc1234 def5678`) | union of `git diff-tree --no-commit-id --name-only -r <hash>` per hash - each commit's own change, not a range diff. Used by `/close` Phase 2 to scope to one session's own commits. |
+| `shas:` prefix, one or more hashes (`shas:abc1234`, `shas:abc1234 def5678`) | union of `git diff-tree --no-commit-id --name-only -r <hash>` per hash - each commit's own change, not a range diff. Used by `/close` Phase 2 to scope to one session's own commits. The prefix is what makes a ONE-sha list unambiguous; without it a lone sha falls through to the range row below and diffs sha-to-working-tree, which is empty right after a commit. |
 | Looks like a file path | treat as single-file list |
-| Looks like a hash or range (`abc1234`, `HEAD~3..HEAD`) | `git diff <arg> --name-only` |
+| Looks like a bare hash or range (`abc1234`, `HEAD~3..HEAD`) | `git diff <arg> --name-only` |
 | No args | default to `uncommitted`: `git diff HEAD --name-only --diff-filter=ACM` |
 
 ## Step 0 - Skill description budget

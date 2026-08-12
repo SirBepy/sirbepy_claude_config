@@ -64,7 +64,7 @@ skill - say so and offer `/auto-do-todos` instead.
 Record `START_SHA` (`git rev-parse HEAD`) and `EXPECTED_BRANCH` (`git rev-parse --abbrev-ref HEAD`).
 `EXPECTED_BRANCH` is substituted into every builder's branch guard, so a peer session moving HEAD
 mid-run stops the agents instead of scattering commits onto someone else's branch (see
-`~/.claude/todos/55-commit-must-recheck-branch-before-each-commit.md`; a long wide run is the worst
+`.claude/todos/done/55-commit-must-recheck-branch-before-each-commit.md`; a long wide run is the worst
 case for that hazard). Then verify, in the target repo, the five conditions the injected commit block
 depends on. Each is a one-line check and each has a defined consequence:
 
@@ -258,15 +258,10 @@ exactly. Do not improvise around it and do not skip a step because the change lo
    expected on a pure code move and must NOT be trimmed - the cap protects newly authored comments
    only, never carried-over documentation. Trim everything else.
 
-   { git diff HEAD -- <FILES>; git status --porcelain -- <FILES> | awk '$1=="??"{print substr($0,4)}' | while IFS= read -r f; do git diff --no-index -- /dev/null "$f"; done; } | awk '
-   /^\+\+\+ b\// { f=substr($0,7); run=0; next }
-   /^\+/ && !/^\+\+\+/ {
-     l=substr($0,2); add[f]++
-     if (l ~ /^[[:space:]]*(\/\/|\/\*|\*|#[^[!]|#$|--|<!--)/) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
-     next
-   }
-   { run=0 }
-   END { for (k in add) if (max[k]>=5 || (add[k]>=20 && c[k]*100/add[k]>=25)) printf "%s %d/%d (%d%%) longest %d\n", k, c[k], add[k], c[k]*100/add[k], max[k] }' | sort
+   Run it via Bash from the repo root, never pasted inline: a bare `$0` in a skill's own body gets
+   rewritten by skill-argument substitution, which is exactly why this lives in a script on disk.
+
+   bash skills/commit/comment-noise.sh <FILES>
 
 4. `git add` any UNTRACKED file you created, by name. Tracked files need no add.
 
