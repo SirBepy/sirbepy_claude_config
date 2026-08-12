@@ -6,21 +6,29 @@ Read this file at steps 2, 11, and 12 of the main skill flow whenever `hubstaff_
 
 Run before any reconciliation work so the dev can fix auth without waiting through the full reconciliation.
 
+**Dependency: local Playwright, not a Playwright MCP server.** This step and step 12 drive the
+npx-cached `playwright` package directly via `skills/clockify-reconciliator/scripts/hs_preflight.cjs`
+and `hs_weekshot.cjs` (Node, headed Chromium, persistent profile). No MCP browser tool is required or
+assumed - do not wait for `browser_wait_for`/`browser_take_screenshot` to appear in the tool list. See
+`reference_local_playwright_fallback` for why this is the default over an MCP server.
+
 - Resolve the window now (see step 3 in SKILL.md for the parsing rules).
 - Compute all Mon-Sun calendar weeks that fall within that window.
 - Kill any orphaned browser holding the HubStaff profile dir before opening a new one: `Get-CimInstance
   Win32_Process -Filter "Name='chrome.exe'" | Where-Object { $_.CommandLine -match 'playwright-profiles.hubstaff' } | Stop-Process -Force`.
   A prior run's browser left open on this profile makes the next launch fail with a misleading "Target
   closed" error instead of a real one (see `reference_playwright_orphan_profile_lock.md`).
-- Open Playwright browser. Navigate to the weekly URL for the first week: `https://app.hubstaff.com/organizations/{hubstaff_org_id}/time_entries/weekly?date={mon}&date_end={sun}&filters%5Buser%5D={hubstaff_user_id}`.
-- If redirected to `account.hubstaff.com/login`:
-  - If `HUBSTAFF_EMAIL`/`HUBSTAFF_PASSWORD` are both set: fill the email/password fields, submit, wait for navigation, then re-check the URL.
-    - Still on login page after submit (bad creds, 2FA challenge, CAPTCHA): warn that screenshot step will be skipped, close the tab, continue with reconciliation. Mark screenshot step as "skipped - auto-login failed, may need manual re-login". Tell the dev exactly which weeks would have been screenshotted.
-    - Now authenticated: close the tab, continue.
-  - If either env var is missing: stop immediately. Tell the dev exactly which weeks would be screenshotted. Wait for manual login in the Playwright window, then re-navigate once.
-    - Still on login page after retry: warn that screenshot step will be skipped, close the tab, continue with reconciliation. Mark screenshot step as "skipped - auth failed preflight".
-    - Now authenticated: close the tab, continue.
-- Not redirected: close the tab, continue.
+- Run `node skills/clockify-reconciliator/scripts/hs_preflight.cjs --org {hubstaff_org_id} --user
+  {hubstaff_user_id} --profile skills/clockify-reconciliator/playwright-profiles/hubstaff --mon {mon}
+  --sun {sun}` for the first week, with `HUBSTAFF_EMAIL`/`HUBSTAFF_PASSWORD` set in the process env if
+  present. The script prints one JSON line: `{"authOk":true}` or `{"authOk":false,"reason":"..."}`.
+  - `authOk:false`, reason mentions auto-login: warn that the screenshot step will be skipped, mark it
+    "skipped - auto-login failed, may need manual re-login". Tell the dev exactly which weeks would
+    have been screenshotted, then continue with reconciliation.
+  - `authOk:false`, reason mentions manual login timeout: the script waited 120s in the visible browser
+    window for the dev to log in by hand and gave up. Mark the screenshot step "skipped - auth failed
+    preflight", tell the dev which weeks would have been screenshotted, then continue.
+  - `authOk:true`: continue, auth confirmed for step 12.
 
 ## Step 11 — HubStaff comparison (skip if `hubstaff_org_id` not set or `HUBSTAFF_REFRESH_TOKEN` missing)
 
@@ -57,47 +65,80 @@ For each calendar day in the window:
 
 Present flagged days as a table: date, HubStaff window, Clockify window, which boundary is off and by how much. Days within tolerance: show as green/OK in a summary line.
 
+**Per-entry completeness pass, in addition to the whole-day boundary check above.** The boundary check
+alone misses internal gaps and misattributes midnight-spanning entries: a session split into two
+Clockify entries at midnight can make the second calendar day look like it "starts at 00:00" when the
+real gap, if any, is inside that day's own tail chunk. For every Clockify entry in the window,
+including each half of one that spans midnight, confirm HubStaff has some tracked or manual coverage
+overlapping that entry's exact window. Flag any Clockify entry with zero overlapping HubStaff coverage
+as a per-entry gap, listed separately from the whole-day boundary flags above - a day can pass the
+boundary check and still hide one of these.
+
+**Before reporting any day as matching/aligned, re-fetch both sides live in this same pass.** Never
+reuse a Clockify or HubStaff fetch from earlier in the run, or a scratch file, without confirming its
+timestamp is from this pass - a stale read is indistinguishable from a real match otherwise.
+
 Do NOT auto-fix anything here - report only. User decides what to adjust.
 
 ## HubStaff update mode (dev asks to "update/sync HubStaff" after a run)
 
 Distinct from the read-only comparison above - this is for when the dev asks Claude to write entries
-into HubStaff, not just report on drift.
+into HubStaff, not just report on drift. Only offer this mode when step 11 (whole-day or per-entry)
+flagged something outside tolerance - never run it unprompted.
 
 - **Scope default is the FULL reconciled window**, not just entries created/edited this run. Ask via
   AskUserQuestion with the full window as the recommended option:
   - "Full window (N entries, recommended - matches Clockify)"
   - "Just the days touched this run (M entries, partial - opt-in only)"
+- **Proposed-edit table, always required before any mutation** (matches step 9's discipline): one row
+  per flagged item, columns date, case (`add missing` / `edit boundary` / `trim excess`), current
+  HubStaff window, target Clockify window, Reason value to be set. Get AskUserQuestion approval - Apply
+  all / Apply some (pick which by index) / Cancel - before touching HubStaff. Prefer **Edit time
+  entry** over delete-then-recreate; use **Add time** only when Clockify has more blocks that day than
+  HubStaff; use **trim** (see below) only when HubStaff has more tracked time than Clockify.
 - **Billable** (`[data-testid="time-entries-form-dialog-billable"]`) is a SEPARATE flag from Clockify's,
   which is always false by convention - don't silently reuse that here, ask if unclear. Confirmed dev
   default 2026-08-10: unchecked.
-- **Entry creation recipe** (Add-time dialog, scoped to `.modal-content:visible`):
+- **Reason defaults to `Forgot to start/stop timer`** on add/edit, surfaced in the approval table since
+  it's client-visible audit metadata - never silently applied without the dev seeing it.
+- **Add missing** (Add-time dialog, scoped to `.modal-content:visible`):
   - Project and Reason: `selectOption(value)` on the hidden `select2-hidden-accessible` `<select>`
     (`modal.locator('select').nth(0)` for Project, `.nth(2)` for Reason). Never `.click()` the rendered
     Reason span - it silently lands on the wrong option without showing a list.
   - Time fields: `.from-hour-select`/`.to-hour-select` -> `input.default-input` typed value +
-    `.meridiem-toggle` click.
+    `.meridiem-toggle` click. Reuse the source Clockify entry's exact start/end verbatim (already
+    5-minute aligned) rather than re-deriving or rounding independently.
   - Note: click `a:has-text("Add note")`, then fill `textarea[name="work_note"]`.
   - Save: `button.save-button:has-text("Save")`; `.modal-content:visible` count hitting 0 confirms it.
-  - Full field-by-field detail and edge cases: `reference_hubstaff_ui_time_edit.md` (zng-app project
-    memory).
+- **Edit boundary**: row Actions menu (hover the row, `a.dropdown-toggle:has-text("Actions")`) ->
+  **Edit time entry**. Same modal shape and field recipe as Add missing above; set the time fields to
+  the target Clockify window instead of leaving the existing HubStaff times.
+- **Trim excess**: HubStaff has MORE tracked time than Clockify for that window (e.g. an automatic
+  tracker ran through an unlogged break) - not a gap, the opposite direction. Row Actions -> **Split
+  time entry** -> **DELETE TIME** tab, set a FROM/TO sub-range inside the tracked block bounding just
+  the excess slice. Its Reason field is a free-text `<textarea>`, not the select2 dropdown Add/Edit use.
+  Never use Edit or delete-then-recreate for this case, it drops the untouched part of the entry.
+- **Verify after each mutation via the API** (step 11's activities fetch), not by trusting the UI's own
+  confirmation toast. Remember the single-exchange/rate-limit rule on the access-token endpoint.
+  - Full field-by-field detail and edge cases for all three cases: `reference_hubstaff_ui_time_edit.md`
+    (zng-app project memory) - this section only covers entry points, not the full selector recipe.
 
 ## Step 12 — HubStaff weekly screenshot (skip if `hubstaff_org_id` not set or preflight marked auth as failed)
 
 Auth already confirmed in step 2 - no login-check needed here. Same orphan-browser guard as step 2
-applies before opening the browser here too. For each Mon-Sun week computed in step 2:
+applies before opening the browser here too.
 
-- Navigate to `https://app.hubstaff.com/organizations/{hubstaff_org_id}/time_entries/weekly?date={mon}&date_end={sun}&filters%5Buser%5D={hubstaff_user_id}&filters%5BshowWeeklycopy%5D=` (dates as `YYYY-MM-DD`). The `showWeeklycopy` param is required - without it the Total column renders differently.
-- Resize viewport to width >= 2300 (height ~1000), then click the left-nav collapse toggle (element
-  with text `left_panel_close`) so the grid gets full width. At ~1600 wide the rightmost **Total**
-  column sits behind a horizontal scrollbar and is unreadable in the screenshot.
-- Wait for the weekly data grid to render: use `browser_wait_for` targeting a table row or data cell that indicates the grid has loaded (timeout 10s). If timeout: warn "weekly table did not load for {mon} - skipping this week's screenshot" and move to the next week.
-- Take screenshot: `browser_take_screenshot` with `fullPage: false`, clipped to the grid region (not
-  the whole page - there's empty space below the two data rows), filename
-  `hubstaff-weekly-{mon}_to_{sun}.png` (relative path - playwright MCP can only write under its allowed roots).
-- Validate file size: if the saved file is under 50 KB, warn "screenshot for {mon} may be a login page or empty table - check manually before sharing."
-- Move the file to `C:\Users\tecno\Desktop\`.
-- Close the browser tab.
+Run `node skills/clockify-reconciliator/scripts/hs_weekshot.cjs --org {hubstaff_org_id} --user
+{hubstaff_user_id} --profile skills/clockify-reconciliator/playwright-profiles/hubstaff --weeks
+{mon1}:{sun1},{mon2}:{sun2},... --out-dir C:/Users/tecno/Desktop` with all Mon-Sun weeks computed in
+step 2 (dates as `YYYY-MM-DD`). The script navigates each week (with the required `showWeeklycopy`
+param, resizes the viewport to >= 2300 wide, and collapses the left nav so the **Total** column isn't
+behind a scrollbar), waits up to 10s for the grid to render, and writes
+`hubstaff-weekly-{mon}_to_{sun}.png` straight to `--out-dir` - no relative-path-then-Move-Item dance,
+a local script has no write-root restriction. It prints one JSON array line, one object per week:
+`{mon, sun, path, sizeBytes, warning}` (`warning` set and `path`/`sizeBytes` absent if the grid never
+loaded; `warning` set alongside `path` if the file saved under 50 KB, which usually means a login page
+or empty table). Report any `warning` to the dev instead of treating that week's screenshot as done.
 
 To READ exact per-slot time boundaries when verifying alignment (not for the screenshot itself), use
 the Calendar view instead: `https://app.hubstaff.com/organizations/{hubstaff_org_id}/time_entries/calendar?date={mon}&date_end={sun}&filters%5Buser%5D={hubstaff_user_id}`.
