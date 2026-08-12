@@ -10,7 +10,8 @@ disable-model-invocation: true
 
 ## Flags
 
-- `auto` - Skip all prompts, run everything, auto-yes all questions (including PWA). No user interaction at all.
+- `pick` (or free text like "let me pick" / "ask me what to skip") - opt into the interactive
+  picker instead of the default run-everything behavior.
 
 ## Step 0 - Git init
 
@@ -23,18 +24,20 @@ Before anything else:
 3. If there are no commits yet and files exist to stage, run `/commit` with a
    `CHORE:` prefix for the initial commit.
 
-## Step 1 - Ask what to skip
+## Step 1 - Determine what to skip
 
-If `auto` flag is passed, skip nothing and proceed to Step 2.
+Run everything by default, no prompt - proceed straight to Step 2, unless the dev's invocation
+text does one of these:
 
-Otherwise, first ask using AskUserQuestion:
+- Names specific step(s) to skip (e.g. "skip favicon and readme") - skip only those, run
+  everything else, proceed to Step 2.
+- Explicitly asks to pick/choose/be asked (`pick` flag, "let me pick", "ask me what to skip") -
+  fall back to the interactive picker below. This is the escape hatch for a project where a step
+  genuinely must not run unattended (e.g. `/update-workflow` would overwrite a hand-tuned
+  deploy.yml the dev doesn't want templated).
 
-- "Run everything"
-- "Let me pick what to skip"
-
-If the user picks "Run everything", skip nothing and proceed to Step 2.
-
-If the user picks "Let me pick what to skip", use AskUserQuestion with multiSelect to ask:
+**Interactive picker** (only when explicitly requested): use AskUserQuestion with multiSelect to
+ask:
 
 "Which skills do you want to SKIP? (Everything else will run)"
 
@@ -59,16 +62,10 @@ Run all non-skipped skills in the order listed. For each one:
 
 Do not stop between skills unless a skill requires user input. Handle the input and continue.
 
-## Step 3 - Ask about PWA
+## Step 3 - PWA setup
 
-If `auto` flag is passed, run `/pwa` without asking.
-
-Otherwise, ask using AskUserQuestion:
-
-- "Set this up as a PWA (adds manifest.json + service worker)"
-- "Skip PWA for now"
-
-If yes, run `/pwa`.
+Run `/pwa` by default. Skip only if the dev's invocation text says not to (e.g. "skip pwa", "no
+pwa", "without PWA"), or the `pick` escape hatch from Step 1 was used and PWA was picked to skip.
 
 ## Step 4 - Commit
 
@@ -102,5 +99,5 @@ Done. Here's what ran:
 ## Notes
 
 - Auto-commit at the end via /commit.
-- If a skill is skipped by user, note it as "skipped by user" in the summary.
+- If a skill is skipped by request (named skip or interactive picker), note it as "skipped by request" in the summary.
 - If a skill has nothing to do, note it as "skipped - nothing to do" in the summary.

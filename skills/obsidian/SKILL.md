@@ -1,6 +1,6 @@
 ---
 name: obsidian
-description: Triggers on /obsidian only. Works with the dev's Obsidian vault: plans projects, manages tickets, captures notes, updates journal. Reads vault CLAUDE.md first.
+description: Triggers on /obsidian only. Works with the dev's Obsidian vault: plans projects, manages tickets, captures notes, updates journal, manages people. Reads vault CLAUDE.md first.
 ---
 
 # /obsidian
@@ -17,14 +17,28 @@ Always read `C:\Users\tecno\Documents\ObsidianVault\CLAUDE.md` first. It's the s
 
 Before any vault change, run the git workflow from vault CLAUDE.md (fetch, pull, commit pending, then proceed). Every commit is followed by push.
 
-## Step 3 - Ask what the dev wants
+## Step 3 - Figure out what the dev wants
 
-Use AskUserQuestion with these options:
+Parse the text typed after `/obsidian` first. Map it to a workflow if it clearly names one with
+enough detail to act on (project, title, person name, etc.):
+- Plan or brainstorm a project - "plan X", "brainstorm X", project name + planning language
+- Add a ticket - "add a ticket to X: title", "new ticket for X"
+- Pick up a ticket - only via `/obsidian-pickup-ticket <ID>`, see that workflow's trigger note
+- Quick capture to Inbox - "note this down", "remember this", a stray thought
+- Update today's journal - "log today", time spent, journal-shaped text
+- Manage a person - names a person plus an action ("add a gift idea for X", "update X's birthday",
+  "new person: X")
+
+If one workflow clearly matches, skip straight into it - no menu.
+
+Otherwise (bare `/obsidian` with no further text, or text that doesn't clearly map to one
+workflow), fall back to AskUserQuestion with these options:
 - Plan or brainstorm a project
 - Add a ticket
 - Pick up a ticket
 - Quick capture to Inbox
 - Update today's journal
+- Manage a person
 
 ## Workflows
 
@@ -60,7 +74,8 @@ Use AskUserQuestion with these options:
    - The ticket note itself.
    - The project note (find via the ticket's `project:` frontmatter - it's a wiki link, so read `<Project>.md` from vault root).
    - The project's Kanban file at `Kanbans/<Project>.md`. Note which column the ticket is currently in and its sibling tickets.
-   - Grep `Journal/` for mentions of the ticket ID or ticket title.
+   - Grep vault-root daily notes (`<YYYY-MM-DD>.md` at vault root, not `Journal/` - abandoned
+     2026-05-03) for mentions of the ticket ID or ticket title.
 3. **Summarize** in one short paragraph: what the ticket is (from its Notes section), current Kanban column and sibling tickets, and any relevant journal mentions.
 4. **Move to In Progress.**
    - Remove the ticket's card line from its current Kanban column.
@@ -86,4 +101,25 @@ Out of scope: creating tickets (use "Add a ticket" above); closing tickets or mo
 1. Open `<YYYY-MM-DD>.md` at the vault root (not `Journal/` - that folder was abandoned 2026-05-03; daily notes live at vault root now). Create from `Templates/Journal.md` if missing.
 2. Add under `## Tasks` or `## Time Blocks` based on what the dev said.
 3. If the dev mentioned time: `- Activity: expected Xmin, actual Y`.
+4. Commit and push.
+
+### Manage a person
+
+**Disambiguation (both sub-flows):** match candidates by filename in `People/*.md` AND by each
+file's `aliases` frontmatter. If more than one file plausibly matches, or the name could be a new
+person distinct from an existing file, ask the dev to confirm - never guess silently.
+
+**Add a person**
+1. Get name, relationship, and any known details (birthday, aliases) from what the dev said, or ask.
+2. Run the disambiguation check above. If no match, proceed.
+3. Create `People/<Full Name>.md` from `Templates/Person.md`. Fill `name`, `aliases`, `relationship`, and `tags` (`person` plus a relationship tag from vault CLAUDE.md's Tags table). Leave `birthday`/`last_seen` blank if unknown.
+4. Commit and push.
+
+**Update a person**
+1. Run the disambiguation check above to resolve the target file.
+2. Re-read the resolved file immediately before writing - the vault is shared across concurrent sessions and nothing locks it, so edit the content as it is right now, not a stale copy.
+3. Apply one line-scoped edit, never a full regenerate:
+   - New info/interaction -> append a dated bullet under `## Notes`.
+   - Gift idea -> append inside the `## Gift Ideas` block.
+   - Changed fact (birthday, relationship, last_seen) -> edit that one frontmatter field.
 4. Commit and push.
