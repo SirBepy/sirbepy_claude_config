@@ -52,6 +52,16 @@ If the todo records open decisions (in `## Notes` or elsewhere):
   unresolved decision blocks the work, write the blocker per the caller's blocker-log convention
   (autopilot: `.for_bepy/autopilot-logs/<slug>.md`), release the claim, and stop this todo -
   never guess, never silently skip the decision.
+- **Card timed out mid-run** (an interactive question died unanswered - `sent no response or
+  progress` / `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT`, ~45 min of dead wall clock, the dev walked away):
+  this is a TOOL ERROR, not a "no", and not a signal to abandon the todo.
+  - An option is explicitly badged/labelled recommended AND the resulting action is reversible (a
+    code change; never a deploy, push, or destructive/outward-facing op) - proceed on it.
+  - No option is marked recommended, or the decision is high-stakes or hard to reverse - stop and
+    park the work, same as the unattended blocker path above.
+  - Either way, report the auto-taken (or parked) decision prominently in the completion summary,
+    with an explicit offer to redo it - never let it read as though it were actually answered.
+  - Do not plan on a "recovery" tool to resume the same card; it may not exist in this session.
 
 ## Step 5 - Verify
 

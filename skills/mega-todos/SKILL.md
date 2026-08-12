@@ -18,8 +18,9 @@ disable-model-invocation: true
 
 Steps 2-5 of `/auto-do-todos` are **adopted by reference, not restated**: `/cleanup-todos`
 unattended, `/batch-todos` unattended, the AUTO/DEV triage with its lean-AUTO bar, and the one
-question round with its 8-question cap. Read that file and run those steps as written. Triage logic
-lives in exactly one place so the two skills cannot drift.
+question round with its question-cap logic (capped at 8 for the builtin `AskUserQuestion`, uncapped
+when an equivalent like `mcp__cc_conductor__ask_user_question` is available). Read that file and run
+those steps as written. Triage logic lives in exactly one place so the two skills cannot drift.
 
 Everything from Step 6 onward is replaced by this file.
 
@@ -31,6 +32,9 @@ Everything from Step 6 onward is replaced by this file.
 - `/autopilot`'s behavior contract: bounded `/iterate-it`, nested-question suppression, the 3-strike
   runaway guard.
 - `~/.claude/refs/process-hygiene.md` for anything spawning Node.
+- `~/.claude/skills/pickup/SKILL.md` Step 4's timed-out-card branch, for any question a lane's
+  builder or the Step C scout raises mid-run that goes unanswered - its reversibility gate is what
+  covers a fork raised mid-run, not just autopilot's known-at-triage forks.
 
 ## Sidebar badge
 
@@ -61,7 +65,7 @@ Record `START_SHA` (`git rev-parse HEAD`) and `EXPECTED_BRANCH` (`git rev-parse 
 `EXPECTED_BRANCH` is substituted into every builder's branch guard, so a peer session moving HEAD
 mid-run stops the agents instead of scattering commits onto someone else's branch (see
 `~/.claude/todos/55-commit-must-recheck-branch-before-each-commit.md`; a long wide run is the worst
-case for that hazard). Then verify, in the target repo, the four conditions the injected commit block
+case for that hazard). Then verify, in the target repo, the five conditions the injected commit block
 depends on. Each is a one-line check and each has a defined consequence:
 
 | Check | If present | Consequence |
@@ -70,10 +74,20 @@ depends on. Each is a one-line check and each has a defined consequence:
 | `.claude/commit-style.md` | overrides prefixes/grouping | read it once and paste its rules INTO the injected block. |
 | `.claude/skills/run-tests/SKILL.md` | `/commit` step 6 | 45 agents would each run the full suite. Strip step 6 from the injected block; the barrier runs it once instead. |
 | `list_peers` shows another session | shared tree | post once from the main thread naming the whole run's scope, then let agents skip their own peer check. |
+| `core.hooksPath`'s `pre-commit` hook invokes `lint-staged` | stash race | switch `COMMIT_MODE` to `barrier` (see below) instead of the injected per-builder commit block. |
 
 All three conditions must hold together, mirroring `/commit` step 1a's real gate rather than a loose
 proxy for it. `GIT_FLOW.md` alone is harmless on a feature branch, and treating it as sufficient
 bricks the skill in every repo that documents its git flow, which is most of them.
+
+**`COMMIT_MODE` default is `per-builder`** (the injected commit block below). It switches to
+**`barrier`** when the hooksPath check above fires: `lint-staged@16` stashes unstaged changes before
+running its tasks, and with N agents holding uncommitted work in one tree that stash/restore cycle
+can swallow another agent's in-flight edits - not theoretical, 6 of 19 commits hit this race on
+2026-08-11. In `barrier` mode, builders never touch git - they leave every change unstaged - and the
+main thread commits by pathspec at each barrier instead. `git commit -m "..." -- <pathspec>` builds
+a TEMPORARY index for that one command, so the hook only ever sees the pathspec's files and never
+the shared index; a pathspec commit of files lint-staged doesn't match is a complete no-op for it.
 
 Also confirm the working tree is clean of other people's uncommitted work (`git status`). A wide
 parallel run over a dirty shared tree is how another session's work gets swept into a pathspec.
@@ -170,6 +184,11 @@ stop** - a wide parallel run with no verify floor is 15 agents committing unchec
 | **Full floor** | every 10-15 completed todos | everything, including tests and e2e |
 | **Final barrier** | once, at run end | see the rule below |
 
+**In `barrier` COMMIT_MODE (Step A)**, the per-batch and full-floor barriers each additionally
+perform the commit step before their verify commands run - see "Barrier COMMIT_MODE" under the
+injected commit block below. Builders never commit in this mode; the main thread does, once per
+completed todo, in lane order.
+
 **The final-barrier rule, stated so there is no todo-count ambiguity:** the last barrier of a run is
 the **cheap per-batch check**, NOT the full floor - unless the full floor has not run for 10 or more
 completed todos, in which case run it once at the end. "This is the last barrier, so do the thorough
@@ -215,7 +234,8 @@ pass/fail. Never file bodies, never transcripts.
 
 This is the deliberate divergence from the delegation doctrine. `/commit` is pure procedure - git
 commands, one awk prefilter, and a marker file - so it CAN be followed by an agent that cannot invoke
-skills. Paste this verbatim into every builder prompt. Substitute `<EXPECTED_BRANCH>` from Step A;
+skills. Paste this verbatim into every builder prompt when `COMMIT_MODE = per-builder` (Step A) -
+see "Barrier COMMIT_MODE" below for the `barrier` case. Substitute `<EXPECTED_BRANCH>` from Step A;
 leave `<FILES>` as-is, the agent fills that with its own owned paths:
 
 ```
@@ -233,7 +253,10 @@ exactly. Do not improvise around it and do not skip a step because the change lo
 
 3. Run the comment-noise prefilter against exactly the paths you are about to commit, replacing
    <FILES>. If it prints anything, TRIM those blocks to the cap (2 lines typical, 4 hard per block)
-   before committing. Do not ask, just trim.
+   before committing. Do not ask, just trim. EXCEPTION: a hit on a file whose flagged lines are a
+   VERBATIM MOVE from another file in this same commit (confirm via `git show HEAD:<old file>`) is
+   expected on a pure code move and must NOT be trimmed - the cap protects newly authored comments
+   only, never carried-over documentation. Trim everything else.
 
    { git diff HEAD -- <FILES>; git status --porcelain -- <FILES> | awk '$1=="??"{print substr($0,4)}' | while IFS= read -r f; do git diff --no-index -- /dev/null "$f"; done; } | awk '
    /^\+\+\+ b\// { f=substr($0,7); run=0; next }
@@ -268,6 +291,20 @@ HARD RULES, no exceptions:
 - One purpose per commit. Prefix from: FEAT, FIX, REFACTOR, CHORE, DOCS, TEST, STYLE, DATA.
 - No commit body unless something genuinely needs explaining. Never add AI attribution.
 ```
+
+### Barrier COMMIT_MODE
+
+When Step A set `COMMIT_MODE = barrier` (lint-staged detected), builders never run steps 1, 4, 5, 6
+above - only step 2 (diff review) and step 3 (the prefilter, carve-out included) as their verify
+floor, then they report their finished paths without touching git. The main thread performs the
+commit at each barrier instead, once per completed todo, in lane order:
+
+1. Write a fresh marker (block's step 1).
+2. `git add` any untracked file that todo's builder created, by name.
+3. Run the branch guard (step 5).
+4. `git commit -m "<PREFIX>: <title>" -- <FILES>` (step 6), naming that todo's files only.
+
+Same HARD RULES apply, main thread substituted for builder throughout.
 
 Alongside it, every builder prompt still carries the doctrine's canonical preamble minus its
 stage-don't-commit line: working dir, PowerShell, the

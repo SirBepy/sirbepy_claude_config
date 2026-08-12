@@ -60,3 +60,6 @@ of those points:
 - No context self-regulation thresholds here on purpose: those are `/autopilot`'s AFK wind-down
   mechanism. The dev is present and can call the handoff himself. If context does get tight,
   say so and offer `/handoff` rather than ending anything unilaterally.
+- Liveness and session-budget rules for dispatched subagents are NOT AFK-only: the doctrine's
+  "Liveness and session budget" section (adopted above) applies exactly as written here - a dead or
+  budget-killed subagent is just as invisible with the dev present as it is unattended.

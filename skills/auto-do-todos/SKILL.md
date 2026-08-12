@@ -47,6 +47,20 @@ Two deliberate divergences from `/autopilot`, both chosen by the dev on 2026-08-
 
 There is no `--sleep` flag. Chain `/sleep-when-done` yourself if you want it.
 
+## Cleanout intent
+
+If the prompt that invoked this run asks to drop, clear out, prune, or clean up the backlog (not
+merely to run the skill), the run is in **cleanout mode** for its duration:
+
+- Step 2's `/cleanup-todos` keep-all auto-resolve is SUSPENDED. Every drop/archive/merge candidate
+  it finds, `ai`-origin included, carries into Step 5's question round instead of being silently
+  archived or silently carried forward.
+- Step 5 fires unconditionally, up front, before any todo executes, carrying that full candidate
+  list alongside its normal triggers.
+
+Bare invocation (no cleanout phrase) is unaffected: Step 2 keeps today's no-confirm auto-archive for
+`ai`-origin candidates.
+
 ## Order of operations
 
 1. Record `START_SHA` (`git rev-parse HEAD`) - Step 9 diffs against it. Emit `<cc-autopilot:on>`.
@@ -67,7 +81,8 @@ IS an unattended run, so:
 - `/cleanup-todos` still prints its full report. Its own origin rule then applies unchanged:
   `ai`/absent-origin todos that are dead, duplicate or not worth doing ARE archived, with no confirm
   gate - that gate never existed for them. Only `dev`-origin candidates carry into the Step 9 summary
-  as still-pending.
+  as still-pending. **In cleanout mode (see above), skip this auto-resolve entirely** - every
+  candidate, `ai`-origin included, carries into Step 5 instead of being archived or carried silently.
 - `/batch-todos` still prints its dry-run report, then proceeds as though the dev replied `run it`.
   Its Step 5 `FLAG` verdicts still re-queue as HARD rather than being auto-answered.
 
@@ -105,7 +120,8 @@ pre-crystallized DEV questions and they feed Step 5 directly, no re-derivation.
 - the AUTO queue is **empty** - there is nothing to grind, so asking is the only way to make
   progress; or
 - one or more todos carry a pre-written `## Open questions` block from a previous run - the dev
-  already knows those are coming and asked for them to be opened with.
+  already knows those are coming and asked for them to be opened with; or
+- the run is in **cleanout mode** (see above) - fires immediately, up front, before any todo runs.
 
 Otherwise **skip this step entirely**, grind the AUTO queue, and let Step 8 park the DEV forks for
 next time. A run that has real work to do never interrupts the dev.
@@ -113,7 +129,11 @@ next time. A run that has real work to do never interrupts the dev.
 **Shape.** Keep it quick - the dev's words are "ask me quick and then we done":
 
 - Highest priority first, `AskUserQuestion` only, 4 per call, chain past 4.
-- **Cap the round at 8 questions** (2 calls). Anything beyond the cap stays parked via Step 8.
+- **Cap the round at 8 questions (2 calls) when using the builtin `AskUserQuestion`.** When an
+  uncapped equivalent is available in this session (e.g. `mcp__cc_conductor__ask_user_question`,
+  documented as having no cap), ask everything in that one call instead - the 8-cap exists only
+  because the builtin tool stops at 4 per call, not as a limit on how much a run may resolve.
+  Anything still unaddressed after the round stays parked via Step 8.
 - Every question carries a final **"you decide - autopilot it"** option, so any question the dev
   does not care about is handed straight back to bounded `/iterate-it` at zero cost to him.
 - Every question carries a **"stop here"** escape so he can end the round without answering the
@@ -124,7 +144,12 @@ ask, no matter what they find.
 
 ## Step 6 - Grind the AUTO queue
 
-High to Low priority. Per todo:
+High to Low priority. Independent todos may fan out concurrently per the doctrine's Parallelism
+rule, but `refs/delegation-doctrine.md`'s "Liveness and session budget" section governs that fan-out
+- it names the concrete dead-dispatch check and caps width by session budget, not context%. A
+healthy context reading does not mean a fan-out is safe.
+
+Per todo:
 
 1. Claim it per `close/ai-todos-format.md`.
 2. Execute via a subagent under the adopted contracts above. Heartbeat the claim at checkpoints.
@@ -139,6 +164,11 @@ High to Low priority. Per todo:
 A todo that hits the 3-strike guard or a Hard Stop mid-execution: release its claim, leave the todo
 in the backlog, record why for Step 8, and continue with the next todo. Never let one todo end the
 run.
+
+**A fan-out that dies mid-edit with no report** (session limit hit, silent stall): do not resume
+blind. Follow the doctrine section's recovery - reconstruct state from `git status` plus a real
+lint/test run, label every reconstructed verdict INFERRED rather than reported, release every claim
+those todos held, and write the handoff into Step 8 before taking any new todo.
 
 Queue empties before 40%? Go to Step 7.
 
