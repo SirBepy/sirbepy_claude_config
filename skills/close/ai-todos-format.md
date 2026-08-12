@@ -56,6 +56,15 @@ other session's file.
 <slug>` or the full filename stem as `-Id` to `claim-todo.ps1` / `complete-todo.ps1`; an
 ambiguous id with no disambiguator errors naming both candidate filenames rather than guessing.
 
+**Content-duplicate guard.** Applies to every writer (`/create-todo`, `/handoff`, `/close` Phase 3,
+`/code-check`, autopilot). The race guard above only catches two sessions grabbing the same id, not
+a second todo covering work already filed under a different slug. Before writing, grep the
+destination backlog and `done/` for keywords tied to the new todo's subject (tool/component names,
+the specific question, any ticket id) and read hits in full. A genuine match: fold its findings in,
+or write a superseding file that references the old id - never leave two todos silently
+disagreeing. Unattended (`/sleep-when-done`, autopilot): never block on this - log the supersession
+and continue. `/create-todo`'s own Anti-patterns section carries the concrete recipe this mirrors.
+
 ## Backlog file: content
 
 ```md
@@ -119,7 +128,9 @@ defined, so neither drifts out of sync with the other.
 
 Type is always `task`. Origin is always `dev` - a handoff records the dev's own in-flight work,
 never Claude's independent observation. The todo IS the session handoff - be VERY descriptive;
-length is fine when it helps the next AI. Fill every section from the session itself, no
+length is fine when it helps the next AI. Run the Content-duplicate guard above first - a handoff
+is exactly the case that produced the original incident (two todos already covered the same fix,
+caught only by luck reading filenames). Fill every section from the session itself, no
 clarifying questions:
 
 - **Goal** - what the dev is ultimately trying to achieve (the original ask, not the last subtask).
