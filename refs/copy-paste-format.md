@@ -4,7 +4,7 @@ The trigger rule lives in `~/.claude/CLAUDE.md` under "Communication". This file
 
 ## The core rule
 
-Anything Joe is meant to copy goes in a **blockquote**. Everything else (inline backticks, fenced code blocks) does not render distinctly in the app, so avoid them for copyable content.
+Anything Joe is meant to copy goes in a **blockquote**, except content containing a backslash (Windows paths), which goes in a **fenced code block** instead - see "Windows path escaping gotcha" below. Plain inline backticks otherwise don't render distinctly in the app, so avoid them for copyable content.
 
 This applies to: commands, code to run or paste, config snippets, prose to paste elsewhere, SQL, JSON payloads, environment variable values, curl requests, sequential shell steps.
 
@@ -47,12 +47,13 @@ If the task genuinely requires a long response (a full file, a long command), th
 
 ## Windows path escaping gotcha
 
-The blockquote renderer treats `\.` (backslash immediately before a dot) as a markdown escape and silently drops the backslash, ANYWHERE it occurs in the path - not just after `~`. `~\.cache\foo` pastes as `~.cache\foo`; `$env:USERPROFILE\.gradle\caches` pastes as `$env:USERPROFILE.gradle\caches`. Either way PowerShell resolves a broken concatenated path instead of the intended dotfolder. Confirmed 2026-07-18 (two failed attempts before the fix landed).
+Markdown (CommonMark/GFM) treats a backslash before ASCII punctuation as an escape and consumes the backslash - a blockquote is raw markdown, so it renders this way too. `\.` becomes `.`, `\_`/`\-`/`\(` become `_`/`-`/`(`, and even `\\` collapses to `\`. Any Windows path with a dot-directory (`.for_bepy`, `.claude`, `.git`, `.env`, `.vscode`, `.cursor`) loses its separator: `C:\Users\tecno\revaire-mobile\.for_bepy\aab` pastes as `...revaire-mobile.for_bepy\aab`. Confirmed 2026-08-12.
 
-- Fix: use forward slashes for any copyable Windows path that has a dotfolder segment (`.cache`, `.gradle`, `.cargo`, etc) - Windows PowerShell accepts `/` as a path separator natively, and `/` is never eaten by the escape (only the exact `\.` sequence is affected; other backslash-letter sequences like `~\Desktop\...` or `$env:LOCALAPPDATA\Temp\...` are unaffected and can stay backslash-form). `$env:USERPROFILE/.cache/huggingface/hub` pastes and resolves correctly.
+- Fix (2026-08-12, supersedes the earlier forward-slash workaround): any copy-paste content containing a backslash goes in a **fenced code block**, never a blockquote - code blocks are not parsed as markdown, so every separator survives verbatim. A path named in prose (not a standalone copyable block) uses inline code instead.
+- Rejected alternatives and why: forward slashes render fine but break `cmd.exe` and some CLIs; doubled backslashes (`C:\\Users\\...`) render correctly but leave the raw source text wrong; a blockquote wrapping a code block is correct but verbose with unconfirmed nested rendering.
 
 ## What NOT to do
 
 - Do not embed a copyable command inside a prose sentence. Put it in its own blockquote.
 - Do not add explanatory comments inside a copyable block if they would break it when pasted verbatim.
-- Do not EVER deliver copyable content as plain unquoted text - prose replies included. Joe reaffirmed 2026-07-08 (overriding an earlier incident-derived exception that suggested plain text for Slack-style prose): ALWAYS use a blockquote for anything he is meant to copy, no exceptions. Keep backticks out of the blockquote content itself so the paste stays clean.
+- Do not EVER deliver copyable content as plain unquoted text - prose replies included. Joe reaffirmed 2026-07-08 (overriding an earlier incident-derived exception that suggested plain text for Slack-style prose): ALWAYS use a blockquote, or a fenced code block for backslash content per the gotcha above, for anything he is meant to copy. Keep backticks out of the blockquote content itself so the paste stays clean.

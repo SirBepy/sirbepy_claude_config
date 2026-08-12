@@ -42,6 +42,10 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
 
 - Its verify floor: the project's fast checks (typecheck, unit, lint, build) with the instruction
   to run them and report the actual output, not a claim of success.
+- The comment-noise prefilter as part of that verify floor: run the command from
+  `~/.claude/skills/commit/comment-noise.md` scoped to its own diff (`git diff HEAD -- <files it
+  changed>`), trim until it prints nothing, and paste the clean output in the report. Requires a
+  bash-capable shell for `awk` - the Bash tool on Windows dispatches, not PowerShell.
 - The staging line, conditional on whether the repo shares a git index with concurrent sessions:
   default `Stage your changes but do NOT commit. The main agent will run /commit after your
   report-back.`; for a shared-index repo (e.g. zng-app, zng-biller) substitute `Leave all changes
