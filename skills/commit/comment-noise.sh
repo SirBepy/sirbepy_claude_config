@@ -24,7 +24,8 @@ else
   {
     git diff HEAD -- "$@"
     git status --porcelain -- "$@" | awk '$1=="??"{print substr($0,4)}' | while IFS= read -r f; do
-      git diff --no-index -- /dev/null "$f"
+      # --no-index exits 1 whenever the files differ, which is always here; pipefail would abort.
+      git diff --no-index -- /dev/null "$f" || true
     done
   } | awk "$AWK" | sort
 fi
