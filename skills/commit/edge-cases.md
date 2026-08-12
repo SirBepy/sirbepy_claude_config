@@ -25,6 +25,39 @@ When a single file holds changes belonging to different commits, stage the speci
 - This is surgical and leaves the working tree untouched - prefer it over restore-edit-amend whenever you need exact lines.
 - **Exception to step 8's pathspec rule:** a hunk-level split genuinely needs the index (that's what `apply --cached` stages into), so it is the one case that commits FROM the index instead of by pathspec. Re-run `git diff --cached --stat` immediately before committing to confirm the index holds ONLY the hunks you just staged - if a concurrent session added anything else in between, stop and re-isolate rather than committing whatever the index now contains.
 
+## Shared-checkout hook hazard
+
+A pathspec commit (step 8) protects the INDEX from a concurrent session's
+staged files. It protects nothing in the WORKING TREE, and a pre-commit hook
+that stages, stashes, or hides files (e.g. husky + lint-staged's "Backing up
+original state" / "Hiding unstaged changes") operates on the working tree
+directly. If that hook fails mid-run - most commonly a `.git/index.lock`
+collision with another session sharing this `.git` - its restore step can be
+skipped, deleting another session's unstaged edits from disk.
+
+**Preflight:** before a hook-bearing commit, check `git rev-parse
+--git-common-dir` against `--git-dir` (differ = worktree) and whether
+`.git/index.lock` exists. Either true = prefer `--no-verify`, and run the
+project's formatter and linter by hand first so the hook's checks still
+happen, just not inside the hook.
+
+**Recovery**, if a hook already ate someone's unstaged changes: lint-staged
+leaves them at `.git/lint-staged_unstaged.patch` - apply with `git apply`
+(`--recount` if hand-trimmed first).
+
+## Cargo.toml version bump (Tauri apps)
+
+`/commit v`'s step 2 widens to Rust crates when `src-tauri/Cargo.toml` (or any
+`Cargo.toml` whose `[package]` name matches the app) exists:
+
+1. Rewrite its `version = "..."` line under `[package]` to the new version.
+2. Regenerate `Cargo.lock` via cargo, never hand-edit: `cargo check` from the
+   crate dir (or `cargo update -p <crate> --precise <new-version>` if a full
+   check is too slow).
+3. Include both `Cargo.toml` and `Cargo.lock` in step 8's pathspec.
+4. Scope to the app crate only - never bump a workspace member or a
+   vendored/submodule crate (e.g. `vendor/tauri_kit`) alongside the app.
+
 ## Backdating commits
 
 - When the user asks for a specific commit time, jitter it to look organic:

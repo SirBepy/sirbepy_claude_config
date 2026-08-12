@@ -57,3 +57,8 @@ gotcha, or measurement the code can't show; if not, don't write it.
    offending blocks (`file:line`, first line, line count). A 5+ line block that
    genuinely documents one hard constraint can survive - say so and why. Do not
    review comments in files the prefilter didn't flag; they are in budget.
+   A block flagged only because it moved verbatim into a new file (a pure code
+   move, wording unchanged) is not new noise - confirm via
+   `git show HEAD:<old-file>` before dismissing it. The exemption covers
+   unchanged text moved as-is only; a newly authored comment sitting in a
+   moved file is still a hit.
