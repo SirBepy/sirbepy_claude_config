@@ -66,7 +66,11 @@ backlog past 40 - exactly the half most likely to still be wrong. Chunking repla
 
 **Deep pass:** dispatch one subagent per chunk (`model: 'sonnet'`, `effort: 'high'`), all chunks in
 a single parallel dispatch, each carrying the full text of its own todos. Each returns one verdict
-per todo:
+per todo, as prose (evidence, reasons) AND as one CSV row per todo appended at the end of its
+report, header `file,complexity,worth,still_valid` (exactly `update-markers.ps1`'s columns, `file`
+is the exact backlog filename). The main agent concatenates chunk CSVs (one shared header) straight
+into Step 5's DataFile - it never retypes a verdict field by hand, the transcription step that
+caused the 2026-08-12 corruption.
 
 - `complexity`: EASY or HARD, same criteria table as `/batch-todos` step 3.
 - `still_valid`: does the premise still hold? The check depth depends on the todo's `**Origin:**`:
@@ -157,6 +161,15 @@ left unchanged, so a real score from an earlier deep run survives an overflow ru
 stamped over with `unknown`. This keeps the staleness nag meaningful once a backlog exceeds the deep-tier cap:
 shallow-tier todos keep aging in the nag like any other unattended todo, instead of resetting to
 "fresh" on every run they overflow into the shallow tier.
+
+**Diff gate - required before writing to the real backlog.** Copy `.claude/todos/` to a scratch
+temp dir, run `update-markers.ps1` there with the real DataFile, then diff every touched file's
+FULL content against the original - no filtering by the marker pattern, which is exactly what hid
+the 2026-08-12 corruption (it excluded the one line class that broke). The only permitted
+difference per file is one marker line added or replaced, above that file's first `# ` heading.
+Any other change - a marker-shaped line altered below the heading, prose touched, a different file
+changed - is a FAILURE: stop, report the offending file and diff, do not run against the real
+backlog. Only once the gate passes does the run repeat against the real `.claude/todos/`.
 
 ## Step 6 - Report
 
