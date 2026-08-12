@@ -115,7 +115,9 @@ Approved rows only.
 
 ### 11. HubStaff comparison (skip if `hubstaff_org_id` not set or `HUBSTAFF_REFRESH_TOKEN` missing)
 
-If gated in, read `skills/clockify-reconciliator/hubstaff.md` and follow its "Step 11" section.
+If gated in, read `skills/clockify-reconciliator/hubstaff.md` and follow its "Step 11" section. If the
+dev then asks to update/sync HubStaff (not just compare), follow its "HubStaff update mode" section
+instead of improvising scope or entry-creation mechanics.
 
 ### 12. HubStaff weekly screenshot (skip if `hubstaff_org_id` not set or preflight marked auth as failed)
 

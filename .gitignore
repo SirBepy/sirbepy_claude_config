@@ -33,4 +33,6 @@ skills/commit/watch-build.pid
 # Belt-and-suspenders: never commit secrets
 .env
 **/.env
+.env.bak
+**/.env.bak
 .DS_Store
