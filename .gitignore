@@ -20,6 +20,9 @@
 !agents/**
 !context/
 !context/**
+!.claude/
+!.claude/todos/
+!.claude/todos/**
 !favicon.svg
 !favicon.png
 !favicon.ico
@@ -29,6 +32,10 @@ skills/shortcut-create-ticket/log.md
 
 # Runtime artifact written by /commit's build watch, per-machine
 skills/commit/watch-build.pid
+
+# Claims are machine-local state (session ids, PIDs) - never commit, even though todos/ above is tracked
+.claude/todos/.claims/
+.claude/todos/.claims/**
 
 # Belt-and-suspenders: never commit secrets
 .env

@@ -1,0 +1,83 @@
+<!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-12, complexity=HARD, worth=6, reconfirm-count=2, content-hash=4adb4886 -->
+# One-time repair pass over 8 shipped public web projects: leaked README TODO line, broken relative og:image, root-absolute PWA service workers
+
+**Type:** skill-improvement
+
+## Goal
+
+The `bepy-project-setup-web`/`readme`/`meta-tags`/`pwa` skills that generate/standardize
+web projects have all had bugs fixed (per the broader skill-audit this todo was filed
+from) that used to produce three specific defects. The FIX is already in the skills
+themselves - this todo is the separate, one-time REPAIR PASS needed over the 8 already-
+shipped public repos that were generated/updated BEFORE the fixes landed, since fixing
+the skill does not retroactively fix output that already shipped. Three defects to
+repair across those repos:
+
+1. A leaked README TODO line (placeholder/reminder text that should have been removed
+   before the README was considered finished, but shipped as-is).
+2. A broken relative `og:image` meta tag (an Open Graph image path that resolves
+   relative to the wrong base, so link previews/social shares show a broken image).
+3. Root-absolute PWA service worker registration paths (a `serviceWorker.register('/sw.js')`-
+   style absolute path that only works when the site is served from a domain root, not
+   from a subpath - breaking install/offline behavior for any project actually deployed
+   under a subpath, e.g. GitHub Pages project sites at `username.github.io/repo-name/`).
+
+## Context
+
+This todo was filed from a skill-audit session (2026-08-01) that reviewed
+`skills/readme/SKILL.md`, `skills/meta-tags/SKILL.md`, and `skills/pwa/SKILL.md` (all
+invoked by `skills/bepy-project-setup-web/SKILL.md`'s Step 2 pipeline) and found/fixed
+the root causes producing these three defects in newly-generated projects. The audit
+identified 8 already-live public repos still carrying the OLD, buggy output from before
+those fixes. This todo's own source material (a set of audit reports under a `C:\tmp`
+scratch path) is NOT available to whoever picks this up - it was explicitly disposable
+per the task that filed this todo, so the exact list of 8 repo names, their exact
+og:image paths, exact TODO line text, and exact service-worker paths must be
+REDISCOVERED from the live repos themselves, not assumed from memory.
+
+## Approach
+
+1. **Rediscover the affected repos.** List Joe's public GitHub repos (`gh repo list
+   SirBepy --visibility public --limit 100` or equivalent - confirm the right `gh`
+   account is active per the global CLAUDE.md's account-switch hook, which switches by
+   the CURRENT repo's origin remote; from outside any repo cwd it defaults to `SirBepy`
+   per that hook's documented mapping) and identify which ones were built via
+   `/bepy-project-setup-web` or its component skills (check for the tell-tale generated
+   file shapes: a `manifest.json` + service worker from `/pwa`, standardized README
+   sections from `/readme`, injected widget scripts from `/inject-widgets`, etc.).
+2. **For each candidate repo, check for each of the three defects independently** (a
+   repo may have zero, one, two, or all three):
+   - README: grep for literal `TODO` markers or placeholder text that reads as
+     unfinished/reminder content rather than real documentation (e.g. "TODO: add
+     screenshot," "TODO: fill this in") - read the README in full to judge, since a grep
+     hit alone doesn't prove it's a leaked placeholder vs an intentional roadmap item.
+   - og:image: check `index.html`'s `<meta property="og:image" ...>` tag - if its `content`
+     is a relative path (not starting with `https://` or a domain-qualified URL), it will
+     break social-preview rendering for crawlers that don't resolve relative URLs against
+     the page's own origin correctly (some do, many don't) - fix by making it an absolute
+     URL pointing at the repo's actual deployed image path (GitHub Pages URL pattern:
+     `https://<user>.github.io/<repo>/<image-path>`, confirm the actual deployed base URL
+     per repo, do not assume a single URL prefix works for all 8).
+   - PWA service worker: check `manifest.json`'s `start_url`/`scope` and the service-
+     worker registration call (likely in `index.html` or a bundled JS file) for a
+     root-absolute path (`/sw.js`, `/manifest.json`, `scope: '/'`) vs a repo-relative one
+     appropriate for however each repo is actually deployed (GitHub Pages project site
+     under `/repo-name/`, a custom domain at root, etc. - check each repo's actual deploy
+     target before assuming they're all GitHub Pages project subpaths).
+3. **Fix each confirmed defect per repo**, committing normally in that repo (this todo's
+   fixes happen IN each affected repo, not in `~/.claude` - this backlog entry just
+   tracks that the sweep needs to happen; the actual commits land in the 8 separate
+   repos).
+4. Keep a running list (in the PR/commit description of each fix, or a scratch note
+   during the sweep) of which of the 8 repos had which of the 3 defects, so the final
+   report to Joe is a clear per-repo checklist rather than a vague "fixed some stuff."
+
+## Acceptance
+
+- All public repos generated/updated via the bepy web-project skills have been checked
+  for all three defects (not just the ones remembered/assumed - actually enumerate and
+  check each candidate repo).
+- Every confirmed defect is fixed and committed in its own repo.
+- A final summary lists, per repo, which defects were found and fixed (or confirmed
+  absent) - so there's a record this sweep was actually exhaustive, not partial.
