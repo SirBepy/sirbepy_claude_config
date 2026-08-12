@@ -9,9 +9,10 @@ backends (local / develop / prod) without a rebuild.
   project, bound to a FIXED loopback port (the project's port block, top slot). An app that
   bakes that one address into its API client can have its backend swapped live, by switching
   the active preset - no rebuild, no app restart.
-- **Find the hub port.** There is no dedicated HTTP route for this (only IPC, dashboard-side).
-  Add the project's first preset (below), then `GET /ports` and find the entry whose `owner`
-  is `<project_id>:__proxyhub__` - its `port` is the hub address.
+- **Find the hub port.** `GET /projects/<project_id>/hub-port` (same bearer token as everything
+  else here) returns the raw port as a bare JSON number (e.g. `42013`), not an object. 404 with
+  a plain-text body means either an unknown project or one with no presets configured yet - that
+  is the "no hub" case, not a transport error. Requires server_supervisor v0.1.34+.
 - **Define presets** (`project_id` is the same id that appears as the project half of a
   `/procs` entry's `id`, e.g. `"my-app"`):
   - List: `GET /projects/<project_id>/presets` -> `[{ id, name, base_url, danger }]`

@@ -22,6 +22,13 @@ Start a long-lived dev server through server_supervisor instead of spawning it i
    - **Reuse is matched by project name AND absolute root** (from `projects.json`), not name alone - so a git worktree of the same project (e.g. Fibo's `frontend`/`frontend-2`/`frontend-3`) never reuses another worktree's process and serves stale code.
    - **Zero exit:** stdout is `<id> status=<status> port=<port>`. Note the `id` - you manage everything else by it.
    - **Non-zero exit:** supervisor unreachable (or a real error) -> go to Fallback.
+   - **`-Root` defaults to the current shell's cwd, not to `-Project`.** If the target repo differs
+     from the session's cwd (e.g. verifying a sibling project from another project's session),
+     always pass `-Root "<absolute-path>"` explicitly. Incident (2026-08-11, zng-admin session):
+     `ensure -Project zng-biller -Cmd "flutter run ..."` was called with no `-Root` while the shell
+     was still in zng-admin's folder - it launched a second zng-admin instance
+     (`zng-admin:flutter-run-4`) instead of zng-biller, caught only by `sv.ps1 ls` showing two
+     `zng-admin:` entries and zero `zng-biller:` ones.
 
 2. **On failure, clean up before you retry.** If the process is `crashed` (`sv.ps1 ls` or `sv.ps1 logs -Id <id>`):
    - Read the logs to see why.
@@ -39,6 +46,27 @@ Start a long-lived dev server through server_supervisor instead of spawning it i
    - Delete (remove the entry entirely): `sv.ps1 rm -Id <id>` (stop it first if running)
    - List everything: `sv.ps1 ls`
 
+## Wait for readiness before using it
+
+A just-started or just-restarted entry is running but may still be mid cold-boot. Poll
+`sv.ps1 logs -Id <id>` for a readiness marker in a `run_in_background` + bash `until` loop
+(per this harness's own "wait for a condition" guidance) instead of blocking synchronously or
+guessing a fixed sleep:
+
+```bash
+until powershell -File "<dir>\sv.ps1" logs -Id <id> | grep -q "<marker>"; do sleep 2; done
+```
+
+Known markers (not exhaustive):
+- NestJS: `Nest application successfully started`
+- Flutter web / chrome / mobile: see the readiness cell per target in the Port table below - the
+  `-d web-server` and `-d chrome`/mobile markers are different lines and NEVER share a grep pattern.
+- Generic Node dev servers: whatever "ready"/"listening on port" line the tool prints.
+
+A genuinely large Flutter web app's first cold DDC compile can still take 1-3+ minutes after its
+readiness marker appears - a blank first page load isn't necessarily broken; give it up to
+~60-90s before concluding something's wrong.
+
 ## Port table (do this in step 1)
 
 For a dynamic port to take effect, template the port flag INTO the command with the literal `{PORT}` placeholder. The supervisor substitutes it AND sets the `PORT` env var.
@@ -47,8 +75,8 @@ For a dynamic port to take effect, template the port flag INTO the command with 
 | --- | --- |
 | Vite | `vite --port {PORT}` (or `npm run dev -- --port {PORT}`) |
 | Next.js | `next dev -p {PORT}` |
-| Flutter web (auto-reload) | `flutter run -d web-server --web-port {PORT}` - after editing source, call `POST /procs/<id>/reload` (not `/restart`) to hot-restart via the daemon; the supervisor's live-reload proxy then refreshes every open tab on its own, no manual F5 |
-| Flutter web (chrome) | `flutter run -d chrome --web-port {PORT}` - flutter owns its chrome; no supervisor proxy, no auto-refresh |
+| Flutter web (auto-reload) | `flutter run -d web-server --web-port {PORT}` - after editing source, call `POST /procs/<id>/reload` (not `/restart`) to hot-restart via the daemon; the supervisor's live-reload proxy then refreshes every open tab on its own, no manual F5. Readiness: `[flutter] app started` / `[flutter] serving at http://localhost:<port>` - this target NEVER prints `Debug service listening` (that needs the Dart Debug Chrome extension), so a loop grepping for it hangs forever even after a healthy compile |
+| Flutter web (chrome) | `flutter run -d chrome --web-port {PORT}` - flutter owns its chrome; no supervisor proxy, no auto-refresh. Readiness: `Debug service listening on ws://` (or `A Dart VM Service`) - `app started` fires first but mid-DDC-compile, so wait for the debug-service line specifically |
 | Node server reading `process.env.PORT` | no `{PORT}` needed - the env var is set automatically |
 | Tool with no port flag you can find | send `"use_dynamic_port": false` and accept its built-in port |
 
