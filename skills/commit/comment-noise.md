@@ -12,41 +12,40 @@ by naming a constraint, a gotcha, or a measurement the code cannot show.
 Restating the next line, narrating steps, labelling JSX sections, or parking
 design rationale in code all fail; rationale goes in the PR body.
 
-1. **Mechanical prefilter** (one command, no judgment, run it verbatim). Two
-   forms - pick the one matching what's being diffed, both share the same awk:
+**Write within the cap - this is a writing budget, not just a gate checked
+after the fact.** Before writing a block, decide if it names a constraint,
+gotcha, or measurement the code can't show; if not, don't write it.
+- Rust trap: the prefilter's `#` regex counts `#[attribute]` lines as
+  comments too, so a 4-line `///` doc block sitting right above one attribute
+  already trips `longest >= 5` - budget 3 doc lines max above an attribute.
+- Never reword an untouched comment - restoring it verbatim keeps it out of
+  the added-lines count entirely; rewording it to "say the same thing" adds
+  it back in for no reason.
+- If step 5a flags a block anyway: CUT it, never reword it. Rewording is what
+  turns one flag into six rounds of re-running the prefilter.
 
+1. **Mechanical prefilter** (one command, no judgment, run it verbatim via
+   Bash). Lives in `skills/commit/comment-noise.sh`, a real script rather than
+   inline in this file - skill-argument substitution rewrites a bare `$0`
+   found in a skill's own body text, which used to clobber awk's `$0` ("whole
+   current line") every time this was pasted inline. A script on disk is
+   never passed through that substitution.
+
+   - **Working-tree mode** (`/commit`'s step 5a, diffing the not-yet-committed
+     change): `git diff HEAD` alone is blind to untracked files - a brand-new
+     file has no `HEAD` entry, so it never appears in that diff and would
+     silently read as clean. The script folds every untracked file in scope
+     before running the same awk over the combined stream:
+     ```
+     bash skills/commit/comment-noise.sh <file> <file> ...
+     ```
    - **Range mode** (`/create-pr`, comparing the branch against its base -
      a branch diff already contains every file the branch added, so
      untracked files aren't a concern here). Diffs `<base>` against the
      working tree, not `<base>..HEAD`, so a re-run after step 2b's trims
      sees the trim instead of reporting the same stale hits:
      ```
-     git diff <base> | awk '
-     /^\+\+\+ b\// { f=substr($0,7); run=0; next }
-     /^\+/ && !/^\+\+\+/ {
-       l=substr($0,2); add[f]++
-       if (l ~ /^[[:space:]]*(\/\/|\/\*|\*|#[^[!]|#$|--|<!--)/) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
-       next
-     }
-     { run=0 }
-     END { for (k in add) if (max[k]>=5 || (add[k]>=20 && c[k]*100/add[k]>=25)) printf "%s %d/%d (%d%%) longest %d\n", k, c[k], add[k], c[k]*100/add[k], max[k] }' | sort
-     ```
-   - **Working-tree mode** (`/commit`'s step 5a, diffing the not-yet-committed
-     change): `git diff HEAD` alone is blind to untracked files - a brand-new
-     file has no `HEAD` entry, so it never appears in that diff and would
-     silently read as clean. Fold every untracked file in scope by diffing
-     each against `/dev/null`, then run the same awk over the combined stream:
-
-     ```
-     { git diff HEAD -- <files>; git status --porcelain -- <files> | awk '$1=="??"{print substr($0,4)}' | while IFS= read -r f; do git diff --no-index -- /dev/null "$f"; done; } | awk '
-     /^\+\+\+ b\// { f=substr($0,7); run=0; next }
-     /^\+/ && !/^\+\+\+/ {
-       l=substr($0,2); add[f]++
-       if (l ~ /^[[:space:]]*(\/\/|\/\*|\*|#[^[!]|#$|--|<!--)/) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
-       next
-     }
-     { run=0 }
-     END { for (k in add) if (max[k]>=5 || (add[k]>=20 && c[k]*100/add[k]>=25)) printf "%s %d/%d (%d%%) longest %d\n", k, c[k], add[k], c[k]*100/add[k], max[k] }' | sort
+     bash skills/commit/comment-noise.sh --range <base>
      ```
 
    No output = `clean` in either mode, and the check is done. Do not read a

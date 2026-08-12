@@ -223,8 +223,10 @@ COMMITTING IS PART OF YOUR JOB. You cannot invoke /commit as a skill, so follow 
 exactly. Do not improvise around it and do not skip a step because the change looks small.
 
 1. A global PreToolUse hook BLOCKS raw `git commit`. Immediately before EVERY commit, write a fresh
-   marker (the hook needs one written within the last 2 minutes, and consumes only the oldest, so
-   concurrent agents do not steal each other's):
+   marker IN ITS OWN TOOL CALL, never chained with the commit (`;`/`&&`) - the hook inspects the
+   whole command string BEFORE any of it runs, so a chained marker is always rejected whole (the
+   hook needs one written within the last 2 minutes, and consumes only the oldest, so concurrent
+   agents do not steal each other's):
    Set-Content -Path "C:\Users\tecno\.claude\hooks\.commit-marker-$([guid]::NewGuid().ToString('N'))" -Value "x"
 
 2. Run `git status` and `git diff` scoped to YOUR files only.

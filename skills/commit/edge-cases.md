@@ -5,7 +5,7 @@ rare paths, not part of the normal flow.
 
 ## Merge commits
 
-Merges go through this skill's flow too - never a raw `git merge` + push that lands an unreviewed merge commit, and never `git commit` directly.
+Merges go through this skill's flow too - never a raw `git merge` + push that lands an unreviewed merge commit, never `git commit` directly, and never a raw `git cherry-pick` either: it creates a commit the same way `git commit` does, bypassing the marker gate just as easily. Make sure this session's commit-marker exists before it runs (see the commit-guard section above). Unlike a merge, a cherry-pick's message usually keeps the original commit's message as-is - it's carrying forward an already-reviewed commit, so there's no `MERGE:`-style rewrite; the marker is the only thing it's missing.
 
 - **When a merge is needed:** a non-fast-forward push (remote has commits local never pulled) or deliberately absorbing superseded remote history into a new line of work.
 - **Prefer the least-surprising resolution.** If a plain `git pull --no-rebase` merges cleanly and the result is what you want, take it. Only reach for `git merge -s ours <remote-ref>` when you intentionally want to KEEP local content and record the remote history as absorbed-but-superseded (e.g. an old framework version preserved on a legacy branch).
