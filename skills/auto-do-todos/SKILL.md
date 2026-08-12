@@ -64,8 +64,10 @@ There is no `--sleep` flag. Chain `/sleep-when-done` yourself if you want it.
 Both `/cleanup-todos` and `/batch-todos` have an "Unattended runs" section. A `/auto-do-todos` run
 IS an unattended run, so:
 
-- `/cleanup-todos` still prints its full report, then auto-resolves as `keep all` - no merges, no
-  drops, nothing archived. Its pending dedupe/drop candidates carry into the Step 9 summary.
+- `/cleanup-todos` still prints its full report. Its own origin rule then applies unchanged:
+  `ai`/absent-origin todos that are dead, duplicate or not worth doing ARE archived, with no confirm
+  gate - that gate never existed for them. Only `dev`-origin candidates carry into the Step 9 summary
+  as still-pending.
 - `/batch-todos` still prints its dry-run report, then proceeds as though the dev replied `run it`.
   Its Step 5 `FLAG` verdicts still re-queue as HARD rather than being auto-answered.
 
