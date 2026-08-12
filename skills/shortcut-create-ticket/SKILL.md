@@ -82,6 +82,16 @@ Staleness check: if none of these fit, or the newest pinned epic is >1 quarter o
 
 ## Flow
 
+### 0. FE "implement this design/flow" tickets - ground in current code first
+
+Applies only to tickets that mean "implement X flow" or "build Y screen" against an existing FE app (zng-app/zng-admin/zng-biller); skip for bugs, chores, or BE tickets.
+
+- Before drafting scope/description: read the current implementation of the affected screen/flow (dispatch an Explore subagent if it's a wide read) and diff it against the new design - never paraphrase a linked design ticket's spec text as if it were the diff.
+- Confirm whether the visual reference is a live-product screenshot or a design-tool (Figma/Miro) mockup before picking a template - repro/actual/expected only fits a defect in a *running* product.
+- Default to one ticket per shared root-cause/screen, not one per symptom found on it, unless the dev says otherwise.
+
+Past incident (2026-07-21): a ticket was drafted by paraphrasing linked design-ticket spec text instead of reading `zng-admin`'s actual biller-group screens, and landed wrong until the dev pointed at the real code.
+
 ### 1. Front-load questions (AskUserQuestion, never open-ended)
 
 Ask ONLY what can't be inferred, in one batch:
@@ -178,6 +188,6 @@ Tell the dev the new story ID + URL and which defaults were applied. If he also 
 ## What this skill never does
 
 - Never posts comments without explicit approval.
-- Never updates existing tickets other than the one just created.
+- Never updates existing tickets other than the one just created - for that, use `~/.claude/skills/shortcut-update-ticket/`.
 - Never generates branch names. the dev handles Git.
 - Never invents custom field UUIDs. Fetch unknown ones from `custom-fields-list` / `GET /api/v3/custom-fields` and pin them.
