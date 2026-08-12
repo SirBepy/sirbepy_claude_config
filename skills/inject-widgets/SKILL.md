@@ -21,7 +21,7 @@ Add the following just before `</body>` if not already present:
 
 ```html
 <!-- Settings widget - comment out to disable -->
-<script src="https://cdn.jsdelivr.net/gh/sirbepy/bepy-project-init@cb6aebd1b672d69bae3aff91581a0a6c6ab2e695/widget/settings.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/sirbepy/bepy-project-init@cb6aebd1b672d69bae3aff91581a0a6c6ab2e695/widget/settings.js" integrity="sha384-XqnpxRCwFEPZrWuLruU+i5GGSEgUckkuK/Yw2lh2ft9Wj/lYPnXvDyHxHdpyJD3k" crossorigin="anonymous"></script>
 ```
 
 The widget always renders in the top-right corner.
@@ -34,8 +34,13 @@ Add the following just after the settings widget script, before `</body>`, if no
 
 ```html
 <!-- Animated background. To disable: set window.BEPY_BACKGROUND = false before this tag. To use a custom SVG: set window.BEPY_BG_PATTERN = 'your-pattern.svg' before this tag. -->
-<script src="https://cdn.jsdelivr.net/gh/sirbepy/bepy-project-init@cb6aebd1b672d69bae3aff91581a0a6c6ab2e695/widget/background.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/sirbepy/bepy-project-init@cb6aebd1b672d69bae3aff91581a0a6c6ab2e695/widget/background.js" integrity="sha384-0icxjbauzIJXB+EZsImSSwXo+42rqrV61xvOKHFNcJURAs0hZeCc587J5gUeeTP3" crossorigin="anonymous"></script>
 ```
+
+Both hashes are pinned to commit `cb6aebd1b672d69bae3aff91581a0a6c6ab2e695`. Bumping the
+commit pin without recomputing SRI breaks every project silently rejecting the load, not
+falling back: recompute both hashes (`SHA384` over the fetched file bytes) in the same edit
+as any future pin bump.
 
 ### Step 4 - Confirm
 

@@ -91,7 +91,9 @@ that breaks a rule the repo spent a page explaining.
    (`model: 'sonnet'`, read-only, "report findings, edit nothing") that reads the docs plus
    `git show <range>` and returns findings only. Keeps the raw doc bytes out of the main context.
 3. **Judge only against rules that are actually written**, and QUOTE each one. A finding without a
-   quote is not a finding.
+   quote is not a finding. **A rule only binds files in the language/stack it targets** - a
+   Dart-specific rule cited against an HTML, Python, or JS file is not a finding; when scope is
+   genuinely unclear, treat it as an unwritten-rule observation instead.
 4. Record each as:
 
 ```json
