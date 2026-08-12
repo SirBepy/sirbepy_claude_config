@@ -18,6 +18,14 @@ Steps:
    `& "C:\Users\tecno\.claude\skills\commit\watch-build.ps1" -Branch <branch> -RepoPath <path>`
 
    Use a literal path (never `$env:`-built) so it doesn't trigger a permission prompt.
+
+   **"In the background" means the PowerShell tool's own `run_in_background: true` parameter, and
+   nothing else.** Never `Start-Process`, `Start-Job`, `nohup`, or a trailing `&`: those detach the
+   process from the harness's background-task tracking, so step 4's "you'll be re-invoked with its
+   stdout" never fires and the watcher runs to completion with nobody reading the result. A 2026-08-10
+   `windows_taskbar_widgets` push launched it via `Start-Process -WindowStyle Hidden` and the result
+   was silently lost; the stray process had to be found with `Get-CimInstance` and killed. The call
+   is a single PowerShell tool call carrying the line above, with `run_in_background` set to true.
 4. **Announce and move on.** Tell the user: "Pushed. Watching the CI build in the background - I'll ping you when it lands. Say 'drop it' to ignore." Do NOT block or poll; you'll be re-invoked when the watcher exits.
 
 When the watcher finishes you are re-invoked with its stdout. Parse the `BUILD_RESULT` marker:
