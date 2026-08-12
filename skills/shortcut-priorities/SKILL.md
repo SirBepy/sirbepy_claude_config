@@ -26,7 +26,7 @@ argument-hint: "[lookback_days]"
 ## Required tools
 
 - `Bash` — curl against both the private activity endpoint and the public v3 API; python for JSON grouping (no `jq` in this environment — confirmed absent, use python).
-- `Agent` (`general-purpose`, model `sonnet`) — only if the candidate-ticket count exceeds the dispatch-volume gate in step 4. Otherwise do the ticket reads inline.
+- `Agent` (`general-purpose`, model `sonnet`) - only if the candidate-ticket count exceeds the dispatch-volume gate in step 5. Otherwise do the ticket reads inline.
 
 ## Auth — two different credentials, don't confuse them
 
@@ -35,7 +35,7 @@ argument-hint: "[lookback_days]"
    - Tenant IDs are stable. Only `SHORTCUT_SID` expires. If the first call returns `403` / `401` / `"tag":"...unauthorized"`, THEN ask Joe for a fresh one: open Shortcut → DevTools → Network → reload the Stories view → right-click the `activity` request → Copy as cURL → paste. Extract the `sid=` value, overwrite `SHORTCUT_SID` in `~/.claude/.env`, retry.
    - `"tag":"organization2_missing"` is NOT an expired cookie — it means the tenant headers didn't reach the server (usually a broken env extraction). Fix the extraction, don't ask Joe.
    - Env extraction gotcha: a `grep` pattern anchored with `^` plus literal `\xEF\xBB\xBF` BOM bytes silently matches nothing inside double quotes. Use the unanchored form: `grep -i "SHORTCUT_SID=" "$ENV" | sed 's/^.*SHORTCUT_SID=//' | sed 's/\xEF\xBB\xBF//g' | tr -d '\r\n'`.
-2. **Public v3 API** (`api.app.shortcut.com/api/v3`) — the durable `SHORTCUT_API_TOKEN` in `~/.claude/.env` (has a BOM — strip it, see extraction pattern below). Used for the full-ticket-detail pass in step 3. Fine to use freely, no need to re-ask each run.
+2. **Public v3 API** (`api.app.shortcut.com/api/v3`) - the durable `SHORTCUT_API_TOKEN` in `~/.claude/.env` (has a BOM - strip it, see extraction pattern below). Used for the full-ticket-detail pass in step 4. Fine to use freely, no need to re-ask each run.
 
 ```bash
 python -c "
@@ -55,42 +55,94 @@ Dev UUID, mention name, and workflow-state IDs: see `~/.claude/refs/shortcut-api
 
 ## Flow
 
-### 1. Paginate the private activity feed
+### 0. Liveness probe - verify SHORTCUT_SID before committing to the full run
 
-The endpoint pages **backwards in time** via a `before` cursor. Each response returns `{start, end, data}` — `start` is the earliest timestamp in that page; feed it back in as the next `before`. `before` must not be in the future (server 400s with `"Can not set timestamp to future time."` — seed the first call with a known-good recent timestamp, e.g. the last `end` you've seen, not a computed "now").
+One cheap call against the private activity endpoint, before paginating, so a dead cookie surfaces immediately instead of after burning a failed page fetch (or mid-loop, if it expires between calls).
 
-```bash
-COOKIE='sid=...'          # from Joe's pasted request, this run only
-ORG='...'                 # tenant-organization2
-WS='...'                  # tenant-workspace2
-before="<recent-known-good-ISO-timestamp>"
-CUTOFF="<today - lookback_days, ISO>"
-i=0
-while true; do
-  i=$((i+1))
-  resp=$(curl -s -X POST 'https://app.shortcut.com/backend/api/private/permission/activity' \
-    -H 'accept: */*' -H 'content-type: application/json; charset=UTF-8' \
-    -H "tenant-organization2: $ORG" -H "tenant-workspace2: $WS" \
-    -H 'x-requested-with: XMLHttpRequest' -H "cookie: $COOKIE" \
-    -d "{\"before\":\"$before\"}")
-  echo "$resp" > "C:/tmp/shortcut_notif/page_$i.json"
-  start=$(echo "$resp" | grep -o '"start":"[^"]*"' | head -1 | cut -d'"' -f4)
-  [ -z "$start" ] && break        # error/empty — stop, surface the raw response to Joe
-  [[ "$start" < "$CUTOFF" ]] && break
-  before="$start"
-  [ $i -gt 60 ] && break          # safety stop
-done
+```python
+import json, urllib.request, urllib.error
+
+COOKIE = 'sid=...'   # cached SHORTCUT_SID from ~/.claude/.env
+ORG    = '...'       # cached SHORTCUT_TENANT_ORG
+WS     = '...'       # cached SHORTCUT_TENANT_WS
+before = '<recent-known-good-ISO-timestamp>'   # last `end` you've seen, never a computed "now"
+
+req = urllib.request.Request(
+    'https://app.shortcut.com/backend/api/private/permission/activity',
+    data=json.dumps({'before': before}).encode('utf-8'),
+    headers={
+        'accept': '*/*', 'content-type': 'application/json; charset=UTF-8',
+        'tenant-organization2': ORG, 'tenant-workspace2': WS,
+        'x-requested-with': 'XMLHttpRequest', 'cookie': COOKIE,
+    },
+    method='POST',
+)
+try:
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        probe_body = resp.read().decode('utf-8')
+except urllib.error.HTTPError as e:
+    if e.code in (401, 403):
+        print('SHORTCUT_SID is dead. Refresh it:')
+        print('  Shortcut -> DevTools -> Network -> reload the Stories view -> right-click the `activity` request -> Copy as cURL')
+        print('  Extract the sid= value, overwrite SHORTCUT_SID in ~/.claude/.env, retry.')
+        raise SystemExit(1)
+    raise   # any other status: read it, don't retry blindly (see Step 2)
 ```
 
-If the very first call errors, don't retry blindly — read the error (`page_1.json`). A `"Can not set timestamp to future time"` means the seed timestamp was bad, not that the cookie is dead.
+`probe_body` is itself page 1 of the activity feed - hand it straight to Step 2's loop as the first iteration instead of re-fetching.
 
-### 2. Dedupe + group by ticket (python, not jq — not installed)
+### 2. Paginate the private activity feed
+
+The endpoint pages **backwards in time** via a `before` cursor. Each response returns `{start, end, data}` - `start` is the earliest timestamp in that page; feed it back in as the next `before`. `before` must not be in the future (server 400s with `"Can not set timestamp to future time."` - seed the first call with a known-good recent timestamp, e.g. the last `end` you've seen, not a computed "now"). Python, not bash - ports the loop that used to live here exactly, edge case for edge case:
+
+```python
+import json, os, urllib.request, urllib.error
+
+os.makedirs('C:/tmp/shortcut_notif', exist_ok=True)
+cutoff = '<today - lookback_days, ISO>'
+i = 0
+while True:
+    i += 1
+    req = urllib.request.Request(
+        'https://app.shortcut.com/backend/api/private/permission/activity',
+        data=json.dumps({'before': before}).encode('utf-8'),
+        headers={
+            'accept': '*/*', 'content-type': 'application/json; charset=UTF-8',
+            'tenant-organization2': ORG, 'tenant-workspace2': WS,
+            'x-requested-with': 'XMLHttpRequest', 'cookie': COOKIE,
+        },
+        method='POST',
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            body = resp.read().decode('utf-8')
+    except urllib.error.HTTPError as e:
+        body = e.read().decode('utf-8')
+        open(f'C:/tmp/shortcut_notif/page_{i}.json', 'w', encoding='utf-8').write(body)
+        print(f'HTTP {e.code} on page {i}: {body[:500]}')   # error - surface the raw response to Joe, don't retry blindly
+        break
+
+    open(f'C:/tmp/shortcut_notif/page_{i}.json', 'w', encoding='utf-8').write(body)
+    data = json.loads(body)
+    start = data.get('start')
+    if not start:            # empty - stop, surface the raw response to Joe
+        break
+    if start < cutoff:
+        break
+    before = start
+    if i > 60:                # safety stop
+        break
+```
+
+If the very first call errors, don't retry blindly - read the error (`page_1.json`). A `"Can not set timestamp to future time"` means the seed timestamp was bad, not that the cookie is dead (that's what Step 0 already ruled out).
+
+### 3. Dedupe + group by ticket (python, not jq - not installed)
 
 Merge all `data[]` arrays, dedupe by event `id`, then group by the story each event is actually about: prefer an `actions[].entity_type == "story"` entry (its `id`/`name`/`app_url`), fall back to a `references[].entity_type == "story"` entry, fall back to `primary_id` if it's an int. Skip events with no resolvable story (workspace-level bulk-update noise, reactions on entities you can't resolve, etc.).
 
 Per ticket, track: `reasons` (union across events — `mention`, `assignment`, `author`, `follower`, `group-assignment-*`), comment events (`entity_type=="story-comment", action=="create"`, with `mention_ids` telling you if Joe was `@`-mentioned in that specific comment), and last-activity timestamp. `PYTHONIOENCODING=utf-8` is required on this Windows setup — comment text contains emoji that break the default `cp1250` console encoding otherwise.
 
-### 3. Filter to candidates worth reading, then pull full ticket + comments (public API)
+### 4. Filter to candidates worth reading, then pull full ticket + comments (public API)
 
 Not every grouped ticket needs a deep read. Skip tickets whose only reasons are `follower`/`group-assignment-*` with zero comments — that's pure board-hygiene noise. Candidates worth a full read: any ticket with `mentions > 0` OR `comments > 0` from someone other than Joe.
 
@@ -100,21 +152,23 @@ curl -s "https://api.app.shortcut.com/api/v3/stories/<id>" -H "Shortcut-Token: $
 ```
 Check `completed`, `started`, `blocked`, `workflow_state_id`, and read the full `comments[]` (the activity feed truncates text). This is what tells you whether the thread is actually still open — e.g. Joe already replied after the last mention, or the ticket completed since the mention was posted.
 
-### 4. Dispatch-volume gate
+### 5. Dispatch-volume gate
 
 - **≤ 10 candidate tickets:** read them inline (as above).
-- **> 10:** fan out one `general-purpose` agent per ticket (or batches of 2-3), `model: 'sonnet'`, single message multiple `Agent` calls. Each dispatch only needs the ticket ID + the public API token pattern above (never the session cookie — it's not needed past step 1). Ask each to return: last commenter, is it Joe, is there an unanswered direct question/QA rejection, current workflow state, one-line verdict.
+- **> 10:** fan out one `general-purpose` agent per ticket (or batches of 2-3), `model: 'sonnet'`, single message multiple `Agent` calls. Each dispatch only needs the ticket ID + the public API token pattern above (never the session cookie - it's not needed past step 2). Ask each to return: last commenter, is it Joe, is there an unanswered direct question/QA rejection, current workflow state, one-line verdict.
 
-### 5. Cross-reference with real code state before calling something "still open"
+### 6. Cross-reference with real code state before calling something "still open"
 
-A QA comment or rejected fix can be stale — check git before flagging:
+A QA comment or rejected fix can be stale - check git across all four ZNG repos before flagging (a same-day fix commonly lands in `zng-admin` or `zng-biller`, not just `zng-app`):
 
 ```bash
-git -C C:/Users/tecno/Desktop/Projects/zng-app log --oneline -10 --grep="<ticket-id>"
+for repo in C:/Users/tecno/Desktop/Projects/zng-app C:/Users/tecno/Desktop/Projects/zng-admin C:/Users/tecno/Desktop/Projects/zng-api C:/Users/tecno/Desktop/Projects/zng-biller; do
+  git -C "$repo" log --oneline -10 --grep="<ticket-id>"
+done
 ```
 and compare commit timestamps against the comment timestamp. A same-day-or-later commit whose message plausibly addresses the QA feedback means "likely already fixed, worth a re-verify ping" rather than "untouched." Don't assume — read the commit's diff/subject before downgrading a finding.
 
-### 6. Synthesize the prioritized report
+### 7. Synthesize the prioritized report
 
 Rank by actual urgency, not recency:
 
