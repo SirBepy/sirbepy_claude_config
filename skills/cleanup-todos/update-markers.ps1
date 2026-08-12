@@ -19,6 +19,19 @@ param(
 $ErrorActionPreference = 'Stop'
 $MarkerRe = '(?m)^<!--[ \t]*cleanup:.*?-->[ \t]*\r?\n?'
 $ClaimRe  = '(?m)^<!--[ \t]*Claim before executing:.*?-->[ \t]*\r?\n'
+$TitleRe  = '(?m)^#[ \t]'
+
+# A real marker lives in the header, above the title. Todos that DOCUMENT the marker format quote
+# it in their prose, and an unanchored search treats that quote as the marker (2026-08-12: todo 99's
+# evidence block was overwritten this way).
+function Get-HeaderMarker {
+    param([string]$Text)
+    $title = [regex]::Match($Text, $TitleRe)
+    $limit = if ($title.Success) { $title.Index } else { $Text.Length }
+    $m = [regex]::Match($Text, $MarkerRe)
+    if ($m.Success -and $m.Index -lt $limit) { return $m }
+    return $null
+}
 
 function Get-SectionHash {
   param([string]$Text)
@@ -47,10 +60,10 @@ foreach ($row in $rows) {
 
   $text     = [System.IO.File]::ReadAllText($path)
   $newHash  = Get-SectionHash -Text $text
-  $existing = [regex]::Match($text, $MarkerRe)
+  $existing = Get-HeaderMarker -Text $text
 
   $oldHash = $null; $oldCount = 0
-  if ($existing.Success) {
+  if ($existing) {
     $h = [regex]::Match($existing.Value, 'content-hash=([0-9a-f]+)')
     $c = [regex]::Match($existing.Value, 'reconfirm-count=(\d+)')
     if ($h.Success) { $oldHash = $h.Groups[1].Value }
@@ -58,15 +71,17 @@ foreach ($row in $rows) {
   }
 
   $valid = $row.still_valid -eq 'true'
-  if (-not $valid)                                   { $count = [Math]::Max($oldCount, 1) }
-  elseif ($existing.Success -and $oldHash -eq $newHash) { $count = $oldCount + 1 }
-  else                                               { $count = 1 }
+  if (-not $valid)                             { $count = [Math]::Max($oldCount, 1) }
+  elseif ($existing -and $oldHash -eq $newHash) { $count = $oldCount + 1 }
+  else                                         { $count = 1 }
 
   $marker = "<!-- cleanup: last-checked $Date, complexity=$($row.complexity), worth=$($row.worth), reconfirm-count=$count, content-hash=$newHash -->"
 
-  if ($existing.Success) {
+  if ($existing) {
+    # Splice by index. String.Replace swaps EVERY occurrence, so a prose copy of the marker
+    # elsewhere in the file would be rewritten too.
     $trailer = if ($existing.Value -match '\r?\n$') { [regex]::Match($existing.Value, '\r?\n$').Value } else { "`r`n" }
-    $updated = $text.Replace($existing.Value, $marker + $trailer)
+    $updated = $text.Substring(0, $existing.Index) + $marker + $trailer + $text.Substring($existing.Index + $existing.Length)
   } else {
     $claim = [regex]::Match($text, $ClaimRe)
     if ($claim.Success) {
@@ -83,7 +98,7 @@ foreach ($row in $rows) {
     [System.IO.File]::WriteAllText($path, $updated, (New-Object System.Text.UTF8Encoding($false)))
     $written++
   }
-  $report += [pscustomobject]@{ file = $row.file; worth = $row.worth; count = $count; hash = $newHash; had_marker = $existing.Success }
+  $report += [pscustomobject]@{ file = $row.file; worth = $row.worth; count = $count; hash = $newHash; had_marker = [bool]$existing }
 }
 
 # Emit objects, not a formatted table - Format-Table here breaks any caller that pipes this.
