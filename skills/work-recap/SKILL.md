@@ -21,7 +21,14 @@ Examples:
 - `/work-recap fibo daily`
 - `/work-recap fibo daily copy`
 
-If `<group>` or `<variant>` is missing, ask the dev which recap to run via AskUserQuestion. List the available variants from the table below.
+If `<group>` is missing, infer it from the invoking session's cwd before asking:
+
+- cwd inside `zng-app`, `zng-admin`, `zng-api`, or `zng-biller` -> `zirtue`
+- cwd inside a fibo-named repo -> `fibo`
+
+Use the inferred group directly, skip the question, when cwd matches exactly one of the above. If cwd
+doesn't map to a known repo, fall back to AskUserQuestion. `<variant>` still always needs asking when
+missing - cwd can't disambiguate weekly vs daily. List the available variants from the table below.
 
 The optional trailing `copy` flag tells the variant to also copy the final output file to the system clipboard after writing it.
 

@@ -45,17 +45,34 @@ Run `fvm flutter pub get` then `fvm dart run flutter_launcher_icons`. The `asset
 
 ## Step 2 - Release keystore (generated OUTSIDE the repo)
 
-Never commit a keystore or its password. Generate once, store under `~/.android-keystores/`:
+Never commit a keystore or its password. Generate once, store under `~/.android-keystores/`. Run as
+separate PowerShell calls (no `;`/`&&` chaining):
 
-```bash
-KS_DIR="$HOME/.android-keystores"; mkdir -p "$KS_DIR"
-KS="$KS_DIR/<app>-release.jks"
-PASS=$(head -c 24 /dev/urandom | base64 | tr -d '/+=' | head -c 28)
-echo "$PASS" > "$KS_DIR/<app>-release.pass.txt"
-keytool -genkeypair -v -keystore "$KS" -storetype JKS -keyalg RSA -keysize 2048 \
-  -validity 10000 -alias <app> -storepass "$PASS" -keypass "$PASS" \
+```powershell
+$KsDir = "$env:USERPROFILE\.android-keystores"
+New-Item -ItemType Directory -Force -Path $KsDir | Out-Null
+$Ks = "$KsDir\<app>-release.jks"
+```
+```powershell
+$Bytes = New-Object byte[] 24
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($Bytes)
+$Pass = ([Convert]::ToBase64String($Bytes) -replace '[/+=]', '').Substring(0, 28)
+```
+```powershell
+# Windows PowerShell 5.1 prepends a UTF-8 BOM to Set-Content/Out-File even with
+# -Encoding utf8, which later breaks gh secret set - WriteAllText with a no-BOM
+# encoding avoids it.
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText("$KsDir\<app>-release.pass.txt", $Pass, $Utf8NoBom)
+```
+```powershell
+keytool -genkeypair -v -keystore $Ks -storetype JKS -keyalg RSA -keysize 2048 `
+  -validity 10000 -alias <app> -storepass $Pass -keypass $Pass `
   -dname "CN=<App>, OU=SirBepy, O=SirBepy, L=Zagreb, S=Zagreb, C=HR"
 ```
+
+This matches the original bash algorithm exactly: 24 random bytes, base64-encoded, `/+=`
+stripped, truncated to 28 chars.
 
 If the keystore already exists, reuse it - do NOT regenerate (a new key breaks upgrade-in-place for anyone who already installed).
 
@@ -185,16 +202,30 @@ Note: the tag is the pubspec version (e.g. `v1.0.0`). Re-pushing without bumping
 
 ## Step 5 - Set repo secrets
 
-```bash
-REPO=<owner/repo>
-base64 -w0 "$KS" | gh secret set RELEASE_KEYSTORE_BASE64 --repo "$REPO"
-printf '%s' "$PASS"  | gh secret set RELEASE_STORE_PASSWORD --repo "$REPO"
-printf '%s' "<app>"  | gh secret set RELEASE_KEY_ALIAS      --repo "$REPO"
-printf '%s' "$PASS"  | gh secret set RELEASE_KEY_PASSWORD   --repo "$REPO"
-gh secret list --repo "$REPO"
+`gh secret set --body` takes the value as a CLI argument (not stdin), so no pipe chain and no
+file-write BOM risk. Each secret as its own separate PowerShell call:
+
+```powershell
+$Repo = "<owner/repo>"
+$KsB64 = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($Ks))
+gh secret set RELEASE_KEYSTORE_BASE64 --repo $Repo --body $KsB64
+```
+```powershell
+gh secret set RELEASE_STORE_PASSWORD --repo $Repo --body $Pass
+```
+```powershell
+gh secret set RELEASE_KEY_ALIAS --repo $Repo --body "<app>"
+```
+```powershell
+gh secret set RELEASE_KEY_PASSWORD --repo $Repo --body $Pass
+```
+```powershell
+gh secret list --repo $Repo
 ```
 
-`gh secret set` on stdin needs the account hook to have switched to the repo's owner - warn the dev if a credential popup appears (it came from Claude).
+`[Convert]::ToBase64String` produces unwrapped base64 (no line breaks), matching bash's `base64 -w0`.
+
+`gh secret set` needs the account hook to have switched to the repo's owner - warn the dev if a credential popup appears (it came from Claude).
 
 ## Step 6 - Verify locally, then commit
 

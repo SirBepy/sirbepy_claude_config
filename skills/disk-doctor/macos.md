@@ -4,6 +4,12 @@ Repeatable cleanup scan for Joe's Mac (darwin/arm64). You **advise**, never dele
 
 ## How to run a scan
 
+**Dispatch, don't run inline.** Send the scan commands for this round to a `general-purpose` subagent,
+`model: sonnet`, prompted to run the listed commands and return only a digested summary (dirs/caches
+over ~1GB with sizes) - never raw `du`/`find` dumps into the main thread. One subagent call per round
+(initial sweep, then a separate one per drill-down round) keeps the back-and-forth Joe-steered without
+a monolithic report.
+
 Run in parallel, then rank findings by payoff (GB freed × ease × reversibility):
 
 ```bash

@@ -1,6 +1,6 @@
 # shortcut-done-audit — investigation dispatch prompt
 
-Read this file at step 6 (dispatch investigation subagent(s)) before firing any Agent calls. Fill in the per-ticket facts computed in steps 1-5, then paste the resulting prompt to each subagent.
+Read this file at step 5 (dispatch investigation subagent(s)) before firing any Agent calls. Fill in the per-ticket facts computed in steps 1-5, then paste the resulting prompt to each subagent.
 
 ## Dispatch prompt shape
 

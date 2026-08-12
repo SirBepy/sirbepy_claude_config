@@ -23,6 +23,12 @@ function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0
 
 ## How to run a scan
 
+**Dispatch, don't run inline.** Send the scan commands for this round to a `general-purpose` subagent,
+`model: sonnet`, prompted to run the listed PowerShell blocks and return only a digested summary
+(dirs/caches over ~1GB with sizes) - never raw robocopy table dumps into the main thread. One subagent
+call per round (initial sweep, then a separate one per drill-down round) keeps the back-and-forth
+Joe-steered without a monolithic report.
+
 Run these (PowerShell), then rank findings by payoff (GB freed × ease × reversibility). All read-only.
 
 ```powershell

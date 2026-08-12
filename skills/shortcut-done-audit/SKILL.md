@@ -27,7 +27,7 @@ argument-hint: "[states]"
 
 ## Required tools
 
-- `Bash` — git log/show/branch in the three repos; curl against Shortcut REST API.
+- `Bash` - git log/show/branch in the four repos; curl against Shortcut REST API.
 - `Agent` (`general-purpose`, model `sonnet`) — one per candidate ticket with commits. Run in parallel (single message, multiple Agent calls), not via the Workflow tool unless Joe explicitly asks for multi-agent orchestration.
 
 **Shortcut API access:** token in `~/.claude/.env` as `SHORTCUT_API_TOKEN` (has a BOM, strip it), header `Shortcut-Token`. Never write the token to a file — always inline `TOKEN=$(...)` in the same command that uses it (writing it to disk gets blocked by the sandbox anyway).
@@ -36,8 +36,7 @@ argument-hint: "[states]"
 
 Dev UUID, mention name, git author, and workflow-state IDs: see `~/.claude/refs/shortcut-api.md`.
 
-- Repos (sibling paths): `C:/Users/tecno/Desktop/Projects/zng-app`, `zng-admin`, `zng-api`. Fetch (never pull/checkout) before reading. zng-api is read-only for scope in this skill (Joe rarely authors there, but still check — a ticket could span BE too).
-- State cache: `C:/Users/tecno/.claude/skills/shortcut-done-audit/state/audit_cache.json` — persists across runs (not `/tmp`, which can get cleared). Maps ticket ID → `{shas: [...], verdict, verdict_summary, audited_at}`.
+- Repos (sibling paths): `C:/Users/tecno/Desktop/Projects/zng-app`, `zng-admin`, `zng-api`, `zng-biller`. Fetch (never pull/checkout) before reading. zng-api is read-only for scope in this skill (Joe rarely authors there, but still check, a ticket could span BE too).
 
 ## Flow
 
@@ -47,6 +46,7 @@ Dev UUID, mention name, git author, and workflow-state IDs: see `~/.claude/refs/
 git -C C:/Users/tecno/Desktop/Projects/zng-app fetch --quiet
 git -C C:/Users/tecno/Desktop/Projects/zng-admin fetch --quiet
 git -C C:/Users/tecno/Desktop/Projects/zng-api fetch --quiet
+git -C C:/Users/tecno/Desktop/Projects/zng-biller fetch --quiet
 ```
 
 Stop and tell Joe if any fetch fails — don't reason against stale state.
@@ -63,7 +63,7 @@ Follow `.next` across pages (it's a full relative URL, `null` when done) until e
 
 ### 3. Match candidates to commits (primary + secondary signal)
 
-For each candidate ticket ID, across all three repos:
+For each candidate ticket ID, across all four repos:
 
 ```bash
 git -C <repo> log --all --oneline -E --grep="^${id}:"
@@ -71,41 +71,28 @@ git -C <repo> log --all --oneline -E --grep="^${id}:"
 
 If no prefix match, also try a broad `--grep "$id"` per repo to catch bundled references (e.g. `52627: foo (52630)`), but treat broad matches with more suspicion — confirm in the investigation step that the match is actually about this ticket, not a coincidental 5-digit number.
 
-**Secondary signal (don't rely on commit-message prefix alone — it misses squashed merges, differently-formatted subjects, and branch/PR-only work):** while fetching each candidate's story JSON anyway (needed for step 4/6), check its `branches` and `pull_requests` fields too. A non-empty `branches`/`pull_requests` with zero commit-grep hits is a **soft match** — still worth investigating, note in the dispatch prompt that detection came from branch/PR metadata, not a commit message, so the subagent should treat "does the code match scope" as more open-ended (can't `git show` a specific commit — needs to `git log` the branch or diff it against `develop` instead).
+**Secondary signal (don't rely on commit-message prefix alone, it misses squashed merges, differently-formatted subjects, and branch/PR-only work):** while fetching each candidate's story JSON anyway (needed for step 5), check its `branches` and `pull_requests` fields too. A non-empty `branches`/`pull_requests` with zero commit-grep hits is a **soft match**: still worth investigating, note in the dispatch prompt that detection came from branch/PR metadata, not a commit message, so the subagent should treat "does the code match scope" as more open-ended (can't `git show` a specific commit, needs to `git log` the branch or diff it against `develop` instead).
 
 Tickets with **zero** signal from both commit-grep and branches/PRs: skip, no investigation needed, they're genuinely not started.
 
-### 4. Check the dedupe cache before dispatching anything
+### 4. Dispatch-volume gate
 
-Read `state/audit_cache.json` if it exists. For each matched candidate, compare its current SHA set (commit hits + any branch-tip SHA from the soft-match case) against the cached entry:
-
-- **Unchanged since last audit** (same SHAs, cache entry exists): skip the subagent — reuse the cached verdict in the report, labeled `(cached from <audited_at>, unchanged)`. Don't re-burn tokens investigating a ticket nothing has moved on.
-- **New or changed** (no cache entry, or SHAs differ): needs a fresh investigation in step 6.
-
-If the cache file doesn't exist yet, treat every matched ticket as needing fresh investigation and create the file after step 6.
-
-### 5. Dispatch-volume gate
-
-Count how many tickets need a *fresh* investigation (post-dedupe). This is the actual cost driver — cap it here, not after the fact:
+Count how many tickets have signal from step 3 and need investigation. This is the actual cost driver, cap it here, not after the fact:
 
 - **≤ 8 tickets:** dispatch one subagent per ticket (1:1), as below.
 - **> 8 tickets:** stop and ask Joe via AskUserQuestion before firing anything: options along the lines of "investigate all (batched ~3 tickets/subagent to bound total agent count)", "investigate only the N most-recently-moved / highest-priority", or "cancel this run." Never silently fire 15+ parallel sonnet agents.
 
-### 6. Dispatch investigation subagent(s)
+### 5. Dispatch investigation subagent(s)
 
 Read `skills/shortcut-done-audit/investigation-prompt.md` now — it has the exact dispatch-prompt shape, the five core questions, and the edge cases learned from the first run. Fan out per that file's instructions: single message, multiple `Agent` calls, `model: 'sonnet'`, `subagent_type: 'general-purpose'`.
 
-### 7. Synthesize the report
+### 6. Synthesize the report
 
-Group by verdict, most actionable first (`DONE` → `SUPERSEDED` → `PARTIALLY DONE` → `MISMATCH` → `UNCLEAR`). Include cached (unchanged) verdicts from step 4 in their group too, labeled as cached. For each ticket: one-paragraph summary, the concrete blocking detail if any (unanswered comment, missing per-button payload, unmerged branch, etc.), and a suggested next Shortcut state — but do not apply anything yet.
+Group by verdict, most actionable first (`DONE` → `SUPERSEDED` → `PARTIALLY DONE` → `MISMATCH` → `UNCLEAR`). For each ticket: one-paragraph summary, the concrete blocking detail if any (unanswered comment, missing per-button payload, unmerged branch, etc.), and a suggested next Shortcut state, but do not apply anything yet.
 
 Report-only, no mutations, no comments — matches the pattern in `zirtue-release-backfill`.
 
-### 8. Update the dedupe cache
-
-After the report is delivered, write/merge the newly-investigated tickets into `state/audit_cache.json` (SHA set, verdict, one-line summary, `audited_at`). Cached (skipped) entries keep their existing cache row untouched. This is what makes the next run cheap.
-
-### 9. Apply actions (only after Joe confirms, per ticket)
+### 7. Apply actions (only after Joe confirms, per ticket)
 
 Once Joe responds with what he wants done (may be informal, e.g. "move X and Y to Testing, close Z as won't-do with comment '...'"), apply directly — no need for a formal multi-gate AskUserQuestion flow like the release-backfill skill, since findings are already ticket-scoped and Joe is confirming inline. Do ask a quick AskUserQuestion only when the target state is genuinely ambiguous (e.g. "close it" could mean `Complete` or `Won't do` — those have different semantic meaning and Joe should pick, don't default silently).
 
