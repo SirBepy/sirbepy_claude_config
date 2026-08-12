@@ -60,6 +60,12 @@ existing screenshot skill than as a new one.
 - Passing a story id that does not exist fails fast with a useful message.
 - Never produces a screenshot of a not-yet-booted or error-state Storybook.
 
+## Open questions
+
+Written by /auto-do-todos on 2026-08-12. The next run opens with these.
+
+- [ ] Blocked by todo 58 (the skills-directory audit), which is itself waiting on your answer about how it should run. Nothing to decide here directly: answer 58 and this unblocks.
+
 ## Notes
 
 Related existing memory: `fibo-storybook-render-sweep` (build-storybook does not render stories, so

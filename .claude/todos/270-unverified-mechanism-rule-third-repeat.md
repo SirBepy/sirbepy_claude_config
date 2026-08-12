@@ -40,6 +40,12 @@ Same option space as 251, but note 251 closed with "won't fix, wording only" aft
 - A decision recorded (in this file's Notes, or by closing as won't-fix) on which option was taken.
 - If option 2 is pursued: a hook that fires on a deliberately-planted "confirmed"/"verified" claim in an outbound message and either blocks or logs it, verified against a real test case.
 
+## Open questions
+
+Written by /auto-do-todos on 2026-08-12. The next run opens with these.
+
+- [ ] [ARCH] The "do not state an unverified mechanism as fact" rule has now failed 5 times despite being documented in memory, and this todo's own escalation trigger says you decide from recurrence 4 onward. Options: (a) sharpen the wording once more, cheap, but the same shape of fix already proved insufficient for the em-dash rule; (b) spike a Stop hook that pattern-matches assertive-mechanism phrasing in outbound messages, higher cost and unproven feasibility since it first needs confirming a hook can even see response text; (c) do nothing until a 6th recurrence. Recommended: (a) now, holding (b) as a fallback spike only if it recurs again.
+
 ## Notes
 
 - Relocated from the claude_usage_in_taskbar backlog (was todo #315) on 2026-08-12: the fix targets the global ~/.claude tree, which a project session must not edit.

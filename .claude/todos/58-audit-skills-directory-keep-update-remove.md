@@ -40,3 +40,11 @@ independent of, the rest of the sweep.
 
 - Every skill under `skills/` has an explicit keep / update / remove verdict.
 - Todos 11, 30, and 44 are each either unblocked (with a stated reason) or closed.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-08-12. The next run opens with these.
+
+- [ ] [TOOLING] This audit is dev-origin and blocks 11, 30 and 63, but its whole deliverable is a keep/update/remove verdict over 78 skills, and executing the removals is your call, not Claude's. How should it run? Options: (a) Claude runs the audit read-only next session and hands back one keep/update/remove table, you approve removals in a single pass; (b) Claude runs it and auto-archives only skills with zero references anywhere in the tree, surfacing every judgement call; (c) skip the audit and unblock 11, 30 and 63 directly instead. Recommended: (a), because the 2026-08-01 audit already showed the removals are the part that needs your taste.
+
+The /auto-do-todos run on 2026-08-12 deliberately did NOT start this. Its output is a proposal that needs your confirm either way, so starting it would have spent the run's remaining context without producing anything shippable.

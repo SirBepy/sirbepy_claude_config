@@ -53,6 +53,12 @@ component", not only for portfolio shots.
 - No caller needs to know where playwright is installed.
 - The existing portfolio flow still works unchanged.
 
+## Open questions
+
+Written by /auto-do-todos on 2026-08-12. The next run opens with these.
+
+- [ ] Blocked by todo 58 (the skills-directory audit), which is itself waiting on your answer about how it should run. Nothing to decide here directly: answer 58 and this unblocks.
+
 ## Merged in (2026-08-11)
 
 Absorbed todos 44, 72, 236 during /cleanup-todos. Their full text is in `done/` - read them before implementing, they carry specifics this file does not.

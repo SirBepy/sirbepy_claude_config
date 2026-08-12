@@ -43,3 +43,4 @@ per-session subfolder `/close` expects.
 ## Notes
 
 - Migrated on 2026-08-12 from the dead top-level `~/.claude/todos/` path (was #04 there). That location was superseded by the repo-relative backlog on 2026-08-11; nothing reads it, so these were invisible to the Conductor app.
+- completed, commit face099. Merged with todo 263 (same missing capability, two descriptions) into one skill, skills/android-drive/, rather than two.

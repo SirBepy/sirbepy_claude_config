@@ -145,3 +145,4 @@ project (the reconstruction/audit logic here isn't fibo-specific).
   that's banned. Separately surfaced a new gap this session (HubStaff sync scope defaults) - see
   [[73-hubstaff-sync-scope-default-full-not-touched-slice]], not folded into this todo since it's
   about `hubstaff.md`, not `SKILL.md`.
+- completed, commit 8d83c75

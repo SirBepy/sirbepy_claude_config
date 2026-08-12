@@ -30,6 +30,12 @@ Ideas to evaluate in whichever session picks this up (not yet decided - this is 
 - A cold session in a full-auto-imported repo, given a fully-verified single-file change, runs `/commit` without any `AskUserQuestion` call, any "let me know if you want to commit" phrasing, AND without silently ending the turn with the change left uncommitted.
 - Whatever mechanism is chosen must not block or slow down commits in NON-full-auto repos (this behavior is opt-in via the `full-auto.md` import).
 
+## Open questions
+
+Written by /auto-do-todos on 2026-08-12. The next run opens with these.
+
+- [ ] [ARCH] Ship the auto-commit enforcement hook, or leave enforcement on memory plus /close nudges? This exact design already went 7 rounds of /iterate-it plus a solo high-effort rate-it and topped out at 5/10, not shipped (see `done/211-auto-commit-enforcement-hook.md`). Re-confirmed 2026-08-12: Stop hooks fire for EVERY session including subagents, and nothing in the Stop payload (`session_id`, `transcript_path`, `stop_hook_active`, `last_assistant_message`) distinguishes a subagent whose own rules FORBID committing from the main session that should commit. Options: (a) ship a non-blocking reminder-only hook scoped to the single-session no-worktree case, accepting false reminders on subagent and foreign-repo stops; (b) leave enforcement as it is and do not reopen without a confirmed way to detect subagent-ness from the Stop payload; (c) spike only the detection question first, then decide. Recommended: (b), because a 5/10 verdict plus an unresolved detection gap is not a shipping signal, and (a) just trades a wedge for recurring noise.
+
 ## Notes
 
 Seven prior occurrences (with exact Joe quotes) are preserved in `feedback_auto_commit_full_auto_projects.md` in `claude_usage_in_taskbar`'s project auto-memory - read that file first, it has the full incident history and is more detailed than this todo needs to restate. All seven occurrences happened in that one project so far; if this recurs in a different full-auto project, log it there too and cross-reference back to this todo rather than duplicating the fix design.

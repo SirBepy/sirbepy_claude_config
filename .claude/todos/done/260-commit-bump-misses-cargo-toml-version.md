@@ -68,3 +68,4 @@ reference, so amending the one list should cover them, but confirm the wording d
   `53-cargo-toml-version-drifted-six-patches-behind` in
   `C:\Users\tecno\Desktop\Projects\windows_taskbar_widgets\.claude\todos\`. This todo is only about
   stopping it happening again, everywhere.
+- completed, commit 6660f6c

@@ -63,3 +63,4 @@ In `skills/cleanup-todos/SKILL.md`:
 
 - Filed by `/close` on 2026-08-12, from that session's own failure. See `266` (which asked for the
   script that now exists) and `99` (the todo whose prose was the casualty).
+- completed, commit 33d564b

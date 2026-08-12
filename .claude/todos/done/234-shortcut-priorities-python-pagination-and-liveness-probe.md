@@ -37,7 +37,7 @@ while true; do
     -d "{\"before\":\"$before\"}")
   echo "$resp" > "C:/tmp/shortcut_notif/page_$i.json"
   start=$(echo "$resp" | grep -o '"start":"[^"]*"' | head -1 | cut -d'"' -f4)
-  [ -z "$start" ] && break        # error/empty — stop, surface the raw response to Joe
+  [ -z "$start" ] && break        # error/empty â€” stop, surface the raw response to Joe
   [[ "$start" < "$CUTOFF" ]] && break
   before="$start"
   [ $i -gt 60 ] && break          # safety stop
@@ -112,3 +112,7 @@ between calls).
 - Re-read the full file after editing to confirm step numbers referenced elsewhere in the
   file (e.g. "Step 4" dispatch-volume-gate cross-references) still point at the correct
   renumbered step.
+
+## Notes
+
+- completed, commit c3b880b

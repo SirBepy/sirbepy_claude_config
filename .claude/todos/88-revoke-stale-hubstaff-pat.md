@@ -34,6 +34,12 @@ Rejected alternative: revoking both and minting a fresh one. Unnecessary churn, 
 - `python c:/tmp/hubstaff_week.py 2026-07-20`-style exchange still returns an access token (with a browser User-Agent header set).
 - `/clockify-reconciliator zirtue` completes its HubStaff comparison step without auth errors.
 
+## Open questions
+
+Written by /auto-do-todos on 2026-08-12. The next run opens with these.
+
+- [ ] Physical action, yours only: revoke the stale HubStaff personal access token in the HubStaff portal. Claude cannot do this, it needs a browser login. Note the `HUBSTAFF_REFRESH_TOKEN` entry in `~/.claude/.env` is a DIFFERENT credential and is still in use, do not delete it. Scored 2/10 on worth and kept only because it is credential hygiene.
+
 ## Notes
 
 Do NOT retry the exchange repeatedly while verifying - HubStaff returns `400 rate_limit` after a few refreshes in quick succession and locks you out for several minutes.

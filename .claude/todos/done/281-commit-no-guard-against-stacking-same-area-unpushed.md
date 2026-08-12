@@ -45,8 +45,8 @@ Add a step to `~/.claude/skills/commit/SKILL.md`, before step 8's pathspec commi
    upstream).
 2. If any unpushed commit's touched paths overlap the pathspec about to be committed
    (`git show --name-only <sha>` intersected with the new pathspec), STOP and surface it:
-   name the overlapping commit and ask whether this is follow-up work on the same unit (→ amend
-   via `reset --soft`) or genuinely separate (→ new commit).
+   name the overlapping commit and ask whether this is follow-up work on the same unit (â†’ amend
+   via `reset --soft`) or genuinely separate (â†’ new commit).
 3. Path overlap is the cheap proxy; a ticket-number match in the message is a second signal worth
    checking when the project uses `<ticket>: <desc>` prefixes.
 
@@ -64,3 +64,4 @@ separated is worse than one question.
 ## Notes
 
 - Migrated on 2026-08-12 from the dead top-level `~/.claude/todos/` path (was #05 there). That location was superseded by the repo-relative backlog on 2026-08-11; nothing reads it, so these were invisible to the Conductor app.
+- completed, commit 6660f6c

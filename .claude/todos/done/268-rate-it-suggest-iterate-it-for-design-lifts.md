@@ -30,3 +30,4 @@ Don't over-engineer this into a rigid rule - the judgment of "is this bullet mec
 ## Notes
 
 - Relocated from the claude_usage_in_taskbar backlog (was todo #209) on 2026-08-12: the fix targets the global ~/.claude tree, which a project session must not edit.
+- completed, commit 4bdf0b8

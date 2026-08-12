@@ -64,3 +64,7 @@ commit's rename map before the commit exists, and the prefilter runs against the
 - The exemption is explicitly scoped to verbatim moves - a newly authored 6-line comment in a new
   file is still a hit.
 - Re-reading the two skill files, the rule appears in both places an agent could encounter it.
+
+## Notes
+
+- completed across two commits: the skills/commit half in 6660f6c, the skills/mega-todos injected-commit-block half in 458760a. Fix is a verbatim-move carve-out (confirm via git show HEAD:<old-file> before trimming), not a loosened cap; comment-noise.sh itself was deliberately left alone since awk has no rename detection.

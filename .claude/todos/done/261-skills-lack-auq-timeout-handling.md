@@ -70,3 +70,4 @@ Filed from a `claude_usage_in_taskbar` session per global CLAUDE.md's rule that 
 global `~/.claude` tree belong in this repo's backlog, never the surfacing project's. Filing only -
 the same rule forbids executing global work from a project session unless Joe says so in that
 session, so this was NOT implemented at the time.
+- completed, commit 458760a

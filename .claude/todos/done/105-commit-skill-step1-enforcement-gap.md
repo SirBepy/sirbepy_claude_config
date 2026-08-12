@@ -28,3 +28,4 @@ Not spec'd here, per this skill's own anti-pattern against drafting fixes inline
 ## Notes
 
 Low severity this time (caught immediately, folded via `git reset --mixed` with no push in between). Filed because it's the second confirmed instance of this exact failure shape (see todo 87) - worth considering a shared fix rather than two skill-specific patches.
+- completed, commit 6660f6c

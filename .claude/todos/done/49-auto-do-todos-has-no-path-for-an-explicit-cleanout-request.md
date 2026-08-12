@@ -85,3 +85,4 @@ Two other things that same run exposed, worth folding into the fix:
   and add "relocate" as a first-class disposition. This was produced by a strict second-pass
   re-triage that specifically asked whether a defensible answer exists without the dev; it
   concluded yes. Not executed only because the session ended.
+- completed across two commits: the /auto-do-todos cleanout-intent half in 458760a, the /cleanup-todos relocate disposition in 4bdf0b8. The Approach item asking to raise the deep-triage id cap was verified as already satisfied (DEEP_CHUNK_SIZE 30 x DEEP_MAX_CHUNKS 6 = 180 ids, which replaced the old 40-lowest-ids rule), so nothing was changed for it.

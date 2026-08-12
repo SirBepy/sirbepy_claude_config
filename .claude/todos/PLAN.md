@@ -38,40 +38,28 @@ items until this lands.
 All nine touch `skills/commit/`. Plan the file's end state once.
 
       clobbering, the worktree-unrunnable form, and the Rules-vs-step-5a contradiction at once)
-- [ ] 36 - working-tree safety when a pre-commit hook runs on a shared `.git` (real data-loss incident)
-- [ ] 105 - make step 1's commit-style.md read an enforced precondition
 
 ## Batch B - clockify-reconciliator (9)
 
 All nine touch `skills/clockify-reconciliator/`. Note **91** already shipped today.
 
-- [ ] 34 - full-month audit / reconstruction mode (methodology already proven live twice)
-- [ ] 82 - consult existing memory, and handle "day has entries but real work unlogged"
-- [ ] 90 - opt-in HubStaff align step, plus the per-entry coverage fix in step 11
 
 ## Batch C - delegation and autopilot (3)
 
 `refs/delegation-doctrine.md` plus the autopilot skills. **53**, **78** and **92**'s siblings
 already shipped today.
 
-- [ ] 01 - detect dead or stalled background subagents
-- [ ] 50 - guard session budget, not just context, on wide fan-outs
 
 ## Batch D - screenshot and Playwright (3, blocked on 58)
 
 - [ ] 63 - one multi-frame helper (absorbed 44, 72, 236: frame matrix, comp rendering, playwright resolution)
 - [ ] 30 - storybook restart-wait-screenshot loop
-- [ ] 74 - the "release build, not DWDS" guidance is stale; needs cross-app retesting first
 
 ## Batch E - close and session identity (4)
 
-- [ ] 60 - use `CLAUDE_CODE_SESSION_ID` instead of the unreliable ancestor-pid walk (absorbed 54)
 
 ## Batch F - Shortcut family (6)
 
-- [ ] 97 - no skill covers updating existing stories; a bare PUT wipes `custom_fields`
-- [ ] 234 - port the bash pagination to python, widen the git cross-check, add a liveness probe
-- [ ] 86 - ground "implement X flow" tickets in current code before drafting
 
 ## Batch G - create-pr (3)
 
@@ -82,7 +70,6 @@ already shipped today.
 
 ## Batch I - supervised-run (3)
 
-- [ ] 238 - verify `/run` actually routes through the supervisor (mostly a verification task)
 
 ## Batch J - brainstorm (2)
 
@@ -98,17 +85,12 @@ reinstalling or updating the skill silently reverts both. Resolve the tracking q
 
 No shared file, no design forks. Good batch for a short session.
 
-- [ ] 246 - `bepy-project-setup-web`: drop the skip-picker, run everything by default
-- [ ] 49 - `/auto-do-todos` has no path for an explicit cleanout request
 - [ ] 11 - orphan-process forensics gets rewritten ad hoc every time (blocked on 58)
 
 ## Batch M - odds and ends (4)
 
 Unrelated to each other; pick off individually.
 
-- [ ] 229 - `/obsidian` rewrite: free-form args, People branch, fix the `Journal/` grep
-- [ ] 231 - sentry: absolute ACT-bucket severity floor and pagination past `limit=100`
-- [ ] 250 - the five guard hooks each re-implement the same scaffold; decide on a shared
       `_hooklib.py`. The BOM fail-open bug had to be fixed five times because of this
       2026-08-11 and not triaged by the 2026-08-11 pass.** Note its id collides with the archived
       `done/249-commit-comment-noise-pipeline-vs-no-chaining-rule.md`

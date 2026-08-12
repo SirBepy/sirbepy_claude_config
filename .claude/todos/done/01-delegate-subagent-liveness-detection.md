@@ -66,3 +66,4 @@ Do NOT solve this by having the main agent poll on a short interval - that burns
   recommended option 3. This was produced by a strict second-pass re-triage that specifically asked
   whether a defensible answer exists without the dev; it concluded yes. Not executed only because
   the session ended.
+- completed, commit 458760a

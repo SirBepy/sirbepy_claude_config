@@ -69,3 +69,7 @@ list afterward.
   supervisor), not a bare orphaned background process outside supervisor tracking.
 - The fix is documented (CLAUDE.md line or shim skill file) so future sessions don't need
   to rediscover this.
+
+## Notes
+
+- completed, commit c2dca59. Documentation only: /run is a built-in harness skill whose internals are not visible from this repo, so the handoff is written with the /run side marked unverified and a GET /procs verification recipe given.

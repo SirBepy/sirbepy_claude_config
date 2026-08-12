@@ -21,14 +21,14 @@ the already-running debug session.
 
 It turned out unnecessary: the exact same target app, same route, driven against the **live debug
 `flutter run -d web-server` session** (no release build), worked perfectly using
-`page.getByRole('textbox')` / `page.getByText(...)` / `page.getByRole('button', {name})` — this
+`page.getByRole('textbox')` / `page.getByText(...)` / `page.getByRole('button', {name})` â€” this
 matches prior-art scripts already in the zng-admin repo (`.for_bepy/qa54714-common.cjs`,
 `.for_bepy/qa-d5-biller-create.cjs`), which clearly also drive the debug session successfully via
 the same locator style. My own manual `flt-semantics-placeholder` activation attempts (evaluate
-click, synthetic PointerEvent, even a real trusted `page.mouse.click()`) all failed — 0 semantics
-nodes — but simply calling `getByRole`/`getByText` (no manual activation at all) worked
+click, synthetic PointerEvent, even a real trusted `page.mouse.click()`) all failed â€” 0 semantics
+nodes â€” but simply calling `getByRole`/`getByText` (no manual activation at all) worked
 immediately. Likely explanation: Playwright's own accessibility-tree queries (what those locators
-use under the hood) themselves trigger Flutter's semantics activation, independent of any click —
+use under the hood) themselves trigger Flutter's semantics activation, independent of any click â€”
 so the doc's premise ("Playwright's own CDP session conflicts with DWDS and the page hangs
 forever") may only hold for the specific case of driving the raw `flt-semantics` DOM by hand /
 opening a second cold CDP connection to an already-connected DWDS session, not for role/text
@@ -36,7 +36,7 @@ locators against a freshly-loaded page.
 
 Recorded as a project memory too:
 `C:\Users\tecno\.claude-personal\projects\C--Users-tecno-Desktop-Projects-zng-admin\memory\feedback_playwright_no_mcp_fallback.md`
-(2026-08-10 addendum) — that's the zng-admin-specific pointer; this todo is for fixing the
+(2026-08-10 addendum) â€” that's the zng-admin-specific pointer; this todo is for fixing the
 shared/global doc so every project stops re-learning it.
 
 ## Approach
@@ -53,7 +53,7 @@ shared/global doc so every project stops re-learning it.
 - Either way, add a pointer in `flutter-e2e`'s Mode A: before building a release bundle, check the
   target project for existing `.for_bepy/*.cjs`/`.for_bepy/e2e/*.cjs` driver scripts and reuse
   their pattern (auth seeding, locator style) instead of re-deriving driving mechanics from
-  scratch — this repo alone had 15+ prior one-off `qa*.cjs` scripts that already solved this.
+  scratch â€” this repo alone had 15+ prior one-off `qa*.cjs` scripts that already solved this.
 
 ## Acceptance
 
@@ -63,6 +63,7 @@ shared/global doc so every project stops re-learning it.
 
 ## Notes
 
-Not urgent — the workaround (try locators against the debug session first, fall back to release
+Not urgent â€” the workaround (try locators against the debug session first, fall back to release
 build only if that fails) is cheap once known. This todo is about updating the doc so the next
 session doesn't rediscover it the expensive way.
+- completed, commit c2dca59. The 2026-08-10 observation is now recorded as a single untested data point with an explicitly-marked unverified hypothesis, not a new absolute; the release-build fallback stays as the safety net. Re-testing against a live DWDS session is still open.

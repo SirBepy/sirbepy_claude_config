@@ -91,3 +91,9 @@ silently.** When picked up:
 - If widened: Step 2's new wording is tested mentally against the CLAUDE.md's own hotkey
   example (a mechanical-looking pattern-copy task hiding one behavioral fork) to confirm
   it would actually catch that case.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-08-12. The next run opens with these.
+
+- [ ] [ARCH] Widen /brainstorm's step 2 ask-gate from "facts that truly cannot be inferred" to full CLAUDE.md parity (UX/ARCH/SEC/DATA/TOOLING forks)? You flagged this yourself as a tradeoff needing weighing rather than a default yes: it catches more forks up front, but adds AskUserQuestion interruptions to a skill whose stated purpose is being gate-free. Options: (a) full CLAUDE.md parity; (b) keep it narrow, facts only; (c) widen only for SEC, DATA and ARCH forks and keep inferring UX and TOOLING. Recommended: (c), as the defensible middle.

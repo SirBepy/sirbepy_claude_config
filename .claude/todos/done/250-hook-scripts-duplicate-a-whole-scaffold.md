@@ -60,3 +60,7 @@ import cannot degrade into "all guards quietly off".
   note in the hooks directory records the decision not to extract, with the reason.
 - If extracted: every hook's existing test cases still produce the same allow/deny verdicts, and
   a deliberately broken import fails loudly instead of failing open.
+
+## Notes
+
+- completed 2026-08-12, NOT COMMITTED: the hooks/ directory is gitignored. Extracted hooks/_hooklib.py (BOM-safe fail-loud stdin parse, deny, strip_quotes, oldest_fresh_marker) and wired the five guards to it behind a loud import-failure guard. 13/13 test cases pass. Pre-edit backup at C:\tmp\hooks-backup-2026-08-12\. tokenize() was deliberately NOT unified (two hooks differ in real ways) and schedulewakeup-guard.py was left out of scope.

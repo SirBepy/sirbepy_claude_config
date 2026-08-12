@@ -81,3 +81,10 @@ REDISCOVERED from the live repos themselves, not assumed from memory.
 - Every confirmed defect is fixed and committed in its own repo.
 - A final summary lists, per repo, which defects were found and fixed (or confirmed
   absent) - so there's a record this sweep was actually exhaustive, not partial.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-08-12. The next run opens with these.
+
+- [ ] [TOOLING] Authorize a repair pass across 8 shipped public web repos (missing README, broken og:image, broken PWA install)? This is the only todo in the backlog that changes repos OUTSIDE ~/.claude and puts changes on live public sites, which is why the 2026-08-12 autopilot run did not start it on its own. Options: (a) one branch and PR per repo, nothing merged without your review; (b) push straight to each default branch, they are your own personal sites; (c) fix one repo first as a sample and decide after seeing the result. Recommended: (c).
+- [ ] The todo's own source scratch data was explicitly disposable and is now gone, so the 8 repos and their specific defects have to be re-identified before any pass runs. Confirm the repo list is still what you expect.

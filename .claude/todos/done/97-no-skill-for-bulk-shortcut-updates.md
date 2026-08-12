@@ -37,3 +37,7 @@ Must keep obeying the hard rule from the `feedback_never_comment_on_tickets` mem
 - Custom fields survive an update that did not mention them.
 - Running it against several stories in one go works.
 - No path in it posts a comment to a story.
+
+## Notes
+
+- completed, commit fa3723a

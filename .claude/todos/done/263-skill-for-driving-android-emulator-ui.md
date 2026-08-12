@@ -65,3 +65,7 @@ through a flow", just on a different surface.
   documented as warnings.
 - Verified by re-running the ephemeral login flow from
   `revaire-mobile/.claude/todos/027-apple-login-and-build-discovery.md`.
+
+## Notes
+
+- completed, commit face099. Merged with todo 280 into skills/android-drive/. Verified live against an attached device: devices, wait-boot and the wm size parsing. NOT verified: screenshot, tap, type-field, dismiss-keyboard, install, since running them would have driven Joe live personal phone. SKILL.md marks those paths reviewed-but-unverified.

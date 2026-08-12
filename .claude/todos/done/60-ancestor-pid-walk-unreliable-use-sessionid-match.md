@@ -81,6 +81,7 @@ cold future session or an automated Phase 3 step can lean on.)
   can lean on" gap the original incident already flagged. A crisper mid-skill
   `$env:CLAUDE_CODE_SESSION_ID`-based one-liner (per this todo's Approach) would likely have been
   followed correctly where the multi-step CIM process-tree walk was skipped entirely.
+- completed, commit 9d14d73
 
 ## Merged in (2026-08-11)
 

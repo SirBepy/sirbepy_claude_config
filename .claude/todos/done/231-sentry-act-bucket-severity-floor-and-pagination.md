@@ -80,3 +80,7 @@ Sentry's pagination past `limit=100`.
 - Existing WATCH/REVIEW/CLOSE logic (lines 95, 113 and surrounding) is otherwise
   unchanged - this todo only adds an OR-condition to ACT's gate and extends the fetch
   loop, it does not redesign the bucketing algorithm.
+
+## Notes
+
+- completed 2026-08-12, NOT COMMITTED: scripts/Invoke-SentryTriage.ps1 is gitignored so it carries no version history. Link-header pagination and the substatus-based regression check were both confirmed against the live Sentry API with read-only GETs, and the full script was run once end to end.

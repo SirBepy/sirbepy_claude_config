@@ -28,6 +28,12 @@ Consumer rules still bind: never create entries in empty time ranges, never touc
 ## Acceptance
 Only actionable if Joe revives it. If the vault idea from the other chat supersedes this, close this todo as superseded rather than building a parallel system.
 
+## Open questions
+
+Written by /auto-do-todos on 2026-08-12. The next run opens with these.
+
+- [ ] [ARCH] Build the session-activity-log design now, or leave it parked? You parked it yourself on 2026-07-30 with "do NOT build unless Joe asks". Options: (a) leave parked, no action; (b) build it now from the design already captured in this file. Recommended: (a), matching your own instruction. Note the Obsidian vault has since taken over the cross-project-memory role this partly overlapped, so its case is weaker now than when it was written.
+
 ## Merged in (2026-08-11)
 
 Absorbed todos 206 during /cleanup-todos. Their full text is in `done/` - read them before implementing, they carry specifics this file does not.

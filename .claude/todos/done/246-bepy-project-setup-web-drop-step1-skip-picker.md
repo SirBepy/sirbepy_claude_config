@@ -81,3 +81,7 @@ calls, which is the opposite of the documented auto-run preference for skill che
   default.
 - Re-read the full file after editing to confirm Step 1 and Step 3's numbering/logic
   still flow correctly into Step 2's "run skills in order" and Step 4's "commit" steps.
+
+## Notes
+
+- completed, commit 7573ff6

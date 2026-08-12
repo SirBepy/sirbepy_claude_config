@@ -55,3 +55,4 @@ what `ai-todos-format.md`'s git-policy section already says rather than a one-of
 ## Notes
 
 - Filed by `/close` on 2026-08-12. Surfaced twice during that session and deferred both times.
+- completed, commit 901e53b

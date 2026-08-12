@@ -52,3 +52,4 @@ two symptoms, one fix.
 
 - Relocated from the claude_usage_in_taskbar backlog (was todo #475) on 2026-08-12: the fix targets the global ~/.claude tree, which a project session must not edit.
 Related coordination context: this repo has a `list_peers` / `post_message` channel that only sees Conductor-hosted sessions. At least one Claude Code instance runs outside it and is invisible to that channel, so "who committed what" cannot be answered from peers alone.
+- completed, commit 9d14d73

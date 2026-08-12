@@ -78,3 +78,4 @@ Related memories worth reading before starting: `reference_hubstaff_ui_time_edit
 
 `~/.claude-personal/skills/clockify-reconciliator/SKILL.md` and
 `~/.claude/skills/clockify-reconciliator/SKILL.md` are hardlinked - editing one edits both.
+- completed, commit 8d83c75. Replaced the Playwright-MCP tool calls with two local Playwright scripts, skills/clockify-reconciliator/scripts/hs_preflight.cjs and hs_weekshot.cjs, and stated the dependency explicitly. The scripts have not been run against the live site yet.

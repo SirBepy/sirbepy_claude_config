@@ -92,3 +92,4 @@ The vault's own `obsidian-git` plugin is separately known to be dead since 2026-
 (manual backup committed 2026-08-01) - that is a DIFFERENT, unfiled problem (git-plugin
 health, not skill behavior) and is explicitly out of scope for this todo. Do not fold a
 plugin fix into this rewrite; if picked up together, treat them as two separate commits.
+- completed, commit 7573ff6. Verified against the live vault read-only: Templates/Person.md frontmatter and People/Bruno Kecman.md match what was written, and the Journal/ to vault-root daily-note migration was confirmed (Journal/ ends 2026-05-05, vault-root notes start 2026-05-27). Nothing was written into the vault.

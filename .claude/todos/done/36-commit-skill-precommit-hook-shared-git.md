@@ -81,3 +81,4 @@ didn't stage - that disrupts another session's commit prep" rule shows the inten
   `git rev-parse --git-common-dir` against `--git-dir` pre-flight check. This was produced by a
   strict second-pass re-triage that specifically asked whether a defensible answer exists without
   the dev; it concluded yes. Not executed only because the session ended.
+- completed, commit 6660f6c

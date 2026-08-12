@@ -55,6 +55,12 @@ kill command, do not kill. Killing processes attached to live sessions is a deci
 - Reports window count, not just process count, for chromium-family processes.
 - Does not kill anything unless explicitly asked.
 
+## Open questions
+
+Written by /auto-do-todos on 2026-08-12. The next run opens with these.
+
+- [ ] Blocked by todo 58 (the skills-directory audit), which is itself waiting on your answer about how it should run. Nothing to decide here directly: answer 58 and this unblocks.
+
 ## Notes
 
 - Re-verified 2026-08-08: premise still holds.

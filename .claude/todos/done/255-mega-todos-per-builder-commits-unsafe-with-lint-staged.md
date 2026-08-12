@@ -58,3 +58,7 @@ Files: `C:\Users\tecno\.claude\skills\mega-todos\SKILL.md` and
 - Running `/mega-todos` in a repo with a lint-staged pre-commit hook produces barrier-commits, and
   the skill text says why, without the operator having to work it out mid-run.
 - The question round is not artificially truncated to 8 on a project with an uncapped ask tool.
+
+## Notes
+
+- completed, commit 458760a

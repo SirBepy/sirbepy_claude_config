@@ -56,3 +56,4 @@ Rejected: doing this via the API. There is no v2 endpoint that mutates tracked t
 ## Notes
 
 Consider whether this belongs in `/clockify-reconciliator` at all versus a separate `/hubstaff-align` skill. Argument for keeping it here: it only ever runs off the back of step 11's comparison and shares the auth/profile setup. Decide before implementing.
+- completed, commit 8d83c75
