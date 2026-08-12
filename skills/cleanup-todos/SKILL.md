@@ -1,6 +1,6 @@
 ---
 name: cleanup-todos
-description: Triggers on /cleanup-todos only. Dedupes todos and scores each for staleness, complexity and worth - never drops anything unconfirmed.
+description: Triggers on /cleanup-todos only. Dedupes todos and scores each for staleness, complexity and worth; archives dead ai-origin ones, never touches dev-origin unconfirmed.
 ---
 
 # /cleanup-todos
@@ -12,9 +12,18 @@ Backlog rules (location, format, claims, done/, PLAN.md) live in
 Structural conventions (dry-run-confirm report style, EASY/HARD criteria) mirror
 `~/.claude/skills/batch-todos/SKILL.md` - referenced below instead of restated.
 
-This is a maintenance pass, not an execution skill: it never implements or executes a todo. Every
-action that removes a todo from the active backlog - a dedupe merge or a suggested drop - goes
-through the SAME confirm gate in Step 7. Nothing moves before the dev replies.
+This is a maintenance pass, not an execution skill: it never implements or executes a todo.
+
+**Removal is gated by ORIGIN, not by a blanket confirm (dev standing instruction, 2026-08-12).**
+
+- `**Origin:** dev` - never auto-archived, for any reason, at any score. It goes on the Step 6
+  confirm list and waits. The dev's own intent is not Claude's to overrule.
+- `**Origin:** ai`, or the field absent (unknown, treated as `ai` per the contract) - Step 7
+  archives it WITHOUT asking when it is a proven-dead premise, a confirmed duplicate, or judged
+  not worth doing. Say what was archived and why in the summary; do not ask first.
+
+Archiving is never deletion - every removal goes to `done/` with a Notes line recording the reason,
+so a wrong call is one `Move-Item` from undone.
 
 ## Step 1 - Read todos
 
@@ -72,8 +81,8 @@ per todo:
   belongs to the dev. Age is a report-level signal only (Step 6), never a triage verdict. An
   `ai`/unknown-origin todo whose re-verification comes back `still_valid: false` is ALWAYS
   `suggested_drop: true`, with the re-verification evidence as the reason - this is exactly the
-  failure mode `**Origin:**` exists to catch. This still only flags it; Step 7's confirm gate still
-  applies, per the no-auto-drop rule below.
+  failure mode `**Origin:**` exists to catch. For an `ai`/absent-origin todo this flag is what
+  Step 7 acts on directly; for a `dev`-origin one it only lands on the confirm list.
 - `worth`: an integer 1-10, plus a one-line `worth_reason`. This answers a question none of the
   other three do: **the premise can hold and the fix can be easy and it can still be a bad change
   to make.** Anchor to this rubric, never a vibe:
@@ -88,9 +97,15 @@ per todo:
   Scoring the low end honestly is the whole point; a backlog where everything scores 7+ means the
   scorer was being polite, not that the backlog is good.
 
-`worth` is ADVISORY. It never drops anything on its own and never feeds `suggested_drop` - a low
-score is an argument for the dev, made in Step 6, decided in Step 7. The no-auto-drop rule is
-absolute and this score does not carve an exception in it.
+`worth` never feeds `suggested_drop` - they answer different questions and must be scored
+independently. But on an `ai`/absent-origin todo a score of **4 or below is on its own sufficient
+grounds for Step 7 to archive it**, separately from `suggested_drop`. On a `dev`-origin todo the
+score is advisory only, forever.
+
+Two carve-outs where a low score does NOT justify archiving, because the score is measuring the
+wrong thing: a todo the dev explicitly parked ("do not build this unless I ask" scores low on
+payoff while being a live instruction), and one whose action is the dev's own physical step
+(revoking a credential, a console change). Surface those in the summary instead.
 
 One subagent per chunk, never one dispatch per todo, and never a second tier of agents re-checking
 the first.
@@ -165,7 +180,9 @@ Contents, in order:
    worth_reason`. These are not drop suggestions and must not be presented as such; they are the
    list the dev scans to decide what is worth their tokens. State the count plainly, including
    when it is zero.
-5. A unified confirm list: every `origin: dedupe` loser appears here regardless of triage tier
+4b. An **archived** list: everything Step 7's Pass A already moved to `done/`, as `id - title -
+   reason`. This is a record, not a proposal - it has already happened.
+5. A unified confirm list, `dev`-origin ONLY: every `origin: dedupe` loser appears here regardless of triage tier
    (Step 2 identifies duplicates across the whole backlog, independent of Step 4's deep-tier cap),
    plus every `origin: drop` suggestion (these are deep-tier only by construction, since shallow
    rows always have `suggested_drop` forced to `false` - not an extra exclusion rule, just a
@@ -174,12 +191,24 @@ Contents, in order:
    claiming a todo between this report and the dev's reply - worst case is a claimed todo gets
    archived, recoverable by moving it back out of `done/`.
 
-Close with a plain-text prompt (not a tool call): "Reply with ids to confirm (covers both dedupe
-merges and drops, e.g. `confirm 07 12`), or `keep all` to leave everything as-is."
+Close by REPORTING what Step 7 already archived (ids + one-line reason each), then, only if any
+`dev`-origin todo is pending: "Reply with ids to confirm the dev-origin items, or `keep all`."
+When nothing dev-origin is pending, close with no question at all - the run is finished.
 
 ## Step 7 - Apply confirmed items
 
 This is the ONLY step in the skill that mutates backlog contents (file moves, PLAN.md prunes).
+
+It runs in two passes, despite the step number:
+
+- **Pass A, `ai`/absent-origin, BEFORE Step 6's report is written.** No reply needed, so the report
+  describes finished work rather than a proposal. Everything below applies unchanged.
+- **Pass B, `dev`-origin, after the dev's reply.** Only ids they named.
+
+**Salvage before archiving a duplicate.** A dedupe loser often carries something the winner lacks -
+sharper evidence, a second acceptance criterion, a sub-fix the winner marked optional. Read both,
+fold anything unique into the winner, and say so in the loser's Notes line. Archiving a duplicate is
+supposed to cost nothing; it costs something every time this is skipped.
 
 On the dev's reply, for each confirmed id: claims-check immediately before the move (right before
 the write, not earlier - narrows the TOCTOU window from the whole report-to-reply gap down to a
@@ -214,9 +243,9 @@ by default, in which case there is nothing to commit.
 ## Unattended runs
 
 Under `/autopilot` or an explicit no-input instruction, Step 6 still delivers its full report, but
-Step 7 auto-resolves as `keep all`: no merges, no drops, nothing archived. Every dedupe pair and
-`suggested_drop` candidate from Step 6's confirm list carries into the run's closing summary as
-still-pending, for confirmation on a later run. This never overrides the no-auto-drop rule below.
+Step 7 behaves exactly as in an attended run for `ai`/absent-origin todos - they are archived on
+judgement, since no confirm was ever required for them. `dev`-origin candidates carry into the
+closing summary as still-pending, for confirmation on a later run.
 
 ## Non-goals (v1)
 
@@ -224,12 +253,12 @@ still-pending, for confirmation on a later run. This never overrides the no-auto
   complexity/dedupe results is a separate, later effort.
 - No cron/scheduled-trigger wiring - manual invocation only. The staleness threshold is a
   report-time nag, not an enforced re-run mechanism.
-- No auto-drop, ever, under any condition - every removal from the backlog goes through the Step 7
-  confirm gate, including dedupe merges.
+- No auto-drop of a `dev`-origin todo, ever, under any condition. `ai`/absent-origin todos are
+  archived on Claude's judgement without a confirm gate - see the origin rule at the top.
 - No per-todo subagent dispatch for the deep tier - one batched call per CHUNK, capped at
   `DEEP_MAX_CHUNKS` chunks; overflow gets the shallow, content-blind pass instead of an unbounded
   fan-out or a second verifier tier.
-- No auto-drop on a low `worth` score, ever. The score informs the dev; it never removes anything.
+- No plain deletion, ever. Every removal lands in `done/` with a Notes line stating the reason.
 
 ## Notes
 
