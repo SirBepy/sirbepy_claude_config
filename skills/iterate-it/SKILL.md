@@ -41,7 +41,7 @@ Goal: find a proposal worth polishing.
 Angle rotation per round (cycle if needed): skeptic → steelman → alternative-lens → shippability → misdiagnosis → skeptic. Pick the next angle that addresses the prior round's weakness. Don't repeat the prior round's angle unless deliberate.
 
 Exit conditions (check after each round):
-- **Promising**: sub score ≥ `--threshold` → enter Phase B with the just-evolved proposal.
+- **Promising**: sub score ≥ `--threshold` AND main audit ≥ `--threshold - 1` → enter Phase B with the just-evolved proposal.
 - **Cap**: round count == `--explore-max` → enter Phase B with the best-scoring proposal so far (or stop if dev passed `--explore-max=0`).
 - **Thrash**: 3 consecutive rounds with PIVOT or KILL markers → stop, report unconverged.
 
@@ -94,6 +94,8 @@ The exact report format also lives in `templates.md` (read once, at round 1, alo
 subagent prompt template).
 
 Do NOT call `AskUserQuestion` in the same turn as this report. Bundling a tool call with the report text makes the harness swallow the report - the dev ends up with a bare picker and no convergence summary (this has happened before, 2026-07-12). The report is the deliverable; it must always render as the turn's final message.
+
+This holds even when the dev already pre-authorized next steps ("go ahead and implement it"). That authorization changes what happens on the FOLLOWING turn, never whether a tool call chains onto this one - continuing straight into `Read`/`Edit`/implementation calls in the same turn as the report is the exact failure this rule guards against (sc-54844, 2026-08-11: the report rendered fine, but the turn then continued straight into implementation tool calls anyway).
 
 Close the report with a single plain-text line offering the next move, not a tool call:
 

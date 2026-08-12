@@ -111,9 +111,11 @@ Then a blank line and a `**How to raise the score:**` block: 2-4 bullets, each a
 
 ## Post-rating prompt (main agent only)
 
-Do NOT call `AskUserQuestion` in the same turn as the rating. Bundling a tool call with the rating text makes the harness (and the global "no work alongside messages" rule) swallow the rating - the dev ends up with a bare picker and no score. The rating is the deliverable; it must always render.
+Do NOT call `AskUserQuestion` (or any other picker-style tool) in the same turn as the rating. Bundling a picker with the rating text makes the harness (and the global "no work alongside messages" rule) swallow the rating - the dev ends up with a bare picker and no score. The rating is the deliverable; it must always render.
 
-So: deliver the full rating (verdict + reasoning + How-to-raise) as a complete text response and END the turn on it. No tool call in that turn.
+So: deliver the full rating (verdict + reasoning + How-to-raise) as a complete text response and end the turn on it - nothing may follow the rating in that turn. In a host where the user-visible channel is itself a tool call (e.g. Claude Conductor's `send_message`), deliver the rating through that call and end the turn there; the constraint is that nothing FOLLOWS the rating, not that zero tool calls occur.
+
+**Nested invocation.** If `/rate-it` was invoked by another skill rather than directly by the dev, the invoking skill owns the terminal question: return just the verdict + reasoning + How-to-raise block and skip the rest of this section (the "Next move" line below and its reply handling). Direct invocation by the dev keeps this section in full.
 
 Close the rating message with a single plain-text follow-up line offering the next move (this is a menu appended to the deliverable, not a standalone question, so it stays inline text - do not promote it to an AskUserQuestion):
 

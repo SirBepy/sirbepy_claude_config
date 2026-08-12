@@ -27,7 +27,7 @@ Determine what to review before rating:
 
 ## Flow
 
-1. **Rate it.** Invoke the `/rate-it` skill, passing the resolved diff content as the thing to rate. Use solo mode (no panel) unless the user explicitly passed a panel size.
+1. **Rate it.** Invoke the `/rate-it` skill, passing the resolved diff content as the thing to rate. Use solo mode (no panel) unless the user explicitly passed a panel size. This is a nested invocation: `/rate-it-and-commit` owns the terminal question, and `/rate-it`'s own post-rating "Next move" menu is suppressed for it (per `/rate-it`'s nested-invocation note).
 2. **Check threshold.**
    - Score >= threshold: show a one-line summary `"Score X/10 - committing."` then invoke `/commit`, telling it which paths belong in this commit as context if a target file was specified, and verifying its proposed pathspec matches before it proceeds.
    - Score < threshold: ask via AskUserQuestion (see below). Do NOT auto-commit.

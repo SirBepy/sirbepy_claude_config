@@ -160,8 +160,9 @@ shallow-tier todos keep aging in the nag like any other unattended todo, instead
 
 ## Step 6 - Report
 
-Deliver as the turn's FINAL message, no tool call after it - a same-turn `AskUserQuestion` would
-swallow the preceding text in this harness, same reasoning as `/batch-todos` step 4.
+Deliver as the turn's FINAL message - nothing may follow it in the same turn, since a same-turn
+`AskUserQuestion` would swallow the preceding text in this harness, same reasoning as
+`/batch-todos` step 4.
 
 Contents, in order:
 
