@@ -1,6 +1,6 @@
 ---
 name: cleanup-todos
-description: Triggers on /cleanup-todos only. Dedupes and triages todos for staleness/complexity - never drops anything unconfirmed.
+description: Triggers on /cleanup-todos only. Dedupes todos and scores each for staleness, complexity and worth - never drops anything unconfirmed.
 ---
 
 # /cleanup-todos
@@ -47,13 +47,17 @@ a blind move.
 
 ## Step 4 - Triage
 
-Sort every todo from Step 1 by ascending numeric id - this is the full pre-dedupe set. The first
-40 ids in that ranking get a deep pass; a dedupe-loser only gets the deep pass by ranking in the
-first 40 like any other todo - it is never added out-of-band, and the 40-cap is never exceeded
-regardless of how many dedupe-losers exist.
+Sort every todo from Step 1 by ascending numeric id - this is the full pre-dedupe set. Split that
+ranking into chunks of at most `DEEP_CHUNK_SIZE` (30) todos, and give the first `DEEP_MAX_CHUNKS`
+(6) chunks a deep pass - 180 todos of real coverage. A dedupe-loser is chunked by its id like any
+other todo, never added out-of-band.
 
-**Deep pass (first 40):** dispatch exactly ONE subagent (`model: 'sonnet'`) with the full text of
-each of these todos in one prompt. It returns one verdict per todo:
+The old rule deep-passed only the 40 lowest ids, which silently starved the NEWEST half of any
+backlog past 40 - exactly the half most likely to still be wrong. Chunking replaces that.
+
+**Deep pass:** dispatch one subagent per chunk (`model: 'sonnet'`, `effort: 'high'`), all chunks in
+a single parallel dispatch, each carrying the full text of its own todos. Each returns one verdict
+per todo:
 
 - `complexity`: EASY or HARD, same criteria table as `/batch-todos` step 3.
 - `still_valid`: does the premise still hold? The check depth depends on the todo's `**Origin:**`:
@@ -70,11 +74,30 @@ each of these todos in one prompt. It returns one verdict per todo:
   `suggested_drop: true`, with the re-verification evidence as the reason - this is exactly the
   failure mode `**Origin:**` exists to catch. This still only flags it; Step 7's confirm gate still
   applies, per the no-auto-drop rule below.
+- `worth`: an integer 1-10, plus a one-line `worth_reason`. This answers a question none of the
+  other three do: **the premise can hold and the fix can be easy and it can still be a bad change
+  to make.** Anchor to this rubric, never a vibe:
+  - **9-10** - fixes a rule or script that has ALREADY misfired, with the incident cited.
+  - **7-8** - closes a real gap that will recur; the change is bounded and its trigger is concrete.
+  - **5-6** - genuine improvement, but speculative trigger or marginal payoff.
+  - **3-4** - churn. Restates a rule that already exists elsewhere, or adds a rule with no
+    enforcement path, or documents a preference as if it were a defect.
+  - **1-2** - net negative. Contradicts an existing rule, over-fits a single incident, or adds
+    surface area to a file that is already the bottleneck.
 
-This must stay a single batched call for the deep tier, never one dispatch per todo.
+  Scoring the low end honestly is the whole point; a backlog where everything scores 7+ means the
+  scorer was being polite, not that the backlog is good.
 
-**Shallow pass (remainder, if any):** main agent only, no subagent, no content read.
-`complexity` and `still_valid` are FORCED to the literal string `"unknown (shallow pass)"`.
+`worth` is ADVISORY. It never drops anything on its own and never feeds `suggested_drop` - a low
+score is an argument for the dev, made in Step 6, decided in Step 7. The no-auto-drop rule is
+absolute and this score does not carve an exception in it.
+
+One subagent per chunk, never one dispatch per todo, and never a second tier of agents re-checking
+the first.
+
+**Shallow pass (overflow past `DEEP_CHUNK_SIZE * DEEP_MAX_CHUNKS`, if any):** main agent only, no
+subagent, no content read. `complexity`, `still_valid` and `worth` are FORCED to the literal string
+`"unknown (shallow pass)"`.
 `suggested_drop` is FORCED `false` - a shallow-tier todo can never be independently flagged for
 drop by this step's own verdict, though it can still appear in the Step 6 confirm list if Step 2
 tagged it `origin: dedupe` (dedupe is backlog-wide and tier-agnostic, see Step 2). There is no
@@ -94,7 +117,7 @@ Then refresh the marker comment near the top (alongside the existing `<!-- Claim
 executing: ... -->` line where present):
 
 ```
-<!-- cleanup: last-checked <YYYY-MM-DD>, complexity=<value>, reconfirm-count=<N>, content-hash=<H> -->
+<!-- cleanup: last-checked <YYYY-MM-DD>, complexity=<value>, worth=<N>, reconfirm-count=<N>, content-hash=<H> -->
 ```
 
 Skip this write entirely for any todo with a live, non-stale claim in `.claims/<id>.claim` (per
@@ -102,7 +125,9 @@ the contract's staleness definition: mtime + PID liveness) - note it in Step 6's
 `claim-status: claimed - marker skipped`, so the report never rewrites a file another session is
 actively working from.
 
-**Deep-tier rows** (actually verified this run): `last-checked` bumps to today. `content-hash` is
+**Deep-tier rows** (actually verified this run): `last-checked` bumps to today, and `worth` is
+overwritten with this run's score - it is a re-judgement each time, never carried forward, since a
+todo's worth changes as the repo around it changes. `content-hash` is
 a short hash of the todo's Goal + Approach sections, recorded fresh each check. `reconfirm-count`
 increments if `still_valid=true` AND the new `content-hash` matches the value stored in the todo's
 previous marker; resets to 1 if the hash differs OR no previous marker exists (a todo's first-ever
@@ -112,8 +137,9 @@ baseline instead of a best-effort read); holds steady (neither increments nor re
 
 **Shallow-tier rows** (never actually verified): `last-checked` is left UNCHANGED at its
 pre-refresh snapshot value - nothing was checked, so nothing should look freshly checked. Only
-`complexity=unknown (shallow pass)` is written; `reconfirm-count` and `content-hash` are left
-unchanged. This keeps the staleness nag meaningful once a backlog exceeds the 40-todo triage cap:
+`complexity=unknown (shallow pass)` is written; `worth`, `reconfirm-count` and `content-hash` are
+left unchanged, so a real score from an earlier deep run survives an overflow run rather than being
+stamped over with `unknown`. This keeps the staleness nag meaningful once a backlog exceeds the deep-tier cap:
 shallow-tier todos keep aging in the nag like any other unattended todo, instead of resetting to
 "fresh" on every run they overflow into the shallow tier.
 
@@ -130,12 +156,17 @@ Contents, in order:
 3. Staleness nag: "`<N>` todos not reconfirmed in `CLEANUP_STALE_DAYS` (14) days or more," computed
    from the PRE-refresh `last-checked` snapshot Step 5 recorded before overwriting it - never from
    the value Step 5 just wrote, which would always read as fresh.
-4. A status table, fixed columns: `id | title | origin | complexity | still_valid |
-   reconfirm-count | triage-depth | claim-status`. `origin` is the todo's `**Origin:**` value, or
-   `unknown` if absent. `triage-depth` is `deep` or `shallow`. `claim-status` is blank or
-   `claimed - marker skipped`.
+4. A status table, fixed columns: `id | title | origin | worth | complexity | still_valid |
+   reconfirm-count | triage-depth | claim-status`, sorted by `worth` ASCENDING so the weakest todos
+   are the first thing read, not buried under 80 rows of fine ones. `origin` is the todo's
+   `**Origin:**` value, or `unknown` if absent. `triage-depth` is `deep` or `shallow`.
+   `claim-status` is blank or `claimed - marker skipped`.
+4a. A **low-worth roundup**: every deep-tier todo scoring `worth <= 4`, as `id - title - score -
+   worth_reason`. These are not drop suggestions and must not be presented as such; they are the
+   list the dev scans to decide what is worth their tokens. State the count plainly, including
+   when it is zero.
 5. A unified confirm list: every `origin: dedupe` loser appears here regardless of triage tier
-   (Step 2 identifies duplicates across the whole backlog, independent of Step 4's 40-id cap),
+   (Step 2 identifies duplicates across the whole backlog, independent of Step 4's deep-tier cap),
    plus every `origin: drop` suggestion (these are deep-tier only by construction, since shallow
    rows always have `suggested_drop` forced to `false` - not an extra exclusion rule, just a
    consequence of Step 4). Each entry: id, title, one-line reason, origin(s).
@@ -195,16 +226,20 @@ still-pending, for confirmation on a later run. This never overrides the no-auto
   report-time nag, not an enforced re-run mechanism.
 - No auto-drop, ever, under any condition - every removal from the backlog goes through the Step 7
   confirm gate, including dedupe merges.
-- No per-todo subagent dispatch for the deep tier - one batched call per cleanup run, capped at 40
-  todos; overflow gets the shallow, content-blind pass instead of a second subagent tier or chunked
-  multi-dispatch.
+- No per-todo subagent dispatch for the deep tier - one batched call per CHUNK, capped at
+  `DEEP_MAX_CHUNKS` chunks; overflow gets the shallow, content-blind pass instead of an unbounded
+  fan-out or a second verifier tier.
+- No auto-drop on a low `worth` score, ever. The score informs the dev; it never removes anything.
 
 ## Notes
 
 - `CLEANUP_STALE_DAYS = 14` - the staleness-nag threshold. A constant, not a flag, for v1; tune
   here directly if it needs to change.
-- Deep-tier triage cap: 40 todos, selected by ascending id order over the full pre-dedupe set.
-  Overflow gets the shallow pass (Step 4).
+- `DEEP_CHUNK_SIZE = 30`, `DEEP_MAX_CHUNKS = 6` - 180 todos of deep coverage per run, chunked by
+  ascending id over the full pre-dedupe set. Overflow gets the shallow pass (Step 4). Constants, not
+  flags; tune here.
+- `worth` is scored fresh every deep run and overwritten in the marker. Comparing a todo's old and
+  new score across runs is not supported - the marker holds one value, the current one.
 - Known residual, not fixed here: Step 4's deep-tier `still_valid` check overlaps with
   `/batch-todos` step 5's own validity check on the same files, with no cache-sharing between the
   two skills. Resolving it means touching `/batch-todos`, deferred to a separate later effort.
