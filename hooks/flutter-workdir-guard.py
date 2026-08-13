@@ -1,0 +1,197 @@
+"""PreToolUse hook: block destructive Flutter/Dart codegen against an unpinned cwd.
+
+Real incident 2026-07-31: a session driven from zng-app silently kept its
+shell cwd there after a Set-Location reset, and `dart run build_runner
+build --delete-conflicting-outputs` deleted 8 tracked generated files in
+the WRONG repo. Two further bare `flutter analyze`/`flutter test` calls in
+that same session produced false "your develop branch is broken" reads.
+
+Scope (deliberately narrow - see report): HARD BLOCK only fires when a
+flutter/dart invocation carries `--delete-conflicting-outputs` (the one
+flag that deletes files) and has no directory pinned in the SAME command
+string. Every other bare flutter/dart call (analyze, test, build, watch
+without the delete flag) only WARNS - printed, never blocking - since a
+blanket block on ordinary flutter/dart calls would get this hook disabled.
+
+"Pinned" = a `-C`/`--directory`/`--working-directory`/PowerShell
+`-WorkingDirectory` flag carrying an absolute path, OR a `cd`/Set-Location/
+Push-Location to an absolute path earlier in the SAME command string (chain
+operators only - a prior tool call's Set-Location is exactly the failure
+mode this guards against, so it never counts).
+
+Override: set CLAUDE_WORKDIR_GUARD_BYPASS=1 to bypass if this hook itself
+misfires.
+"""
+
+import os
+import re
+import shlex
+import sys
+from pathlib import Path
+
+_HOOKS_DIR = Path(__file__).resolve().parent
+if str(_HOOKS_DIR) not in sys.path:
+    sys.path.insert(0, str(_HOOKS_DIR))
+
+try:
+    from _hooklib import read_payload, deny, strip_quotes as _lib_strip_quotes
+except Exception as e:
+    sys.stderr.write(f"[flutter-workdir-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
+    sys.exit(2)
+
+OVERRIDE_ENV = "CLAUDE_WORKDIR_GUARD_BYPASS"
+
+RUNNER_BASENAMES = {"flutter", "flutter.bat", "flutter.exe", "dart", "dart.exe", "dart.bat"}
+DESTRUCTIVE_FLAG = "--delete-conflicting-outputs"
+CD_WORDS = {"cd", "cd.", "chdir", "pushd", "sl", "set-location", "push-location"}
+DIR_FLAGS = {"-c", "--directory", "--working-directory", "-workingdirectory"}
+
+# Windows drive-letter (C:\...), UNC (\\server\...), or git-bash style (/c/...).
+ABS_PATH_RE = re.compile(r"^(?:[A-Za-z]:[\\/]|\\\\|/[^/\s])")
+CHAIN_SPLIT_RE = re.compile(r"&&|\|\||;|\n|\|")
+
+
+def allow(message: str = "") -> None:
+    if message:
+        print(message)
+    sys.exit(0)
+
+
+def basename(tok: str) -> str:
+    return re.split(r"[\\/]", tok)[-1].lower()
+
+
+def flatten_tokens(tokens: list[str]) -> list[str]:
+    """PowerShell `-ArgumentList "a","b","c"` collapses to one shlex token
+    when there's no whitespace between the commas; split those back apart.
+    Runs on posix=False output (see tokenize), so quotes are stripped here
+    per comma-piece rather than relying on shlex - posix mode would mangle
+    Windows backslash paths like C:\\Users\\... by treating \\U as an escape.
+    """
+    out: list[str] = []
+    for tok in tokens:
+        for piece in tok.split(","):
+            piece = _lib_strip_quotes(piece.strip())
+            if piece:
+                out.append(piece)
+    return out
+
+
+def tokenize(segment: str) -> list[str]:
+    try:
+        return flatten_tokens(shlex.split(segment, posix=False))
+    except ValueError:
+        return []
+
+
+def has_runner(tokens: list[str]) -> bool:
+    return any(basename(tok) in RUNNER_BASENAMES for tok in tokens)
+
+
+def is_destructive(tokens: list[str]) -> bool:
+    lowered = [t.lower() for t in tokens]
+    return "build_runner" in lowered and DESTRUCTIVE_FLAG in lowered
+
+
+def pinned_dir_flag(tokens: list[str]) -> str | None:
+    """Return the pinned absolute path if a -C/--directory/--working-directory/
+    -WorkingDirectory flag with an absolute value is present, else None.
+    """
+    for i, tok in enumerate(tokens):
+        low = tok.lower()
+        if "=" in low and low.split("=", 1)[0] in DIR_FLAGS:
+            value = tok.split("=", 1)[1]
+        elif low in DIR_FLAGS and i + 1 < len(tokens):
+            value = tokens[i + 1]
+        else:
+            continue
+        if ABS_PATH_RE.match(value):
+            return value
+    return None
+
+
+def pinned_cd(tokens: list[str]) -> str | None:
+    """Return the absolute path of a cd/Set-Location/Push-Location in this
+    segment, else None. Scans the 3 tokens after the cd-word so a `-Path`
+    flag in between doesn't hide the value.
+    """
+    for i, tok in enumerate(tokens):
+        if tok.lower() not in CD_WORDS:
+            continue
+        for cand in tokens[i + 1 : i + 4]:
+            if ABS_PATH_RE.match(cand):
+                return cand
+    return None
+
+
+def is_flutter_project(path: str) -> bool:
+    try:
+        return os.path.isfile(os.path.join(path, "pubspec.yaml"))
+    except OSError:
+        return False
+
+
+def main() -> None:
+    payload = read_payload()
+    command = (payload.get("tool_input") or {}).get("command", "") or ""
+    if not command.strip():
+        allow()
+    if os.environ.get(OVERRIDE_ENV):
+        allow()
+
+    segments = CHAIN_SPLIT_RE.split(command)
+    prior_pin: str | None = None
+    warn_hit = False
+
+    for segment in segments:
+        tokens = tokenize(segment)
+        if not tokens:
+            continue
+
+        if has_runner(tokens):
+            pin = pinned_dir_flag(tokens) or prior_pin
+            destructive = is_destructive(tokens)
+
+            if destructive and not pin:
+                deny(
+                    "[flutter-workdir-guard] Blocked: build_runner --delete-conflicting-outputs "
+                    "with no directory pinned in this command. A silently-reset cwd has already "
+                    "deleted tracked generated files in the wrong repo once (2026-07-31). Pin the "
+                    "repo in the SAME invocation, e.g. "
+                    "`Start-Process -FilePath dart.bat -ArgumentList 'run','build_runner','build',"
+                    "'--delete-conflicting-outputs' -WorkingDirectory <abs repo path> -NoNewWindow -Wait` "
+                    "or `dart -C <abs repo path> run build_runner build --delete-conflicting-outputs`. "
+                    f"Bypass: set {OVERRIDE_ENV}=1."
+                )
+
+            if destructive and pin and not is_flutter_project(pin):
+                deny(
+                    f"[flutter-workdir-guard] Blocked: pinned directory '{pin}' has no pubspec.yaml "
+                    "- looks like a typo'd or non-Flutter path, not a real pin. "
+                    f"Bypass: set {OVERRIDE_ENV}=1."
+                )
+
+            if not pin:
+                warn_hit = True
+
+        cd_pin = pinned_cd(tokens)
+        if cd_pin:
+            prior_pin = cd_pin
+
+    if warn_hit:
+        allow(
+            "[flutter-workdir-guard] Warning: flutter/dart call with no directory pinned in this "
+            "command. If the shell's cwd silently reset (has happened before), this can run "
+            "against, and report on, the wrong repo. Not blocked - just double-check the repo."
+        )
+    allow()
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except SystemExit:
+        raise
+    except Exception as e:
+        sys.stderr.write(f"[flutter-workdir-guard] hook error, failing open: {e}\n")
+        sys.exit(0)

@@ -20,6 +20,8 @@
 !agents/**
 !context/
 !context/**
+!hooks/
+!hooks/**
 !.claude/
 !.claude/todos/
 !.claude/todos/**
@@ -36,6 +38,14 @@ skills/commit/watch-build.pid
 # Claims are machine-local state (session ids, PIDs) - never commit, even though todos/ above is tracked
 .claude/todos/.claims/
 .claude/todos/.claims/**
+
+# Python bytecode cache, regenerated locally, not source
+hooks/__pycache__/
+hooks/__pycache__/**
+
+# commit-guard/pr-guard runtime markers - machine/session-local, never commit
+hooks/.commit-marker*
+hooks/.pr-marker*
 
 # Belt-and-suspenders: never commit secrets
 .env
