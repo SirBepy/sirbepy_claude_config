@@ -1,6 +1,6 @@
 ---
 name: screenshot
-description: Triggers on /screenshot only. Takes portfolio-quality screenshots of the current project using a persistent Playwright helper script.
+description: Triggers on /screenshot, and on requests to shoot a matrix of frames/states of a local page (design comps, responsive sweeps). Takes portfolio-quality screenshots of the current project using a persistent Playwright helper script.
 ---
 
 # /screenshot
@@ -135,3 +135,28 @@ typed single-file invocations with one documented loop.
    keeper instead uses an explicit `.portfolio-data/` path, matching Step 4.
 5. After the loop, `Read` every PNG back inline (same verification bar as Step 5: not blank, not
    mid-animation). Report the full list of files captured with their paths.
+
+## Frame matrix mode - many parameterised frames in one command
+
+Trigger: "shoot every state/variant/breakpoint of this component", a design comp round with
+several near-identical HTML/bundle variants, or any case that would otherwise mean hand-rolling a
+Playwright loop. Replaces the pattern of re-deriving launch/loop/screenshot boilerplate per round.
+
+1. Write a frames JSON array, each entry `{ "name": "..", "url": "..", "query": "..", "width": N,
+   "height": N, "wait": N, "deviceScaleFactor": N }`. Give either an absolute/`file://` `url`, or a
+   `query`/relative `url` combined with `--base-url`/`--serve` below. `wait` and
+   `deviceScaleFactor` are optional; `deviceScaleFactor` defaults to 2 for `width <= 500` (mobile),
+   1 otherwise.
+2. Pick a source for the pages:
+   - Static files: `--serve <dir>` starts a throwaway local server over the directory (needed for
+     any bundled/ES-module output, which does not load over `file://`) and tears it down after.
+   - Already-running dev server: `--base-url <url>` instead of `--serve`.
+3. One command:
+   ```
+   node "C:/Users/tecno/.claude/skills/screenshot/screenshot-helper.cjs" --frames "frames.json" --out-dir "comp-shots" --serve "path/to/static/dir"
+   ```
+   `--out-dir` follows the same rule as every other output path: a bare name auto-resolves into
+   this session's subfolder, an explicit path must be under `.portfolio-data/`.
+4. The command exits non-zero if any frame throws a page error - a blank/broken render never
+   reports as captured. Its stdout is `{"captured":[...],"failed":[...]}`.
+5. `Read` each captured PNG back, same verification bar as every other mode.
