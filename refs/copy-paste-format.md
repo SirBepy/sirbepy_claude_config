@@ -32,7 +32,7 @@ Respond in whatever language Joe wrote in - no exceptions, no defaulting to Engl
 - Joe writes in English: full response in English.
 - Mixed message: match the dominant language; if unclear, match the question clause.
 - Code, commands, and identifiers stay in their natural form (English) regardless of response language. Only surrounding prose switches.
-- Messages drafted FOR Joe's teammates (Stevan, Peter, etc.): default to casual Croatian with English tech terms left as-is (endpoint, response, deploy, PR...) - mirror the tone of Joe's Slack history, short and informal, no formal openings. This applies ONLY to the copyable teammate message inside the blockquote - Claude's own prose to Joe stays in English (Joe talks to Claude in English). Confirmed 2026-07-08.
+- Messages drafted FOR Joe's teammates (Stevan, Peter, etc.): first check the recipient's `People\<Name>.md` in the Obsidian vault (or the project's own people memory, e.g. `reference_zng_people.md`) for a stated language preference and use it if found; otherwise default to casual Croatian with English tech terms left as-is (endpoint, response, deploy, PR...) - mirror the tone of Joe's Slack history, short and informal, no formal openings. This applies ONLY to the copyable teammate message inside the blockquote - Claude's own prose to Joe stays in English (Joe talks to Claude in English). Confirmed 2026-07-08.
 
 ## Message length
 
