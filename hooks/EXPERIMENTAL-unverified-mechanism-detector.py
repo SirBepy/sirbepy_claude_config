@@ -10,9 +10,15 @@ false-positive rate. Never blocks - exit code is always 0. This is a
 measurement tool, not a working guard.
 """
 
-import json
 import re
 import sys
+from pathlib import Path
+
+_HOOKS_DIR = Path(__file__).resolve().parent
+if str(_HOOKS_DIR) not in sys.path:
+    sys.path.insert(0, str(_HOOKS_DIR))
+
+from _hooklib import read_payload
 
 ASSERTIVE_PATTERN = re.compile(
     r"\b("
@@ -31,13 +37,7 @@ HEDGE_PATTERN = re.compile(
 
 
 def main() -> int:
-    raw = sys.stdin.read()
-    try:
-        payload = json.loads(raw.lstrip("﻿") or "{}")
-    except json.JSONDecodeError:
-        print("PARSE_ERROR")
-        return 0
-
+    payload = read_payload()
     text = payload.get("last_assistant_message", "")
     hits = ASSERTIVE_PATTERN.findall(text)
     hedged = bool(HEDGE_PATTERN.search(text))
