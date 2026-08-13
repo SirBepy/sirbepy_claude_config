@@ -53,6 +53,10 @@ component", not only for portfolio shots.
 - No caller needs to know where playwright is installed.
 - The existing portfolio flow still works unchanged.
 
+## Notes
+
+- Done 2026-08-13, authorized by Joe ahead of the 58 audit that formally blocked it, because it extends an existing skill rather than adding one and shares its files with 295. Added --frames <frames.json> --out-dir <dir> [--serve <dir> | --base-url <url>] to screenshot-helper.cjs. Frame spec is {name, url|query, width, height, wait?, deviceScaleFactor?}, scale defaulting to 2 below 500px width since Playwright has no mobile clamp (confirmed by a real 390px capture). --serve runs a minimal same-process static server on an ephemeral port for bundled ES-module output that cannot load over file://, torn down after. Every frame gets a pageerror listener and any failure exits non-zero with a captured/failed JSON summary, so a blank render cannot pass as captured. Output goes through a new resolveScreenshotDir() sharing the same allowlist as resolveScreenshotPath() via a common withinAllowlist() helper: the allowlist was NOT weakened, and an out-of-allowlist --out-dir was verified to be refused. Real runs verified: a 2-frame matrix captured both PNGs correctly, and a deliberately broken page produced the failed summary and exit 1. NOT done, from the absorbed todos: 236's /supervised-run swap and 72's esbuild bundling and measure modes, both out of this todo's stated Approach.
+
 ## Open questions
 
 Written by /auto-do-todos on 2026-08-12. The next run opens with these.

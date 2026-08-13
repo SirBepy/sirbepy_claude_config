@@ -52,7 +52,6 @@ already shipped today.
 
 ## Batch D - screenshot and Playwright (3, blocked on 58)
 
-- [ ] 63 - one multi-frame helper (absorbed 44, 72, 236: frame matrix, comp rendering, playwright resolution)
 - [ ] 30 - storybook restart-wait-screenshot loop
 
 ## Batch E - close and session identity (4)

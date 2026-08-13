@@ -56,3 +56,4 @@ cause: 290 has no script, this one has a script nobody is pointed at.
   4 hard per block, 25% ratio past 20 added lines) and both `/commit` and `/create-pr` defer to it.
 - Related: [[290-em-dash-check-is-hand-rolled-every-run-instead-of-being-a-script]] proposes the
   sibling `em-dash.sh`. If both land, step 5a should call two scripts, not paste two pipelines.
+- Archived 2026-08-13 as DEAD, no work needed. Todo 290 rewrote /commit step 5a in commit c2ff82d during the same run: SKILL.md now calls 'bash skills/commit/comment-noise.sh <files>' and 'bash skills/commit/em-dash.sh <files>' directly, with zero inlined awk. Verified /create-pr step 2b carries no inline awk either. The premise was true when filed and was fixed by a sibling todo before this one was ever picked up.
