@@ -1,7 +1,7 @@
 ---
 name: commit
-description: Triggers on /commit and its subcommands (v, bump, onlybump, onlyv, push, pushbump, pushnbump) to commit changes.
-argument-hint: "[v|bump|push|pushbump|pushnbump|onlyv|onlybump]"
+description: Triggers on /commit and its subcommands (v, bump, onlybump, onlyv, push, pushbump, pushnbump, fold) to commit changes.
+argument-hint: "[v|bump|push|pushbump|pushnbump|onlyv|onlybump|fold <sha>]"
 ---
 
 # /commit
@@ -118,6 +118,30 @@ Commit message is always: `CHORE: bump to v1.0.1` (with the actual new version).
 Version bump procedure: same as `/commit v` above.
 
 If no `package.json` exists, say so and stop.
+
+## `/commit fold <sha>`
+
+Folds newly-staged-or-named fixes into an existing commit `<sha>` that is not yet pushed, preserving every other commit's original message, author, and timestamp. This is the explicit, dev-named counterpart to `~/.claude/snippets/auto-commit.md`'s "Folding a correction into the last commit" section, not a replacement for it - if `<sha>` is HEAD and nothing has landed on top of it since, that snippet's own atomic `update-ref` recipe (its Case A) is simpler and applies directly, use it instead. This mode exists for the case that snippet marks unsafe for silent/automatic action (its Case B, other commits sitting on top of the target) but which is fine once a dev explicitly names the sha and no file overlap blocks a clean split.
+
+**Preconditions, checked in this order, before anything is written:**
+
+1. Resolve `<sha>` to a full hash (`git rev-parse <sha>`). Unresolvable: stop, tell the dev.
+2. **Pushed check, unmissable.** `git rev-parse --abbrev-ref --symbolic-full-name @{u}` for the upstream.
+   - No upstream configured: nothing to push to yet, so `<sha>` cannot be "already pushed" - safe on this axis, continue.
+   - Upstream exists: `git branch -r --contains <sha>`. Any output means `<sha>` is reachable from a remote branch - **refuse**, name the sha, and tell the dev to make a normal follow-up `FIX:` commit instead (same fix-forward wording as auto-commit.md's "Fixes: `<short-sha>`" body line). Stop, do not touch history.
+3. **Overlap check.** `git log --format=%H <sha>..HEAD` lists every commit on top of the target. For each, `git show --name-only --format= <commit>` and intersect with the file list this fold is about to touch. Any overlap: a clean pathspec split can't separate the hunks - **refuse this mode**, point the dev at "Splitting one file across commits" in `skills/commit/edge-cases.md` instead.
+4. Step 5a prefilters (`comment-noise.sh`, `em-dash.sh`) run against the fold's own file set, same as any other commit.
+5. Branch guard: record `git rev-parse --abbrev-ref HEAD` now, and re-check it immediately before the reset below - same rule as step 8's, stop if it moved. Same peer check (7a) too: announce the pathspec about to be rewritten before touching history.
+
+**Recipe, once every precondition passes:**
+
+1. Record the ordered commit list from `<sha>` to `HEAD`, oldest first, with each full hash, author date, committer date, and message: `git log --format='%H|%aI|%cI|%s' --reverse <sha>~1..HEAD`.
+2. `git reset --soft <sha>~1` - moves HEAD to the target's parent; the index now holds everything from `<sha>..HEAD` plus this fold's own fix, together. Same deliberate, surfaced exception to the "never reset what you didn't stage" rule as step 8's own unpushed-overlap check - this is the dev's own prior work, named explicitly.
+3. Recommit oldest first by pathspec, never `git add -A`:
+   - First commit = the original target's own file list plus the fold's fix files, using the **original** message from step 1, with `--date` and `GIT_AUTHOR_DATE`/`GIT_COMMITTER_DATE` set to the original timestamps.
+   - Each remaining original commit, in original order, recommitted with its own unchanged file list, original message, original timestamps.
+4. **Verify via patch-diff, not full-tree-diff**, every commit except the folded one: `git show <original-sha>` must diff empty against `git show <new-sha>` for its replacement. A full-tree comparison would not catch a hunk silently landing in the wrong commit.
+5. Report the old-sha to new-sha remapping to the dev.
 
 ## Prefixes
 
