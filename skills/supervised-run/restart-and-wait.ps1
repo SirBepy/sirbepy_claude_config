@@ -83,8 +83,10 @@ if (-not $Marker) {
 
 # High-water mark: only entries appended after this point count as "fresh", so a
 # marker left over from before the restart can never false-positive readiness.
+# Anchored on the last pre-restart line's TEXT, not on a count: a capped ring
+# buffer that is already full keeps Count pinned while its contents shift.
 $before = @(Invoke-Api $cfg 'GET' "/procs/$Id/logs")
-$baseline = $before.Count
+$anchor = if ($before.Count -gt 0) { $before[$before.Count - 1].text } else { $null }
 
 if (-not $NoRestart) {
     if ($proc.kind -eq 'flutter') { Invoke-Api $cfg 'POST' "/procs/$Id/reload" | Out-Null }
@@ -95,11 +97,18 @@ $deadline = (Get-Date).AddSeconds($TimeoutSec)
 $proxyUrl = $null
 while ((Get-Date) -lt $deadline) {
     $logs = @(Invoke-Api $cfg 'GET' "/procs/$Id/logs")
-    # Buffer may have rotated (trimmed from the front) since baseline was taken -
-    # if it shrank, every line currently present is "fresh" by definition.
-    if ($logs.Count -gt $baseline) { $fresh = $logs[$baseline..($logs.Count - 1)] }
-    elseif ($logs.Count -lt $baseline) { $fresh = $logs }
-    else { $fresh = @() }
+    # Find the anchor's LAST occurrence; everything after it arrived since baseline.
+    # No anchor, or rotated past it, means every line present is fresh.
+    $cut = -1
+    if ($anchor -ne $null) {
+        for ($i = $logs.Count - 1; $i -ge 0; $i--) {
+            if ($logs[$i].text -eq $anchor) { $cut = $i; break }
+        }
+        if ($cut -lt 0) { $fresh = $logs }
+        elseif ($cut -lt $logs.Count - 1) { $fresh = $logs[($cut + 1)..($logs.Count - 1)] }
+        else { $fresh = @() }
+    }
+    else { $fresh = $logs }
 
     foreach ($entry in $fresh) {
         if (-not $proxyUrl -and $entry.text -match 'live-reload proxy on ([\d.]+:\d+)') {
