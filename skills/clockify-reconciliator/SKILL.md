@@ -74,15 +74,16 @@ For a single-day lookback (`today`, `yesterday`, or an explicit single `YYYY-MM-
 - **Reconstruction**: the window has zero or sparse existing entries and the dev's ask implies
   building the period from scratch (e.g. "I haven't logged anything this week", "rebuild my week").
   Confirm scope once via AskUserQuestion, "This session only" as the only offered option, before
-  sourcing anything beyond commits. See "Reconstruction mode" below.
+  sourcing anything beyond commits, then read `skills/clockify-reconciliator/modes.md`'s
+  "Reconstruction mode" section for the full procedure.
 - **Audit**: the dev explicitly asks to check/fix a period that already has entries (e.g. "check the
   whole month", "audit July"). Requires one AskUserQuestion confirming the override of the "never
-  touch existing / never create in gaps" defaults, scoped to this session only, before running the
-  checklist in "Audit mode" below.
+  touch existing / never create in gaps" defaults, scoped to this session only, then read
+  `skills/clockify-reconciliator/modes.md`'s "Audit mode" section for the checklist.
 
 Reconstruction and Audit are never inferred silently from window contents alone - the trigger is the
 dev's own phrasing, confirmed once via AskUserQuestion before any of their extra sourcing/checklist
-work begins.
+work begins. A plain Reconciliation run never needs to read `modes.md`.
 
 ### 4. Fetch Clockify entries
 
@@ -190,54 +191,6 @@ If gated in, read `skills/clockify-reconciliator/hubstaff.md` and follow its "St
 - HubStaff weekly screenshot path(s) (step 12), or skipped reason (auth failed preflight / org not configured)
 - "Needs manual" targets with time + reason
 - Other-project warning list
-
-## Reconstruction mode
-
-Gated in by step 3a. Builds an entire period from scratch when little or nothing is logged. Sources,
-in priority order:
-
-1. Git commits (author-date, all configured repos) - the primary evidence.
-2. The recurring standup block, if one is named in the project config.
-3. An optional commute-app timestamp source for bounding unexplained gaps as likely in-person
-   meetings: first daily timestamp before ~1PM = arrival, a second same-day timestamp or one after
-   ~1PM = departure. A missing departure is normal, not an error. Durations anchored this way are a
-   starting hypothesis, not ground truth - always ask the dev to confirm meeting content/duration from
-   memory, and let the dev's memory win when it conflicts with the timestamp-derived guess.
-
-**Clustering defaults** (proven 2026-07-21, 46 entries): session break at a 3h commit gap; pad each
-session +20min lead-in and +20min trail-off; split sessions over 3h into ~2-2.25h sub-chunks with
-per-chunk commit-derived descriptions; carve named recurring non-commit activities (e.g. a daily
-09:45-10:00 standup) around sessions instead of double-booking them. Create via `POST` (plain
-Reconciliation mode stays `PUT`/description-only, never creates).
-
-**Hard rule:** never invent hours not backed by a real commit/PR or an explicitly named real activity
-- a weekly target the dev states is a ceiling to fill toward from real evidence, never a target that
-justifies inventing unbacked hours (see Rules).
-
-## Audit mode
-
-Gated in by step 3a. Runs a checklist over a period that already has entries, cheapest check first:
-
-- **Hard overlap check:** any two entries in the range with overlapping `[start, end)` - always a bug,
-  fix immediately, no judgment call.
-- **Mechanical-split fingerprint:** consecutive entries with near-identical (within a few seconds)
-  durations - a sign a raw block got auto-split without checking for real gaps. Re-derive each half's
-  commit backing independently rather than trusting the original split point.
-- **Chopped-session fingerprint:** two short entries (roughly under 30min) separated by a gap of an
-  hour or more, with nothing else nearby, on the same night/day. Default hypothesis is ONE continuous
-  session with untracked (non-commit) work in the gap - ask the dev before assuming two real separate
-  sessions instead.
-- **Total-duration sanity:** any single day over ~9-10h, or a duration wildly disproportionate to a
-  trivial-sounding description, gets a second look.
-
-**Multi-pass verification**, reusable pattern for a full-month audit: 2 independent `sonnet` agents
-padding-hunting from different angles/date ranges, then 1 `sonnet` agent explicitly tasked as
-devil's-advocate-for-longer (catches over-trimming), then 1 final high-reasoning **read-only** solo
-pass told to look for systemic issues (overlaps, cross-day inconsistency, "does this look
-reverse-engineered") rather than re-litigate individual entries already checked. Give every subagent
-the live API key/workspace/project ids inline and tell it explicitly whether it has write access or is
-report-only - each one re-pulls data itself rather than trusting a prior agent's summary. Follow the
-global sonnet-by-default / opus-only-for-final-solo-verify model rule.
 
 ## Rules
 

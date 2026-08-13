@@ -1,17 +1,15 @@
 // Checks HubStaff auth via local Playwright before a reconciliation run.
-// No Playwright MCP dependency - drives the npx-cached playwright package directly.
+// No Playwright MCP dependency - playwright resolution lives in hs_common.cjs (fallback chain,
+// not a pinned npx cache path).
 // Usage: node hs_preflight.cjs --org <id> --user <id> --profile <dir> --mon <YYYY-MM-DD> --sun <YYYY-MM-DD>
-const { chromium } = require('C:/Users/tecno/AppData/Local/npm-cache/_npx/e41f203b7505f1fb/node_modules/playwright');
-const fs = require('fs');
+const { getArg, launchProfileContext } = require('./hs_common.cjs');
 
 const args = process.argv.slice(2);
-const get = (flag, def = null) => { const i = args.indexOf(flag); return i !== -1 ? args[i + 1] : def; };
-
-const org = get('--org');
-const user = get('--user');
-const profile = get('--profile');
-const mon = get('--mon');
-const sun = get('--sun');
+const org = getArg(args, '--org');
+const user = getArg(args, '--user');
+const profile = getArg(args, '--profile');
+const mon = getArg(args, '--mon');
+const sun = getArg(args, '--sun');
 
 if (!org || !user || !profile || !mon || !sun) {
   console.error('Usage: --org <id> --user <id> --profile <dir> --mon <YYYY-MM-DD> --sun <YYYY-MM-DD>');
@@ -25,8 +23,7 @@ function report(result) {
 }
 
 (async () => {
-  fs.mkdirSync(profile, { recursive: true });
-  const context = await chromium.launchPersistentContext(profile, { headless: false });
+  const context = await launchProfileContext(profile);
   try {
     const page = context.pages()[0] || await context.newPage();
     await page.goto(weeklyUrl, { waitUntil: 'domcontentloaded' });
@@ -60,4 +57,7 @@ function report(result) {
   } finally {
     await context.close();
   }
-})();
+})().catch(e => {
+  console.error(e.message);
+  process.exit(1);
+});
