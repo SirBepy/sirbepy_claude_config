@@ -43,8 +43,19 @@ independent of, the rest of the sweep.
 
 ## Open questions
 
-Written by /auto-do-todos on 2026-08-12. The next run opens with these.
+Answered 2026-08-13. No open question remains, only a scheduling decision.
 
-- [ ] [TOOLING] This audit is dev-origin and blocks 11, 30 and 63, but its whole deliverable is a keep/update/remove verdict over 78 skills, and executing the removals is your call, not Claude's. How should it run? Options: (a) Claude runs the audit read-only next session and hands back one keep/update/remove table, you approve removals in a single pass; (b) Claude runs it and auto-archives only skills with zero references anywhere in the tree, surfacing every judgement call; (c) skip the audit and unblock 11, 30 and 63 directly instead. Recommended: (a), because the 2026-08-01 audit already showed the removals are the part that needs your taste.
+Asked on 2026-08-13 how the audit should run. Joe's answer, verbatim: "this is meant to be a whole
+session kind of thing, so skip this for now." So it is not a question any more, it is a job waiting
+for a session of its own. Do NOT open it as a side quest inside another run.
 
-The /auto-do-todos run on 2026-08-12 deliberately did NOT start this. Its output is a proposal that needs your confirm either way, so starting it would have spent the run's remaining context without producing anything shippable.
+Two things a future run should know before starting it:
+
+- The count is now **76 directories, 669 files, 664 tracked**, re-enumerated 2026-08-13, not the
+  ~78 this todo was written against.
+- **12 of those are vendored**, not hand-authored (the 11 Cloudflare-family skills plus
+  `impeccable`), all added in one commit, `4cc2977`. They are documented in `skills/VENDORED.md`
+  with their patch status. Only ONE carries a local patch. The audit should judge those 12 on
+  "do we still want this installed" rather than on quality, since their content is upstream's.
+
+Blocks 11, 30 and 63, all of which stay parked until this runs.

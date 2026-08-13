@@ -101,8 +101,11 @@ Each changes something outside `~/.claude`. Move them or do them where they belo
 Deliberately NOT checkboxes, so `/pickup` never serves them as the next lane item.
 
 - 32 - compact **fibo's** `MEMORY.md` (156 lines, target under 140)
-- 247 - repair pass over 8 external public repos; the og:image defect is confirmed still live
-- 88 - revoke a stale HubStaff PAT (Joe's browser, zero functional impact)
+- 247 - repair pass over external public repos. Rediscovered 2026-08-13: it is **15 repos, not 8**,
+      and the pass also caught `mass_send_message` being dead in production (its Vite `base` is
+      `/MassSendMessage/` while Pages serves `/mass_send_message/`, so the main bundle 404s).
+      Authorized by Joe, push direct, in flight.
+- 88 - done, archived 2026-08-13 on Joe's call as not worth tracking.
 
 ## Parked - do not build (2)
 
@@ -122,12 +125,23 @@ Not checkboxes on purpose. `/pickup` must never hand these to anyone as actionab
 
 ## Open questions for Joe
 
-1. **`skills/` has 11 untracked vendored directories** (~517 files: impeccable, the Cloudflare
-   set, agents-sdk, wrangler and more). A `/rate-it` on committing them wholesale scored **4/10**;
-   the recommendation was a manifest of installed skills plus versions, and committing only the
-   files that have been locally patched. Blocks batch K.
-2. **`hooks/` is gitignored while `settings.json` is tracked.** Settings references the hook
-   scripts by absolute path, so a fresh clone gets wiring that points at files which do not exist.
-   Unlike the vendored skills these are hand-written and irreplaceable.
-3. **The package-manager guard requires `corepack yarn install`** over bare `yarn install` in any
-   pinned repo, even when the PATH binary already matches. One line to relax if it grates.
+All three were answered on 2026-08-13. Kept here with their resolutions so nobody re-asks.
+
+1. **Vendored skills: RESOLVED, but not the way the question assumed.** The wholesale commit had
+   already happened in `4cc2977` (2026-08-12, 516 files), which is the option `/rate-it` scored
+   4/10. Real state now: 76 skill dirs, 669 files, 664 tracked. Joe chose the manifest, so
+   `skills/VENDORED.md` was written as documentation over the existing state rather than as a
+   tracking change. It found exactly ONE local patch in the whole vendored set,
+   `skills/impeccable/reference/new-work.md`, verified by diffing against the vendoring commit.
+   Still open, narrowly: whether to `git rm --cached` the ~516 unpatched vendor files to restore
+   the exclude-vendored model. Nobody has to, and the silent-revert risk is one file wide.
+2. **`hooks/` gitignored: RESOLVED.** Now tracked (`bcaa730`), 13 files, secret-scanned first.
+   Joe asked whether the absolute paths could go too. Answer, VERIFIED against the live hook docs:
+   `${CLAUDE_PROJECT_DIR}` is real and documented, but it resolves to whichever project is open,
+   and this `settings.json` is the GLOBAL user-level file whose hooks fire in every session. A
+   portable form would therefore break everywhere except this repo. Absolute paths stay, on
+   purpose.
+3. **corepack guard: RESOLVED, keep it strict.** Joe confirmed after learning it is a different
+   thing from the package-safety rule: this one governs WHICH binary installs, never what gets
+   installed. A global Yarn 1 once silently rewrote a Yarn 4 lockfile, which is the incident it
+   prevents.
