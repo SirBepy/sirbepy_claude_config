@@ -29,6 +29,12 @@ CASES = [
     ("x | tee y.txt", True, "tee real write"),
     ("x | tee /dev/null", False, "tee to devnull"),
     ("(echo hi) | Out-File z", True, "Out-File after pipe following paren group"),
+    ('iex "Set-Content -Path evil.txt -Value pwned"', True, "iex bypass: double-quoted payload"),
+    ('Invoke-Expression "Out-File x.txt"', True, "Invoke-Expression bypass: double-quoted payload"),
+    ("iex 'Set-Content -Path evil.txt -Value pwned'", True, "iex bypass: single-quoted payload"),
+    ('echo "foo\\" ; Set-Content evil.txt "bar"', True, "pwsh backslash-in-dquote bypass: real Set-Content after fake escape"),
+    ('echo "he said ""Set-Content"" nicely"', False, "doubled-quote pwsh escape: mention only, not an invocation"),
+    ('echo "say `"Out-File`" now"', False, "backtick-escaped quote: mention only, not an invocation"),
 ]
 
 
