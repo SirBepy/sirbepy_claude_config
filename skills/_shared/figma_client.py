@@ -13,6 +13,7 @@ import urllib.request
 
 API = "https://api.figma.com/v1"
 MAX_SAFE_DEPTH = 3
+MAX_RETRY_AFTER = 300
 
 
 class FigmaQuotaError(RuntimeError):
@@ -78,9 +79,17 @@ def api_get(url, token, cache_dir=None, cache_key=None, force=False):
         except urllib.error.HTTPError as e:
             if e.code != 429:
                 raise
-            wait = int(e.headers.get("Retry-After") or 0) or min(60, 5 * 2 ** attempt)
-            print(f"  429, sleeping {wait}s (attempt {attempt + 1}/8)")
-            time.sleep(wait)
+            asked = int(e.headers.get("Retry-After") or 0) or min(60, 5 * 2 ** attempt)
+            # This API really does return Retry-After past 100 hours when quota is
+            # spent. Honour it up to a ceiling, then give up rather than sleep for days.
+            if asked > MAX_RETRY_AFTER:
+                raise FigmaQuotaError(
+                    f"Figma asked for a {asked}s wait ({asked / 3600:.1f}h), past the "
+                    f"{MAX_RETRY_AFTER}s ceiling. Quota is spent, not congested: use the "
+                    "offline export/slice fallback or come back later."
+                )
+            print(f"  429, sleeping {asked}s (attempt {attempt + 1}/8)")
+            time.sleep(asked)
     if result is None:
         raise FigmaQuotaError(
             "Rate limited out after 8 retries. Stop retrying and switch to the "
