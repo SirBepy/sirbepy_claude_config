@@ -301,6 +301,15 @@
             "command": "curl -s --connect-timeout 2 --max-time 4 -X POST --data-binary @- -H 'Content-Type: application/json' http://127.0.0.1:27182/hooks/stop || exit 0"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\em-dash-guard.py\"",
+            "statusMessage": "Checking for em dash"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
