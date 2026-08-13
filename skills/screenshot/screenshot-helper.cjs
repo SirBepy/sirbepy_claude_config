@@ -6,24 +6,26 @@ const { getSessionShotDir } = require('./session-shot-dir.cjs');
 const args = process.argv.slice(2);
 const get = (flag, def = null) => { const i = args.indexOf(flag); return i !== -1 ? args[i + 1] : def; };
 
-// A bare filename (no directory) auto-resolves into this session's throwaway subfolder, so a
-// caller never hand-builds the <pid>-<start-ticks> path itself. A path already naming
-// .for_bepy/screenshots/ directly at the root (no subfolder) is refused - that's the exact rule
-// /close's purge depends on (todo 287).
+// Allowlist, not a blocklist: a path must resolve (path.resolve, so ../ traversal and absolute
+// paths are caught after resolution, never by string matching) inside THIS session's subfolder
+// or the portfolio-keepers folder, or it is refused. A bare filename still auto-resolves into
+// the session subfolder, so a caller never hand-builds the <pid>-<start-ticks> path itself.
 function resolveScreenshotPath(p) {
+  const sessionDir = getSessionShotDir();
   if (!p.includes('/') && !p.includes('\\')) {
-    return path.join(getSessionShotDir(), p);
+    return path.join(sessionDir, p);
   }
-  const norm = path.resolve(p).replace(/\\/g, '/');
-  const marker = '/.for_bepy/screenshots/';
-  const idx = norm.indexOf(marker);
-  if (idx !== -1 && norm.slice(idx + marker.length).split('/').length < 2) {
+  const resolved = path.resolve(p);
+  const portfolioDir = path.resolve(process.cwd(), '.portfolio-data');
+  const inSession = resolved === sessionDir || resolved.startsWith(sessionDir + path.sep);
+  const inPortfolio = resolved === portfolioDir || resolved.startsWith(portfolioDir + path.sep);
+  if (!inSession && !inPortfolio) {
     throw new Error(
-      `Refusing to write directly under .for_bepy/screenshots/ root: "${p}". ` +
-      'Pass a bare filename (auto-resolved into the session subfolder) instead.'
+      `Refusing to write screenshot outside the allowed folders: resolved to "${resolved}". ` +
+      `Use a bare filename (auto-resolved into "${sessionDir}") or a path under ".portfolio-data/".`
     );
   }
-  return p;
+  return resolved;
 }
 
 function usage() {
