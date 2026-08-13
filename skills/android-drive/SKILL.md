@@ -1,6 +1,6 @@
 ---
 name: android-drive
-description: Drives an installed Android app on an emulator or physical device through a UI flow via adb - boot/wait, screenshot, tap, type, clear a field, dismiss the keyboard, read back, repeat. Use for "test this on the emulator", "drive the Android app through X", "tap through this flow", or any native-Android UI automation ask. Not for Flutter web (use /flutter-e2e) or scripted Patrol test suites.
+description: Drives an installed Android app via adb - tap, type, screenshot, repeat. For test/drive/tap-through asks on an emulator or device. Not Flutter web (/flutter-e2e) or Patrol suites.
 ---
 
 # android-drive
