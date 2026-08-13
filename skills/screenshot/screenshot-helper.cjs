@@ -1,8 +1,30 @@
 const { chromium } = require('C:/Users/tecno/AppData/Local/npm-cache/_npx/e41f203b7505f1fb/node_modules/playwright');
 const fs = require('fs');
+const path = require('path');
+const { getSessionShotDir } = require('./session-shot-dir.cjs');
 
 const args = process.argv.slice(2);
 const get = (flag, def = null) => { const i = args.indexOf(flag); return i !== -1 ? args[i + 1] : def; };
+
+// A bare filename (no directory) auto-resolves into this session's throwaway subfolder, so a
+// caller never hand-builds the <pid>-<start-ticks> path itself. A path already naming
+// .for_bepy/screenshots/ directly at the root (no subfolder) is refused - that's the exact rule
+// /close's purge depends on (todo 287).
+function resolveScreenshotPath(p) {
+  if (!p.includes('/') && !p.includes('\\')) {
+    return path.join(getSessionShotDir(), p);
+  }
+  const norm = path.resolve(p).replace(/\\/g, '/');
+  const marker = '/.for_bepy/screenshots/';
+  const idx = norm.indexOf(marker);
+  if (idx !== -1 && norm.slice(idx + marker.length).split('/').length < 2) {
+    throw new Error(
+      `Refusing to write directly under .for_bepy/screenshots/ root: "${p}". ` +
+      'Pass a bare filename (auto-resolved into the session subfolder) instead.'
+    );
+  }
+  return p;
+}
 
 function usage() {
   console.error('Usage: --url <url> --plan <plan.json>');
@@ -56,16 +78,30 @@ if (planPath) {
   }
 }
 
+// Resolve/guard every screenshot output path up front, before launching the browser.
+let resolvedScreenshotOut = null;
+try {
+  if (screenshotOut) resolvedScreenshotOut = resolveScreenshotPath(screenshotOut);
+  if (steps) {
+    for (const step of steps) {
+      if (step.type === 'screenshot') step.out = resolveScreenshotPath(step.out);
+    }
+  }
+} catch (e) {
+  console.error(e.message);
+  process.exit(1);
+}
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: vw, height: vh } });
   await page.goto(url, { waitUntil: 'networkidle' });
 
-  if (screenshotOut) {
+  if (resolvedScreenshotOut) {
     if (clickSelector) await page.click(clickSelector);
     if (waitMs !== null) await page.waitForTimeout(waitMs);
-    await page.screenshot({ path: screenshotOut });
-    console.log('Saved:', screenshotOut);
+    await page.screenshot({ path: resolvedScreenshotOut });
+    console.log('Saved:', resolvedScreenshotOut);
   } else {
     for (const step of steps) {
       switch (step.type) {

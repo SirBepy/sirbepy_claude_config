@@ -21,7 +21,7 @@ Native Android app via adb (not Flutter web)? Use `android-drive` instead - a di
 
 ## Shared
 
-Node + Playwright reachable (`npx playwright` or the project's own `node_modules`) - note the resolved path, you'll need it as a literal `require()` path. Screenshots always go to `.for_bepy/screenshots/<claude-ancestor-pid>-<ancestor-start-ticks>/` (gitignored, per-session, matching `/close`'s purge scheme).
+Node + Playwright reachable (`npx playwright` or the project's own `node_modules`) - note the resolved path, you'll need it as a literal `require()` path. Screenshots go to `.for_bepy/screenshots/<claude-ancestor-pid>-<ancestor-start-ticks>/` (gitignored, per-session, matching `/close`'s purge scheme), resolved automatically by `e2e-helpers.js`'s `SHOT_DIR` via the shared `session-shot-dir.cjs` helper - never hand-fill the id.
 
 ## Mode A - Scripted
 
@@ -31,7 +31,7 @@ Node + Playwright reachable (`npx playwright` or the project's own `node_modules
    driving mechanics from scratch.
 3. Build the RELEASE web bundle: `fvm flutter build web -o build/web-e2e` (add `--dart-define=USE_EMULATORS=true` only under the Firebase layer). Rebuild whenever app code changes; the static bundle does not hot-reload.
 4. Serve it statically via `/supervised-run` (kind `generic`, dynamic port): `python -m http.server {PORT} --directory build/web-e2e` (or `npx serve build/web-e2e -l {PORT}`). Note the URL as `APP_URL`.
-5. Copy `references/e2e-helpers.js` into the project (e.g. `.for_bepy/e2e/helpers.js`), fill in its `CONFIG` block, and write a driver script that `require()`s it. The helpers already implement every rule from refs/flutter-web-playwright.md (`enableSemantics`, `clickNodeAtomic`, `refreshSemantics`, `shot`) plus the Firebase-only ones (`signIn`, `fetchJson`, `getUidFromIndexedDb`) - only call the latter if Step 1 loaded that layer.
+5. Copy `references/e2e-helpers.js` into the project (e.g. `.for_bepy/e2e/helpers.js`), fill in its `CONFIG` block (`SHOT_DIR` is resolved automatically, no need to fill it in), and write a driver script that `require()`s it. The helpers already implement every rule from refs/flutter-web-playwright.md (`enableSemantics`, `clickNodeAtomic`, `refreshSemantics`, `shot`) plus the Firebase-only ones (`signIn`, `fetchJson`, `getUidFromIndexedDb`) - only call the latter if Step 1 loaded that layer.
 6. Run the script, capture `page.on('console')`/`page.on('pageerror')`, and report per the checklist below.
 
 ## Mode B - Plan-file

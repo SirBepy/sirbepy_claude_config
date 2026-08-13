@@ -11,30 +11,27 @@ description: Triggers on /screenshot only. Takes portfolio-quality screenshots o
 
 Desktop shells (Tauri/Electron windows, tray icons, taskbar strips, OS dialogs) are unreachable
 from the browser helper below. Capture them with an ad-hoc PowerShell `System.Drawing` grab
-instead - but the output path rule is the SAME one Step 4 states, and it is the part that keeps
-getting missed:
-
-Derive the id via `C:/Users/tecno/.claude/skills/close/rename-session.ps1 -GetId` (prints
-`<pid>-<start-ticks>`) - never a hand-rolled process-tree walk, which is unreliable (todo 60).
+instead, but resolve the output folder via the shared helper - never a hand-built id/path:
 
 ```powershell
-$id = & "C:/Users/tecno/.claude/skills/close/rename-session.ps1" -GetId
-$dir = ".for_bepy/screenshots/$id"
-New-Item -ItemType Directory -Force $dir | Out-Null
+$dir = & node "C:/Users/tecno/.claude/skills/screenshot/session-shot-dir.cjs"
 Add-Type -AssemblyName System.Drawing
 $b = New-Object Drawing.Bitmap 1920, 1080
 [Drawing.Graphics]::FromImage($b).CopyFromScreen(0, 0, 0, 0, $b.Size)
 $b.Save("$dir/strip.png", [Drawing.Imaging.ImageFormat]::Png)
 ```
 
-**Never write a capture to `.for_bepy/screenshots/` root.** `/close` treats root-level files as
-unowned legacy and refuses to delete them, so they accumulate forever. Past incident (2026-08-01):
-25 loose captures from one Tauri icon session had to be cleared by hand.
+`session-shot-dir.cjs` creates the folder if missing and prints its path - it is the single place
+the `<pid>-<start-ticks>` id gets resolved (wraps `close/rename-session.ps1 -GetId`), so no caller
+hand-builds `.for_bepy/screenshots/...` itself and no capture lands at the root, where `/close`
+treats it as unowned legacy and never deletes it (past incident, 2026-08-01: 25 loose captures
+from one Tauri icon session had to be cleared by hand).
 
 ## Step 1 - Verify helper script
 
-The script must exist at `C:/Users/tecno/.claude/skills/screenshot/screenshot-helper.cjs`.
-If it is missing, stop and tell the user to restore it.
+The script must exist at `C:/Users/tecno/.claude/skills/screenshot/screenshot-helper.cjs`,
+alongside `session-shot-dir.cjs` (resolves the per-session output folder, see Step 4).
+If either is missing, stop and tell the user to restore it.
 
 ## Step 2 - Detect and start the server
 
@@ -64,7 +61,7 @@ Plan 1-5 screenshots showing distinct views. Do not plan multiple shots of the s
 
 Write a JSON plan to `.portfolio-data/screenshot-plan.json`. The plan is an ordered list of steps executed in one browser session.
 
-**Output path.** Portfolio-quality keepers (this skill's normal output, never purged by `/close`) go under `.portfolio-data/`. A throwaway verification shot instead goes under `.for_bepy/screenshots/<pid>-<start-ticks>/`, matching `/close`'s Phase 0/3 purge scheme - point `out` there when the screenshot is scratch, not a portfolio asset.
+**Output path.** Portfolio-quality keepers (this skill's normal output, never purged by `/close`) go under `.portfolio-data/` - use that path in `out` directly. A throwaway verification shot instead: set `out` to a bare filename (e.g. `"check-1.png"`, no directory) and `screenshot-helper.cjs` auto-resolves it into this session's `.for_bepy/screenshots/<pid>-<start-ticks>/` via `session-shot-dir.cjs`, matching `/close`'s Phase 0/3 purge scheme - no id to hand-build. The script refuses any `out` that names `.for_bepy/screenshots/` directly at the root.
 
 Supported step types:
 
@@ -126,13 +123,15 @@ typed single-file invocations with one documented loop.
    session); this helper launches its own isolated browser every time.
 3. For each file, one command, one invocation:
    ```
-   node "C:/Users/tecno/.claude/skills/screenshot/screenshot-helper.cjs" --url "file:///<abs-path-to-file.html>" --screenshot ".for_bepy/screenshots/<pid>-<start-ticks>/<basename>.png" --viewport 1920x1080
+   node "C:/Users/tecno/.claude/skills/screenshot/screenshot-helper.cjs" --url "file:///<abs-path-to-file.html>" --screenshot "<basename>.png" --viewport 1920x1080
    ```
+   The bare filename (no directory) auto-resolves into this session's subfolder, same as Step 4.
    If a file needs interaction before it's ready to shoot (a click, a wait for animation), use
    `--plan` for that file instead of `--click`/`--wait`, same rule as Step 4 - still one command
    per file.
-4. Output path: throwaway verification shots go under
-   `.for_bepy/screenshots/<pid>-<start-ticks>/`, never the folder root (see the top-of-file rule).
-   A batch that's a portfolio keeper instead goes under `.portfolio-data/`, matching Step 4.
+4. Output path: throwaway verification shots auto-resolve into
+   `.for_bepy/screenshots/<pid>-<start-ticks>/` via the bare-filename convention above; writing
+   directly to the folder root is refused (see the top-of-file rule). A batch that's a portfolio
+   keeper instead uses an explicit `.portfolio-data/` path, matching Step 4.
 5. After the loop, `Read` every PNG back inline (same verification bar as Step 5: not blank, not
    mid-animation). Report the full list of files captured with their paths.

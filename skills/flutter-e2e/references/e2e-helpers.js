@@ -6,15 +6,18 @@
 
 const fs = require('fs');
 const path = require('path');
+const { getSessionShotDir } = require('C:/Users/tecno/.claude/skills/screenshot/session-shot-dir.cjs');
 
 // ---- CONFIG: fill these in per project ----
 const APP_URL = 'http://127.0.0.1:PORT';               // static-served release bundle URL (see SKILL.md Step 3)
 const FIREBASE_PROJECT_ID = 'YOUR-PROJECT-ID';          // matches firebase.json / firebase_options.dart
 const FIRESTORE_BASE = `http://127.0.0.1:8080/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`;
 const AUTH_EMULATOR_ACCOUNTS = `http://127.0.0.1:9099/emulator/v1/projects/${FIREBASE_PROJECT_ID}/accounts`;
-const SHOT_DIR = 'PATH/TO/PROJECT/.for_bepy/screenshots/<claude-ancestor-pid>-<ancestor-start-ticks>';
 const E2E_DIR = 'PATH/TO/PROJECT/.for_bepy/e2e';
 // --------------------------------------------
+
+// Resolved via the shared helper, not hand-filled - creates the per-session subfolder if missing.
+const SHOT_DIR = getSessionShotDir();
 
 async function shot(page, name) {
   await page.screenshot({ path: path.join(SHOT_DIR, name) });
