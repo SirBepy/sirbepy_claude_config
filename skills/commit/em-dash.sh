@@ -4,13 +4,12 @@
 
 # Usage: em-dash.sh <file> [<file> ...]   working-tree mode (/commit step 5a)
 #        em-dash.sh --range <base>        range mode (delegation-doctrine builder prefilter)
-# No set -e: expected nonzero exits (git diff --no-index differs, bad --range sha) are handled
-# explicitly below and turned into a loud stdout ERROR line, never a silent abort that reads as
-# "no output means clean" per step 5a's contract.
+
+# No set -e: expected nonzero exits become a loud stdout ERROR below, never a silent
+# abort, which step 5a's "no output means clean" contract would read as passing.
 set -uo pipefail
 
-# Built from raw UTF-8 bytes, never the literal character, so this file itself never trips its own
-# check or any other em-dash scan of this repo.
+# Raw bytes, never the literal character, so this file never trips its own check.
 ED=$(printf '\xe2\x80\x94')
 
 AWK='
