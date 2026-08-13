@@ -159,6 +159,10 @@ not a gate. `/code-check` caught it afterwards; no barrier did.
 Add one barrier line item for the same class: **for any todo that added an entry to a remote-callable
 allowlist, diff its input validation against the sibling entries already in that list.**
 
+Before Step D dispatches, reconcile the lane map per `refs/delegation-doctrine.md`'s "Fan-out
+reconciliation": diff the union of ids across every lane against the AUTO queue - a set difference,
+never a count. An id in neither means a todo was dropped from partitioning, not that it is done.
+
 `log()` the lane map at run start so the dev can see the shape.
 
 ## Step D - The workflow run
@@ -318,10 +322,15 @@ Archival is **main-thread only**, because `complete-todo.ps1` prunes the shared 
    -Note "<what happened>"`. One call per todo, sequential.
 2. Commit the archival as one `CHORE: archive completed todos` commit per barrier, via `/commit`
    (the main thread CAN invoke skills, so it uses the real one).
+3. Diff the set of ids actually archived or parked against the lane map from Step C, per
+   `refs/delegation-doctrine.md`'s "Fan-out reconciliation" - an id in neither set is a silent drop,
+   re-dispatch or park it, never assume done.
 
 Then the wrap-up, per `/auto-do-todos` Step 9: `/code-check START_SHA..HEAD`, the full fast-check
 floor, e2e if runnable. Park every unresolved DEV fork into its todo's `## Open questions` block per
-`/auto-do-todos` Step 8.
+`/auto-do-todos` Step 8. Also drain every builder's "Out-of-scope findings" section gathered during
+Step D: file each as a properly allocated todo, `**Origin:** ai`, per `refs/delegation-doctrine.md`'s
+"Out-of-scope findings" section - never the builder itself.
 
 **Summary must report:** todos completed with shas, todos parked and why, exclusion counts by
 category from Step B, the lane map and actual achieved parallelism, every fork auto-decided and what

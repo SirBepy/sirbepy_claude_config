@@ -46,6 +46,15 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
   `~/.claude/skills/commit/comment-noise.md` scoped to its own diff (`git diff HEAD -- <files it
   changed>`), trim until it prints nothing, and paste the clean output in the report. Requires a
   bash-capable shell for `awk` - the Bash tool on Windows dispatches, not PowerShell.
+- The em-dash prefilter, same verify floor, same shell requirement: run
+  `~/.claude/skills/commit/em-dash.sh` scoped to its own diff, same invocation and exit-code
+  convention as comment-noise.sh above. A flag means fix that added line now, never a louder
+  restatement of the no-em-dash rule - the rule was already stated verbatim in every dispatch of
+  the run that broke it three times regardless (todo 290).
+- The out-of-scope-findings channel: a subagent NEVER writes into `.claude/todos/`, even a
+  well-formed, confident finding. It reports an "Out-of-scope findings" section instead - what it
+  found and why it sits outside this dispatch's lane - and the orchestrator files it as a proper
+  todo after the fan-out returns (see "Out-of-scope findings" below).
 - The staging line, conditional on whether the repo shares a git index with concurrent sessions:
   default `Stage your changes but do NOT commit. The main agent will run /commit after your
   report-back.`; for a shared-index repo (e.g. zng-app, zng-biller) substitute `Leave all changes
@@ -128,6 +137,37 @@ file in parallel.
 **Reports come back as conclusions plus evidence.** A subagent returns what it concluded, what it
 changed, and the commands it ran with their real output. It does not return file dumps, search
 results, or transcripts. Specify the report shape in the dispatch prompt.
+
+## Out-of-scope findings
+
+Decision (todo 291, 2026-08-12): a subagent never writes into `.claude/todos/`, no matter how
+well-formed the finding - only the orchestrator can allocate an id without racing a concurrent
+session, and an out-of-band write cannot see the claim/id-allocation guard the backlog contract
+defines. A builder that wrote `.claude/todos/263-...` mid-dispatch collided with an already-taken
+id within the same run, proving the race is real, not hypothetical. A PreToolUse write-guard hook
+was considered and rejected here: it enforces mechanically, but the report-back channel keeps the
+same finding without needing a new harness capability.
+
+Every dispatch instead asks for an "Out-of-scope findings" section in the report: what was found,
+and why it sits outside this dispatch's lane. The orchestrator turns each one into a properly
+allocated todo after the fan-out returns, per the reporting requirement named above.
+
+## Fan-out reconciliation
+
+Partitioning a batch into dispatches by hand drops items silently, and nothing in a fan-out
+notices on its own - every dispatch can report success while the union they cover is short one
+item (todo 292, 2026-08-12: a 42-item batch grouped into 10 dispatches missed id 75, caught only
+by an after-the-fact count mismatch while writing the archive notes). This is a set difference,
+never a count comparison - counts match by coincidence when one item is duplicated and another is
+dropped.
+
+**Before dispatch:** write the union of ids assigned across every group and diff it against the
+source list. State the expected total in the dispatch plan, so post-run reconciliation has
+something to check against instead of re-deriving it.
+
+**After the fan-out returns:** diff the set of ids actually reported on against that same source
+list. An id in neither the completed nor the failed set is a silent drop - it must be
+re-dispatched or parked, never assumed done.
 
 ## Liveness and session budget
 

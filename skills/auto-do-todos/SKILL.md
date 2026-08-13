@@ -149,6 +149,10 @@ rule, but `refs/delegation-doctrine.md`'s "Liveness and session budget" section 
 - it names the concrete dead-dispatch check and caps width by session budget, not context%. A
 healthy context reading does not mean a fan-out is safe.
 
+Any fan-out covering more than one todo also follows the doctrine's "Fan-out reconciliation"
+section: diff the union of ids assigned across the fan-out against the AUTO queue before dispatch,
+then diff reported ids against it after return - a set difference, never a count.
+
 Per todo:
 
 1. Claim it per `close/ai-todos-format.md`.
@@ -218,6 +222,10 @@ Dispatch subagents to verify the run's whole diff (`git diff START_SHA..HEAD`):
 2. The project's fast-check floor (typecheck, unit tests, lint, build) - whichever it actually has.
 3. E2E if the project has a runnable suite (`test-flow`, `flutter-e2e`, an existing
    Playwright/Cypress config) - best effort, skip with a one-line note if there is no headless way.
+
+Also drain every builder's "Out-of-scope findings" section gathered during Step 6: the orchestrator
+files each one as a properly allocated todo, `**Origin:** ai`, per `refs/delegation-doctrine.md`'s
+"Out-of-scope findings" section - never the builder itself.
 
 Fix anything trivial and re-verify inline, then `/commit`. Anything else found becomes an
 `## Open questions` entry or a new todo - never a mid-run question. A new todo filed here is a
