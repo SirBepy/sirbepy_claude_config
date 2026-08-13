@@ -13,9 +13,10 @@ disable-model-invocation: true
 
 ## Sidebar badge
 
-Emit `<cc-autopilot:on>` at the end of the **first response** of the run, and `<cc-autopilot:off>` at
-the end of the **final response** (after the Step 9 summary). Same markers `/autopilot` uses - the
-app shows an "autopilot" badge on the session row, and strips the markers from the rendered chat.
+`<cc-autopilot:on>` and `<cc-autopilot:off>` drive the "autopilot" badge on the session row in the
+sidebar, same markers `/autopilot` uses, and are stripped from the rendered chat. Step 1 and Step 9
+below are the only place they get emitted; this section documents what they do, it is not a second
+instruction to emit them.
 
 ## Precedence
 
@@ -63,7 +64,7 @@ Bare invocation (no cleanout phrase) is unaffected: Step 2 keeps today's no-conf
 
 ## Order of operations
 
-1. Record `START_SHA` (`git rev-parse HEAD`) - Step 9 diffs against it. Emit `<cc-autopilot:on>`.
+1. Record `START_SHA` (`git rev-parse HEAD`) - Step 9 diffs against it, then end this first response with `<cc-autopilot:on>` on its own line, nothing after.
 2. `/cleanup-todos`, unattended.
 3. `/batch-todos`, unattended - its EASY batch executes here.
 4. Triage the remaining queue into AUTO and DEV (Step 4).
@@ -234,7 +235,7 @@ verification finding Claude made on its own: `**Origin:** ai`.
 Then the written summary: todos completed with commit shas, todos parked and why, every fork the run
 auto-decided and what it picked, questions asked and answers applied, `/cleanup-todos`'s still-pending
 dedupe/drop candidates, final ctx% used, and the verification result (code-check finding count,
-test/e2e pass-fail). End with `<cc-autopilot:off>`.
+test/e2e pass-fail), immediately followed by `<cc-autopilot:off>` on its own line, nothing after.
 
 ## Notes
 
