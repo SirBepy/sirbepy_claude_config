@@ -82,6 +82,10 @@ REDISCOVERED from the live repos themselves, not assumed from memory.
 - A final summary lists, per repo, which defects were found and fixed (or confirmed
   absent) - so there's a record this sweep was actually exhaustive, not partial.
 
+## Notes
+
+- Done 2026-08-13, all 15 repos, pushed direct to default branches on Joe's call. The remembered scope of 8 was wrong: rediscovery found 16 public Pages repos, 15 carrying at least one confirmed defect (only bepy_styleguide clean). Fixed: the leaked README TODO (byte-identical across 13 repos, so one template bug not 13 mistakes), relative og:image made absolute, and root-absolute PWA paths made subpath-relative in the 9 repos that had a PWA. Two things a pre-push verification pass caught that would otherwise have shipped broken: (1) mass_send_message was DEAD in production, its Vite base was /MassSendMessage/ while Pages serves /mass_send_message/, so the main bundle 404'd; that also meant its og:image absolute url pointed at a Vite-hashed path that did not exist, and sw.js was never in the build output at all. Fixed base, moved sw.js and the favicon into public/, proved each by running the build. (2) split_opinions's fixes had been edited but never staged, so its commit would have been empty. Shas: countdown_timer f0b9a01, flashcards aaafbde, mass_send_message 0adbd74, no_sleep cd81fb9, split_opinions 49d9ac6, codenames-generator d0b53ac, empires_guess_the_author bb6164b, mc_skin_to_roblox_clothing 421bbd0, vectorize_text_for_stroke_animation de19cbc, visualize_tycoon_balancing bb54ea7, a_cxnfusing_framework_docs 2677b57, portfolio_2021 e091ab3, sirbepy.github.io 4ad662c, sirbepy_blog b5ad817, wedding_invitation 71c7118. Known leftover, pre-existing and out of scope: mass_send_message's sw.js ASSETS cache list still names pre-hash paths that do not exist post-build; fixing it properly needs a build-time cache-manifest generator.
+
 ## Open questions
 
 Written by /auto-do-todos on 2026-08-12. The next run opens with these.
