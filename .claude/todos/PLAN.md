@@ -73,7 +73,6 @@ already shipped today.
 
 ## Batch J - brainstorm (2)
 
-- [ ] 242 - decide whether to widen the step-2 ask gate, or record why it stays narrow
 
 ## Batch K - impeccable (3)
 

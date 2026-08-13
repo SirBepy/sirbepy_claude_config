@@ -52,3 +52,5 @@ Consider also making Step 6's marker-coverage figure count files with a *parseab
 ## Notes
 
 - Dropped via /cleanup-todos 2026-08-12: premise already fixed. cleanup-todos/SKILL.md Step 5 now leaves shallow-tier last-checked unchanged, and the marker helper shipped as skills/cleanup-todos/update-markers.ps1 (bae56bd, hardened in da7ead7).
+
+- Renumbered 99 -> 297 on 2026-08-13 (todo 286): id 99 was claimed by two different files. The other file kept it because it was filed earlier. Any older reference to todo 99 may mean this one.

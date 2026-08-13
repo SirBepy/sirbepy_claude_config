@@ -70,3 +70,5 @@ and for `/create-pr`'s range-mode variant, so check whether the same corruption 
 Found during a `/commit` run in `zng-app` on 2026-08-07. Filed here rather than in the project backlog
 because it changes the global `~/.claude-personal/skills/` tree.
 - Skipped by /auto-do-todos 2026-08-08: already fixed upstream. commit/SKILL.md step 5a and commit/comment-noise.md both carry the correct awk (substr(\,7), \==??), not the Fold/the corruption this todo described. Note todo 45 covers a distinct, still-open mechanism (harness arg-substitution clobbering \ at invocation time) and is NOT closed by this.
+
+- Renumbered 13 -> 296 on 2026-08-13 (todo 286): id 13 was claimed by two different files. The other file kept it because it was filed earlier. Any older reference to todo 13 may mean this one.

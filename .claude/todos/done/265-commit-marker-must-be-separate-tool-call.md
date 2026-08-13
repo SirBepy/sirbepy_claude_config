@@ -49,3 +49,6 @@ In `hooks/commit-guard.py`, extend the rejection message for the case where the 
 
 - Merged from a duplicate during /cleanup-todos 2026-08-12. That copy's evidence: in the same `/mega-todos` run, 16 builder agents were handed the marker step as a numbered list with the commit as its own step and none of them tripped the guard - which is what makes the separate-call framing the actual fix rather than a guess.
 - completed, commit 0796403
+- This exact fix was independently filed 4 separate times: 98, 263, this file's own id-less
+  predecessor (`done/commit-marker-must-be-its-own-tool-call.md`), and 265 itself. Consolidated
+  by todo 286 on 2026-08-13; the other three were deleted (git history preserves them).

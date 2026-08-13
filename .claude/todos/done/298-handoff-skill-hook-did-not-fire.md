@@ -62,3 +62,5 @@ redone, at the tail of a long session where context was already scarce.
 ## Notes
 
 - Dropped via /cleanup-todos 2026-08-12: premise re-verified FALSE - flagged-skill-mention.py is a generic glob-based injector now, and a live test confirmed /handoff injects correctly. AI-origin, auto-archived per dev standing instruction 2026-08-12 (no confirm gate for ai-origin todos).
+
+- Renumbered 100 -> 298 on 2026-08-13 (todo 286): id 100 was claimed by two different files. The other file kept it because it was filed earlier. Any older reference to todo 100 may mean this one.

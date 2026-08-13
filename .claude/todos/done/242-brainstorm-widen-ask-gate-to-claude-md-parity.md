@@ -92,6 +92,10 @@ silently.** When picked up:
   example (a mechanical-looking pattern-copy task hiding one behavioral fork) to confirm
   it would actually catch that case.
 
+## Notes
+
+- Done 2026-08-13. Joe chose Option D (8/10 from a rating panel) over the three options the todo listed. The gate no longer partitions by domain tag: /brainstorm asks when BOTH either branch produces different visible behavior AND neither branch is dictated 1:1 by the pattern being copied, which is CLAUDE.md's own bar reused directly. This was chosen because tag-based widening fails on classification disputes: CLAUDE.md's own hotkey example reads as UX, not ARCH, so a SEC/DATA/ARCH-only widening would still miss the case the rule exists for. Domain tags survive for how a question is PRESENTED. The frontmatter description and the 'what still holds' bullet were updated too, since both restated the old fact-only bar.
+
 ## Open questions
 
 Written by /auto-do-todos on 2026-08-12. The next run opens with these.

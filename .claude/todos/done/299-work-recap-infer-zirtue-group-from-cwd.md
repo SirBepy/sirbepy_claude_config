@@ -43,3 +43,5 @@ can't disambiguate that.
 ## Notes
 
 - completed, commit 937f802
+
+- Renumbered 249 -> 299 on 2026-08-13 (todo 286): id 249 was claimed by two different files. The other file kept it because it was filed earlier. Any older reference to todo 249 may mean this one.

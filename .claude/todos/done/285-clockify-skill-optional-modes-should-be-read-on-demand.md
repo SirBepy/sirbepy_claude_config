@@ -40,3 +40,4 @@ rules were written for the modes and may belong with them.
 ## Notes
 
 - Filed by the wrap-up verification of the 2026-08-12 `/auto-do-todos` run, not by the dev.
+- Done 2026-08-13. Reconstruction and Audit modes moved out of the always-loaded SKILL.md into a new modes.md, mirroring the hubstaff.md read-on-demand pattern. SKILL.md 259 -> 212 lines. The Rules section deliberately stayed in SKILL.md: Reconstruction's hard rule cross-references it and the billable/overlap rules also apply to plain Reconciliation, so splitting them would break both callers. Noted in modes.md's header so the split is legible.

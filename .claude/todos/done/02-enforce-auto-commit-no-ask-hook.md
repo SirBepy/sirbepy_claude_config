@@ -53,6 +53,7 @@ Seven prior occurrences (with exact Joe quotes) are preserved in `feedback_auto_
   invitation-phrasing and the silent-omission failure shapes. This was produced by a strict
   second-pass re-triage that specifically asked whether a defensible answer exists without the dev;
   it concluded yes. Not executed only because the session ended.
+- Archived 2026-08-13 on Joe's call during /auto-do-todos: he has not hit the failure in a while, so it may have self-resolved. Closing with the blocker recorded rather than leaving it open indefinitely. VERIFIED this run against the repo's own working hook code: a Stop hook payload carries only session_id, transcript_path, stop_hook_active and last_assistant_message, none of which distinguish a background subagent (correctly forbidden to commit, correctly leaving work staged) from the main session that should have committed and did not. Any dirty-tree check therefore sees an identical signal for both. Reopen only with an answer to that detection gap; transcript_path is the one unexplored lead.
 
 ## Merged in (2026-08-11)
 

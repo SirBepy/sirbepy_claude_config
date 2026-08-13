@@ -43,3 +43,4 @@ Written by /auto-do-todos on 2026-08-12. The next run opens with these.
 ## Notes
 
 Do NOT retry the exchange repeatedly while verifying - HubStaff returns `400 rate_limit` after a few refreshes in quick succession and locks you out for several minutes.
+- Archived on Joe's call 2026-08-12 during /auto-do-todos: a redundant read-scope HubStaff PAT on his own account, zero functional impact, rated 2/10 worth. Not worth tracking as a standing todo.
