@@ -69,10 +69,12 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
 - Any load-bearing project memory already known to the orchestrator (a prior fix, workaround, or
   failure recorded for this repo), restated inline. A subagent re-solving a problem memory already
   answered is a wasted dispatch.
-- If the dispatch captures screenshots: the already-resolved
-  `.for_bepy/screenshots/<ancestor-pid>-<ancestor-start-ticks>/` path, computed by the
-  orchestrator. A subagent cannot derive the ancestor PID itself, so a bare path or a
-  description of how to compute it silently degrades to root, which `/close` can never claim.
+- If the dispatch captures screenshots: the already-resolved `.for_bepy/screenshots/<pid>-<start-ticks>/`
+  path. Resolve it ONCE per session via `~/.claude/skills/close/rename-session.ps1 -GetId`
+  (`.sh --get-id` on Unix) and reuse that id for every dispatch this session makes. Never derive
+  it from a process-tree walk and never hand-pick a folder name: `/close` can only delete its own
+  authoritative subfolder, so a wrong id is permanently un-cleanable and may collide with a live
+  session's folder.
 - The orphan-check final step from `~/.claude/refs/process-hygiene.md` if it runs Node commands.
 - The line: "Your final message is your entire return value. ALL commands, including the verify
   floor (build/test/lint/typecheck), run synchronously in the same tool call: `run_in_background`
@@ -101,10 +103,10 @@ Never run `git stash`, `git reset`, or `git checkout` on paths you don't own - o
 uncommitted work shares this tree. To compare against clean state, use `git show HEAD:<file>`.
 Stage changed files by name, never `git add -A`.
 
-If this dispatch captures screenshots, save them under
-`.for_bepy/screenshots/<ancestor-pid>-<ancestor-start-ticks>/` (the orchestrator resolves this
-path, a subagent cannot derive its own ancestor PID) - never a bare or hand-picked subfolder name,
-that's what leaves files `/close` can never prove ownership of and therefore never clean up.
+If this dispatch captures screenshots, save them under `.for_bepy/screenshots/<pid>-<start-ticks>/`,
+the id the orchestrator resolved once via `rename-session.ps1 -GetId` (never a bare or hand-picked
+subfolder name, and never one you derive yourself) - that's what leaves files `/close` can never
+prove ownership of and therefore never clean up.
 
 <OFF_LIMITS>
 
@@ -117,8 +119,9 @@ anything is still running is a failed dispatch.
 ```
 
 `<WORKING_DIR>`, `<STAGING_LINE>`, `<OFF_LIMITS>` and `<ORPHAN_CHECK>` are the only fields the
-orchestrator fills in per dispatch; the `.for_bepy/screenshots/` path is resolved by the
-orchestrator (see above), not left for the subagent to compute. `<STAGING_LINE>` is `Stage your
+orchestrator fills in per dispatch; the `.for_bepy/screenshots/` id is resolved ONCE per session by
+the orchestrator via `rename-session.ps1 -GetId` (see above) and reused for every dispatch - never
+re-derived per dispatch, never from a process-tree walk, never hand-picked. `<STAGING_LINE>` is `Stage your
 changes but do NOT commit. The main agent will run /commit after your report-back.` by default, or
 `Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.`
 for a repo that shares a git index with concurrent sessions (e.g. zng-app, zng-biller).
