@@ -42,6 +42,8 @@ skills/commit/watch-build.pid
 # Python bytecode cache, regenerated locally, not source
 hooks/__pycache__/
 hooks/__pycache__/**
+**/__pycache__/
+**/__pycache__/**
 
 # commit-guard/pr-guard runtime markers - machine/session-local, never commit
 hooks/.commit-marker*
