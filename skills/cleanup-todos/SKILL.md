@@ -264,16 +264,28 @@ Never plain-delete, per the contract.
 
 **Relocate.** For a confirmed (or Pass-A, `ai`/absent-origin) `suggested_relocate` id:
 
-1. Scan the destination's `.claude/todos/` and `done/` for the max numeric prefix, add 1, then
+1. **Content-duplicate check against the destination, first.** Apply `ai-todos-format.md`'s
+   Content-duplicate guard to the DESTINATION backlog and its `done/`, keyed on this todo's
+   subject - a relocation lands a file there like any other write and gets the same guard.
+   - **Live match:** fold in there instead of writing a new file. Skip steps 2, 3 and 5.
+   - **`done/` DONE match:** the relocation is stale. Skip steps 2, 3 and 5.
+   - **`done/` DECLINED match, or a retired-rule hit per the guard's `git log` check:** skip steps
+     2, 3 and 5, and carry the decline/retirement reason into step 4's Note and Step 6's report -
+     this is the branch that stops a repeat filing on sight.
+   - **No match:** continue to step 2.
+2. Scan the destination's `.claude/todos/` and `done/` for the max numeric prefix, add 1, then
    re-check for a same-id collision per `ai-todos-format.md`'s creation race guard.
-2. Write `<dest-repo>\.claude\todos\<new-id>-<same-slug>.md` via Edit/Write (never a shell
+3. Write `<dest-repo>\.claude\todos\<new-id>-<same-slug>.md` via Edit/Write (never a shell
    redirect), same content plus a Notes line: "Relocated from `<old-id>` in `<source-repo>` via
    /cleanup-todos `<date>`: `<reason>`."
-3. Run `complete-todo.ps1 -Id <old-id> -Note "Relocated to <new-id> in <dest-repo> via
-   /cleanup-todos <date>."` on the SOURCE repo - archives the source copy to its own `done/`,
-   releases its claim, prunes its PLAN.md line. Never delete the source file directly.
-4. Self-heal the destination's `.git/info/exclude` per this file's Git policy section if it's
-   missing there - the destination may be a different repo with its own policy state.
+4. Run `complete-todo.ps1 -Id <old-id> -Note "<text>"` on the SOURCE repo - archives the source
+   copy to its own `done/`, releases its claim, prunes its PLAN.md line. Never delete the source
+   file directly. Note text: "Relocated to <new-id> in <dest-repo> via /cleanup-todos <date>." when
+   step 3 wrote a file; otherwise step 1's matched outcome and reason (fold target id, or the
+   done/decline text quoted).
+5. Self-heal the destination's `.git/info/exclude` per this file's Git policy section if it's
+   missing there - the destination may be a different repo with its own policy state. Only runs
+   when step 3 actually wrote a file.
 
 Bounded to destinations whose `.claude/todos/` already exists - relocate never invents a new
 backlog folder.

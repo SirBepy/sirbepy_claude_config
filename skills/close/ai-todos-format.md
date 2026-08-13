@@ -57,13 +57,25 @@ other session's file.
 ambiguous id with no disambiguator errors naming both candidate filenames rather than guessing.
 
 **Content-duplicate guard.** Applies to every writer (`/create-todo`, `/handoff`, `/close` Phase 3,
-`/code-check`, autopilot). The race guard above only catches two sessions grabbing the same id, not
-a second todo covering work already filed under a different slug. Before writing, grep the
-destination backlog and `done/` for keywords tied to the new todo's subject (tool/component names,
-the specific question, any ticket id) and read hits in full. A genuine match: fold its findings in,
-or write a superseding file that references the old id - never leave two todos silently
-disagreeing. Unattended (`/sleep-when-done`, autopilot): never block on this - log the supersession
-and continue. `/create-todo`'s own Anti-patterns section carries the concrete recipe this mirrors.
+`/code-check`, autopilot) AND to `/cleanup-todos` relocation - moving a todo into another repo's
+backlog is still a write into that backlog and gets the same check against the DESTINATION, not
+just the source. The race guard above only catches two sessions grabbing the same id, not a second
+todo covering work already filed under a different slug. Before writing, grep the destination
+backlog and `done/` for keywords tied to the new todo's subject (tool/component names, the specific
+question, any ticket id) and read hits in full. A hit resolves to one of three outcomes, never a
+blind write:
+
+- Destination has a LIVE todo for it: fold in, do not create a second file.
+- Destination `done/` shows it DONE: the incoming copy is stale; drop it instead of filing it.
+- Destination `done/` shows it DECLINED: drop it, and carry the decline reason forward (into the
+  report, or the superseding file's Notes) so the same subject does not get filed again.
+
+No `done/` hit does not mean no history: if the todo asks to enforce a rule, also check whether
+that rule was retired outright with no todo ever filed for it - `git log --oneline -- <the rule's
+file>` (e.g. `CLAUDE.md`) grepped for the todo's keywords surfaces a removal commit even without a
+`done/` entry. A hit there is the same DECLINED outcome above. Unattended (`/sleep-when-done`,
+autopilot): never block on this - log the supersession and continue. `/create-todo`'s own
+Anti-patterns section carries the concrete recipe this mirrors.
 
 ## Backlog file: content
 
