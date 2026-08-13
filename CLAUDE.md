@@ -67,6 +67,7 @@
 - Prefer the platform primitive over a library or custom code: CSS over JS animation, `<input type="date">` over a picker lib, a DB constraint over app-layer validation, a built-in widget over a custom one. If the runtime provides it, use it.
 - Define success criteria upfront (test, command, check). Loop until verified.
 - Given a spec file: read it fully, summarize your understanding and ask any questions, then implement.
+- Before asserting "X does/causes Y because Z" about a system not read or run this session: read it first, even one file. If you can't check right now, write "UNVERIFIED: <claim>, would check <file/log>" instead of stating it as fact - hedging the noun ("suspect") does not hedge a trailing "so Y happens" clause, the whole sentence needs the label. Past incident: recurred 5 times in one project despite being memory-documented after each one; a wording-only fix already failed once for this exact class of rule (see the em-dash enforcement history).
 
 ## Testing & verification floor
 
