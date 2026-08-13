@@ -57,7 +57,7 @@ this app means: invoke /supervised-run") is the fallback to try next.
 
 4. **Manage it afterward** via `sv.ps1`:
    - Logs: `sv.ps1 logs -Id <id>`
-   - Stop: `sv.ps1 stop -Id <id>`
+   - Stop: `sv.ps1 stop -Id <id>`. **If this session took a verification screenshot** (CLAUDE.md's UI & visual changes rule), confirm `SendUserFile` was actually called for it before stopping - the server, and the cheap ability to re-capture, goes away once it's down. If not sent yet, send it now, then stop. Never delete a throwaway screenshot before it has been sent, and keep it under `.for_bepy/screenshots/`, not an arbitrary path.
    - Restart: `sv.ps1 restart -Id <id>` (full process respawn - use for non-flutter entries, or a flutter entry whose daemon isn't ready)
    - Reload (flutter only, fast path - no `sv.ps1` subcommand yet, raw API): `POST /procs/<id>/reload` with header `Authorization: Bearer <token>` - hot-restarts via the flutter daemon instead of respawning the process; for a `web-server` target this also auto-refreshes every open browser tab on the live-reload proxy port (see Port table). Prefer this over `/restart` for any flutter entry - `ensure -Restart` already does this automatically.
    - Delete (remove the entry entirely): `sv.ps1 rm -Id <id>` (stop it first if running)
@@ -73,6 +73,11 @@ guessing a fixed sleep:
 ```bash
 until powershell -File "<dir>\sv.ps1" logs -Id <id> | grep -q "<marker>"; do sleep 2; done
 ```
+
+Or, for the common "restart/reload then wait" combo (e.g. before a fresh Playwright
+connection), use `restart-and-wait.ps1 -Id <id>` (next to this file) instead of
+hand-writing the loop - it restarts/reloads by kind, then polls for the marker
+itself (flutter has a default; other kinds need `-Marker`).
 
 Known markers (not exhaustive):
 - NestJS: `Nest application successfully started`
