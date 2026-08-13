@@ -23,6 +23,7 @@ argument-hint: "[states]"
 ```
 
 - `states` (optional) — comma-separated Shortcut state names to scan. Default: `Backlog,To Do,In Progress`.
+- **ID mode:** if the arg is purely numeric, or a space/comma-separated list of numerics (e.g. `/shortcut-done-audit 54987` or `54987,54990`), treat it as explicit ticket ID(s) instead of state names. Jump straight to step 2b, skip the state-scan search (step 2) and the dispatch-volume gate (step 4).
 - If Joe passes an unknown state name, ask via AskUserQuestion listing the actual state names from `ENG - Core Workflow` (workflow id `500018252`) rather than guessing.
 
 ## Required tools
@@ -61,9 +62,21 @@ curl -s -G "https://api.app.shortcut.com/api/v3/search/stories" -H "Shortcut-Tok
 
 Follow `.next` across pages (it's a full relative URL, `null` when done) until exhausted — don't trust `page_size` alone to mean "one page." Filter the combined result client-side to the target `workflow_state_id`s (the search API rejects `workflow_state_ids` as a POST body key — filter after fetching, not in the query).
 
+### 2b. ID mode (bare ticket ID arg)
+
+Skip step 2's search/pagination/state-filter entirely. For each ID, fetch directly:
+
+```bash
+curl -s "https://api.app.shortcut.com/api/v3/stories/<id>" -H "Shortcut-Token: $TOKEN"
+```
+
+Continue straight to step 3, scoped to just these ticket(s). Skip the dispatch-volume gate (step 4)
+outright: the ticket count is already bounded by what Joe typed.
+
 ### 3. Match candidates to commits (primary + secondary signal)
 
-For each candidate ticket ID, across all four repos:
+For each candidate ticket ID, across all four repos (ID mode: narrow to the repo(s) the title/description
+plausibly points at if obvious, otherwise search all four and let empty results fall out):
 
 ```bash
 git -C <repo> log --all --oneline -E --grep="^${id}:"
@@ -88,7 +101,7 @@ Read `skills/shortcut-done-audit/investigation-prompt.md` now — it has the exa
 
 ### 6. Synthesize the report
 
-Group by verdict, most actionable first (`DONE` → `SUPERSEDED` → `PARTIALLY DONE` → `MISMATCH` → `UNCLEAR`). For each ticket: one-paragraph summary, the concrete blocking detail if any (unanswered comment, missing per-button payload, unmerged branch, etc.), and a suggested next Shortcut state, but do not apply anything yet.
+Group by verdict, most actionable first (`DONE` → `SUPERSEDED` → `PARTIALLY DONE` → `MISMATCH` → `UNCLEAR`). For each ticket: one-paragraph summary, the concrete blocking detail if any (unanswered comment, missing per-button payload, unmerged branch, etc.), and a suggested next Shortcut state, but do not apply anything yet. ID mode with a single ticket: skip the group-by-verdict synthesis, report one verdict directly.
 
 Report-only, no mutations, no comments — matches the pattern in `zirtue-release-backfill`.
 
