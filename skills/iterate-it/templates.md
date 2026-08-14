@@ -32,24 +32,36 @@ ANGLE FOR YOU: <skeptic | steelman | alternative-lens | shippability | misdiagno
 
 ## Final report template
 
+Two blocks, in this order. The dev reads the first and stops; everything he might want
+later goes below the rule. Never open with round counts or phase names - that is process
+metadata, not the answer, and burying the score under it is the exact failure this shape
+fixes.
+
 ```
-# /iterate-it converged in <R> rounds (<explore-rounds> explore + <polish-rounds> polish)
+<emoji> <score>/10 - <the answer in one line, naming what won>
 
-**Final proposal (P_<R+1>):**
-<synthesized final>
+<2-4 bullets, the final proposal only. What it is and what it does, not how it evolved.>
 
-**Score trajectory:** P1=<s1> → P2=<s2> → ... (sub scores)
-**Main audit trajectory:** P1=<a1> → P2=<a2> → ...
-**Phase transition:** entered Polish at round <X> with score <Y>
-**Termination reason:** <floor hit | cap hit | thrash | unconverged>
+Ship it, run another manual round, or park it?
 
-**Evolution log:**
-- P1 → P2: <one-line summary>
+---
+
+**Detail** (<R> rounds: <explore-rounds> explore + <polish-rounds> polish, <termination reason>)
+
+Scores: <s1> → <s2> → ... (main audit: <a1> → <a2> → ...), entered Polish at round <X>
+
+- P1 → P2: <one-line summary of what changed and why>
 - P2 → P3: ...
 
-**Explicit rejections (never re-propose):**
-- <thing killed in round X>
+Rejected, never re-propose: <thing killed in round X>; <thing killed in round Y>
 
 [If main audit deviates ≥ 2 from sub:]
-**MAIN DISSENT:** main scored <X>, sub <Y>. <one-paragraph why>. Take this verdict with the dissent in mind.
+**MAIN DISSENT:** main scored <X>, sub <Y>. <one paragraph why>. Weigh the verdict accordingly.
 ```
+
+Rules for the summary block:
+
+- Score emoji and number are the first characters of the report. No heading above them.
+- The bullets state the final design, not its history. If a bullet only makes sense once you
+  know what round 3 killed, it belongs below the rule.
+- The next-move line closes the SUMMARY, not the whole report. Detail follows it.

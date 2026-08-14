@@ -97,7 +97,8 @@ Do NOT call `AskUserQuestion` in the same turn as this report. Bundling a tool c
 
 This holds even when the dev already pre-authorized next steps ("go ahead and implement it"). That authorization changes what happens on the FOLLOWING turn, never whether a tool call chains onto this one - continuing straight into `Read`/`Edit`/implementation calls in the same turn as the report is the exact failure this rule guards against (sc-54844, 2026-08-11: the report rendered fine, but the turn then continued straight into implementation tool calls anyway).
 
-Close the report with a single plain-text line offering the next move, not a tool call:
+Close the report's SUMMARY block with a single plain-text line offering the next move, not a
+tool call. Detail follows below the rule, so this line sits mid-report, not last:
 
 > Ship it, run another manual round, or park it?
 
