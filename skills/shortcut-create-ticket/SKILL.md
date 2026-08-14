@@ -103,6 +103,8 @@ Ask ONLY what can't be inferred, in one batch:
 
 Description defaults to "drafted from this conversation" — don't ask unless the dev has a spec to paste. Skip any question the invocation already answered (e.g. `/shortcut-create-ticket high priority, 2 points`).
 
+**State the claim.** Name the concrete file/behavior the ticket asserts is missing or broken, phrased as a literal string that will appear in a `grep` (a function, component, selector, or error text), not a paraphrase. That string is step 2's grep target.
+
 **Title style** (match the dev's existing tickets, not invented conventions):
 - zng-app features/chores: `FE: <verb phrase>` — e.g. `FE: Remove biller address dependency from loan creation`
 - zng-app bugs: `[FE] Area > Sub: symptom` — e.g. `[FE] Login > Sign up: loan link redirect is lost after registration`
@@ -110,17 +112,12 @@ Description defaults to "drafted from this conversation" — don't ask unless th
 - zng-biller: `FE: BP: ...`
 - zng-api (filed for Stevan): `BE: ...`
 
-### 2. Duplicate check (MANDATORY — never skip)
+### 2. Ground check (MANDATORY - never skip)
 
-Before creating, search for an existing ticket covering the same work:
+Run the three queries in `ground-check.md`: merged/open PRs, Shortcut with each hit's workflow state, and the stated claim at the tracked branch. A tracker search alone cannot see work that is already done.
 
-- ```bash
-  curl -s -G "https://api.app.shortcut.com/api/v3/search/stories" -H "Shortcut-Token: $TOKEN" \
-    --data-urlencode "query=<distinctive keyword> !is:archived"
-  ```
-  Pick a distinctive noun from the work (e.g. `biller address`, `redirect route`), not the boilerplate prefix. Run 1-2 keyword variants.
-- If a plausible match shows up, stop and ask (AskUserQuestion): use existing / file anyway / cancel — include the match's ID + title.
-- If nothing matches, proceed and note in the report that the check ran.
+- **Clean or soft signal:** write the `.shortcut-marker-<suffix>` file (`New-Item`, per `ground-check.md`) immediately before the create call, and note in the report what was checked and what could not be.
+- **Hard stop** (Shortcut hit in Done/Testing, merged PR on the named file, or the symptom already absent at the tracked branch): do NOT write the marker. Report the hit (id, state, URL, or PR number and merge date) and stop. `shortcut-create-guard.py` blocks the create call without a marker, which is the mechanism working, not a failure.
 
 ### 3. Description — pick the smallest shape that fits
 

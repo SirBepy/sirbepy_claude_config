@@ -164,6 +164,15 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "^(mcp__shortcut__stories-create|Bash|PowerShell)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\shortcut-create-guard.py\""
+          }
+        ]
+      },
+      {
         "matcher": "^mcp__shortcut__stories-(update|add-task|update-task|create-comment|add-external-link|remove-external-link|set-external-links|add-relation|add-subtask|remove-subtask|create-subtask|assign-current-user|unassign-current-user|upload-file)$",
         "hooks": [
           {
