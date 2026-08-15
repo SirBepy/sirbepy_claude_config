@@ -54,3 +54,7 @@ worth a commit. See the zng-admin memory `feedback_client_repo_change_bar` for t
 - The `worth` rubric text names the repo-context factor explicitly.
 - No change to the `file,complexity,worth,still_valid,relocate_dest` CSV contract or the Step 5 diff
   gate.
+
+## Notes
+
+- Completed via /auto-do-todos 2026-08-15: /cleanup-todos worth rubric 3-4 tier now caps behavior-neutral changes (file split, helper move, dead-code nit) at 4 when the repo origin remote sits outside the personal SirBepy account, reusing the gh-account-switch hook org signal so the check is detectable rather than vibes. No CSV column, no schema change, per the todo explicit rejection of one.

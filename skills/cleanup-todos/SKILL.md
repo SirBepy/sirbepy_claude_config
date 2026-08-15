@@ -105,7 +105,12 @@ transcription step that caused the 2026-08-12 corruption.
   - **7-8** - closes a real gap that will recur; the change is bounded and its trigger is concrete.
   - **5-6** - genuine improvement, but speculative trigger or marginal payoff.
   - **3-4** - churn. Restates a rule that already exists elsewhere, or adds a rule with no
-    enforcement path, or documents a preference as if it were a defect.
+    enforcement path, or documents a preference as if it were a defect. Also caps here: a
+    behavior-neutral change (file split, helper move, dead-code nit) in a repo whose `origin`
+    remote sits outside the personal `SirBepy` account, the same org check the gh-account-switch
+    hook already uses (zirtue-corp, Fibo-Studio, revaire, or any other client/employer org) - that
+    repo pays real review time and merge-conflict risk a solo repo never does. Ask "is there a
+    downside to keeping it as-is?" before scoring one above 4 there.
   - **1-2** - net negative. Contradicts an existing rule, over-fits a single incident, or adds
     surface area to a file that is already the bottleneck.
 
