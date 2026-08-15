@@ -29,7 +29,7 @@ For any app whose flow starts behind an email-OTP or similar login (e.g. zng-bil
 
 ## Shared
 
-Node + Playwright reachable (`npx playwright` or the project's own `node_modules`) - note the resolved path, you'll need it as a literal `require()` path. Screenshots go to `.for_bepy/screenshots/<claude-ancestor-pid>-<ancestor-start-ticks>/` (gitignored, per-session, matching `/close`'s purge scheme), resolved automatically by `e2e-helpers.js`'s `SHOT_DIR` via the shared `session-shot-dir.cjs` helper - never hand-fill the id.
+Node + Playwright reachable (`npx playwright` or the project's own `node_modules`) - note the resolved path, you'll need it as a literal `require()` path. Screenshots go to `.for_bepy/screenshots/<session-id>/`, the id `rename-session.ps1 -GetId` returns (gitignored, per-session, matching `/close`'s purge scheme), resolved automatically by `e2e-helpers.js`'s `SHOT_DIR` via the shared `session-shot-dir.cjs` helper - never hand-fill the id.
 
 ## Mode A - Scripted
 
@@ -64,7 +64,7 @@ Final report: append a `## Run summary` to the plan file - totals (passed/failed
 - [ ] Mode picked matches the ask (scripted = unattended/cold; plan-file = supervised QA against a plan)
 - [ ] Scripted: built RELEASE web, never driven against a `flutter run` debug session; Firebase layer loaded only if the app actually uses Firebase
 - [ ] Plan-file: login/auth handling was asked about, never assumed
-- [ ] Screenshots under `.for_bepy/screenshots/<claude-ancestor-pid>-<ancestor-start-ticks>/`
+- [ ] Screenshots under `.for_bepy/screenshots/<session-id>/` (the `rename-session.ps1 -GetId` id)
 - [ ] Report lists pass/fail per step (or per driven action) plus any new console errors
 
 ## References

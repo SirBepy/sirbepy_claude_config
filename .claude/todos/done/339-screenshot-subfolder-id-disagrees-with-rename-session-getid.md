@@ -59,3 +59,4 @@ describe different ids.
 - Do not "fix" this by loosening `/close`'s purge to delete by mtime. That was explicitly rejected;
   concurrent sessions write files both newer and older than each other and mtime cannot tell them
   apart. The id scheme is the right design, it just has two disagreeing implementations.
+- Completed via /auto-do-todos 2026-08-15: CLAUDE.md:84 now points at rename-session.ps1 -GetId as the single source of truth for the screenshot subfolder id, replacing the process-tree-walk wording the script own comments call best-effort/unstable. Repo-wide grep confirmed close, screenshot and mockup were already correct; the two remaining stale copies in skills/flutter-e2e/SKILL.md (lines 32 and 67) were fixed by the orchestrator after that file freed up. -GetId verified live, returns a <pid>-<procStart-ticks> shaped id.
