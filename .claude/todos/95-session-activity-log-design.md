@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-12, complexity=HARD, worth=2, reconfirm-count=2, content-hash=75cd15eb -->
+<!-- cleanup: last-checked 2026-08-15, complexity=EASY, worth=2, reconfirm-count=3, content-hash=75cd15eb -->
 # Session activity log design, parked
 
 **Type:** task

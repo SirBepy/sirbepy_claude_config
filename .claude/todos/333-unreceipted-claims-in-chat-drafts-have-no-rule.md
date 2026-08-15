@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-15, complexity=HARD, worth=6, reconfirm-count=1, content-hash=869b10db -->
 # Chat/Slack drafts Claude hands the dev have no receipt rule, and no chokepoint to enforce one
 
 **Type:** rule-improvement

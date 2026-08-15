@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-15, complexity=HARD, worth=7, reconfirm-count=1, content-hash=59442bb4 -->
 # /auto-do-todos has no path for a dev who is present and answering
 
 **Type:** skill-improvement

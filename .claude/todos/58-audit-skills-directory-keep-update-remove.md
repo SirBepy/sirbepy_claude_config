@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-12, complexity=HARD, worth=8, reconfirm-count=2, content-hash=1ec3adee -->
+<!-- cleanup: last-checked 2026-08-15, complexity=HARD, worth=7, reconfirm-count=3, content-hash=1ec3adee -->
 # Full audit pass over skills/ deciding keep, update, or remove per skill
 
 **Type:** task

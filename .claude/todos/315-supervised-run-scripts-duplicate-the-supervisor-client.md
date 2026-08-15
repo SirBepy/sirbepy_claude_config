@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-15, complexity=EASY, worth=5, reconfirm-count=1, content-hash=9b2e096b -->
 # restart-and-wait.ps1 copies sv.ps1's supervisor client instead of sharing it
 
 **Type:** task
