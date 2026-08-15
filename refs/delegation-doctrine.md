@@ -79,7 +79,10 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
 - The line: "Your final message is your entire return value. ALL commands, including the verify
   floor (build/test/lint/typecheck), run synchronously in the same tool call: `run_in_background`
   is FORBIDDEN in builder subagents, a long build is waited out, not backgrounded. Ending the turn
-  while anything is still running is a failed dispatch."
+  while anything is still running is a failed dispatch. Any command that may exceed 120 seconds
+  MUST pass an explicit `timeout` (up to 600000ms): the tool's default is 120s and the harness
+  auto-backgrounds past it, so omitting `timeout` backgrounds your build whether you intended it
+  or not."
 - The line: "Never run `git stash`, `git reset`, or `git checkout` on paths you don't own: other
   agents' uncommitted work shares this tree. To compare against clean state, use `git show
   HEAD:<file>`."
@@ -103,6 +106,10 @@ Never run `git stash`, `git reset`, or `git checkout` on paths you don't own - o
 uncommitted work shares this tree. To compare against clean state, use `git show HEAD:<file>`.
 Stage changed files by name, never `git add -A`.
 
+Never edit files under `~/.claude/` (skills, hooks, settings, global CLAUDE.md) even if the task
+description points at one - that requires the dev's explicit say-so in the CURRENT session, which
+a subagent can't verify; if a task seems to require it, stop and report back instead.
+
 If this dispatch captures screenshots, save them under `.for_bepy/screenshots/<pid>-<start-ticks>/`,
 the id the orchestrator resolved once via `rename-session.ps1 -GetId` (never a bare or hand-picked
 subfolder name, and never one you derive yourself) - that's what leaves files `/close` can never
@@ -115,7 +122,9 @@ prove ownership of and therefore never clean up.
 Your final message is your entire return value. ALL commands, including the verify floor
 (build/test/lint/typecheck), run synchronously in the same tool call: `run_in_background` is
 FORBIDDEN in builder subagents, a long build is waited out, not backgrounded. Ending the turn while
-anything is still running is a failed dispatch.
+anything is still running is a failed dispatch. Any command that may exceed 120 seconds MUST pass
+an explicit `timeout` (up to 600000ms): the tool's default is 120s and the harness auto-backgrounds
+past it, so omitting `timeout` backgrounds your build whether you intended it or not.
 ```
 
 `<WORKING_DIR>`, `<STAGING_LINE>`, `<OFF_LIMITS>` and `<ORPHAN_CHECK>` are the only fields the

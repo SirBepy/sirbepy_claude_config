@@ -55,3 +55,4 @@ The orchestrator caught this one before it shipped, so this is a near-miss write
 report - worth fixing the systemic gap anyway since the same near-miss already happened once before
 under a different project (`windows_taskbar_widgets`, 2026-08-07) and CLAUDE.md's own rule text
 exists because of it.
+- Completed via /auto-do-todos 2026-08-15: canonical builder preamble now carries a one-line ban on editing ~/.claude (skills, hooks, settings, global CLAUDE.md) from a dispatched subagent, placed beside the git-reset ban it mirrors. No new placeholder, so the four-placeholder paragraph stayed accurate.

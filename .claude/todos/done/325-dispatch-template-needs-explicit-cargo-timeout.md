@@ -58,3 +58,7 @@ being retried.
 - The preamble names the explicit-timeout requirement, not just the prohibition.
 - A builder dispatched from that template against a 10-minute build completes its verify floor
   without parking.
+
+## Notes
+
+- Completed via /auto-do-todos 2026-08-15: refs/delegation-doctrine.md now requires an explicit timeout (up to 600000ms) on any builder command that may exceed 120s, stated in both the Dispatch discipline bullet and the canonical preamble block so the two copies stay in sync. Reason recorded inline: the harness auto-backgrounds past 120s, which is what parked four builders on cargo builds.
