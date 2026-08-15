@@ -93,3 +93,4 @@ run on 2026-08-13 found 23 of that project's 182 memory files absent from `MEMOR
 load into any session) and proposed re-indexing 18, taking the index 160 -> 178. So the index needs
 ADDITIONS at the same time this todo is worried about its length. This todo's own option 3 (group
 index lines under `##` headings) is the most likely way to hold both.
+- Completed via /auto-do-todos 2026-08-15: added one Memory Discipline bullet to CLAUDE.md marking the Auto Memory index-size warning as harness-internal advisory, and making "never delete an index line while its memory file still exists on disk" the bolded load-bearing rule, citing the reproduced 2026-08-13 three-entry loss. Optional /cleanup-memory pruning left undone, out of Acceptance scope.
