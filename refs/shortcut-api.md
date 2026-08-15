@@ -46,6 +46,25 @@ git log --all --oneline -E --grep="^${id}:"
 
 If no prefix match, also try a broad `--grep "$id"` to catch bundled references, but confirm any hit is actually about the ticket before treating it as related work — a 5-digit number can coincidentally match unrelated text.
 
+## Fetching a story with comments
+
+```bash
+curl -s "https://api.app.shortcut.com/api/v3/stories/<id>" -H "Shortcut-Token: $TOKEN"
+```
+
+Full story JSON includes `comments[]`, `description`, `workflow_state_id`, `blocked`/`blocker`, `story_links`, `branches`, `pull_requests`, `commits`. Read `comments[]` in full, chronological order: a comment can silently reverse, narrow, or add scope the description never mentions (see `shortcut-pickup-ticket`). For provenance-checking a claim attributed to Shortcut (e.g. a todo's "per PM decision" citation), the comment thread is often the only place that backing actually lives.
+
+## Searching stories
+
+```bash
+curl -s -G "https://api.app.shortcut.com/api/v3/search/stories" -H "Shortcut-Token: $TOKEN" \
+  --data-urlencode "query=owner:josipmui !is:archived !is:done" --data-urlencode "page_size=25"
+```
+
+Common query operators: `owner:<mention>`, `!is:archived`, `!is:done`, `completed:<date>..*`, `title:"<exact phrase>"`. Paginate via the response's `.next` field (a full relative URL, `null` when exhausted): don't assume `page_size` alone means one page. The search API rejects `workflow_state_ids` as a query/body key; filter to specific states client-side after fetching.
+
+**Free-text `query` is fuzzy/relevance-ranked, even combined with `state:"X"`: it returns unrelated stories ranked in, not a real AND filter.** `title:"exact phrase"` scopes more precisely. Carried forward, not re-verified this session (from a single hand-rolled-script session, 2026-08-13/14): a colon inside the quoted phrase (`title:"AP:"`) gets dropped, and the search falls back to matching the bare token as a substring of unrelated words (e.g. "Web App" contains "AP"), so a punctuated `title:` phrase needs a local post-filter on the returned `name` field before trusting the result set.
+
 ## Mutating a story: state-only PUT
 
 ```bash

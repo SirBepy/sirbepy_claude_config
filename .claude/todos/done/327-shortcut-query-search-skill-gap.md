@@ -56,3 +56,7 @@ Extend `~/.claude/skills/shortcut-create-ticket/` (or add a sibling `shortcut-se
 - The `title:` precision requirement and colon-substring gotcha are documented somewhere a cold
   session actually reads before writing its own search query.
 - No path in it posts a comment or mutates a story - read-only.
+
+## Notes
+
+- Completed via /auto-do-todos 2026-08-15: refs/shortcut-api.md gained Fetching a story with comments and Searching stories sections (GET recipes, query operators, .next pagination, and the title: colon-substring gotcha explicitly labelled carried-forward rather than re-verified, since no live token was available). Landed in the shared ref rather than a new skill, matching how the mutation recipe and workflow-state table already serve all five shortcut-* skills. Existing hand-rolled call sites in shortcut-pickup-ticket, shortcut-done-audit and work-recap were left untouched, out of Approach scope.
