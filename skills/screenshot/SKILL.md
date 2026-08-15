@@ -7,6 +7,16 @@ description: Triggers on /screenshot, and on requests to shoot a matrix of frame
 
 > Capture screenshots of the dev project, one per distinct view or state.
 
+## Playwright MCP is not the capture path
+
+`mcp__playwright__browser_take_screenshot` writes to the working directory or `.playwright-mcp/`,
+never to this session's `.for_bepy/screenshots/<id>/` - it has no folder-resolution logic, unlike
+`screenshot-helper.cjs`. Anything that must survive `/close`'s purge or stay out of `git status`
+goes through `screenshot-helper.cjs` instead. If the MCP is genuinely needed for interaction the
+helper's `--plan` can't express (e.g. a login flow), move the captured file into the session
+subfolder immediately (id from `close/rename-session.ps1 -GetId`) and confirm `git status` is
+clean of stray `.png` files before finishing.
+
 ## Native windows - the Playwright flow does not apply
 
 Desktop shells (Tauri/Electron windows, tray icons, taskbar strips, OS dialogs) are unreachable
@@ -90,6 +100,11 @@ Example plan:
   { "type": "screenshot", "out": ".portfolio-data/screenshot-3.png" }
 ]
 ```
+
+The plan file is a bare JSON array, as shown above, never `{"steps": [...]}`. An `evaluate` step's
+return value is discarded (`page.evaluate(step.js)` runs without logging) - to surface a result,
+inject it into the DOM (e.g. set `textContent` on an element) and read it back from the following
+screenshot, rather than expecting the step itself to report it.
 
 ## Step 5 - Run the script
 

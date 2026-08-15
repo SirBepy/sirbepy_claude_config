@@ -55,3 +55,7 @@ Pick one and write it down in the affected skills rather than relying on remembe
   skill text tells it to move them and to verify `git status` is clean of stray images before closing.
 - The plan-file schema notes above are recorded where the `--plan` flag is documented, so the next
   session does not rediscover them through three failed invocations.
+
+## Notes
+
+- Completed via /auto-do-todos 2026-08-15: skills/screenshot/SKILL.md gained a canonical "Playwright MCP is not the capture path" section (MCP writes to CWD or .playwright-mcp/, never the session subfolder; a needed MCP capture is moved immediately and git status checked), plus the plan-file schema gotchas. mockup points at it rather than duplicating. close Phase 3 step 3 now also checks the repo root and .playwright-mcp/ for stray PNGs and REPORTS rather than auto-deleting, since those can be git-tracked outside .for_bepy/.
