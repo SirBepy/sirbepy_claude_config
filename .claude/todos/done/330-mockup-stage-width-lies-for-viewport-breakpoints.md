@@ -58,3 +58,7 @@ believed.
 - Step 5's measurement check names the inner-scroller rule.
 - A future session following the skill cannot produce a 390px stage of a `sm:`-gated component and
   present it as mobile behaviour.
+
+## Notes
+
+- Completed via /auto-do-todos 2026-08-15: skills/mockup/SKILL.md Staging section now separates container queries (clamped stage is valid) from viewport media queries (clamped stage lies, resize the real viewport and label the shot), requires labelling a board that mixes both, and step 5 geometric check now measures scrollWidth > clientWidth + 2 on the element that actually scrolls rather than the outer wrapper.
