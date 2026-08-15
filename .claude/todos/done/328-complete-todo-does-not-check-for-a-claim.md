@@ -59,3 +59,4 @@ refusing to complete an unclaimed todo would break real paths.
 - The deeper fix would be for whatever executes a todo to claim it automatically, but that is a much
   bigger change across `/pickup`, `/batch-todos`, autopilot and ad-hoc runs. The warning is the cheap
   detection layer that makes the bigger fix's absence visible in the meantime.
+- Completed via /auto-do-todos 2026-08-15: complete-todo.ps1 now splits the claim-release else branch, printing a named WARNING when no claim file matches instead of one undifferentiated line. Non-blocking by design, and idempotency re-verified. Honest limit recorded: the only signal at completion time is whether a .claim file exists right now, so this cannot tell never-claimed from claimed-then-released-early; no new release-log artifact was invented, per the todo Approach scoping this to a detection layer. claim-todo.ps1 was reviewed and needed no change, its four messages are already differentiated.

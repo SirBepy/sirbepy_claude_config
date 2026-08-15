@@ -206,7 +206,10 @@ if ($claimMatches.Count -ge 1) {
     }
 }
 else {
-    Write-Info "No claim file for id $numericId (already released or never claimed) - nothing to remove."
+    # Can't distinguish never-claimed from already-released - no artifact records
+    # release history. Warn anyway: per CLAUDE.md, claiming is non-negotiable, so
+    # an absent claim at completion time is worth a reviewer's eyes either way.
+    Write-Info "WARNING: todo $numericId is being completed with no claim on record - either it was executed without claiming, or the claim was released early (see close/ai-todos-format.md). Not blocking."
 }
 
 # --- Step 3: prune the PLAN.md line, CAS-style (fresh read immediately before write) ---
