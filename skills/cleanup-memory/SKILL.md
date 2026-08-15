@@ -1,16 +1,19 @@
 ---
 name: cleanup-memory
-description: Audits the current project's auto-memory files for staleness, dead references, and duplication; dedupes and archives, everything confirm-gated before anything moves.
+description: Audits the current project's auto-memory files for staleness, dead references, and duplication; dedupes and archives, applying by default after one up-front question.
 disable-model-invocation: true
 ---
 
 # /cleanup-memory
 
-> Dedupe, verify, and triage the auto-memory system (the memory directory named in this session's auto-memory context) - mirrors `/cleanup-todos`'s confirm-gated triage, applied to Claude's own persistent memory instead of todos.
+> Dedupe, verify, and triage the auto-memory system (the memory directory named in this session's auto-memory context) - applied to Claude's own persistent memory instead of todos. Unlike `/cleanup-todos`'s per-item confirm list, this auto-applies every finding by default; the one up-front question exists so the dev can say "stop" or "check twice", not to enumerate items for sign-off.
 
 This is a maintenance pass only: it never acts on a memory's advice, only on whether the memory
-itself is still accurate and non-duplicate. Every removal - a dedupe merge or a suggested drop -
-goes through the confirm gate in the Apply step. Nothing moves before the dev replies.
+itself is still accurate and non-duplicate. Auto-apply is the default outcome, not an opt-in flag -
+the single question in Step 5 is the dev's one chance to redirect (apply / get a second opinion /
+say something else), not a per-item gate. Nothing is ever plain-deleted: every archive/drop moves
+the file to `<memory-dir>/archive/` (Step 6), recoverable by moving it back and re-adding its
+`MEMORY.md` line.
 
 ## Step 1 - Locate and read
 
@@ -91,51 +94,100 @@ Must stay a single batched call, never one dispatch per memory.
 Step 3's dedupe tagging (dedupe is corpus-wide, not tier-limited), but never independently
 flagged stale by this step.
 
-## Step 5 - Report
+## Step 5 - Ask (one question, up front)
 
-Deliver as the turn's FINAL message, no tool call after it - a same-turn `AskUserQuestion` would
-swallow the preceding text in this harness.
+The apply set going in: every `origin: dedupe` loser (Step 3), every `suggested_drop` (Step 4),
+every broken-link fix (Step 2/4), every `orphan-file` needing a new index line, and every
+`orphan-index-entry` needing its dangling line dropped (Step 2). Nothing outside this set is
+ever auto-applied - Step 1.5's size warnings and CLAUDE.md/axiom candidates stay flag-only.
 
-Contents, in order:
+Ask exactly ONE structured question (the harness's `AskUserQuestion`, or
+`mcp__cc_conductor__ask_user_question` where available - per CLAUDE.md's Communication section)
+as the FIRST content of the turn, with no preceding chat text: a same-turn question tool call
+swallows any text before it in this harness, so the audit counts and highlights go inside the
+question's own `question`/header text, never in a separate message first. This is the same
+constraint the old Step 5 documented; it now governs where the summary text lives, not whether
+a question can be asked at all.
 
-0. Step 1.5 findings: size/length warnings, T0 axiom candidates, CLAUDE.md
-   promotion candidates (or "None.").
-1. Index/file consistency hits from Step 2 (or "Index and files match.").
-2. Dedupe-group count and list.
-3. Broken-link findings (memory `X` links to `[[Y]]`, no memory named `Y` exists).
-4. Stale/dead-reference findings from the deep pass (memory `X` claims `path/fn` exists, not
-   found).
-5. A unified confirm list: every `origin: dedupe` loser, every `suggested_drop`, every broken
-   link's source memory (if the fix is "drop" rather than "just fix the link text" - judgment
-   call left to the dev, not auto-decided here). Each entry: `name`, one-line reason, origin(s).
+Options:
 
-Close with a plain-text prompt: "Reply with names to confirm (dedupe merges and drops), `fix
-links only` to just repair broken `[[links]]` without dropping anything, or `keep all`."
+- **Apply all** (default/recommended) - auto-apply the full set above, protections intact
+  (archive not delete, fold-before-archive, honour any exclusions already on record for this
+  project).
+- **Get a second opinion** - run Step 5.5 before applying.
+- **Something else** (free text) - exclusions ("nothing about X", "nothing modified this month"),
+  `fix links only`, or `keep all`; apply whatever remains after honouring the reply literally.
 
-## Step 6 - Apply confirmed items
+No further per-item prompting after this reply, regardless of branch taken.
 
-The only step that mutates the memory directory.
+## Step 5.5 - Second opinion (only if chosen)
 
-For each confirmed drop or dedupe-loser: move the file to `<memory-dir>/archive/` (never
-plain-delete - a memory turning out to still be load-bearing should be recoverable), remove its
-`MEMORY.md` line, and grep the remaining memory files for `[[<name>]]` references - replace with
-a plain-text mention (drop the link syntax) rather than leaving a dangling link.
+Dispatch 2 subagents (`model: 'sonnet'`), the full apply set in each prompt:
 
-For a dedupe merge specifically: before archiving the loser, check its body for any detail not
-already present in the keeper's body (a distinct example, a distinct "Why") - fold that in as a
-short addition to the keeper first, then archive the loser.
+- **Refuter**, pointed at the destructive items only (archives, drops): default to "do not act"
+  on any item it's not confident about.
+- **Reviewer**, pointed at the additive/structural items (re-index proposals, link fixes, dedupe
+  keeper choice): checks the audit's judgment calls, not just its mechanics.
 
-For `fix links only`: repair each broken `[[name]]` in place (either it's a typo of an existing
-memory's actual name, in which case correct it, or it points at something truly gone, in which
-case drop the link syntax and leave the surrounding sentence readable) - no files archived.
+Any item either subagent flags as refuted/uncertain drops out of the apply set and is named in
+the Step 7 summary as excluded. Everything neither flags proceeds to Step 6. This does not
+re-open the question from Step 5 - it resolves inline from the two reports.
 
-Never touch `MEMORY.md` structure beyond removing/updating the specific lines this run confirmed.
+## Step 6 - Apply
+
+The only step that mutates the memory directory. Order matters and is not optional - it is what
+keeps the index and the files from ever falling out of step (see CLAUDE.md's Memory Discipline:
+"never delete an index line while its memory file still exists on disk").
+
+For each archive/drop item, in this exact order:
+
+1. Move the file to `<memory-dir>/archive/` (never plain-delete).
+2. Verify the move: the file exists at the new path and no longer exists at the old one.
+3. Only after that verification, remove its `MEMORY.md` line.
+4. Grep remaining memory files for `[[<name>]]` references - replace with a plain-text mention
+   (drop the link syntax) rather than leaving a dangling link.
+
+Never remove an index line before its file has been confirmed moved (steps 1-2 before step 3,
+every time) - that ordering is what makes the desync structurally impossible rather than merely
+discouraged.
+
+For a dedupe merge specifically: before step 1, check the loser's body for any detail not already
+in the keeper's body (a distinct example, a distinct "Why"). State explicitly, per entry, either
+"nothing unique to fold" or the exact detail folded and where it landed in the keeper - then fold
+it in before archiving. This applies to every dedupe-loser entry, listed or not, since under
+auto-apply nobody reads a list before the write happens.
+
+For each `orphan-file`: add a `MEMORY.md` line pointing to it (summarized from its `description`
+frontmatter). For each `orphan-index-entry`: remove the dangling line (safe - no file exists to
+desync against).
+
+For `fix links only` or an equivalent free-text reply: repair each broken `[[name]]` in place
+(correct it if it's a typo of an existing memory's actual name, otherwise drop the link syntax
+and leave the sentence readable) - no files archived.
+
+**Mandatory final check, before Step 7:** re-run Step 2's index/file cross-check over the whole
+directory. If anything still mismatches (an index line with no file, or a file with no index
+line), stop and surface it in the Step 7 summary instead of reporting success - do not let a
+partial apply pass as clean.
+
+Never touch `MEMORY.md` structure beyond the lines this run's apply set covers.
+
+## Step 7 - Post-apply summary
+
+Deliver as the turn's FINAL message, no tool call after it (same swallow risk as Step 5 - this
+message is the report the dev is meant to read). Short and auditable, not a re-run of the audit:
+
+- What moved: dedupe merges (loser -> keeper, folded-detail note), drops, re-indexed orphans,
+  link fixes.
+- Any item excluded by Step 5.5, named with the reason.
+- Result of the mandatory final consistency check (clean, or what still mismatches).
 
 ## Non-goals (v1)
 
 - No cross-project sweep - one project's memory directory per run. Running it project-by-project
   is the intended workflow, same as `/cleanup-todos` being per-repo.
-- No auto-drop, ever - every removal goes through the Step 5 confirm gate.
+- No auto-drop past the Step 5 question - the one question gates the whole apply set; nothing is
+  ever plain-deleted, only archived.
 - No scheduled/cron trigger - manual invocation only.
 - No rewriting a memory's *content* for style/length during this pass - a kept memory's body is
   only ever edited to fold in a dedupe-loser's unique detail (Step 6) or repair a link; anything

@@ -86,3 +86,7 @@ matters more, not less, since nobody is reading a list before the write happens.
   refuted item excluded and named.
 - Nothing is ever hard-deleted; `archive/` still receives everything.
 - Joe never has to type a list of memory names.
+
+## Notes
+
+- Completed via /auto-do-todos 2026-08-15: /cleanup-memory is now auto-apply by default with exactly one structured question up front (Step 5), plus the validated two-lens second-opinion phase (Step 5.5) and a post-apply summary (Step 7). Desync with CLAUDE.md new never-deindex-a-live-file rule is made structurally impossible by Step 6 ordered sequence: archive the file, verify it moved, only then remove the MEMORY.md line, backed by a mandatory re-run of Step 2 cross-check before any success report - so an interruption can only ever leave a self-revealing orphan index entry, never the silent 2026-08-13 failure. Nothing is plain-deleted, only archived.
