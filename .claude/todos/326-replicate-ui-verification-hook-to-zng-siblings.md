@@ -48,3 +48,20 @@ it built. Confirm with Joe before executing.
   exactly once per session; subsequent stops are silent; non-UI edits never trigger it.
 - `settings.local.json` in each repo still parses as valid JSON and existing permissions are
   intact.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-08-15. The next run opens with these.
+
+- [ ] [TOOLING] Do you still want this built? The todo's own Context says you offered it once, never
+      built it, and on 2026-08-14 said you did not recall it, choosing to keep it queued rather than
+      re-confirm. Verified 2026-08-15: `zng-app/.claude/settings.local.json` has a Stop hook but it
+      runs `flutter analyze`, not the reminder; `zng-biller` has no Stop hook at all; zng-admin's
+      sentinel-gated `lib/.*ui/` reminder hook is present and is the source to copy. Options: build
+      it in both repos / build it in zng-biller only / drop it. Recommended: **drop it** unless you
+      say otherwise, since an unconfirmed want that has survived two passes is usually a no.
+- [ ] [ARCH] If it is built, it edits two OTHER repos from a `~/.claude` session, which the global
+      rule against cross-repo tooling work cuts against in both directions. Options: do it from a
+      session opened in each target repo / do it from here with your explicit say-so in that
+      session. Recommended: **from each target repo**, which is also where the todo would then
+      belong.

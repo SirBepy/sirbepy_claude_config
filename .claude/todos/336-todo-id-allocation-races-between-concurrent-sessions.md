@@ -62,3 +62,25 @@ in the same change, since every writer reads its id rule from there.
   from the other end - the `.claims/` mutex exists but nothing verifies or extends it.
 - The renaming work is worse than it looks: a todo whose id changes after being committed needs the
   old path explicitly removed from the commit, or the tree ends up carrying both copies.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-08-15. The next run opens with these.
+
+- [ ] [ARCH] Which allocation scheme? This changes every backlog writer in every repo, so it is a
+      wide, hard-to-reverse call. Options: (a) atomic reserve, create an empty `<id>-.reserved` file
+      with no-overwrite semantics before writing, the same primitive `claim-todo.ps1` already uses
+      for the claims mutex; (b) non-sequential ids (timestamp or short random suffix), which cannot
+      collide but loses the readable ordering you use when you say "do todo 07"; (c) keep the
+      existing reactive rename-on-collision and just harden it. Recommended: **(a)**, because it
+      reuses a primitive already proven in this backlog and keeps ids readable. Worth knowing before
+      deciding: option (c) already ships. `close/ai-todos-format.md:48-53` has carried a creation
+      race guard since commit `c971a08` on 2026-07-15, a month before the 2026-08-14 triple
+      collision this todo cites, so the guard was in force and the collision happened anyway. The
+      todo's own Approach lists detect-and-repair as a lesser third option, seemingly unaware of
+      that.
+- [ ] [TOOLING] Two files in this backlog still share id `338` right now. Options: renumber the
+      newer one to a free id / leave it, since both helper scripts accept a `-Slug` or a full
+      filename stem as `-Id` and it is already working. Recommended: **leave it** if `338`'s
+      shortcut half gets archived per its own Open questions, which dissolves the collision without
+      any renaming.

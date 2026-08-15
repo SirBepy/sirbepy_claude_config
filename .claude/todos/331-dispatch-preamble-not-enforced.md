@@ -72,3 +72,23 @@ Prefer 1 + 2 together. 2 alone still relies on remembering to read the file.
   dispatched process is exposed in that process's command line for its whole
   lifetime. Worth a line in the doctrine or process-hygiene about preferring a
   file or env var over a command-line argument for secrets in dispatched runs.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-08-15. The next run opens with these.
+
+- [ ] [ARCH] This repo's own hook doctrine (see `PLAN.md`) says exact mechanical checks ship and
+      heuristic judgment calls do not, and it killed three detectors in one day on that basis. A
+      preamble-enforcement hook is partly mechanical (is the staging line present, verbatim) and
+      partly heuristic (is the orphan-check text required for THIS dispatch, which depends on
+      whether it runs a dev server). Options: enforce only the always-required verbatim lines and
+      ignore the conditional ones / measure the whole thing against a real corpus of past dispatch
+      prompts first, per the doctrine / drop it and rely on `/close` sweeping for omissions as
+      today. Recommended: **enforce the verbatim-only subset**, because that half is a string
+      comparison and would have caught both cited incidents, while the conditional half is exactly
+      the shape the doctrine rejects.
+- [ ] [SEC] The Notes carry a separate finding: a `--dart-define` or env secret passed to a
+      dispatched process sits in that process's command line for its whole lifetime. Options: fold
+      a line into `refs/delegation-doctrine.md` / into `refs/process-hygiene.md` / file it
+      separately. Recommended: **process-hygiene**, since it is about how processes are launched
+      rather than how dispatches are written, and it applies outside dispatches too.

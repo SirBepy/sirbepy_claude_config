@@ -68,3 +68,19 @@ not a "keep in sync" comment.
 - Related: [[326-replicate-ui-verification-hook-to-zng-siblings]] for the hook-replication pattern.
 - Three of four `EXPERIMENTAL-` spikes in `~/.claude/hooks/` were never promoted to blocking. If
   this becomes a hook, it should be non-blocking by design rather than a spike awaiting promotion.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-08-15. The next run opens with these.
+
+- [ ] [ARCH] The todo names an undecided fork and it is the whole job. Options: extend the existing
+      prose rule in `CLAUDE.md`'s Execution Discipline (which today covers claims about systems not
+      read this session, a narrower scope than outbound chat receipts) / build a `UserPromptSubmit`
+      hook / do nothing until a chat-side incident actually happens. Recommended: **extend the prose
+      rule**. A detector for "did this claim get checked" is a judgment call, and this repo's hook
+      doctrine has already killed three of those; the cited incident was ticket-side and is already
+      fixed by `a7c09a6`, so the chat half has no incident of its own yet.
+- [ ] [TOOLING] If the prose route wins, does it need a work-versus-personal scope split, per the
+      todo's own aside? Options: one rule for all outbound chat / stricter for client-facing (Slack,
+      Shortcut comments) than for personal. Recommended: **one rule**, because a split needs a
+      reliable signal for which channel a draft is headed to, and there isn't one.

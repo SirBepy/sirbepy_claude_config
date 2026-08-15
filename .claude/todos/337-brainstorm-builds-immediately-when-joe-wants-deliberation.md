@@ -63,3 +63,20 @@ CLAUDE.md's Execution Discipline section already splits inline from subagent-dri
 - Do not solve this by adding an "are you sure?" prompt. CLAUDE.md's front-load rule and this
   skill's own design both reject mid-task approval gates; the branch has to be decided from the
   task's shape, not by asking.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-08-15. The next run opens with these.
+
+- [ ] [UX] How should `/brainstorm` tell the two cases apart, given the Notes forbid solving it by
+      asking? Options: infer from blast radius (does it touch a shared ref, a global rule, or more
+      than N files) / require an explicit word on the invocation, e.g. `/brainstorm deliberate` /
+      always deliberate first for anything touching `~/.claude` or a shared ref, build immediately
+      otherwise. Recommended: **the third**. It needs no new argument for you to remember, and the
+      cited incident was exactly a global-tooling change. This one is your call on how you want to
+      be interrupted, which is why it was not auto-decided.
+- [ ] [TOOLING] The skill's "Gate-free by design" section currently promises no approval checkpoint
+      unconditionally, so whatever lands has to rewrite that promise rather than sit beside it.
+      Options: narrow the promise to the build-immediately branch / drop the section and state the
+      two branches plainly. Recommended: **narrow it**, so the gate-free guarantee you rely on for
+      small work stays explicit.

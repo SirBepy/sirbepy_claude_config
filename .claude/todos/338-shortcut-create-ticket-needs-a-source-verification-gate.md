@@ -66,3 +66,20 @@ so the audit trail shows whether the gate ran.
 - Related, same session: the same wrong inference also reached a QA-facing comment on SC-54228 and
   had to be edited after posting. A verification gate on ticket creation would not have caught the
   comment. Worth considering whether `shortcut-update-ticket` needs the same gate.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-08-15. The next run opens with these.
+
+- [ ] [TOOLING] This todo's premise no longer holds. Commit `a7c09a6`, the same day it was filed,
+      ships a strictly broader version of the ask: step 2 of `skills/shortcut-create-ticket/SKILL.md`
+      is now a mandatory "Ground check" for EVERY ticket rather than only BE or other-owner ones;
+      `ground-check.md` query 3 reads the owning system's own source at the tracked branch
+      (`git show origin/<branch>:<path> | grep -n "<claim>"`), which is precisely the sc-55124
+      failure mode; and `hooks/shortcut-create-guard.py` hard-blocks the create call without a fresh
+      ground-check marker, which is stronger than this todo's "record verification or mark
+      UNVERIFIED". Archive it, or keep it open? Options: archive to `done/` as superseded / keep it
+      open for the `shortcut-update-ticket` half named in its own Notes / keep it open for another
+      reason. Recommended: **archive**, and let the update-ticket gap be filed as its own todo,
+      since that is a different skill with a different trigger. Archiving also resolves the id-338
+      collision with the flutter-e2e todo. Dev-origin, so it waits on your word.

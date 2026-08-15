@@ -1,12 +1,15 @@
 # Plan
 
-**4 active todos, and every one of them is parked by Joe's own decision.** Nothing here is waiting
-on Claude. Rewritten 2026-08-13 after an `/auto-do-todos` run cleared the backlog from 20 down to
-4 across two waves.
+**15 active todos.** The four long-parked ones below still stand. Updated 2026-08-15 after an
+`/auto-do-todos` run took the backlog from 32 to 15: 21 executed, 1 archived as churn.
+
+Of the 15, **six carry an `## Open questions` block** written by that run and are waiting on Joe,
+not on Claude: **326, 331, 333, 336, 337, 338**(shortcut). The next run opens with those. Five more
+(**340-345**) were filed by the run itself from its own findings and have never been triaged.
 
 The old batch structure (16 batches, 71 todos, written 2026-08-11) is gone because the backlog it
-described is gone. If the backlog grows past a dozen again, re-run `/plan-todos` and rebuild it
-rather than resurrecting the old headings from git.
+described is gone. Now that the backlog is past a dozen again, re-run `/plan-todos` to rebuild
+ordering rather than resurrecting the old headings from git.
 
 Per the contract in `~/.claude/skills/close/ai-todos-format.md`, claim each todo in
 `.claude/todos/.claims/` before executing it, and archive with `complete-todo.ps1` when done.
