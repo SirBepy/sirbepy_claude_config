@@ -116,10 +116,46 @@ accessibility-tree query may itself trigger Flutter's semantics activation.
 This is a single app, single session, not re-tested across other Flutter
 apps/versions - treat it as "try this first," not a replacement absolute.
 If role/text locators hang or return nothing against a live debug session,
-fall back to a `flutter build web` release bundle served statically
-(`flutter-e2e`'s Mode A checks for this). Playwright MCP against a human's
-own already-running debug session remains a separately-supported shape (see
-plan-file mode) because the human owns that session.
+fall back to a `flutter build web` release bundle served statically (see the
+2026-08-14 re-test and the practical rule below). Playwright MCP against a
+human's own already-running debug session remains a separately-supported
+shape (see plan-file mode) because the human owns that session.
+
+**2026-08-14 zng-admin re-test: the same debug session hung, twice.** This
+is the re-test todo 74 left open. Same repo, same `flutter run -d
+web-server` shape, opposite outcome:
+
+- Round 1, an already-warm process: most routes rendered fine, but
+  `/billers/<id>` and `/users/<id>` each hung ~4.5 min and never mounted,
+  while a later route in the same session mounted instantly - inconsistent
+  even within one warm process.
+- Round 2, against a freshly restarted process (its first-ever browser
+  attach): never painted in a 180s budget. The server itself was healthy
+  (`curl` returned `main.dart.js` in single-digit ms), but that response was
+  only the ~8.7 KB DWDS bootstrap stub, not compiled app code.
+- Switching to `flutter build web` + a static file server worked on the
+  first attempt and every round after (`main.dart.js` ~3.9 MB of real
+  compiled output).
+
+Cost of the detour: roughly two hours across two blocked rounds plus a
+killed agent.
+
+**What the two data points actually show.** 2026-08-10 shows locators CAN
+work against an already-warm debug session with no manual activation.
+2026-08-14 shows the same session shape can also hang unrecoverably, on both
+a warm and a cold attach, with no client-side signal telling you a stall
+apart from a slow mount. Two data points, opposite outcomes, same setup -
+the variable is not understood, so this is not grounds for trusting a debug
+session by default.
+
+**Practical rule:** a debug session may be worth trying first only for a
+single quick scenario against an already-warm process, since it skips the
+build step. For a multi-scenario sweep, go straight to a release bundle:
+retries against a static bundle are free, a DWDS stall has no timeout and
+burns real wall-clock time per hang. `flutter-e2e`'s Mode A already takes
+this position unconditionally - it builds release for every scripted run
+rather than trying a debug session first, and this evidence is why that
+default stays as-is.
 
 ## Headless guidance
 

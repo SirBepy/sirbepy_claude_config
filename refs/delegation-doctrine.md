@@ -73,6 +73,14 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
 - Any load-bearing project memory already known to the orchestrator (a prior fix, workaround, or
   failure recorded for this repo), restated inline. A subagent re-solving a problem memory already
   answered is a wasted dispatch.
+- If the dispatched work matches a skill's own description, that skill's file path(s) - `SKILL.md`
+  plus any refs it points to - not just its rules pasted by hand. Subagents cannot invoke skills at
+  all, only the orchestrator can, so a matching skill never fires on its own inside a dispatch; the
+  file path is the only route the subagent has to that content, and hand-copied rules drift from
+  the source over time. Skip this only when the prompt already inlines everything the skill would
+  have supplied. (todo 338, 2026-08-14: five Flutter e2e dispatches hand-copied the same driving
+  rules instead of pointing at `flutter-e2e`'s files, because the skill can't invoke itself inside
+  a subagent.)
 - If the dispatch captures screenshots: the already-resolved `.for_bepy/screenshots/<pid>-<start-ticks>/`
   path. Resolve it ONCE per session via `~/.claude/skills/close/rename-session.ps1 -GetId`
   (`.sh --get-id` on Unix) and reuse that id for every dispatch this session makes. Never derive
