@@ -4,15 +4,14 @@ Run directly: python hooks/test_shell_content_write_guard.py
 Exits 0 on all-pass, 1 on any failure, printing a PASS/FAIL line per case.
 """
 
-import importlib.util
 import sys
 from pathlib import Path
 
-_spec = importlib.util.spec_from_file_location(
+import _testlib
+
+guard = _testlib.load_module(
     "guard", Path(__file__).resolve().parent / "shell-content-write-guard.py"
 )
-guard = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(guard)
 
 # (command, expect_block, label). expect_block=False means it must PASS through.
 CASES = [
@@ -38,17 +37,18 @@ CASES = [
 ]
 
 
+def check(case) -> bool:
+    cmd, expect_block, label = case
+    result = guard.find_violation(cmd)
+    got_block = result is not None
+    ok = got_block == expect_block
+    print(f"[{'PASS' if ok else 'FAIL'}] {label}: {cmd!r} -> {'BLOCK' if got_block else 'PASS'} ({result})")
+    return ok
+
+
 def run() -> int:
-    fails = []
-    for cmd, expect_block, label in CASES:
-        result = guard.find_violation(cmd)
-        got_block = result is not None
-        ok = got_block == expect_block
-        print(f"[{'PASS' if ok else 'FAIL'}] {label}: {cmd!r} -> {'BLOCK' if got_block else 'PASS'} ({result})")
-        if not ok:
-            fails.append(label)
-    print("\nALL PASS" if not fails else f"\nFAILURES: {fails}")
-    return 0 if not fails else 1
+    fails = _testlib.run_cases(CASES, check)
+    return _testlib.summarize(fails)
 
 
 if __name__ == "__main__":

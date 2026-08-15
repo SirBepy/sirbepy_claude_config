@@ -55,3 +55,4 @@ a refactor that quietly changes the report is worse than the duplication.
 
 - Filed by `/close` Phase 2 on 2026-08-13. Not urgent: the duplication costs nothing at runtime, it
   only guarantees the next hook test copies it again.
+- Completed via /auto-do-todos 2026-08-15: added hooks/_testlib.py (load_module, run_cases, report, summarize) and migrated all FIVE test_*.py suites, not the four the todo named - test_shortcut_create_guard.py had already copied the harness a fifth time, exactly as the todo predicted. No sys.path fiddling needed: CPython prepends the script own directory to sys.path[0] under python hooks/test_x.py, so a bare import _testlib resolves. Before/after output verified byte-identical for all five.

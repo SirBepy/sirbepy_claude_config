@@ -6,19 +6,17 @@ only - it does NOT certify the spike as safe to wire, see its docstring
 and the todo 308 report for the measured false-negative rate.
 """
 
-import importlib.util
 import json
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
+import _testlib
+
 _HOOKS_DIR = Path(__file__).resolve().parent
 _SPIKE_PATH = _HOOKS_DIR / "EXPERIMENTAL-bare-question-detector.py"
-
-_spec = importlib.util.spec_from_file_location("bare_question_spike", _SPIKE_PATH)
-spike = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(spike)
+spike = _testlib.load_module("bare_question_spike", _SPIKE_PATH)
 
 # (text, expect_bare_question, label) - pure trailing-line heuristic
 UNIT_CASES = [
@@ -34,15 +32,12 @@ UNIT_CASES = [
 ]
 
 
-def run_unit_cases() -> list:
-    fails = []
-    for text, expect, label in UNIT_CASES:
-        got = spike.is_bare_question(text)
-        ok = got == expect
-        print(f"[{'PASS' if ok else 'FAIL'}] unit: {label} -> {got} (expected {expect})")
-        if not ok:
-            fails.append(label)
-    return fails
+def check_unit(case) -> bool:
+    text, expect, label = case
+    got = spike.is_bare_question(text)
+    ok = got == expect
+    print(f"[{'PASS' if ok else 'FAIL'}] unit: {label} -> {got} (expected {expect})")
+    return ok
 
 
 def write_transcript(tmpdir: Path, has_auq: bool) -> Path:
@@ -73,10 +68,11 @@ INTEGRATION_CASES = [
 
 
 def run_integration_cases() -> list:
-    fails = []
     with tempfile.TemporaryDirectory() as tmp:
         tmpdir = Path(tmp)
-        for has_auq, expect_prefix, label in INTEGRATION_CASES:
+
+        def check(case):
+            has_auq, expect_prefix, label = case
             transcript = write_transcript(tmpdir, has_auq)
             payload = {
                 "last_assistant_message": "Want me to check the admin side?",
@@ -91,15 +87,14 @@ def run_integration_cases() -> list:
             )
             ok = proc.stdout.strip().startswith(expect_prefix) and proc.returncode == 0
             print(f"[{'PASS' if ok else 'FAIL'}] {label} -> {proc.stdout.strip()!r}")
-            if not ok:
-                fails.append(label)
-    return fails
+            return ok
+
+        return _testlib.run_cases(INTEGRATION_CASES, check)
 
 
 def run() -> int:
-    fails = run_unit_cases() + run_integration_cases()
-    print("\nALL PASS" if not fails else f"\nFAILURES: {fails}")
-    return 0 if not fails else 1
+    fails = _testlib.run_cases(UNIT_CASES, check_unit) + run_integration_cases()
+    return _testlib.summarize(fails)
 
 
 if __name__ == "__main__":

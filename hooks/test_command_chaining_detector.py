@@ -6,16 +6,15 @@ only - it does NOT certify the spike as safe to wire, see its docstring
 and the todo 311 report for the measured false-positive rate.
 """
 
-import importlib.util
 import sys
 from pathlib import Path
 
+import _testlib
+
 _HOOKS_DIR = Path(__file__).resolve().parent
-_spec = importlib.util.spec_from_file_location(
+spike = _testlib.load_module(
     "chaining_spike", _HOOKS_DIR / "EXPERIMENTAL-command-chaining-detector.py"
 )
-spike = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(spike)
 
 # (command, expect_flag, label). Drawn from real commands seen in this
 # machine's own session transcripts (todo 311 corpus, 30047 samples).
@@ -34,16 +33,17 @@ CASES = [
 ]
 
 
+def check(case) -> bool:
+    cmd, expect_flag, label = case
+    got_flag = bool(spike.find_chain_ops(cmd))
+    ok = got_flag == expect_flag
+    print(f"[{'PASS' if ok else 'FAIL'}] {label}: {cmd!r} -> {'FLAG' if got_flag else 'CLEAN'}")
+    return ok
+
+
 def run() -> int:
-    fails = []
-    for cmd, expect_flag, label in CASES:
-        got_flag = bool(spike.find_chain_ops(cmd))
-        ok = got_flag == expect_flag
-        print(f"[{'PASS' if ok else 'FAIL'}] {label}: {cmd!r} -> {'FLAG' if got_flag else 'CLEAN'}")
-        if not ok:
-            fails.append(label)
-    print("\nALL PASS" if not fails else f"\nFAILURES: {fails}")
-    return 0 if not fails else 1
+    fails = _testlib.run_cases(CASES, check)
+    return _testlib.summarize(fails)
 
 
 if __name__ == "__main__":

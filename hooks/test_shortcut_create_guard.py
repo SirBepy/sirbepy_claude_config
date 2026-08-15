@@ -4,17 +4,17 @@ Run directly: python hooks/test_shortcut_create_guard.py
 Exits 0 on all-pass, 1 on any failure, printing a PASS/FAIL line per case.
 """
 
-import importlib.util
+import os
 import sys
 import tempfile
 import time
 from pathlib import Path
 
-_spec = importlib.util.spec_from_file_location(
+import _testlib
+
+guard = _testlib.load_module(
     "guard", Path(__file__).resolve().parent / "shortcut-create-guard.py"
 )
-guard = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(guard)
 
 URL = "https://api.app.shortcut.com/api/v3/stories"
 
@@ -37,13 +37,17 @@ CASES = [
     ("Read", None, False, "non-shell tool"),
 ]
 
-failures = 0
-for tool_name, command, expected, label in CASES:
+
+def check(case) -> bool:
+    tool_name, command, expected, label = case
     tool_input = {"command": command} if command is not None else {}
     got = guard.is_story_creation(tool_name, tool_input)
     ok = got == expected
-    failures += not ok
     print(f"{'PASS' if ok else 'FAIL'}: {label} (expected creation={expected}, got {got})")
+    return ok
+
+
+fails = _testlib.run_cases(CASES, check)
 
 # Marker freshness: the guard allows only on a marker inside the window.
 with tempfile.TemporaryDirectory() as tmp:
@@ -51,24 +55,20 @@ with tempfile.TemporaryDirectory() as tmp:
     fresh = tmpdir / ".shortcut-marker-abc"
     fresh.touch()
     found = guard.oldest_fresh_marker(tmpdir, guard.MARKER_GLOB, guard.FRESHNESS_SECONDS)
-    ok = found is not None
-    failures += not ok
-    print(f"{'PASS' if ok else 'FAIL'}: fresh marker is found")
+    if not _testlib.report(found is not None, "fresh marker is found"):
+        fails.append("fresh marker is found")
 
     stale_time = time.time() - (guard.FRESHNESS_SECONDS + 60)
-    import os
     os.utime(fresh, (stale_time, stale_time))
     found = guard.oldest_fresh_marker(tmpdir, guard.MARKER_GLOB, guard.FRESHNESS_SECONDS)
-    ok = found is None
-    failures += not ok
-    print(f"{'PASS' if ok else 'FAIL'}: marker older than {guard.FRESHNESS_SECONDS}s is ignored")
+    label = f"marker older than {guard.FRESHNESS_SECONDS}s is ignored"
+    if not _testlib.report(found is None, label):
+        fails.append(label)
 
     fresh.unlink()
     (tmpdir / ".commit-marker-session-xyz").touch()
     found = guard.oldest_fresh_marker(tmpdir, guard.MARKER_GLOB, guard.FRESHNESS_SECONDS)
-    ok = found is None
-    failures += not ok
-    print(f"{'PASS' if ok else 'FAIL'}: a commit marker never satisfies this guard")
+    if not _testlib.report(found is None, "a commit marker never satisfies this guard"):
+        fails.append("a commit marker never satisfies this guard")
 
-print(f"\n{'ALL PASS' if not failures else str(failures) + ' FAILURE(S)'}")
-sys.exit(1 if failures else 0)
+sys.exit(_testlib.summarize(fails, style="count"))
