@@ -20,3 +20,7 @@ Amend the sentence in `~/.claude/code-style/tauri.md` to say the threshold count
 
 ## Acceptance
 The rule, read cold against `src-tauri/src/daemon/hooks_server/*.rs`, no longer flags files that follow the repo's established test-colocation pattern.
+
+## Notes
+
+- Completed via /auto-do-todos 2026-08-15: code-style/tauri.md:107 now says the ~300-line split threshold counts production lines only, excluding a trailing #[cfg(test)] mod tests block, and notes TS files get no such exclusion since their tests live in a separate tree. One-line clarification in place, no doc restructure, per the todo Approach.

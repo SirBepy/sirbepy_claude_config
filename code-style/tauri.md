@@ -104,7 +104,7 @@ project-root/
 
 - **Group by domain, not by layer.** No `handlers/`, `models/`, `services/` folders. Folder names match bounded contexts (`auth/`, `tray/`, `hooks/`, `tokens/`, `channels/`, `settings/`, `notifications/`, `ipc/`).
 - **Use the 2018-style module layout**: a sibling `.rs` file per folder (e.g. `auth.rs` + `auth/`), not `mod.rs`.
-- **Any file past ~300 lines should split into a subfolder.**
+- **Any file past ~300 lines should split into a subfolder.** Count production lines only: exclude a trailing `#[cfg(test)] mod tests` block. TS files have no such exclusion since their tests live in a separate tree.
 - **`ipc.rs` only re-exports.** Commands live in `ipc/<domain>.rs`.
 - **`types/*` holds only structs that cross the IPC boundary.** Internal-only types live inside the domain module that owns them.
 
