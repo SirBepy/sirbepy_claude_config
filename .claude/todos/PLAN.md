@@ -1,11 +1,12 @@
 # Plan
 
-**15 active todos.** The four long-parked ones below still stand. Updated 2026-08-15 after an
-`/auto-do-todos` run took the backlog from 32 to 15: 21 executed, 1 archived as churn.
+**16 active todos.** The four long-parked ones below still stand. Updated 2026-08-15 after an
+`/auto-do-todos` run took the backlog from 32 down to 10: 21 executed, 1 archived as churn.
 
-Of the 15, **six carry an `## Open questions` block** written by that run and are waiting on Joe,
-not on Claude: **326, 331, 333, 336, 337, 338**(shortcut). The next run opens with those. Five more
-(**340-345**) were filed by the run itself from its own findings and have never been triaged.
+Of the 16, **six carry an `## Open questions` block** written by that run and are waiting on Joe,
+not on Claude: **326, 331, 333, 336, 337, 338**(shortcut). The next run opens with those. Six more
+(**340-345**) were filed by the run itself from its own findings and have never been triaged, which
+is what took the count back up to 16.
 
 The old batch structure (16 batches, 71 todos, written 2026-08-11) is gone because the backlog it
 described is gone. Now that the backlog is past a dozen again, re-run `/plan-todos` to rebuild
