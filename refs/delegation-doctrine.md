@@ -105,9 +105,10 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
 
 The block below is the literal text every builder dispatch prompt pastes for the "embeds, without
 exception" list above, so it stops getting hand-retyped (and drifting) per dispatch. Fill in the
-four placeholders; everything else is copy-verbatim. The per-dispatch parts - task, scope, OFF
-LIMITS file list, verify floor specifics - stay hand-written, since those are the parts that
-actually need thought.
+four placeholders; everything else is copy-verbatim, except the `~/.claude` edit ban, which is
+deleted outright when the session's own working directory IS `~/.claude`. The per-dispatch parts -
+task, scope, OFF LIMITS file list, verify floor specifics - stay hand-written, since those are the
+parts that actually need thought.
 
 ```
 Windows. PowerShell for shell commands. Working directory: <WORKING_DIR>.
@@ -120,7 +121,9 @@ Stage changed files by name, never `git add -A`.
 
 Never edit files under `~/.claude/` (skills, hooks, settings, global CLAUDE.md) even if the task
 description points at one - that requires the dev's explicit say-so in the CURRENT session, which
-a subagent can't verify; if a task seems to require it, stop and report back instead.
+a subagent can't verify; if a task seems to require it, stop and report back instead. This line is
+DELETED, not pasted, when `<WORKING_DIR>` is `~/.claude` itself: the dev opened the session there,
+so global work is the whole point and the ban would refuse the assigned task.
 
 If this dispatch captures screenshots, save them under `.for_bepy/screenshots/<pid>-<start-ticks>/`,
 the id the orchestrator resolved once via `rename-session.ps1 -GetId` (never a bare or hand-picked
