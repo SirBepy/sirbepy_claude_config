@@ -40,23 +40,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$dataDir = Join-Path $env:APPDATA 'com.sirbepy.server-supervisor\supervisor'
-
-function Get-SupervisorConfig {
-    $tokenPath = Join-Path $dataDir 'api_token.txt'
-    $portPath = Join-Path $dataDir 'api_port.txt'
-    if (-not (Test-Path $tokenPath) -or -not (Test-Path $portPath)) { return $null }
-    $token = (Get-Content -Path $tokenPath -Raw).Trim()
-    $port = (Get-Content -Path $portPath -Raw).Trim()
-    if (-not $token -or -not $port) { return $null }
-    return [pscustomobject]@{ Token = $token; Port = $port; BaseUrl = "http://127.0.0.1:$port" }
-}
-
-# Token only ever goes into this header, never into Write-Host output.
-function Invoke-Api($cfg, $Method, $Path) {
-    $headers = @{ Authorization = "Bearer $($cfg.Token)" }
-    Invoke-RestMethod -Method $Method -Uri "$($cfg.BaseUrl)$Path" -Headers $headers
-}
+. (Join-Path $PSScriptRoot '_common.ps1')
 
 function Fail($msg) {
     Write-Host "ERROR: $msg"

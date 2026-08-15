@@ -50,3 +50,4 @@ Underscore prefix matches the convention already used by `hooks/_hooklib.py` and
 - Do NOT restart or reload one of Joe's live supervised entries to test this. The original build of
   `restart-and-wait.ps1` deliberately left the `/reload` and `/restart` POST paths unexercised for
   that reason, and that constraint still holds.
+- Completed via /auto-do-todos 2026-08-15: extracted $dataDir, Get-SupervisorConfig and Invoke-Api into skills/supervised-run/_common.ps1, dot-sourced from both sv.ps1 and restart-and-wait.ps1 via $PSScriptRoot so resolution is independent of the caller cwd (verified by running both from C:\tmp with absolute paths). The two original Invoke-Api copies differed only in signature: sv.ps1 had a 4th optional $Body that branched to a JSON POST, restart-and-wait.ps1 had 3 params; the superset was adopted, which is behaviour-preserving since restart-and-wait never passed a body. SKILL.md needed no change, it has no enumerated file-layout section.
