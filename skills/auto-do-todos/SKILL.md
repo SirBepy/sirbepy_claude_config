@@ -20,10 +20,13 @@ instruction to emit them.
 
 ## Precedence
 
-For the duration of a run this contract **SUPERSEDES** the global "front-load all questions before
-starting" rule and every nested skill's `AskUserQuestion` step. Step 5 is the run's compliance with
-that global rule: it is the ONE question round, it happens before any HARD todo executes, and after
-it the run does not ask again.
+For the duration of an **unattended** run (the default - see Attended mode below) this contract
+**SUPERSEDES** the global "front-load all questions before starting" rule and every nested skill's
+`AskUserQuestion` step. Step 5 is the run's compliance with that global rule: it is the ONE question
+round, it happens before any HARD todo executes, and after it the run does not ask again.
+
+An **attended** run does not supersede that global rule - it restores it. See Attended mode for what
+that changes in Steps 5-7.
 
 Everything else stays in force: CLAUDE.md, `/commit` only (never raw `git commit`), auto-commit on
 qualifying turns, and every Hard Stop in `/autopilot`.
@@ -62,11 +65,31 @@ merely to run the skill), the run is in **cleanout mode** for its duration:
 Bare invocation (no cleanout phrase) is unaffected: Step 2 keeps today's no-confirm auto-archive for
 `ai`-origin candidates.
 
+## Attended mode
+
+**Trigger.** The prompt that invoked this run explicitly invites questions mid-run - phrasing like
+"feel free to ask", "ask me anything", "ask whenever". Detected once, from the invoking prompt text,
+at Step 1. No flag to remember, no mid-run re-check. Absent that phrasing, the run is unattended and
+every step behaves exactly as written elsewhere in this file - this section changes nothing for it.
+
+Attended mode restores the global "front-load all questions" rule for the run (Precedence's
+supersede clause does not apply) and changes three steps:
+
+- **Step 5** loses its one-round cap - it still fires under its normal trigger, but does not close
+  the door after.
+- **Steps 6 and 7** may ask, narrowly: only for a fork that genuinely blocks the todo in hand, never
+  for something Step 8 could park instead. Unattended, both keep their "never ask" promise exactly
+  as written in those steps.
+- A question the dev answers with a request for explanation, or a follow-up question, is a normal
+  turn, not a second round - budget for it rather than treating the round as spent.
+
+Cleanout mode and attended mode are independent and may both be active in the same run.
+
 ## Order of operations
 
 1. Record `START_SHA` (`git rev-parse HEAD`) - Step 9 diffs against it, then end this first response with `<cc-autopilot:on>` on its own line, nothing after.
-2. `/cleanup-todos`, unattended.
-3. `/batch-todos`, unattended - its EASY batch executes here.
+2. `/cleanup-todos`, unattended - always runs (Steps 2-3).
+3. `/batch-todos`, unattended, unless Step 2 left nothing EASY - its EASY batch executes here.
 4. Triage the remaining queue into AUTO and DEV (Step 4).
 5. The one question round, if it triggers (Step 5).
 6. Grind the AUTO queue (Step 6).
@@ -88,6 +111,12 @@ IS an unattended run, so:
   Its Step 5 `FLAG` verdicts still re-queue as HARD rather than being auto-answered.
 
 Do not wait for a reply at either gate.
+
+**When each step runs.** Step 2 runs on every run, no size exemption: `/cleanup-todos` is the only
+pass that dedupes, re-verifies premises against the tree, and archives dead `ai`-origin todos, and
+Step 4's triage does none of those. Step 3 is skipped when Step 2 leaves no unclaimed EASY todo,
+since Step 6 grinds that same queue directly and a second nested dry-run report adds nothing.
+Cleanout mode always runs both.
 
 ## Step 4 - Triage into AUTO and DEV
 
@@ -140,8 +169,9 @@ next time. A run that has real work to do never interrupts the dev.
 - Every question carries a **"stop here"** escape so he can end the round without answering the
   rest; unanswered questions park via Step 8.
 
-Answered todos move into the AUTO queue. This is the run's ONLY question round - Steps 6 and 7 never
-ask, no matter what they find.
+Answered todos move into the AUTO queue. Unattended, this is the run's ONLY question round - Steps 6
+and 7 never ask, no matter what they find. Attended, this round still fires under the same trigger,
+but is not the last one - see Attended mode.
 
 ## Step 6 - Grind the AUTO queue
 
@@ -167,8 +197,9 @@ Per todo:
    - Otherwise: next todo.
 
 A todo that hits the 3-strike guard or a Hard Stop mid-execution: release its claim, leave the todo
-in the backlog, record why for Step 8, and continue with the next todo. Never let one todo end the
-run.
+in the backlog, record why for Step 8, and continue with the next todo - unless the run is attended
+and the block is a genuine dev-only fork, in which case ask once inline (see Attended mode), then
+resume the todo with the answer. Never let one todo end the run.
 
 **A fan-out that dies mid-edit with no report** (session limit hit, silent stall): do not resume
 blind. Follow the doctrine section's recovery - reconstruct state from `git status` plus a real
@@ -187,8 +218,9 @@ The AUTO queue is empty and there is headroom left. Read ctx used again.
   of caution. Whatever downgrades to AUTO goes through Step 6's loop. Whatever survives a second
   look as genuinely dev-only stays DEV.
 
-This step is where the old skill asked more questions. It no longer does - it tries harder instead.
-Re-triage runs at most once per run.
+This step is where the old skill asked more questions. Unattended, it still doesn't - it tries harder
+instead. Attended, a fork that survives re-triage as genuinely dev-only may ask once inline (see
+Attended mode) rather than falling through to Step 8. Re-triage runs at most once per run.
 
 ## Step 8 - Park what is left
 
