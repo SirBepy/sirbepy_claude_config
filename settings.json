@@ -260,6 +260,16 @@
             "statusMessage": "Checking Flutter/Dart working-directory pin"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\todos-em-dash-guard.py\"",
+            "statusMessage": "Checking .claude/todos writes for em dash"
+          }
+        ]
       }
     ],
     "SessionEnd": [
