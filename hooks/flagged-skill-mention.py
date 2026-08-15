@@ -9,10 +9,15 @@ except Exception:
 if not prompt:
     sys.exit(0)
 
-# System-injected turns (background task notifications, etc.) aren't real user
-# invocations - they can quote old skill mentions in their body (e.g. a closed
-# todo's "ran /autopilot overnight") and false-positive a scan of the full text.
-if prompt.lstrip().startswith('[SYSTEM NOTIFICATION'):
+# Machine-injected turns (system/task notifications, peer/daemon channel
+# messages) aren't real user invocations and can quote old skill mentions in
+# their body. Detected by envelope SHAPE, a leading run of bracketed `[tag]`
+# markers, not a per-channel prefix list, so a new channel needs no update.
+_ZERO_WIDTH_RE = re.compile('[​‌‍﻿]')
+_ENVELOPE_TAG_RE = re.compile(r'^(\[[^\[\]\n]+\]\s*)+')
+
+_normalized = _ZERO_WIDTH_RE.sub('', prompt).lstrip()
+if _normalized.startswith('[SYSTEM NOTIFICATION') or _ENVELOPE_TAG_RE.match(_normalized):
     sys.exit(0)
 
 # Real slash-command usage is typed as the first thing in the message; a
