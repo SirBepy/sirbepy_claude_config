@@ -19,6 +19,14 @@ Native Android app via adb (not Flutter web)? Use `android-drive` instead - a di
 
 `~/.claude/refs/flutter-web-playwright.md` - the canonical rules for semantics activation, atomic clicks, per-character typing, snapshot staleness, no-reload-mid-flow, release-vs-DWDS, and headless guidance. This file only states mode-specific flow; it does not restate driving mechanics.
 
+## Login preamble (dev-backed apps)
+
+For any app whose flow starts behind an email-OTP or similar login (e.g. zng-biller, zng-admin), pick one of two paths, don't default to driving the UI:
+
+- **Fast path (default for "just get me authenticated"):** call the dev API directly instead of the browser. `POST <API_URL>auth/login {"email"}` then `POST <API_URL>auth/verify {"userId","code":"000000"}` (both with the project's API-key header) returns the token set. Seed it with `page.addInitScript((tokens) => { localStorage.setItem(...) }, tokens)` **before** the single `page.goto()` call, so session-init code finds a valid session on boot and skips the login screen entirely. No coordinate clicks, no focus/Tab timing, no OTP UI at all. zng-biller's committed reference implementation: `scripts/screenshot-dev.js` (also seeds a portal-switcher/mock-mode localStorage key if asked).
+- **Slow path (only when the login flow itself is what's under test):** drive the real UI. Expect an empty or unreliable `flt-semantics` tree in a release/CanvasKit build, coordinate clicks off a screenshot are the reliable DEFAULT here, not the fallback the canonical ref above implies for apps where semantics does populate. Read the real DOM proxy box (`document.querySelectorAll('input, textarea').map(el => el.getBoundingClientRect())`) rather than guessing from a screenshot when a stable target exists. The email field's `Enter`-to-submit (`onSubmitted`) usually works; the OTP screen usually does NOT submit on `Enter` or after typing all digits, it needs an explicit click on the actual "Next step"/submit control. A dev-only shortcut that pre-fills/auto-submits `000000` may exist on dev builds; prefer tapping it over typing digit-by-digit when present.
+- **Release build is mandatory either way.** `flutter run -d web-server` (debug/DWDS) never bootstraps under Playwright, `document.body` stays script-only, no `flutter-view`, blank forever, no error. Build `flutter build web --release --dart-define-from-file=<env file>` and serve the static `build/web` output (SPA fallback to `index.html`) instead.
+
 ## Shared
 
 Node + Playwright reachable (`npx playwright` or the project's own `node_modules`) - note the resolved path, you'll need it as a literal `require()` path. Screenshots go to `.for_bepy/screenshots/<claude-ancestor-pid>-<ancestor-start-ticks>/` (gitignored, per-session, matching `/close`'s purge scheme), resolved automatically by `e2e-helpers.js`'s `SHOT_DIR` via the shared `session-shot-dir.cjs` helper - never hand-fill the id.

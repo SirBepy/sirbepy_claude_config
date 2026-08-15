@@ -37,3 +37,4 @@ For any app whose flow starts behind an email-OTP or similar login (e.g. zng-bil
 ## Notes
 
 Before landing this: run the content-duplicate guard (grep this backlog and `done/` for "login preamble" / "flutter-e2e" / prior OTP-driving todos) - none found as of 2026-08-13, but re-check at execution time in case another session filed something adjacent since.
+- Completed via /auto-do-todos 2026-08-15: added a Login preamble (dev-backed apps) section to skills/flutter-e2e/SKILL.md covering the fast API-login plus addInitScript token-seeding path, the slow UI path with its CanvasKit and coordinate-click caveats, and the mandatory release build. Content-duplicate guard ran clean across the backlog and done/. Placed in SKILL.md rather than refs/flutter-web-playwright.md because that ref carries only general canvas-driving mechanics and no auth content.
