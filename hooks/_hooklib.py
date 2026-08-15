@@ -64,3 +64,26 @@ def oldest_fresh_marker(
         return None
     candidates.sort(key=lambda pair: pair[0])
     return candidates[0][1]
+
+
+def consume_fresh_marker(
+    marker_dir: Path,
+    glob_pattern: str,
+    freshness_seconds: int,
+    exclude_prefix: str | None = None,
+) -> bool:
+    """Find the oldest fresh marker and delete it. Returns True (allow) if one
+    existed, False (fall through to deny) otherwise.
+
+    The unlink's OSError is swallowed on purpose: a concurrent session may
+    have already consumed the same marker file, and losing that race is not
+    an error, it just means this call falls through to the deny path below.
+    """
+    marker = oldest_fresh_marker(marker_dir, glob_pattern, freshness_seconds, exclude_prefix)
+    if marker is None:
+        return False
+    try:
+        marker.unlink()
+    except OSError:
+        pass
+    return True

@@ -29,7 +29,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, oldest_fresh_marker
+    from _hooklib import read_payload, deny, consume_fresh_marker
 except Exception as e:
     sys.stderr.write(f"[pr-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -87,12 +87,7 @@ def main() -> None:
     if os.environ.get(OVERRIDE_ENV):
         sys.exit(0)
 
-    marker = oldest_fresh_marker(MARKER_DIR, MARKER_GLOB, FRESHNESS_SECONDS)
-    if marker is not None:
-        try:
-            marker.unlink()
-        except OSError:
-            pass
+    if consume_fresh_marker(MARKER_DIR, MARKER_GLOB, FRESHNESS_SECONDS):
         sys.exit(0)
 
     deny(
