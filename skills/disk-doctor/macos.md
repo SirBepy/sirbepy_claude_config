@@ -22,6 +22,8 @@ xcrun simctl runtime list                                                       
 du -sh ~/Library/Developer/CoreSimulator 2>/dev/null
 find ~ -maxdepth 6 -name node_modules -type d -prune 2>/dev/null | xargs du -sh 2>/dev/null | sort -rh | head -10        # maxdepth 6 caps runtime on large repos
 du -sh ~/Downloads ~/.Trash 2>/dev/null
+# Screenshot session folders - /close (todo 324) no longer deletes these; flag anything over 30 days
+find ~ -maxdepth 8 -type d -path '*/.for_bepy/screenshots' 2>/dev/null | while read -r d; do find "$d" -mindepth 1 -maxdepth 1 -exec sh -c 'days=$(( ($(date +%s) - $(stat -f %m "$1")) / 86400 )); echo "$days days  $(du -sh "$1" | cut -f1)  $1"' _ {} \; ; done | sort -rn
 find /System/Library/AssetsV2 -maxdepth 1 -name "*iOSSimulator*" 2>/dev/null | xargs du -sh 2>/dev/null
 ```
 
@@ -65,6 +67,7 @@ At END of scan, propose any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SC
 - Orphan sim devices: `xcrun simctl delete unavailable` (did nothing on 2026-05-23 - no orphan devices, weight was in runtimes not devices).
 - `~/Library/Caches/*` entries not in NEVER-TOUCH - all regenerate.
 - Stale-project `node_modules` - `npm i` rebuilds.
+- `.for_bepy/screenshots/` subfolders and loose legacy files older than 30 days - throwaway per-chat verification shots; `/close` stopped deleting these (todo 324), so they only clear here. Report per-repo, oldest first; never touch `.portfolio-data/` (portfolio keepers, separate scope).
 
 ## SCAN LOG
 

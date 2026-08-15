@@ -64,6 +64,19 @@ $names = @('target','build','.dart_tool','dist','.venv','venv')
 Get-ChildItem $env:USERPROFILE -Directory -Recurse -Depth 6 -Force -ErrorAction SilentlyContinue | Where-Object { $names -contains $_.Name } | ForEach-Object { [PSCustomObject]@{ GB=(Get-DirGB $_.FullName); Path=$_.FullName.Replace($env:USERPROFILE,'~') } } | Sort-Object GB -Descending | Select-Object -First 25
 ```
 ```powershell
+# Screenshot session folders across all repos - /close (todo 324) no longer deletes these itself,
+# so they only age out here. Flags anything over 30 days (a closed chat's shots have no further use).
+$cutoffDays = 30
+Get-ChildItem $env:USERPROFILE -Directory -Recurse -Depth 6 -Force -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match '\\\.for_bepy\\screenshots$' } | ForEach-Object {
+  $root = $_.FullName
+  Get-ChildItem $root -Force -ErrorAction SilentlyContinue | ForEach-Object {
+    $mb = if ($_.PSIsContainer) { [math]::Round(((Get-ChildItem $_.FullName -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum)/1MB,1) } else { [math]::Round($_.Length/1MB,1) }
+    $ageDays = [math]::Round((New-TimeSpan -Start $_.LastWriteTime -End (Get-Date)).TotalDays,0)
+    [PSCustomObject]@{ Repo=$root; Item=$_.Name; MB=$mb; AgeDays=$ageDays; Stale=($ageDays -gt $cutoffDays) }
+  }
+} | Sort-Object AgeDays -Descending
+```
+```powershell
 # Package-manager caches (correct bases: cargo/gradle live under USERPROFILE, the rest under LOCALAPPDATA)
 function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0 /W:0; $l=@($o|Where-Object{$_ -match '^\s*Bytes :'})[0]; if($l -and $l -match 'Bytes :\s+(\d+)'){[math]::Round([int64]$Matches[1]/1GB,2)}else{0} }
 @(
@@ -150,6 +163,7 @@ At END of scan, propose any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SC
 - Browser caches under `$env:LOCALAPPDATA\<Browser>\User Data\*\Cache` - regenerate.
 - Stale-project `node_modules` - `npm i` / `pnpm i` rebuilds. Build artifacts (`build/`, `.dart_tool/`, `dist/`, `.next/`, `target/`, `venv/`, `.venv/`) - regenerate. The build-artifact sweep step above is the biggest single win found so far (150G+ on 2026-07-19) - always run it, don't skip as optional.
 - Windows Update leftovers / `Windows.old` / Delivery Optimization - via `cleanmgr` or Storage Sense, not manual delete.
+- `.for_bepy/screenshots/` subfolders and loose legacy files older than 30 days - throwaway per-chat verification shots; `/close` stopped deleting these (todo 324), so they only clear here. Report per-repo, oldest first; never touch `.portfolio-data/` (portfolio keepers, separate scope).
 
 ## KNOWN HARD (judgment call, not a routine safe-delete)
 

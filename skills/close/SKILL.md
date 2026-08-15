@@ -67,9 +67,9 @@ matched against `~/.claude/sessions/*.json`, not a process-tree walk (todo 60: t
 to two different PIDs at two points in the SAME session; the sessionId match is stable). The
 start-time suffix is load-bearing, not decoration: Windows recycles PIDs, so a bare PID can
 collide with a dead session that left files behind; PID plus start time cannot. Also note whether
-this session captured any screenshots at all. Phase 3 step 3 uses both: the id scopes the purge to
-this session's own subfolder, and the zero-writes flag skips the purge entirely when the answer is
-none.
+this session captured any screenshots at all. Phase 3 step 3 uses both: the id locates this
+session's own subfolder for Phase 4's screenshot count, and the zero-writes flag sets that count to
+0 without touching the filesystem.
 
 **Visual-work check.** If any file changed this session matches `.css`/`.scss`/`.less`, or is otherwise a user-facing visual/layout change, and the zero-screenshots flag above is true, add "show Joe a live screenshot of the visual change" to the unfinished-commitments list below. CLAUDE.md's UI & visual changes section already requires this; a green headless/e2e test pass is not a substitute, since it cannot detect "this looks wrong" (2026-08-01: an AUQ card-height CSS fix shipped on a passing Playwright regression test alone, never shown live).
 
@@ -162,7 +162,16 @@ Run in this order:
      skill-improvement`, `**Origin:** ai`, Approach section names the skill file involved.
 
    Follow `ai-todos-format.md` (this skill's folder) for everything: template, filename/id rules, git-policy self-heal. The bar: a future cold AI session must be able to execute the task from the file alone, without re-reading session history. Skip if no items. Note: Phase 2 review findings are written to the backlog by `/code-check` directly - do not re-write them here.
-3. **Screenshot cleanup.** Ownership is proven by subfolder, never inferred from mtime - a concurrent session's files can be newer OR older than this session's start and mtime cannot tell them apart. This session may delete ONLY files under its own `.for_bepy/screenshots/<pid>-<start-ticks>/` subfolder (the Phase 0 id) - never files at the folder root, never another session's subfolder, regardless of age. If Phase 0 recorded zero screenshots captured this session, skip deletion entirely, even if a subfolder happens to exist. Before deleting anything, print the exact filenames about to be removed, then delete - never pipe straight to `Remove-Item` without capturing names first. Loose files at the `.for_bepy/screenshots/` root are legacy (written by skills that don't yet use the per-session subfolder) - never auto-delete them, just report the count. Also count any OTHER subfolder under `.for_bepy/screenshots/` (neither this session's own id nor the root) and report that count too - it may belong to a live concurrent session or be an orphan from a wrongly-resolved id (see `refs/delegation-doctrine.md`), and ownership cannot be told apart from the outside; never delete or rename it, reporting is what stops it from silently rotting unnoticed. Scope is strictly `.for_bepy/screenshots/` - never touch `.portfolio-data/` (portfolio keepers), committed assets, or any image elsewhere. If this session captured any screenshot via the Playwright MCP (`mcp__playwright__browser_take_screenshot`), also check the repo root and `.playwright-mcp/` for stray `.png` files - the MCP writes there directly and this purge cannot see them; report any found rather than auto-deleting, since they may be outside `.for_bepy/` entirely and git-tracked. `.for_bepy/mockups/` and `mockup-step-*.json` are NOT this phase's scope either - `/mockup` step 7 owns their disposal, gated on whether the dev actually saw the preview. Delete without a blocking prompt (still runs unattended under `/sleep-when-done`/autopilot). Skip silently if the folder or this session's subfolder is missing or empty. PowerShell: `$files = Get-ChildItem -File ".for_bepy/screenshots/$id" -ErrorAction SilentlyContinue; $files | ForEach-Object { $_.Name }` to list and print, then `$files | Remove-Item -Force` (`$id` is Phase 0's pid-plus-start-ticks, never a bare pid).
+3. **Screenshot summary.** `/close` no longer deletes screenshots - todo 324 moved that to
+   `/disk-doctor`, which ages folders out later while Joe decides. If Phase 0 recorded any
+   screenshots captured this session, count the files under this session's own
+   `.for_bepy/screenshots/<pid>-<start-ticks>/` subfolder (the Phase 0 id) for Phase 4's counter; 0
+   if none were captured or the subfolder is missing/empty. Nothing is printed or deleted here. If
+   this session captured any screenshot via the Playwright MCP
+   (`mcp__playwright__browser_take_screenshot`), also check the repo root and `.playwright-mcp/`
+   for stray `.png` files - the MCP writes there directly and this summary cannot see them; report
+   any found, never auto-delete, since they may be git-tracked. `.for_bepy/mockups/` and
+   `mockup-step-*.json` are out of scope here too - `/mockup` step 7 owns their disposal.
 Note: there is no implicit /commit step anymore. If the dev wants a commit, they chain `/commit` (with whatever subcommand they want) into the /close call.
 
 ## Phase 4 - Counter summary
@@ -170,10 +179,10 @@ Note: there is no implicit /commit step anymore. If the dev wants a commit, they
 Print one line, always - this is the one thing Joe reliably sees from Phases 1-3:
 
 ```
-N memory writes . N todos written (M from review, K skill-improvement) . N screenshots cleaned (M legacy at root, P other-session subfolders, both untouched) . chain: <list of chained commands or "none"> . closing: yes/no
+N memory writes . N todos written (M from review, K skill-improvement) . N screenshots written to <dir> . chain: <list of chained commands or "none"> . closing: yes/no
 ```
 
-`M from review` is the count of findings from Phase 2 (size + DRY + dead code). If Phase 2 was skipped, omit the parenthetical and say `review skipped`. `K skill-improvement` is the subset of this close's todos tagged `skill-improvement` in Phase 3 step 2; omit `, K skill-improvement` if zero. `N screenshots cleaned` is the count deleted from this session's own subfolder in Phase 3 step 3 (0 if this session took no screenshots, its subfolder was missing/empty, or nothing qualified). `M legacy at root, untouched` is the count of loose root-level files left alone because they predate the per-session subfolder scheme. `P other-session subfolders, both untouched` is the count of subfolders belonging to a different id, reported not deleted; omit either or both parentheticals if their count is 0.
+`M from review` is the count of findings from Phase 2 (size + DRY + dead code). If Phase 2 was skipped, omit the parenthetical and say `review skipped`. `K skill-improvement` is the subset of this close's todos tagged `skill-improvement` in Phase 3 step 2; omit `, K skill-improvement` if zero. `N screenshots written to <dir>` is Phase 3 step 3's count plus this session's subfolder path, so the folder stays discoverable; if the count is 0, print `0 screenshots` and drop the `to <dir>` clause. `/close` never deletes screenshots - `/disk-doctor` reclaims that space later, by age (todo 324).
 
 ## Phase 5 - Run chained commands
 
