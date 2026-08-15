@@ -36,6 +36,18 @@ are in budget.
 
 Never edit the comments in the subagent. Report; step 2b trims.
 
+### Secret-scan check (for the subagent to apply in step 2)
+
+See `skills/commit/secret-scan.md` for what it matches. Same range-mode
+command as comment-noise, `git diff <base>`:
+```
+bash skills/commit/secret-scan.sh --range <base>
+```
+No output = `clean`. Any output is a hit, not a style call - report it to the
+dev directly and do not draft the PR body until the value is removed and
+replaced with an env var or secret-store read. Never trim or edit a flagged
+line yourself.
+
 ### Visual scan rules (for the subagent to apply in step 2)
 
    It recommends, it never captures/uploads/embeds itself; that's step 3's

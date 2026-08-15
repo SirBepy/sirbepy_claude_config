@@ -51,6 +51,10 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
   convention as comment-noise.sh above. A flag means fix that added line now, never a louder
   restatement of the no-em-dash rule - the rule was already stated verbatim in every dispatch of
   the run that broke it three times regardless (todo 290).
+- The secret-scan prefilter, same verify floor and shell requirement: run
+  `~/.claude/skills/commit/secret-scan.sh` scoped to its own diff. Unlike the other two, a hit is
+  never auto-fixed - the builder stops and reports it. A dispatch prompt itself must never carry a
+  credential either; name the env var the builder should read instead.
 - The out-of-scope-findings channel: a subagent NEVER writes into `.claude/todos/`, even a
   well-formed, confident finding. It reports an "Out-of-scope findings" section instead - what it
   found and why it sits outside this dispatch's lane - and the orchestrator files it as a proper

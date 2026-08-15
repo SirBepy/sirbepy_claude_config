@@ -75,3 +75,4 @@ addition to a proven step rather than new machinery.
 - Scope check: this is a change to the GLOBAL `~/.claude` tree, filed here rather than in the Fibo
   repo per CLAUDE.md's rule that findings about the global tree belong in this backlog. It was
   surfaced from a Fibo session but is not Fibo-specific.
+- Completed via /auto-do-todos 2026-08-15: added skills/commit/secret-scan.sh plus secret-scan.md, wired into /commit step 5a and /commit fold preconditions, and mirrored into /create-pr as a new step 2c gate. Posture is report-and-stop, never auto-fix, unlike the other two prefilters. Measured 0/30 false positives against this repo last 30 commits. Approach step 6 also landed: refs/delegation-doctrine.md now carries the secret-scan bullet and the no-credential-in-a-dispatch-prompt rule.

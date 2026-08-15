@@ -83,6 +83,11 @@ per the global subagent-model rule; never inherit.
      `drafting-rules.md`. Report the offenders as `file:line` + the block's
      first line + line count, or `clean`. Never rewrite them itself - the main
      agent gates it.
+   - **Secret-scan check** (always, not skippable by `--no-checks`): see
+     "Secret-scan check" in `drafting-rules.md`. Report any hit as `file:line`
+     + the flagged text, or `clean`. Unlike comment-noise this is not
+     auto-fixable - do not draft the PR body if it hits, report the hit and
+     stop so the main agent can surface it to the dev.
    - **Auto-tier** (see the auto-tier rubric in `drafting-rules.md`) and
      **title** (conventional prefix, one line).
    - **Visual scan** - inspect the changed-files list and decide what to
@@ -105,10 +110,11 @@ per the global subagent-model rule; never inherit.
    - **Return** (short - this is what crosses back into the main agent's
      context, keep it to a few lines): title, tier, base, checks status
      (pass, or the exact failure to show the dev), the comment-noise verdict
-     (`clean`, or the offender list), visual recommendation + reason, and
-     confirmation of the file path written. Do NOT return the full diffs,
-     commit log, or check output in the happy-path case - the file on disk is
-     the artifact; the return value is just enough for the main agent to act on.
+     (`clean`, or the offender list), the secret-scan verdict (`clean`, or the
+     hit list), visual recommendation + reason, and confirmation of the file
+     path written. Do NOT return the full diffs, commit log, or check output
+     in the happy-path case - the file on disk is the artifact; the return
+     value is just enough for the main agent to act on.
 
 2b. **Comment-noise gate (main agent).** If the verdict was `clean`, continue.
    Otherwise TRIM THE OFFENDERS FIRST, before the preview - do not ask whether
@@ -118,6 +124,12 @@ per the global subagent-model rule; never inherit.
    re-run the project's fast checks, amend or add a commit via `/commit` (per
    the global rule, never a raw `git commit`), and only then continue. Say what
    was trimmed in one line - the dev does not need the before/after text.
+
+2c. **Secret-scan gate (main agent).** If the verdict was `clean`, continue.
+   Otherwise STOP - do not write the preview file, do not open the PR. Show
+   the dev the flagged `file:line` and tell them to remove the literal value,
+   replace it with an env var or secret-store read, and commit the fix before
+   `/create-pr` runs again. This is not auto-fixable, unlike step 2b.
 
 3. **Visual approval (main agent - live gate, cannot delegate).** If the
    subagent recommended `none`, there's nothing to ask - continue to step 4.
@@ -177,8 +189,8 @@ per the global subagent-model rule; never inherit.
      after them. Step 5's `AskUserQuestion` opens a NEW turn, never the same one.
 
 See `skills/create-pr/drafting-rules.md` for the auto-tier rubric, the
-comment-noise check, the visual-scan rules, and the Slack-announcement-block
-format the drafting subagent applies in step 2.
+comment-noise check, the secret-scan check, the visual-scan rules, and the
+Slack-announcement-block format the drafting subagent applies in step 2.
 
 5. **Confirm, then create (main agent - live gate, cannot delegate).**
    Pre-flight: have you already asked step 3's visual y/n as its OWN question
