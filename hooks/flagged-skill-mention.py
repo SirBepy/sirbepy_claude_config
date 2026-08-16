@@ -20,9 +20,12 @@ _normalized = _ZERO_WIDTH_RE.sub('', prompt).lstrip()
 if _normalized.startswith('[SYSTEM NOTIFICATION') or _ENVELOPE_TAG_RE.match(_normalized):
     sys.exit(0)
 
-# Real slash-command usage is typed as the first thing in the message; a
-# mention buried deeper (quoted text, tool/agent output) isn't an invocation.
+# Real slash-command usage is typed as the first thing in the message, OR as
+# its own line further down (todo 342: measured against 509 real prompts on
+# this machine, see flagged-skill-mention.md - first_line-only missed 193 of
+# them). A mention buried mid-sentence still doesn't count as an invocation.
 first_line = prompt.split('\n', 1)[0]
+line_starts = [ln.strip() for ln in prompt.split('\n')]
 
 skills_dir = os.path.expanduser('~/.claude/skills')
 contexts = []
@@ -46,7 +49,11 @@ for path in sorted(glob.glob(os.path.join(skills_dir, '*', 'SKILL.md'))):
 
     # Slash required: bare-word names (close, review, pickup) collide with plain
     # English and fired on ambient text, not real invocation intent.
-    if not re.search(r'(?<![\w/-])/' + re.escape(name) + r'(?![\w-])', first_line, re.IGNORECASE):
+    _name_pattern = r'(?<![\w/-])/' + re.escape(name) + r'(?![\w-])'
+    mentioned = re.search(_name_pattern, first_line, re.IGNORECASE) or any(
+        re.match(_name_pattern, ls, re.IGNORECASE) for ls in line_starts
+    )
+    if not mentioned:
         continue
 
     contexts.append(

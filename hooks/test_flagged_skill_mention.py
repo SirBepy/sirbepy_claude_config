@@ -43,6 +43,10 @@ CASES = [
      "genuine Joe prompt: skill name mid-sentence, position not penalised"),
     ("[todo item] /close is what I want to run", False,
      "documents the accepted tradeoff: a Joe prompt opening with [tag] reads as an envelope too"),
+    ("lets finish off all of the todos!!!\n/auto-do-todos \nbut first go thru them",
+     True, "todo 342: real corpus case, invocation on line 2 starting that line, must fire"),
+    ("explain the plan first\nI think we should probably use /close when done",
+     False, "todo 342: still-uncovered case, mid-sentence mention on a non-first line"),
 ]
 
 
