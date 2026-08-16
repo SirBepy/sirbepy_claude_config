@@ -39,6 +39,10 @@ skills/commit/watch-build.pid
 .claude/todos/.claims/
 .claude/todos/.claims/**
 
+# Id-reservation markers are transient runtime state, consumed the moment the real todo file
+# is written - never commit, even though todos/ above is tracked
+.claude/todos/*-.reserved
+
 # Python bytecode cache, regenerated locally, not source
 hooks/__pycache__/
 hooks/__pycache__/**
@@ -48,6 +52,7 @@ hooks/__pycache__/**
 # commit-guard/pr-guard runtime markers - machine/session-local, never commit
 hooks/.commit-marker*
 hooks/.pr-marker*
+hooks/.session-markers/
 
 # Belt-and-suspenders: never commit secrets
 .env

@@ -37,6 +37,10 @@ Default: NOT committed anywhere. Any skill that writes into `.claude/todos/` fir
   In that case do NOT add this line.
 - `.claude/todos/.claims/` - ALWAYS, even in opted-in projects. Claims are machine-local state;
   committing them ships session ids and PIDs into history.
+- `.claude/todos/*-.reserved` - ALWAYS, even in opted-in projects. Reservation markers are
+  transient runtime state (see "Picking the next id" above) and must never be committed; each
+  one is deleted at the point its real todo file is written, so a committed one would be a bug
+  either way.
 
 Appending the missing line(s) is idempotent self-healing; do it silently at point of use.
 
@@ -45,12 +49,30 @@ Appending the missing line(s) is idempotent self-healing; do it silently at poin
 Zero-padded numeric prefix + kebab-case slug: `03-tighten-onboarding-step-redirect.md`.
 The prefix is the stable id; the dev references tasks by id ("do todo 03").
 
-**Picking the next id:** scan `.claude/todos/` and `done/` for the max numeric prefix, add 1.
-Never reuse ids, even after deletion. **Creation race guard:** immediately after writing,
-re-scan for OTHER files sharing your numeric prefix (a concurrent session may have taken the
-same id with a different slug, so a filename-exists check alone is not enough). If a collision
-exists, rename YOUR file to the next free id and re-check. Never overwrite, never renumber the
-other session's file.
+**Picking the next id: reserve it, don't just read it.** Reading the directory for max+1 and
+then writing has a race window between two concurrent sessions - observed three times in a row
+on 2026-08-14 in this exact backlog (see [[336-todo-id-allocation-races-between-concurrent-sessions]]).
+The id is claimed the same way execution is claimed:
+
+1. Run `~/.claude/skills/close/reserve-todo-id.ps1 -RepoRoot <repo root>`. It scans
+   `.claude/todos/*.md`, `done/*.md`, and any live `*-.reserved` markers for the current max
+   numeric prefix, then atomically claims `max+1` by renaming a private temp file onto
+   `.claude/todos/<id>-.reserved` with no-overwrite semantics (fails if the destination
+   exists, same primitive the Claims mutex below uses). On collision it retries with a fresh
+   scan, up to 20 attempts, so two sessions filing at once get two different ids without
+   either overwriting the other. It prints the reserved id.
+2. Write `.claude/todos/<id>-<slug>.md` using that id.
+3. Delete `.claude/todos/<id>-.reserved` immediately after the write succeeds. This is the
+   only way a reservation is consumed - do not leave it lying around.
+
+**Abandoned reservations:** if a session reserves an id and crashes before writing the real
+file, the marker is safe to reuse. A reservation is stale once its mtime exceeds 4 hours (same
+threshold as the Claims staleness rule below) - `reserve-todo-id.ps1` prunes stale markers on
+every call before it scans for the max, so this self-heals without a separate cleanup skill.
+
+Never reuse ids, even after deletion. If a duplicate slips through anyway (e.g. a writer that
+bypassed the reserve step), rename the later file to the next free id and re-check. Never
+overwrite, never renumber the other session's file.
 
 **If a collision slips through anyway** (both helper scripts below support this): pass `-Slug
 <slug>` or the full filename stem as `-Id` to `claim-todo.ps1` / `complete-todo.ps1`; an
