@@ -94,6 +94,13 @@ powershell -File adb-drive.ps1 install -Serial <id> -Apk <path-to.apk>
   space `input tap` expects (`wm size`, override if set else physical) can differ - e.g. captured
   at 1080x2400, tapped in a 900x2000 space. `tap`/`tap-and-capture` always convert using the actual
   `wm size` of the target device, never a hardcoded ratio.
+- **Landscape rotation: `wm size` stays stale, screenshot doesn't.** On a rotated device `wm size`
+  can keep reporting the pre-rotation (portrait) resolution while `screencap` already captures the
+  rotated frame, e.g. `pngSize=2400x1080 wmSize=1080x2400`. Scaling off that mismatch crosses the
+  axes (`scaleX=2.222 scaleY=0.45`) and every tap lands somewhere unrelated. The script detects an
+  exact WxH swap between PNG and `wm size` and applies no scaling in that case, since `input tap`
+  is already operating in the screenshot's own space. `screenshot`'s output now includes
+  `orientation=`/`rotated=` so a wrong conversion is visible before a tap fires.
 - **Stale field contents.** Typing without clearing first concatenates onto old input.
   `type-field` always clears first.
 - **keyevent 111 for keyboard dismiss.** Opens Gboard settings. Use keyevent 4 (`dismiss-keyboard`).
@@ -123,8 +130,15 @@ driving via adb only.
 `adb` exists on this machine and one physical device was attached during authoring. Verified live,
 read-only, against that device: `devices`, `wait-boot` (already-booted device, returns
 immediately), and the `wm size` parsing logic (both a no-override and a synthetic override case).
-**Not verified**: `screenshot`, `tap`/`tap-and-capture`, `clear-field`/`type-field`,
-`dismiss-keyboard`, and `install` were not run - they would tap, type into, screenshot, or install
-onto Joe's live personal phone, which is out of scope for authoring this skill. No emulator was
-booted in this session either. Treat those code paths as reviewed-but-unverified until the first
-real session exercises them, and report back anything that doesn't match.
+
+2026-08-13 in `ssy-mobile`: a real session exercised `screenshot`, `tap`/`tap-and-capture`,
+`type-field`, `dismiss-keyboard`, and `install` on `emulator-5554` and found the landscape
+coordinate bug (todo 349) - `wm size` staying at the pre-rotation resolution while `screencap`
+already reflects the rotated frame, crossing the scale axes. The workaround (raw `input tap` at
+screenshot-pixel coordinates, no scaling) was confirmed correct across a ~20-step flow. The script
+now detects that exact case (PNG/`wm size` differ only by a WxH swap) and applies no scaling,
+matching the confirmed workaround; this was checked offline (dimension-pair unit checks against
+both the portrait and the recorded landscape case) but **not yet re-run against a live rotated
+device through the script itself** - report back if the first such run doesn't match.
+**Still not verified**: `clear-field` in isolation (only `type-field`, which calls the same clear
+path, has run).

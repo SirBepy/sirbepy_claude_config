@@ -73,17 +73,33 @@ function Take-Screenshot {
     return $LocalPath
 }
 
+function Get-OrientationInfo {
+    # Pure/testable: a rotated device leaves `wm size` reporting the pre-rotation resolution
+    # while screencap already reflects the rotated frame, so PNG and wm size swap W/H exactly.
+    # When that exact swap is detected, `input tap` is already operating in the screenshot's own
+    # space, so the correct conversion is 1:1, not the axis-crossed ratios wm-based scaling gives.
+    param([int]$PngWidth, [int]$PngHeight, [int]$WmWidth, [int]$WmHeight)
+    $orientation = if ($PngWidth -gt $PngHeight) { 'landscape' } else { 'portrait' }
+    $rotated = ($PngWidth -eq $WmHeight) -and ($PngHeight -eq $WmWidth) -and ($PngWidth -ne $WmWidth)
+    if ($rotated) {
+        [pscustomobject]@{ Orientation = $orientation; Rotated = $true; ScaleX = 1.0; ScaleY = 1.0 }
+    } else {
+        [pscustomobject]@{ Orientation = $orientation; Rotated = $false; ScaleX = ($PngWidth / $WmWidth); ScaleY = ($PngHeight / $WmHeight) }
+    }
+}
+
 function Convert-TapCoords {
     # X/Y are in the pixel space of the screenshot the caller actually read (RefShot),
     # converted into the space `input tap` expects (wm size), not assumed to match.
     param([string]$Serial, [int]$PngX, [int]$PngY, [string]$ScreenshotPath)
     $png = Get-PngSize -Path $ScreenshotPath
     $wm  = Get-WmSize -Serial $Serial
-    $scaleX = $png.Width  / $wm.Width
-    $scaleY = $png.Height / $wm.Height
+    $info = Get-OrientationInfo -PngWidth $png.Width -PngHeight $png.Height -WmWidth $wm.Width -WmHeight $wm.Height
     [pscustomobject]@{
-        X = [math]::Round($PngX / $scaleX)
-        Y = [math]::Round($PngY / $scaleY)
+        X = [math]::Round($PngX / $info.ScaleX)
+        Y = [math]::Round($PngY / $info.ScaleY)
+        Orientation = $info.Orientation
+        Rotated = $info.Rotated
     }
 }
 
@@ -110,7 +126,8 @@ switch ($Action) {
         Take-Screenshot -Serial $s -LocalPath $path | Out-Null
         $png = Get-PngSize -Path $path
         $wm  = Get-WmSize -Serial $s
-        Write-Output "path=$path pngSize=$($png.Width)x$($png.Height) wmSize=$($wm.Width)x$($wm.Height) scaleX=$([math]::Round($png.Width/$wm.Width,3)) scaleY=$([math]::Round($png.Height/$wm.Height,3))"
+        $info = Get-OrientationInfo -PngWidth $png.Width -PngHeight $png.Height -WmWidth $wm.Width -WmHeight $wm.Height
+        Write-Output "path=$path pngSize=$($png.Width)x$($png.Height) wmSize=$($wm.Width)x$($wm.Height) orientation=$($info.Orientation) rotated=$($info.Rotated) scaleX=$([math]::Round($info.ScaleX,3)) scaleY=$([math]::Round($info.ScaleY,3))"
     }
 
     'tap' {
