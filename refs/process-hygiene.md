@@ -56,6 +56,13 @@ Joe's hardware can handle 5 fine.
 
 If you ever bypass the supervisor: track the PID and ensure it terminates on session end / Ctrl-C / completion of the parent task.
 
+## Secrets on the command line
+
+A secret passed as a `--dart-define` or an env-prefix argument sits in that process's command line
+for its whole lifetime, readable by anything that can enumerate processes. Prefer a file or a real
+environment variable instead (2026-08-14, `revaire-mobile`: a live API key sat exposed this way in
+an orphaned `flutter run`).
+
 ## Subagent commit handoff (READY_TO_COMMIT marker)
 
 Subagents cannot invoke skills, so they must NEVER commit (the global rule covers the verbatim "stage only" dispatch sentence). For **background** subagents specifically: have them write a short `READY_TO_COMMIT.md` marker (or similar report-back doc) listing what they staged, so when the completion notification arrives the main agent knows there is staged work waiting and can run `/commit` against it.
