@@ -339,6 +339,15 @@
             "statusMessage": "Checking for em dash"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\ui-screenshot-reminder.py\"",
+            "statusMessage": "Checking for a UI screenshot reminder"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
