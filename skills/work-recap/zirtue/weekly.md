@@ -92,7 +92,7 @@ If a commit references a ticket that is NOT yet completed, include it in the rec
 
 **(c) Currently-open:** all open tickets the dev owns (used to suggest "Today" candidates). Same recipe as (b): `query=owner:josipmui !is:archived !is:done`, `page_size=25`.
 
-Paginate via `.next` per the ref, but stop early at ~50 results (deliberate bound, not full exhaustion) — enough to surface today's candidates.
+Paginate via `.next` per the ref, but stop early at ~50 results (deliberate bound, not full exhaustion), enough to surface today's candidates.
 
 **State name resolution:** ticket JSON returns `workflow_state_id` (integer), not the state name. Fetch `/api/v3/workflows` once and build an id → (name, type) map. Cache for the rest of the run.
 

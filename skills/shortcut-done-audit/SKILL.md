@@ -54,7 +54,7 @@ Stop and tell Joe if any fetch fails — don't reason against stale state.
 
 ### 2. Pull every ticket Joe owns, paginate, filter to target states
 
-Use the `Searching stories` recipe in `~/.claude/refs/shortcut-api.md`: `query=owner:josipmui`, `page_size=25`, `-o C:/tmp/sc_page_1.json`. Follow `.next` per the ref until exhausted — don't trust `page_size` alone to mean "one page." Filter the combined result client-side to the target `workflow_state_id`s (the ref covers why: the search API rejects `workflow_state_ids` as a query/body key).
+Use the `Searching stories` recipe in `~/.claude/refs/shortcut-api.md`: `query=owner:josipmui`, `page_size=25`, `-o C:/tmp/sc_page_1.json`. Follow `.next` per the ref until exhausted, don't trust `page_size` alone to mean "one page." Filter the combined result client-side to the target `workflow_state_id`s (the ref covers why: the search API rejects `workflow_state_ids` as a query/body key).
 
 ### 2b. ID mode (bare ticket ID arg)
 
