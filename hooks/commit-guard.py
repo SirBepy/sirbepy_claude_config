@@ -5,10 +5,14 @@ token-aware parsing (not string search) so it can't be fooled by "commit" in
 a message/path or tripped by `commit-graph`.
 
 Two marker styles are honoured:
-- Session marker (`.commit-marker-session-<session_id>`): written ONCE per
+- Session marker (`.session-markers/<session_id>`): written ONCE per
   session, never consumed, matched by exact session id from the hook
   payload - this is what `/commit` writes now, so only the first commit of a
-  session pays for the marker-write call.
+  session pays for the marker-write call. Lives in its own subdirectory, out
+  of the glob-matched `.commit-marker*` space, so an external cleanup that
+  globs temp per-commit markers can never reach a live session's marker
+  (todo 341, 2026-08-16). `legacy_session_marker_path()` is a read-only
+  fallback to the pre-split location for markers written before this change.
 - Legacy per-commit marker (`.commit-marker-<suffix>` or plain
   `.commit-marker`): fresh-window + oldest-consumed, kept for callers that
   still write one marker per commit (e.g. `/mega-todos` builder agents).
@@ -36,7 +40,8 @@ except Exception as e:
 
 MARKER_DIR = _HOOKS_DIR
 MARKER_GLOB = ".commit-marker*"
-SESSION_MARKER_PREFIX = ".commit-marker-session-"
+SESSION_MARKER_DIR = _HOOKS_DIR / ".session-markers"
+LEGACY_SESSION_MARKER_PREFIX = ".commit-marker-session-"
 FRESHNESS_SECONDS = 120
 OVERRIDE_ENV = "CLAUDE_COMMIT_HOOK_BYPASS"
 
@@ -73,7 +78,13 @@ def is_git_commit_invocation(command: str) -> bool:
 
 
 def session_marker_path(session_id: str) -> Path:
-    return MARKER_DIR / f"{SESSION_MARKER_PREFIX}{session_id}"
+    return SESSION_MARKER_DIR / session_id
+
+
+def legacy_session_marker_path(session_id: str) -> Path:
+    """Pre-split location - read-only fallback for a marker written before
+    the `.session-markers/` move (todo 341)."""
+    return MARKER_DIR / f"{LEGACY_SESSION_MARKER_PREFIX}{session_id}"
 
 
 def main() -> None:
@@ -87,10 +98,13 @@ def main() -> None:
         sys.exit(0)
 
     session_id = payload.get("session_id") or ""
-    if session_id and session_marker_path(session_id).exists():
+    if session_id and (
+        session_marker_path(session_id).exists()
+        or legacy_session_marker_path(session_id).exists()
+    ):
         sys.exit(0)
 
-    if consume_fresh_marker(MARKER_DIR, MARKER_GLOB, FRESHNESS_SECONDS, exclude_prefix=SESSION_MARKER_PREFIX):
+    if consume_fresh_marker(MARKER_DIR, MARKER_GLOB, FRESHNESS_SECONDS, exclude_prefix=LEGACY_SESSION_MARKER_PREFIX):
         sys.exit(0)
 
     reason = (
@@ -99,7 +113,7 @@ def main() -> None:
         f"- it writes the session marker this hook checks. If /commit itself is "
         f"broken, set {OVERRIDE_ENV}=1 to bypass."
     )
-    if ".commit-marker" in command:
+    if ".commit-marker" in command or ".session-markers" in command:
         reason += (
             " This command already tries to write the marker itself: the hook "
             "reads the whole command string before any of it executes, so a "

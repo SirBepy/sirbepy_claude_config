@@ -88,18 +88,13 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
   authoritative subfolder, so a wrong id is permanently un-cleanable and may collide with a live
   session's folder.
 - The orphan-check final step from `~/.claude/refs/process-hygiene.md` if it runs Node commands.
-- The line: "Your final message is your entire return value. ALL commands, including the verify
-  floor (build/test/lint/typecheck), run synchronously in the same tool call: `run_in_background`
-  is FORBIDDEN in builder subagents, a long build is waited out, not backgrounded. Ending the turn
-  while anything is still running is a failed dispatch. Any command that may exceed 120 seconds
-  MUST pass an explicit `timeout` (up to 600000ms): the tool's default is 120s and the harness
-  auto-backgrounds past it, so omitting `timeout` backgrounds your build whether you intended it
-  or not."
-- The line: "Never run `git stash`, `git reset`, or `git checkout` on paths you don't own: other
-  agents' uncommitted work shares this tree. To compare against clean state, use `git show
-  HEAD:<file>`."
-- Stage changed files by name, never `git add -A` (parallel agents cross-stage each other's work
-  otherwise).
+- The ban on `run_in_background` in builders, the mandatory explicit `timeout` past 120s, and what
+  to do if a command still outlives its own 600000ms cap (report the partial output and name the
+  command still running, never a bare "still waiting", todo 335) - verbatim text lives in
+  `refs/builder-preamble.md`'s static block, not restated here so the two never drift apart.
+- The bans on `git stash`/`git reset`/`git checkout` on paths it doesn't own, `git add -A`, and
+  glob-based cleanup that could reach `hooks/.commit-marker-*` or `hooks/.session-markers/` (todo
+  341) - same static block, same reasoning.
 
 ## Canonical builder preamble
 
@@ -115,7 +110,11 @@ does not check. The per-dispatch parts - task, scope, OFF LIMITS file list, veri
 stay hand-written, since those are the parts that actually need thought.
 
 **Recovery.** If a builder parks itself waiting on a backgrounded command anyway, send one direct
-resume: "deliver the final report now, no waiting." Expect to repeat it once before it complies.
+resume: "deliver the final report now, no waiting." If that single nudge doesn't produce a real
+report, the orchestrator takes verification over itself right away (run the check in the main
+thread) rather than sending a second nudge - a second nudge only ever worked by telling the agent
+to stop running commands and report facts it already had, which is the orchestrator doing the work
+by proxy anyway (todo 335).
 
 **Parallelism.** Independent chunks fan out concurrently; anything that touches the same files
 runs sequentially, or each builder gets its own worktree. Never let two builders write the same

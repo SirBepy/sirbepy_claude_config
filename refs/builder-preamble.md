@@ -13,6 +13,10 @@ Never run `git stash`, `git reset`, or `git checkout` on paths you don't own - o
 uncommitted work shares this tree. To compare against clean state, use `git show HEAD:<file>`.
 Stage changed files by name, never `git add -A`.
 
+Clean up only the exact files you created, by exact name, never by glob or wildcard: never touch
+`hooks/.commit-marker-*` (the guard consumes those itself) or `hooks/.session-markers/` (a live
+session's commit depends on it).
+
 <GLOBAL_EDIT_BAN>
 
 If this dispatch captures screenshots, save them under `.for_bepy/screenshots/<pid>-<start-ticks>/`,
@@ -29,7 +33,10 @@ Your final message is your entire return value. ALL commands, including the veri
 FORBIDDEN in builder subagents, a long build is waited out, not backgrounded. Ending the turn while
 anything is still running is a failed dispatch. Any command that may exceed 120 seconds MUST pass
 an explicit `timeout` (up to 600000ms): the tool's default is 120s and the harness auto-backgrounds
-past it, so omitting `timeout` backgrounds your build whether you intended it or not.
+past it, so omitting `timeout` backgrounds your build whether you intended it or not. The only case
+allowed to end a turn with something unfinished is a foregrounded command that outlives its own
+600000ms cap: report the partial output plus the exact command still in flight, don't end a turn on
+bare "still waiting" with nothing else.
 ```
 
 ## Placeholder table

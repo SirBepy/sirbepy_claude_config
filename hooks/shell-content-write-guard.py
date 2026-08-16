@@ -34,7 +34,9 @@ except Exception as e:
 
 # Guard-marker writes are the one sanctioned Set-Content: blocking them would
 # lock /commit and /create-pr out of their own PreToolUse gates entirely.
-MARKER_HINTS = (".commit-marker", ".pr-marker")
+# ".session-markers" covers /commit's session marker, split into its own
+# directory from ".commit-marker*" by todo 341 (2026-08-16).
+MARKER_HINTS = (".commit-marker", ".pr-marker", ".session-markers")
 
 CONTENT_CMDLET_RE = re.compile(r"\b(Set-Content|Out-File|Add-Content)\b", re.IGNORECASE)
 TEE_RE = re.compile(r"\btee\b\s+(?:-a\s+)?(\S+)", re.IGNORECASE)

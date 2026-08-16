@@ -13,7 +13,8 @@ argument-hint: "[v|bump|push|pushbump|pushnbump|onlyv|onlybump|fold <sha>]"
 **Commit-guard marker:** a global PreToolUse hook blocks raw `git commit`. Before the FIRST `git commit` call of a session, write a session marker, in its OWN tool call, never chained with the commit (`;`/`&&`) - the hook inspects the whole command string BEFORE any of it runs, so a chained marker does not exist yet at hook time and the call is always rejected whole, nothing in it executes:
 
 ```powershell
-Set-Content -Path "C:\Users\tecno\.claude\hooks\.commit-marker-session-$env:CLAUDE_CODE_SESSION_ID" -Value "x"
+New-Item -ItemType Directory -Force -Path "C:\Users\tecno\.claude\hooks\.session-markers" | Out-Null
+Set-Content -Path "C:\Users\tecno\.claude\hooks\.session-markers\$env:CLAUDE_CODE_SESSION_ID" -Value "x"
 ```
 
 The marker is keyed to this session and is never consumed, so every later commit in the same session needs no marker write at all - just call `git commit` directly. A raw `git commit` from a session that never wrote this marker is still blocked, and two concurrent sessions can never share or steal each other's marker since each is keyed to its own session id.
