@@ -103,56 +103,16 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
 
 ## Canonical builder preamble
 
-The block below is the literal text every builder dispatch prompt pastes for the "embeds, without
-exception" list above, so it stops getting hand-retyped (and drifting) per dispatch. Fill in the
-four placeholders; everything else is copy-verbatim, except the `~/.claude` edit ban, which is
-deleted outright when the session's own working directory IS `~/.claude`. The per-dispatch parts -
-task, scope, OFF LIMITS file list, verify floor specifics - stay hand-written, since those are the
-parts that actually need thought.
-
-```
-Windows. PowerShell for shell commands. Working directory: <WORKING_DIR>.
-
-<STAGING_LINE>
-
-Never run `git stash`, `git reset`, or `git checkout` on paths you don't own - other agents'
-uncommitted work shares this tree. To compare against clean state, use `git show HEAD:<file>`.
-Stage changed files by name, never `git add -A`.
-
-Never edit files under `~/.claude/` (skills, hooks, settings, global CLAUDE.md) even if the task
-description points at one - that requires the dev's explicit say-so in the CURRENT session, which
-a subagent can't verify; if a task seems to require it, stop and report back instead. This line is
-DELETED, not pasted, when `<WORKING_DIR>` is `~/.claude` itself: the dev opened the session there,
-so global work is the whole point and the ban would refuse the assigned task.
-
-If this dispatch captures screenshots, save them under `.for_bepy/screenshots/<pid>-<start-ticks>/`,
-the id the orchestrator resolved once via `rename-session.ps1 -GetId` (never a bare or hand-picked
-subfolder name, and never one you derive yourself) - that's what leaves files `/close` can never
-prove ownership of and therefore never clean up.
-
-<OFF_LIMITS>
-
-<ORPHAN_CHECK>
-
-Your final message is your entire return value. ALL commands, including the verify floor
-(build/test/lint/typecheck), run synchronously in the same tool call: `run_in_background` is
-FORBIDDEN in builder subagents, a long build is waited out, not backgrounded. Ending the turn while
-anything is still running is a failed dispatch. Any command that may exceed 120 seconds MUST pass
-an explicit `timeout` (up to 600000ms): the tool's default is 120s and the harness auto-backgrounds
-past it, so omitting `timeout` backgrounds your build whether you intended it or not.
-```
-
-`<WORKING_DIR>`, `<STAGING_LINE>`, `<OFF_LIMITS>` and `<ORPHAN_CHECK>` are the only fields the
-orchestrator fills in per dispatch; the `.for_bepy/screenshots/` id is resolved ONCE per session by
-the orchestrator via `rename-session.ps1 -GetId` (see above) and reused for every dispatch - never
-re-derived per dispatch, never from a process-tree walk, never hand-picked. `<STAGING_LINE>` is `Stage your
-changes but do NOT commit. The main agent will run /commit after your report-back.` by default, or
-`Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.`
-for a repo that shares a git index with concurrent sessions (e.g. zng-app, zng-biller).
-`<ORPHAN_CHECK>` is the mandatory final-step text from
-`~/.claude/refs/process-hygiene.md`, included whenever the dispatch runs Node commands and deleted
-outright when it does not - it is a placeholder rather than verbatim text precisely so a
-Node-running dispatch cannot lose it by pasting the block unread.
+The literal paste block every builder dispatch prompt embeds for the "embeds, without exception"
+list above now lives in its own file, `~/.claude/refs/builder-preamble.md`, so it is read and
+copied directly rather than hand-retyped (and drifted) per dispatch. That file has the block plus
+its placeholder table, including the conditional `~/.claude` edit ban (`<GLOBAL_EDIT_BAN>`) and the
+conditional orphan-check line (`<ORPHAN_CHECK>`) - both are placeholders, not body text, precisely
+so neither can be pasted unconditionally by a hurried reader. A `PreToolUse` hook
+(`hooks/dispatch-preamble-guard.py`) blocks a dispatch missing the three always-required markers;
+see that file's docstring and `refs/builder-preamble.md`'s read-only opt-out for what it does and
+does not check. The per-dispatch parts - task, scope, OFF LIMITS file list, verify floor specifics -
+stay hand-written, since those are the parts that actually need thought.
 
 **Recovery.** If a builder parks itself waiting on a backgrounded command anyway, send one direct
 resume: "deliver the final report now, no waiting." Expect to repeat it once before it complies.

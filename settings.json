@@ -270,6 +270,16 @@
             "statusMessage": "Checking .claude/todos writes for em dash"
           }
         ]
+      },
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\dispatch-preamble-guard.py\"",
+            "statusMessage": "Checking dispatch prompt for canonical preamble markers"
+          }
+        ]
       }
     ],
     "SessionEnd": [
