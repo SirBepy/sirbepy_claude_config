@@ -278,8 +278,11 @@ Never plain-delete, per the contract.
      2, 3 and 5, and carry the decline/retirement reason into step 4's Note and Step 6's report -
      this is the branch that stops a repeat filing on sight.
    - **No match:** continue to step 2.
-2. Scan the destination's `.claude/todos/` and `done/` for the max numeric prefix, add 1, then
-   re-check for a same-id collision per `ai-todos-format.md`'s creation race guard.
+2. Reserve the destination's next id atomically:
+   `~/.claude/skills/close/reserve-todo-id.ps1 -RepoRoot <dest-repo>`. Never hand-scan for max+1
+   here - relocating into another repo's backlog is a second concurrent writer, which is the race
+   `ai-todos-format.md` now forbids. Delete the `<id>-.reserved` marker once step 3 has written the
+   real file.
 3. Write `<dest-repo>\.claude\todos\<new-id>-<same-slug>.md` via Edit/Write (never a shell
    redirect), same content plus a Notes line: "Relocated from `<old-id>` in `<source-repo>` via
    /cleanup-todos `<date>`: `<reason>`."
