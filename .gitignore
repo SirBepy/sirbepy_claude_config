@@ -53,6 +53,7 @@ hooks/__pycache__/**
 hooks/.commit-marker*
 hooks/.pr-marker*
 hooks/.session-markers/
+hooks/.ui-screenshot-reminder-session-*
 
 # Belt-and-suspenders: never commit secrets
 .env
