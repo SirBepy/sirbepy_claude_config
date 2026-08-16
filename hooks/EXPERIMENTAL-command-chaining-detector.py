@@ -34,13 +34,11 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 from _hooklib import read_payload
-import importlib.util
+import _testlib
 
-_spec = importlib.util.spec_from_file_location(
+_scwg = _testlib.load_module(
     "shell_content_write_guard", _HOOKS_DIR / "shell-content-write-guard.py"
 )
-_scwg = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_scwg)
 
 # Top-level `&&`, `;`, `||` in command position. `|` alone is never flagged:
 # a filter pipeline is one logical command, not a chain of independent ones.
