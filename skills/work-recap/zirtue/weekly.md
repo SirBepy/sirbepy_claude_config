@@ -82,12 +82,7 @@ This is the authoritative Done list. Only tickets with a commit in the window be
 
 **(b) Recently completed (secondary cross-check for Done):**
 
-Search for tickets the dev owns that were **completed** (not just updated) in the window plus a 2-day buffer before the start, to catch tickets Joe finished just before the recap window:
-
-```bash
-curl -s -H "Shortcut-Token: $(cat C:/tmp/sc/tok)" \
-  "https://api.app.shortcut.com/api/v3/search/stories?query=owner:josipmui+!is:archived+completed:<buffer_start>..*&page_size=25"
-```
+Search for tickets the dev owns that were **completed** (not just updated) in the window plus a 2-day buffer before the start, to catch tickets Joe finished just before the recap window. Use the `Searching stories` recipe in `~/.claude/refs/shortcut-api.md` (token from the extraction above): `query=owner:josipmui !is:archived completed:<buffer_start>..*`, `page_size=25`.
 
 Where `<buffer_start>` = window start minus 2 days (e.g. if window starts 2026-05-12, use 2026-05-10).
 
@@ -95,14 +90,9 @@ Intersect this with the commit-referenced IDs from (a). A ticket belongs in Done
 
 If a commit references a ticket that is NOT yet completed, include it in the recap under "Tickets touched" but NOT in the Done standup payload bucket — it's still in progress.
 
-**(c) Currently-open:** all open tickets the dev owns (used to suggest "Today" candidates).
+**(c) Currently-open:** all open tickets the dev owns (used to suggest "Today" candidates). Same recipe as (b): `query=owner:josipmui !is:archived !is:done`, `page_size=25`.
 
-```bash
-curl -s -H "Shortcut-Token: $(cat C:/tmp/sc/tok)" \
-  "https://api.app.shortcut.com/api/v3/search/stories?query=owner:josipmui+!is:archived+!is:done&page_size=25"
-```
-
-Paginate via `next` until exhausted, or stop at ~50 results — enough to surface today's candidates.
+Paginate via `.next` per the ref, but stop early at ~50 results (deliberate bound, not full exhaustion) — enough to surface today's candidates.
 
 **State name resolution:** ticket JSON returns `workflow_state_id` (integer), not the state name. Fetch `/api/v3/workflows` once and build an id → (name, type) map. Cache for the rest of the run.
 

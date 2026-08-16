@@ -22,12 +22,7 @@ Shared across the shortcut-* skills: `~/.claude/refs/shortcut-api.md` (token ext
 ## Step 1 - Parse the ID
 
 - Expected invocation: `/shortcut-pickup-ticket <ID>` (e.g. `/shortcut-pickup-ticket 54229`). Shortcut story IDs are bare numbers - accept with or without an `sc-` prefix.
-- If no argument was passed, search the dev's own tickets and ask which one via AskUserQuestion:
-  ```bash
-  TOKEN=$(grep -a SHORTCUT_API_TOKEN ~/.claude/.env | sed 's/^\xef\xbb\xbf//' | cut -d= -f2 | tr -d '\r\n')
-  curl -s -G "https://api.app.shortcut.com/api/v3/search/stories" -H "Shortcut-Token: $TOKEN" \
-    --data-urlencode "query=owner:josipmui !is:archived" --data-urlencode "page_size=10"
-  ```
+- If no argument was passed, search the dev's own tickets and ask which one via AskUserQuestion. Use the `Searching stories` recipe in `~/.claude/refs/shortcut-api.md` with `query=owner:josipmui !is:archived`, `page_size=10`.
 
 ## Step 2 - Fetch the full story: description AND every comment, ALWAYS
 

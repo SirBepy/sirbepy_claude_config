@@ -1,6 +1,6 @@
 # Shortcut API — shared core
 
-Canonical reference for the shortcut-* skill family (shortcut-create-ticket, shortcut-pickup-ticket, shortcut-done-audit, shortcut-priorities). Fix drift here, not per-skill.
+Canonical reference for the shortcut-* skill family (shortcut-create-ticket, shortcut-pickup-ticket, shortcut-done-audit, shortcut-priorities, shortcut-update-ticket, work-recap). Fix drift here, not per-skill.
 
 ## Token extraction
 
