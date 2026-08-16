@@ -1,12 +1,13 @@
 # Plan
 
-**9 active todos.** Updated 2026-08-16 after an `/auto-do-todos` run took the backlog from 18 down
-to 9: **16 executed, 1 archived as superseded, 5 filed** (1 from Joe, 4 from the run's own findings).
-Every `## Open questions` block that was waiting on Joe is now answered and gone.
+**12 active todos.** Updated 2026-08-16 after an `/auto-do-todos` run took the backlog from 18 down
+to 9: **17 executed, 1 archived as superseded, 5 filed** (1 from Joe, 4 from the run's own findings).
+The closing `/close` retrospective then filed 3 more, taking it to 12. Every `## Open questions`
+block that was waiting on Joe is now answered and gone.
 
-Four of the nine are parked by Joe's own decision, so the real actionable queue is **five**: 351,
-352, 353, 354, 355. Run `/plan-todos` if that queue grows past a dozen again; it is small enough
-right now that ordering by hand is fine.
+Four of the twelve are parked by Joe's own decision, so the real actionable queue is **eight**: 351
+through 358. Run `/plan-todos` to order them; that queue is now past the point where doing it by
+hand is worth the effort.
 
 Per the contract in `~/.claude/skills/close/ai-todos-format.md`, claim each todo in
 `.claude/todos/.claims/` before executing it, and archive with `complete-todo.ps1` when done.
@@ -48,6 +49,18 @@ offered the option to lift the block and declined.
   every `git status`. Small.
 - [ ] **355** - `-GetId` can still answer confidently wrong from a background dispatch, and the
   script cannot detect it. Needs a background-dispatch measurement BEFORE any fix.
+
+The last three came out of that run's own `/close` retrospective, and all three are the same shape
+the hook doctrine below keeps rediscovering: a correct rule with nothing enforcing it.
+
+- [ ] **356** - running `/commit`'s prefilters and `git commit` in one shell call has no gate, so a
+  flagged diff commits anyway. This actually happened, twice-em-dashed, in commit `8abd412`. The
+  near miss is that `secret-scan` would have gone the same way. **Highest value of the eight.**
+- [ ] **357** - the orphan-check preamble line is gated on "runs Node commands", so a subagent's
+  whole-drive `find` escaped it and then falsely reported itself killed. Third instance of a builder
+  misreporting a process it started.
+- [ ] **358** - `/auto-do-todos` Steps 2-3 are marked "always runs", but a real run substituted a
+  triage subagent. Same contract-versus-practice gap as 347.
 
 ## Resolved questions, kept so nobody re-asks
 
