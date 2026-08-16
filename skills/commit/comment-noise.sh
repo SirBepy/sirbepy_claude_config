@@ -13,6 +13,8 @@ set -uo pipefail
 AWK='
 /^\+\+\+ b\// { f=substr($0,7); run=0; next }
 /^\+/ && !/^\+\+\+/ {
+  # Markdown/mdx "#" is a heading, never a comment - the cap is a code rule (todo 340).
+  if (f ~ /\.(md|mdx)$/) next
   l=substr($0,2); add[f]++
   if (l ~ /^[[:space:]]*(\/\/|\/\*|\*|#[^[!]|#$|--|<!--)/) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
   next

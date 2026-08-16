@@ -53,6 +53,8 @@ gotcha, or measurement the code can't show; if not, don't write it.
    language using none of those line-comment markers isn't covered - flag it
    by eye if one shows up. The `#` branch deliberately excludes `#[` and `#!`
    so Rust attributes and shebangs count as code, not comments.
+   `.md`/`.mdx` files are skipped entirely - a `#` there is a heading, never
+   a comment, and the cap is a code rule (todo 340).
 2. **Judge only the flagged files.** Read those diffs and list the specific
    offending blocks (`file:line`, first line, line count). A 5+ line block that
    genuinely documents one hard constraint can survive - say so and why. Do not
