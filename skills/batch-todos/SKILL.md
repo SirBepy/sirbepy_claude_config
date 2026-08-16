@@ -103,7 +103,9 @@ For each **DO**-verdict EASY todo in id order:
    append the Notes line, move the todo to `done/`, prune its PLAN.md line, and release the claim
    in one call. Fall back to doing those steps by hand per the contract if the helper is
    unavailable (non-Windows, or missing).
-5. Run `/commit` after each completed todo.
+5. `/commit` - invoke and read the skill in full only for this run's first commit; every commit
+   after that follows `/commit`'s procedure directly (session marker already written, prefilters,
+   pathspec form, branch/overlap checks all still apply) without re-invoking the skill file.
 
 If a todo hits a blocker: release its claim, surface the blocker, stop that todo, continue with the next EASY.
 
@@ -146,4 +148,5 @@ auto-answered - unattended mode changes the Step 4 gate only, not the FLAG/HARD 
 
 - Source of truth: `.claude/todos/` only.
 - This skill executes in id order regardless of PLAN.md ordering - plan-ordered execution is `/pickup`'s job. It still prunes PLAN.md lines of todos it completes.
-- Never commit directly. Always use `/commit` after each completed todo.
+- Never commit directly. `/commit` is invoked and read in full once per run; every completed todo's
+  commit after that follows its procedure directly.

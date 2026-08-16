@@ -20,7 +20,7 @@
 
 ## Git Commits
 
-- NEVER commit directly. Always invoke `/commit` first and follow it - every commit, no exceptions, including in subagent-driven work.
+- NEVER commit directly. Invoke and read `/commit` in full once per session, then follow its procedure exactly for every commit after, no exceptions, including in subagent-driven work.
 - Auto-commit is a universal default, not opt-in: `@import ~/.claude/snippets/auto-commit.md` - read it in full once per session. It covers when to commit without asking, and when to fold a correction into the last commit instead of stacking a new one. Applies to every project, personal and client alike; never gated on full-auto. If you catch yourself about to ask "should I commit this?", that snippet already answered it - just run `/commit`.
 - Subagents can't invoke skills, so subagents NEVER commit, except `/mega-todos` agents, which commit via a branch-guarded procedure since `/commit` is pure procedure they can follow directly - see `~/.claude/skills/mega-todos/SKILL.md`. Every subagent dispatch prompt (foreground or background) MUST include the staging line, conditional on whether the repo shares a git index with concurrent sessions: default verbatim "Stage your changes but do NOT commit. The main agent will run `/commit` after your report-back."; for a shared-index repo (e.g. zng-app, zng-biller) substitute "Leave all changes unstaged. The main agent will run `/commit` by pathspec after your report-back." Background subagents: see `~/.claude/refs/process-hygiene.md` for the READY_TO_COMMIT marker.
 - If you're about to commit and can't invoke `/commit`, don't commit - stop, surface the problem, wait for the main agent / human.

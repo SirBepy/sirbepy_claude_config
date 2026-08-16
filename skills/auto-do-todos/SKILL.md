@@ -190,7 +190,9 @@ Per todo:
 2. Execute via a subagent under the adopted contracts above. Heartbeat the claim at checkpoints.
 3. `~/.claude/skills/close/complete-todo.ps1 -Id <id> -Note "<what happened>"` - one call records
    the Notes line, archives it, prunes its PLAN.md line, and releases the claim.
-4. `/commit`.
+4. `/commit` - invoke and read the skill in full only for this run's first commit; every commit
+   after that follows `/commit`'s procedure directly (session marker already written, prefilters,
+   pathspec form, branch/overlap checks all still apply) without re-invoking the skill file.
 5. Run `node ~/.claude/skills/context-left/context-left.mjs` and read pct used.
    - **>= 40% used (HARD_STOP_AT):** stop taking new todos immediately, even with queue left, and
      go to Step 8.
@@ -273,6 +275,7 @@ test/e2e pass-fail), immediately followed by `<cc-autopilot:off>` on its own lin
 
 - Never invoke `/autopilot` as a literal slash command - this skill ADOPTS its contract by
   reference (see above) and layers the backlog-specific flow on top, the same way `/delegate` does.
-- Never commit directly. `/commit` after each completed todo, same cadence as `/batch-todos`.
+- Never commit directly. `/commit` is invoked and read in full once per run; every completed todo's
+  commit after that follows its procedure directly, same cadence as `/batch-todos`.
 - Source of truth for the backlog: `.claude/todos/` per `close/ai-todos-format.md`.
 - Thresholds live in Step 6 (`HARD_STOP_AT = 40%`) and Step 7 (`SLOW_AT = 30%`) - tune there.
