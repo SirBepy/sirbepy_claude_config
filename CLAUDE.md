@@ -60,7 +60,7 @@
 
 ## Execution Discipline
 
-- For any creative/feature work (new feature, component, behavior change, non-trivial design), use the local `/brainstorm` skill, never `superpowers:brainstorming`. The local one is the owned, gate-free replacement.
+- For any creative/feature work (new feature, component, behavior change, non-trivial design), use the local `/brainstorm` skill, never `superpowers:brainstorming`. The local one is the owned replacement. It deliberates first by default and shows a short plan before building; it skips that checkpoint when the invocation already says to implement, or when the change is a single existing file that adds no new file and no new skill/hook/rule surface. Its SKILL.md holds the exact escape conditions.
 - State assumptions and interpretations before coding; present them instead of picking silently.
 - Every changed line must trace to the request. No drive-by refactors.
 - Before writing a new helper, util, or type: scan the codebase first. If something equivalent already exists a few files over, reuse it. Re-implementing what's nearby is the most common way code bloats.
@@ -68,6 +68,7 @@
 - Define success criteria upfront (test, command, check). Loop until verified.
 - Given a spec file: read it fully, summarize your understanding and ask any questions, then implement.
 - Before asserting "X does/causes Y because Z" about a system not read or run this session: read it first, even one file. If you can't check right now, write "UNVERIFIED: <claim>, would check <file/log>" instead of stating it as fact - hedging the noun ("suspect") does not hedge a trailing "so Y happens" clause, the whole sentence needs the label. Past incident: recurred 5 times in one project despite being memory-documented after each one; a wording-only fix already failed once for this exact class of rule (see the em-dash enforcement history).
+- That same rule governs anything OUTBOUND Joe sends or pastes as his own words: a Slack message, a chat reply, a standup note, a ticket comment. In a draft, every factual statement and every number either carries a receipt or gets cut, where a receipt is a `file:line` read this session, a command's stdout, an API response, or a fetched URL - "I read it earlier" from a past session is not one. Certainty language ("is", "does", "will") needs a receipt too; no estimated percentages, counts, or durations. Never draft a reply to a thread you were not given in full - ask for the thread instead. One scope, work and personal alike. Ticket CREATION is already enforced at the tool layer by `shortcut-create-ticket`'s ground check plus `hooks/shortcut-create-guard.py`; this bullet covers the chat half, which has no tool call to hook. Past incident 2026-08-14: a ticket was filed for work already done and Joe looked stupid in front of his team.
 
 ## Testing & verification floor
 
