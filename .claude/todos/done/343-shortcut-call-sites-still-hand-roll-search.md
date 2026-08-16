@@ -53,3 +53,7 @@ Fix the header line while there.
   documents.
 - Each call site still states its own query, page size and any client-side filter.
 - The ref's header names every skill that references it.
+
+## Notes
+
+- Done 2026-08-16, commits 8abd412 and 330a59e. shortcut-pickup-ticket, shortcut-done-audit and work-recap/zirtue/weekly.md now point at refs/shortcut-api.md's Searching stories recipe, keeping only their own query, page size and client-side filters. The ref's header lists every referencing skill again. Three more inline recipes exist outside this todo's named scope (ground-check.md, shortcut-create-ticket SKILL.md:81, zirtue-release-backfill/reference.md:16) and were deliberately left alone. The follow-up FIX commit removed two em dashes the refactor introduced, caught by /commit's em-dash prefilter.

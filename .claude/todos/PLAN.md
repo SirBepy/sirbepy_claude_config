@@ -1,71 +1,96 @@
 # Plan
 
-**16 active todos.** The four long-parked ones below still stand. Updated 2026-08-15 after an
-`/auto-do-todos` run took the backlog from 32 down to 10: 21 executed, 1 archived as churn.
+**9 active todos.** Updated 2026-08-16 after an `/auto-do-todos` run took the backlog from 18 down
+to 9: **16 executed, 1 archived as superseded, 5 filed** (1 from Joe, 4 from the run's own findings).
+Every `## Open questions` block that was waiting on Joe is now answered and gone.
 
-Of the 16, **six carry an `## Open questions` block** written by that run and are waiting on Joe,
-not on Claude: **326, 331, 333, 336, 337, 338**(shortcut). The next run opens with those. Six more
-(**340-345**) were filed by the run itself from its own findings and have never been triaged, which
-is what took the count back up to 16.
-
-The old batch structure (16 batches, 71 todos, written 2026-08-11) is gone because the backlog it
-described is gone. Now that the backlog is past a dozen again, re-run `/plan-todos` to rebuild
-ordering rather than resurrecting the old headings from git.
+Four of the nine are parked by Joe's own decision, so the real actionable queue is **five**: 351,
+352, 353, 354, 355. Run `/plan-todos` if that queue grows past a dozen again; it is small enough
+right now that ordering by hand is fine.
 
 Per the contract in `~/.claude/skills/close/ai-todos-format.md`, claim each todo in
 `.claude/todos/.claims/` before executing it, and archive with `complete-todo.ps1` when done.
+**Ids are now reserved atomically** via `~/.claude/skills/close/reserve-todo-id.ps1`, never by
+hand-scanning for max+1 - see the Resolved questions section.
 
-## Needs a session of its own (1)
+## Parked by Joe, reconfirmed 2026-08-16 (4)
+
+Joe was asked about all four in this run's question round and kept every one parked. Do not re-ask,
+and do not open them as side quests.
 
 - [ ] **58** - audit `skills/` and decide keep / update / remove per skill
 
-Joe's own ask, and he deferred it on 2026-08-13 with "this is meant to be a whole session kind of
-thing, so skip this for now". Do NOT open it as a side quest inside another run. Current scale is
-**76 directories, 669 files, 664 tracked**, of which **12 are vendored** (the 11 Cloudflare-family
-skills plus `impeccable`), documented in `skills/VENDORED.md`. Judge those 12 on "do we still want
-this installed" rather than on quality, since their content is upstream's.
-
-## Blocked on 58 (2)
-
-Both add NEW skill surface, which is exactly what the audit might prune, so they wait.
+His third deferral. Current scale is **76 directories, 669 files, 664 tracked**, of which **12 are
+vendored** (11 Cloudflare-family skills plus `impeccable`), documented in `skills/VENDORED.md`.
+Judge those 12 on "do we still want this installed" rather than on quality.
 
 - [ ] **11** - `/orphan-audit`, process forensics gets rewritten ad hoc every time
 - [ ] **30** - `/story-shot`, the Storybook restart-wait-screenshot loop
 
-Note **63** was in this group and is now done: Joe released it on 2026-08-13 because it extended an
-existing skill instead of adding one, and it shared files with 295.
+Both blocked on 58. They add NEW skill surface, which is exactly what the audit might prune. Joe was
+offered the option to lift the block and declined.
 
-## Parked, do not build (1)
+- **95** - session activity log. Not a checkbox on purpose. Joe's words on 2026-08-16: *"i think this
+  deserves a whole session, its a question of permanent memory, something im very passionate for,
+  but its best we shelf it for now, that should be brainstormed in its own session."* Its shape is
+  now settled even though its content is not: **this is a `/brainstorm` task, not a build task
+  waiting for a green light.** The old build-or-park question is closed.
 
-Not a checkbox on purpose. `/pickup` must never hand this to anyone as actionable.
+## Actionable (5)
 
-- **95** - session activity log. Joe explicitly stopped the build 2026-07-30 and confirmed the park
-  again on 2026-08-13. The file exists to preserve the research so it is not rediscovered.
+- [ ] **351** - unify the 8 ticket skills behind one platform-inferring `/ticket`. Joe's own idea,
+  dev-origin. Sized as its own session, and overlaps 58, which would likely shrink it.
+- [ ] **352** - `/autopilot` and `/delegate` still carry the commit-cadence ambiguity todo 347 fixed
+  in the other three files. Consistency work, small.
+- [ ] **353** - three more inline `search/stories` recipes outside todo 343's named scope. Also
+  carries the unresolved `+` versus `--data-urlencode` encoding question.
+- [ ] **354** - `hooks/.claude/last-session-status.json` is untracked and unignored, so it shows in
+  every `git status`. Small.
+- [ ] **355** - `-GetId` can still answer confidently wrong from a background dispatch, and the
+  script cannot detect it. Needs a background-dispatch measurement BEFORE any fix.
 
 ## Resolved questions, kept so nobody re-asks
 
-1. **Vendored skills.** The wholesale commit already happened in `4cc2977` (2026-08-12, 516 files),
-   which was the option a `/rate-it` scored 4/10. `skills/VENDORED.md` was therefore written as
-   documentation over the existing state. It found exactly ONE local patch in the whole vendored
-   set, `skills/impeccable/reference/new-work.md`, verified by diffing against the vendoring commit.
-   Narrowly still open: whether to `git rm --cached` the ~516 unpatched vendor files. Nobody has to;
-   the silent-revert risk is one file wide.
-2. **`hooks/` is tracked** as of `bcaa730`, 13 files, secret-scanned first. The absolute paths in
-   `settings.json` stay on purpose: `${CLAUDE_PROJECT_DIR}` is real and documented, but it resolves
-   to whichever project is open, and that file is the GLOBAL user-level settings whose hooks fire in
-   every session, so a portable form would break everywhere except this repo.
-3. **The corepack guard stays strict.** It governs WHICH binary installs, not what gets installed,
-   and a global Yarn 1 once silently rewrote a Yarn 4 lockfile.
+1. **Todo id allocation is now atomic.** `reserve-todo-id.ps1` writes an `<id>-.reserved` marker with
+   no-overwrite semantics before the real file, the same primitive `claim-todo.ps1` proves for the
+   claims mutex. Proven with two real concurrent processes doing 25 reservations each: 50 ids, zero
+   duplicates. Abandoned reservations self-heal on the 4h-plus-dead-pid rule. Markers are gitignored.
+   Joe rejected non-sequential ids (readable ordering matters) and rejected hardening the reactive
+   rename-on-collision guard, which had already been tried in `c971a08` and failed anyway.
+2. **Session markers moved** to `hooks/.session-markers/<session_id>`, out of reach of a
+   non-recursive `hooks/.commit-marker-*` glob. A permanent read-only legacy fallback covers
+   stragglers. This is the structural half of todo 341; the preamble also now bans glob cleanup.
+3. **Vendored skills.** The wholesale commit already happened in `4cc2977` (2026-08-12, 516 files).
+   `skills/VENDORED.md` found exactly ONE local patch in the whole vendored set,
+   `skills/impeccable/reference/new-work.md`. Narrowly still open: whether to `git rm --cached` the
+   ~516 unpatched vendor files. Nobody has to; the silent-revert risk is one file wide.
+4. **`hooks/` is tracked** as of `bcaa730`, secret-scanned first. The absolute paths in
+   `settings.json` stay on purpose: `${CLAUDE_PROJECT_DIR}` resolves to whichever project is open,
+   and that file is the GLOBAL user-level settings whose hooks fire in every session.
+5. **The corepack guard stays strict.** It governs WHICH binary installs, and a global Yarn 1 once
+   silently rewrote a Yarn 4 lockfile.
+6. **`/brainstorm` deliberates first** as of 2026-08-16. It shows a plan capped at ~5 lines and
+   waits, unless the invocation carries a go-word ("then implement it", "just do it", "go") or the
+   change is a single existing file adding no new file and no new skill/hook/rule surface. The
+   gate-free promise now covers only those two escapes.
 
-## Hook doctrine, learned the expensive way on 2026-08-13
+## Hook doctrine, and what the 2026-08-16 run added to it
 
-Three detectors were spiked in one day and the pattern is now clear enough to save the next attempt:
+The 2026-08-13 lesson stands and got two more data points:
 
 - **Exact mechanical checks ship.** `hooks/em-dash-guard.py` is live because U+2014 is a codepoint.
+  Two more shipped on 2026-08-16 on the same basis: `dispatch-preamble-guard.py` (three verbatim
+  string checks, with a `READ-ONLY DISPATCH` opt-out marker rather than a guess about read-only-ness)
+  and `ui-screenshot-reminder.py` (path-extension gate, fails open, once per session).
 - **Heuristic judgment calls do not.** The unverified-mechanism detector hit 67 percent false
-  positives, the bare-question detector missed 20 to 25 percent of real cases against ~4025 real
-  messages, and the command-chaining detector flagged 55 percent of 30047 real commands. All three
-  are kept as `hooks/EXPERIMENTAL-*.py` with their measurements.
+  positives, the bare-question detector missed 20 to 25 percent against ~4025 real messages, and the
+  command-chaining detector flagged 55 percent of 30047 real commands. All three stay as
+  `hooks/EXPERIMENTAL-*.py` with their measurements.
+- **Measuring can also SAVE a change.** Todo 342 measured three match scopes against 7128 real
+  prompts. `whole_prompt` would have caught every invocation but also fired inside all 131
+  task-notification bodies, reproducing the exact injection bug todo 332 fixed. The middle option
+  won on evidence: +74 genuine catches, zero new false positives. Writeup in
+  `hooks/flagged-skill-mention.md`.
 
 Measure against a real corpus BEFORE wiring anything, and prefer inverting the problem (require an
 explicit marker on the legitimate case) over detecting the violation.

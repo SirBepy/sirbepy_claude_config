@@ -72,6 +72,7 @@ Prefer 1 + 2 together. 2 alone still relies on remembering to read the file.
   dispatched process is exposed in that process's command line for its whole
   lifetime. Worth a line in the doctrine or process-hygiene about preferring a
   file or env var over a command-line argument for secrets in dispatched runs.
+- Done 2026-08-16, commits f758d2e and 9017526. Joe chose verbatim-lines-only plus the template file. hooks/dispatch-preamble-guard.py blocks an Agent/Task dispatch missing the staging line, the run_in_background FORBIDDEN line, or the .for_bepy/screenshots/ id, with a READ-ONLY DISPATCH opt-out for the screenshot check only. The conditional orphan-check line is deliberately NOT enforced, per the hook doctrine. 12/12 new tests pass, all 8 hook suites green. Secret-in-cmdline finding went to refs/process-hygiene.md, Joe's pick.
 
 ## Open questions
 

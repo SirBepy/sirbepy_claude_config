@@ -54,3 +54,7 @@ this workaround.
 - Running it over a real code file with a genuinely over-commented block still flags it, proving
   the fix did not just disable the check.
 - `/commit` step 5a's "trim it, don't ask" instruction is safe to follow literally again.
+
+## Notes
+
+- Done 2026-08-16, commit 4bed8e1. comment-noise.sh now skips .md and .mdx entirely (option 1, Joe's pick), so a heading is never counted as a comment. Verified against the original bug case (todo 334's file at 8d1df43^ printed 10/26, now prints nothing) and against a constructed 5-line over-commented JS file, which still flags 5/5.

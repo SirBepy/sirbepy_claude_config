@@ -53,3 +53,7 @@ READ, not about which commits follow it.
 - A cold run reading Step 6 knows without inferring how many times to invoke `/commit`.
 - The prefilter and pathspec requirements still apply to every commit.
 - `/auto-do-todos` and `/batch-todos` agree.
+
+## Notes
+
+- Done 2026-08-16, commit 7bb8751. CLAUDE.md, /auto-do-todos Step 6 and /batch-todos Step 6 now all say /commit is invoked and read in full once per run, with every later commit following its procedure directly. The guarantee is preserved by an explicit clause naming the session marker, prefilters, pathspec form and branch/overlap checks as still applying to every commit. /autopilot and /delegate carry the same latent ambiguity and were left for a follow-up todo.

@@ -49,6 +49,10 @@ it built. Confirm with Joe before executing.
 - `settings.local.json` in each repo still parses as valid JSON and existing permissions are
   intact.
 
+## Notes
+
+- Done 2026-08-16, commit b8b8eaa, but NOT as this file describes. Joe changed the scope on 2026-08-16: he does not want zng-admin's hook copied into two sibling repos, he wants it applied always, as a rule, so he can see what agents are working on. He picked global with a UI-path gate over an always-fires variant. Shipped hooks/ui-screenshot-reminder.py, a global Stop hook wired into settings.json, firing at most once per session and only when the diff touched UI-ish files (.tsx/.jsx/.vue/.svelte/.css/.scss or a ui/components/widgets/screens/pages path segment). Fails open on any error. The rule itself already existed in CLAUDE.md's UI and visual changes section; this is enforcement only, and the reminder points at that rule rather than restating it. zng-admin was not present on this machine, so the reference implementation was rebuilt from the todo's description. 14 test cases pass, all 9 hook suites green, settings.json validated as parseable.
+
 ## Open questions
 
 Written by /auto-do-todos on 2026-08-15. The next run opens with these.

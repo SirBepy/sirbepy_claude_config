@@ -47,3 +47,7 @@ Record the absolute date and the reason, per the rubric, so a future session can
 - No live guidance anywhere on this machine, memory files included, names the process-tree walk as
   the way to derive the screenshot subfolder id.
 - The memory's own point about subagent overkill survives the edit intact.
+
+## Notes
+
+- Done 2026-08-16, no commit in this repo: the fix lands in claude_usage_in_taskbar's project memory, outside the ~/.claude tree. feedback_subagent_overkill.md line 16 had a stale <ancestor-pid>-<ancestor-start-ticks> placeholder naming the retired process-tree scheme that the very next paragraph already bans; corrected to <id> from rename-session.ps1 -GetId. UPDATE not removal, because the line teaches a real dispatch rule (pass the id pre-resolved, a subagent cannot derive it). MEMORY.md's index line never named the detail, so no desync. Grepped the whole projects tree: this was the only stale copy.

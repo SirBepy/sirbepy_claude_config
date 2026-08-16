@@ -60,3 +60,4 @@ output, pasted user text containing an em dash).
 Filed from claude_usage_in_taskbar (a project session) per CLAUDE.md's rule that global `~/.claude`
 findings go in this repo's own backlog, never the surfacing project's. This session did not edit
 `~/.claude` itself, only filed this todo.
+- Done 2026-08-16, commit 005490c. em-dash-guard.py now also scans the text args of an allowlisted set of chat tools (send_message, post_message, update_message, ask_user_question, matched by name suffix so a differently-prefixed MCP server is still caught), read from transcript_path. Write/Edit/Bash stay unscanned per todo 307's scope decision. 22 test cases pass, all 9 hook suites green. The retry-loop risk is covered by the pre-existing stop_hook_active guard at line 132, verified by reading it.

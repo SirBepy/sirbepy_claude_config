@@ -61,3 +61,7 @@ chain.
 - The orchestrator path still returns the same stable id it does today, proven by two consecutive
   calls matching.
 - `/close` Phase 0 and the screenshot helpers still resolve correctly.
+
+## Notes
+
+- Done 2026-08-16, commit f95bc94. The suspected mechanism was REFUTED by measurement: a foreground subagent does inherit CLAUDE_CODE_SESSION_ID (measured non-empty) and -GetId returned the orchestrator's exact id, because a foreground dispatch shares the orchestrator's OS process. The real trigger is a genuinely separate process, most plausibly a background dispatch. Fix shipped for the narrower hole the todo targeted: Resolve-SessionRecord now tags how it resolved, and -GetId exits 1 citing the doctrine's resolve-once rule rather than trusting the pid-walk fallback. Exit-nonzero was chosen over a marker string because no caller validates the id format, so a marker would just become a bogus folder name. session-shot-dir.cjs and e2e-helpers.js now fail loudly instead of crashing raw. -Close and -Name untouched.

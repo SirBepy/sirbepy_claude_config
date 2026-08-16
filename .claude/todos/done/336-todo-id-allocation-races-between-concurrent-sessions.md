@@ -62,6 +62,7 @@ in the same change, since every writer reads its id rule from there.
   from the other end - the `.claims/` mutex exists but nothing verifies or extends it.
 - The renaming work is worse than it looks: a todo whose id changes after being committed needs the
   old path explicitly removed from the commit, or the tree ends up carrying both copies.
+- Done 2026-08-16, commits 2f2be17 and 59e3892. Joe chose the atomic reserve (option a). skills/close/reserve-todo-id.ps1 prunes stale markers, scans .md plus done/ plus live *-.reserved for the max, then Move-Items a temp file onto <id>-.reserved without -Force, the same no-overwrite primitive claim-todo.ps1 proves. Proven with two real concurrent powershell.exe processes doing 25 reservations each: 50 ids, zero duplicates, contiguous. Abandoned reservations self-heal on the same 4h-plus-dead-pid rule as claims. Contract updated, markers gitignored, and the two writers that restated max+1 by hand (cleanup-todos relocate path, close/light.md) now call the helper.
 
 ## Open questions
 

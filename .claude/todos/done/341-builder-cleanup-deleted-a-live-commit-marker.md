@@ -58,3 +58,7 @@ than merely discouraged.
   and after, proven by their test suites plus a by-hand allow/block exercise of the two that have
   no suite.
 - The preamble line is present in the copy-verbatim block, not just in prose elsewhere.
+
+## Notes
+
+- Done 2026-08-16, commit 8a55286. Both layers shipped. Layer 1: the canonical builder preamble now bans glob cleanup by name, naming hooks/.commit-marker-* and hooks/.session-markers/ explicitly. Layer 2 was judged safe after reading _hooklib.py first: oldest_fresh_marker and consume_fresh_marker already glob non-recursively within an arbitrary marker_dir, so session markers moved to hooks/.session-markers/<session_id>, a directory a non-recursive glob cannot reach at all. Zero _hooklib.py changes needed. All 6 live session markers were migrated, a permanent read-only legacy fallback covers stragglers, and the orchestrator's own marker was proven still working by the commit that landed this change. Also trimmed two paragraphs the doctrine still duplicated from builder-preamble.md.

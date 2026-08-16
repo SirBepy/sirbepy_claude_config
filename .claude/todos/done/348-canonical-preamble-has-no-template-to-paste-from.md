@@ -56,3 +56,7 @@ full".
 - One file holds the preamble text, and the doctrine points at it rather than duplicating it.
 - The conditional `~/.claude` line cannot be pasted unconditionally by accident.
 - Every skill that adopts the doctrine still resolves to the same preamble content.
+
+## Notes
+
+- Done 2026-08-16, commit f758d2e. The canonical preamble now lives in refs/builder-preamble.md with a placeholder table; delegation-doctrine.md points at it instead of embedding it. The ~/.claude edit ban became the <GLOBAL_EDIT_BAN> placeholder so it can no longer be pasted unconditionally, which was the defect that needed bdb0323. All consumers checked: none quoted the block inline, so all still resolve to the same content.

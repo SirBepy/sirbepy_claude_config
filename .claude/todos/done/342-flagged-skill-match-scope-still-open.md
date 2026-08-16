@@ -55,3 +55,7 @@ this". That is a real answer, not a non-answer.
 - The chosen scope is backed by a count against real prompts, not an argument.
 - `hooks/test_flagged_skill_mention.py` covers the decided behaviour, and all hook suites pass.
 - A genuine typed `/close` still fires; a peer envelope still does not.
+
+## Notes
+
+- Done 2026-08-16, commit aaeb1ca. Settled by measurement over 2574 real transcripts, 7128 Joe-typed prompts, 509 mentioning a flagged skill. first_line caught 300/493 true invocations with 0 false positives. whole_prompt caught all 493 but also all 16 false positives AND fired inside all 131 task-notification/auq-answer bodies, empirically reproducing the exact 19KB injection bug todo 332 fixed, so it is disqualified. first_line_or_explicit_slash_anywhere caught 374/493 with 0 false positives and 0 synthetic-body fires, so it won. The 119 remaining mid-sentence cases need semantic judgment and were deliberately left as a documented gap. Measurement written up in hooks/flagged-skill-mention.md.

@@ -42,3 +42,7 @@ Note `type-field`, `dismiss-keyboard`, `install` and `screenshot` were all fine;
 - A landscape app can be driven end to end through `tap-and-capture` with no manual coordinate correction.
 - Portrait behaviour is unchanged.
 - `screenshot` output states the orientation it detected.
+
+## Notes
+
+- Done 2026-08-16, commit 06d3404. adb-drive.ps1 gained Get-OrientationInfo: when the screenshot and wm size differ by an exact WxH transposition, no scaling is applied. Portrait math untouched. No Android device was attached, so this is offline-verified only: PowerShell parse check plus unit tests over the four dimension cases, including the todo's exact 2400x1080-vs-1080x2400 bug case. Not yet re-run live.
