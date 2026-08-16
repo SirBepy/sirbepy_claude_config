@@ -17,7 +17,13 @@ const E2E_DIR = 'PATH/TO/PROJECT/.for_bepy/e2e';
 // --------------------------------------------
 
 // Resolved via the shared helper, not hand-filled - creates the per-session subfolder if missing.
-const SHOT_DIR = getSessionShotDir();
+// Fails loudly at load time (todo 346) rather than silently writing into a wrong-process folder.
+let SHOT_DIR;
+try {
+  SHOT_DIR = getSessionShotDir();
+} catch (e) {
+  throw new Error(`e2e-helpers.js: ${e.message}`);
+}
 
 async function shot(page, name) {
   await page.screenshot({ path: path.join(SHOT_DIR, name) });

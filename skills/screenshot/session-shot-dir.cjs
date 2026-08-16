@@ -9,13 +9,21 @@ const os = require('os');
 
 const CLAUDE_ROOT = path.join(os.homedir(), '.claude');
 
+// -GetId now refuses (non-zero exit) when it can't resolve a reliable id - e.g. called from a
+// detached subagent process (todo 346). Re-throw with the doctrine pointer front and center so a
+// caller that only shows e.message doesn't just see a raw "Command failed" stack.
 function getSessionId() {
-  if (process.platform === 'win32') {
-    const script = path.join(CLAUDE_ROOT, 'skills', 'close', 'rename-session.ps1');
-    return execFileSync('powershell', ['-NoProfile', '-File', script, '-GetId'], { encoding: 'utf8' }).trim();
+  try {
+    if (process.platform === 'win32') {
+      const script = path.join(CLAUDE_ROOT, 'skills', 'close', 'rename-session.ps1');
+      return execFileSync('powershell', ['-NoProfile', '-File', script, '-GetId'], { encoding: 'utf8' }).trim();
+    }
+    const script = path.join(CLAUDE_ROOT, 'skills', 'close', 'rename-session.sh');
+    return execFileSync(script, ['--get-id'], { encoding: 'utf8' }).trim();
+  } catch (e) {
+    const detail = (e.stderr || e.message || '').toString().trim();
+    throw new Error(`Could not resolve a reliable session id - pass one in instead of re-deriving it here. ${detail}`);
   }
-  const script = path.join(CLAUDE_ROOT, 'skills', 'close', 'rename-session.sh');
-  return execFileSync(script, ['--get-id'], { encoding: 'utf8' }).trim();
 }
 
 // cwd defaults to the project root (process.cwd()), matching every other .for_bepy/ convention.

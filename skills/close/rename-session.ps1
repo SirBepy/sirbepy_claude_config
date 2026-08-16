@@ -40,7 +40,7 @@ function Get-AncestorClaudePid {
 }
 
 # Resolves this session's own record from sessions/*.json. sessionId match is authoritative;
-# the pid-walk match only runs when the env var is unset.
+# the pid-walk match only runs when the env var is unset. Tags via _resolvedVia (todo 346).
 function Resolve-SessionRecord {
     $sid = $env:CLAUDE_CODE_SESSION_ID
     if ($sid) {
@@ -51,25 +51,37 @@ function Resolve-SessionRecord {
                     if ($d.sessionId -eq $sid) { $d }
                 } catch {}
             } | Select-Object -First 1
-        if ($match) { return $match }
+        if ($match) {
+            $match | Add-Member -NotePropertyName _resolvedVia -NotePropertyValue 'sessionId' -Force
+            return $match
+        }
     }
 
     $claudePid = Get-AncestorClaudePid
     if (-not $claudePid) { return $null }
 
-    Get-ChildItem -Path $sessionsDir -Filter '*.json' -File -ErrorAction SilentlyContinue |
+    $fallback = Get-ChildItem -Path $sessionsDir -Filter '*.json' -File -ErrorAction SilentlyContinue |
         ForEach-Object {
             try {
                 $d = Get-Content -Raw -Path $_.FullName | ConvertFrom-Json
                 if ($d.pid -and ([int]$d.pid -eq $claudePid)) { $d }
             } catch {}
         } | Sort-Object -Property UpdatedAt -Descending | Select-Object -First 1
+    if ($fallback) {
+        $fallback | Add-Member -NotePropertyName _resolvedVia -NotePropertyValue 'pidwalk' -Force
+    }
+    return $fallback
 }
 
 if ($GetId) {
     $record = Resolve-SessionRecord
     if (-not $record) {
         Write-Error "Could not resolve this session's own record (sessionId env var unset and pid-walk fallback failed)."
+        exit 1
+    }
+    if ($record._resolvedVia -eq 'pidwalk') {
+        # sessionId lookup missed; only the unstable pid-walk (todo 60) matched (todo 346).
+        Write-Error "Refusing -GetId: sessionId lookup failed, only the unreliable process-tree fallback matched. Per refs/delegation-doctrine.md, the orchestrator resolves this id ONCE and passes it into every dispatch - never re-derive it here."
         exit 1
     }
     $ticks = $record.procStart
