@@ -63,6 +63,7 @@ CLAUDE.md's Execution Discipline section already splits inline from subagent-dri
 - Do not solve this by adding an "are you sure?" prompt. CLAUDE.md's front-load rule and this
   skill's own design both reject mid-task approval gates; the branch has to be decided from the
   task's shape, not by asking.
+- Done 2026-08-16. /brainstorm default inverted: deliberates and shows a <=5-line plan first, skipped by a go-word in the invocation or when the change is a single existing file adding no new file and no new skill/hook/rule surface. 'Gate-free by design' narrowed to 'Gate-free only for the two escapes' rather than deleted, per Joe. CLAUDE.md line 63's stale gate-free claim fixed in the same run.
 
 ## Open questions
 

@@ -43,3 +43,7 @@ Do not promote or otherwise change the detector's behaviour. This is a loader sw
 - `grep -rn spec_from_file_location hooks/` returns one definition.
 - All six hook test suites still pass.
 - The detector's own behaviour is unchanged, and it stays unpromoted.
+
+## Notes
+
+- Done 2026-08-16. EXPERIMENTAL-command-chaining-detector.py now imports load_module from _testlib; the last hand-rolled spec_from_file_location outside _testlib.py is gone. All 7 hooks/test_*.py suites pass.

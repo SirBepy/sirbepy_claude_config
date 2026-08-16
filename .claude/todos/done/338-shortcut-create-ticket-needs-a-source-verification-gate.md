@@ -20,7 +20,7 @@ false. `BillerDashboardResponseDto` in `zng-api` had returned `registrationsCoun
 reading the *Flutter client's parser*, which hardcodes `registrationsLast30Days: const []`, and
 inferring the server contract from it.
 
-Stevan replied within the hour: "Već ti vraćam registracije po danu, to je dodato odavno." The
+Stevan replied within the hour: "VeÄ‡ ti vraÄ‡am registracije po danu, to je dodato odavno." The
 ticket went to Won't do the same day. Joe's reaction: "fucking hell man, what the fuck, there needs
 to be more rules setup before we go out and make tickets for other ppl".
 
@@ -66,6 +66,7 @@ so the audit trail shows whether the gate ran.
 - Related, same session: the same wrong inference also reached a QA-facing comment on SC-54228 and
   had to be edited after posting. A verification gate on ticket creation would not have caught the
   comment. Worth considering whether `shortcut-update-ticket` needs the same gate.
+- Archived 2026-08-16 as superseded, on Joe's word. Commit a7c09a6 shipped a strictly broader version the same day it was filed: a mandatory ground check for EVERY ticket, ground-check.md reading the owning system's source at the tracked branch, and hooks/shortcut-create-guard.py hard-blocking the create call without a fresh marker. The leftover shortcut-update-ticket gap moved to todo 351, which also carries Joe's unified /ticket idea.
 
 ## Open questions
 

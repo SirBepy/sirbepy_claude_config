@@ -28,11 +28,23 @@ Consumer rules still bind: never create entries in empty time ranges, never touc
 ## Acceptance
 Only actionable if Joe revives it. If the vault idea from the other chat supersedes this, close this todo as superseded rather than building a parallel system.
 
-## Open questions
+## Park reconfirmed 2026-08-16
 
-Written by /auto-do-todos on 2026-08-12. The next run opens with these.
+Asked again by `/auto-do-todos` and answered by Joe, verbatim: *"i think this deserves a whole
+session, and its a lot more complex, its a question of permanent memory, and its something im very
+passionate for claudes usages, but i think its best we shelf it for now, that should be brainstormed
+in its own session, grilled down, all of that jazz."*
 
-- [ ] [ARCH] Build the session-activity-log design now, or leave it parked? You parked it yourself on 2026-07-30 with "do NOT build unless Joe asks". Options: (a) leave parked, no action; (b) build it now from the design already captured in this file. Recommended: (a), matching your own instruction. Note the Obsidian vault has since taken over the cross-project-memory role this partly overlapped, so its case is weaker now than when it was written.
+So the park stands, and its shape is now explicit: this is **not** a build task waiting for a green
+light. **It is a `/brainstorm` task**, in its own session, framed as the permanent-memory question
+rather than as an activity-log implementation. That reframing is the reason the old question below
+is closed rather than carried forward: the answer was never "build it or not".
+
+The 2026-08-12 question (build now vs leave parked) is therefore resolved. Do not re-ask it. The
+only thing a future run may do with this file is hand it to a dedicated brainstorm session.
+
+Note the Obsidian vault has since taken over the cross-project-memory role this design partly
+overlapped, so any brainstorm starts by asking what the vault does NOT already cover.
 
 ## Merged in (2026-08-11)
 

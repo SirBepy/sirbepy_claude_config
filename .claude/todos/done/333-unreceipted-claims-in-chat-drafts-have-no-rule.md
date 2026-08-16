@@ -68,6 +68,7 @@ not a "keep in sync" comment.
 - Related: [[326-replicate-ui-verification-hook-to-zng-siblings]] for the hook-replication pattern.
 - Three of four `EXPERIMENTAL-` spikes in `~/.claude/hooks/` were never promoted to blocking. If
   this becomes a hook, it should be non-blocking by design rather than a spike awaiting promotion.
+- Done 2026-08-16. Joe chose the prose route with one scope for all outbound chat, not a hook and not a work/personal split. CLAUDE.md Execution Discipline now extends the UNVERIFIED rule to outbound drafts Joe sends as his own words: receipts or cut, certainty language needs a receipt, never draft a reply to a thread not given in full.
 
 ## Open questions
 
