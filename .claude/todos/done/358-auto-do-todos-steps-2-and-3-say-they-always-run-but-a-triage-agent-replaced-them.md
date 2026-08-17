@@ -67,3 +67,4 @@ already be the right home for this behaviour.
   deviation rather than hiding it.
 - Related: [[347-auto-do-todos-commit-cadence-is-unfollowable-as-written]] in `done/`, the same
   literal-instruction-versus-real-run gap in the same file.
+- Done 2026-08-17: took Approach option 1. skills/auto-do-todos/SKILL.md's 'When each step runs' paragraph drops the absolute 'no size exemption' claim and names two sanctioned invocations that MOVE Step 2's work instead of skipping it - questions-first (Step 4 triage runs first, and its prompt must carry Step 2's three unique functions as explicit requirements) and named-subset (dev names the ids; Steps 2-4 skipped, and Step 9 must say the backlog was not swept). Any other substitution is still a deviation and must be reported in Step 9. Checked skills/batch-todos/SKILL.md for the same conflict: it makes no always-runs claim, its Step 4 is a dry-run gate this skill already overrides, so it needed no change.

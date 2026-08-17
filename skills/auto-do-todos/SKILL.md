@@ -112,11 +112,29 @@ IS an unattended run, so:
 
 Do not wait for a reply at either gate.
 
-**When each step runs.** Step 2 runs on every run, no size exemption: `/cleanup-todos` is the only
-pass that dedupes, re-verifies premises against the tree, and archives dead `ai`-origin todos, and
-Step 4's triage does none of those. Step 3 is skipped when Step 2 leaves no unclaimed EASY todo,
-since Step 6 grinds that same queue directly and a second nested dry-run report adds nothing.
-Cleanout mode always runs both.
+**When each step runs.** Step 2 runs on every run by default: `/cleanup-todos` is the only pass that
+dedupes, re-verifies premises against the tree, and archives dead `ai`-origin todos. Step 3 is
+skipped when Step 2 leaves no unclaimed EASY todo, since Step 6 grinds that same queue directly and
+a second nested dry-run report adds nothing. Cleanout mode always runs both.
+
+**Two invocations move Step 2's work rather than skipping it.** Both were real runs improvising
+against a rule that used to read "no size exemption"; the substitution is sanctioned now, the
+guarantee is not negotiable.
+
+- **Questions-first invocation** - the prompt demands the dev's input be gathered before any work
+  ("see if any of them require input from me, and only then do anything"). `/cleanup-todos` and
+  `/batch-todos` both DO work, so running them first disobeys the prompt. Order it like cleanout
+  mode instead: Step 4's triage runs first over every todo in full, then Step 5, then Steps 2-3
+  fold into Step 6's grind. The triage prompt MUST then carry Step 2's three unique functions as
+  explicit requirements - dedupe across the whole backlog, re-verify each premise against the tree,
+  and flag dead `ai`-origin todos for archival - because nothing else in the run provides them.
+- **Named-subset invocation** - the dev names the exact todo ids to run ("auto-do-todos those 5").
+  The queue is given, so Steps 2-4 have nothing to select and are skipped; the run starts at Step 6
+  over the named ids. Backlog-wide dedupe and dead-todo archival are NOT performed, and the Step 9
+  summary says so rather than implying the backlog was swept.
+
+Any other substitution for Step 2 is still a deviation. Report it in Step 9 rather than performing
+it silently.
 
 ## Step 4 - Triage into AUTO and DEV
 
