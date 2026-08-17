@@ -31,6 +31,9 @@ An autopilot run ADOPTS `~/.claude/refs/delegation-doctrine.md` in full: the 90/
    - The one-line outcome kept per chunk includes the commit sha (autopilot commits between chunks, so the sha is the only record of what landed).
    - If main context approaches its limit mid-run, write the remaining plan items to a scratch task-list file and continue from the file, not from memory. There is no dev to hand off to verbally.
    - Cadence: the main loop runs `/commit` between chunks, since subagents stage but never commit.
+     Invoke and read the skill in full only for this run's first commit; every commit after that
+     follows `/commit`'s procedure directly (session marker already written, prefilters, pathspec
+     form, branch/overlap checks all still apply) without re-invoking the skill file.
 
 3. **Tiered uncertainty resolution.**
    - Trivial / one clearly-correct answer -> decide, no log, no iterate-it.

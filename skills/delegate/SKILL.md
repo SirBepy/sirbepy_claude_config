@@ -51,7 +51,10 @@ of those points:
 
 - Talks with the dev, plans, and decides.
 - Writes dispatch prompts and reads reports.
-- Runs `/commit` after subagent work lands (subagents stage only, never commit).
+- Runs `/commit` after subagent work lands (subagents stage only, never commit). Invoke and read the
+  skill in full only for this run's first commit; every commit after that follows `/commit`'s
+  procedure directly (session marker already written, prefilters, pathspec form, branch/overlap
+  checks all still apply) without re-invoking the skill file.
 - The surgical exception in the doctrine: a targeted read of a known `file:line`, a trivial
   one-line fix. Never a feature-sized edit.
 

@@ -48,3 +48,4 @@ skip the prefilters, which is exactly wrong.
 
 - Filed 2026-08-16 by `/auto-do-todos` from todo 347's builder report.
 - Related: [[347-auto-do-todos-commit-cadence-is-unfollowable-as-written]] in `done/`.
+- Done 2026-08-17: copied todo 347's exact wording into skills/autopilot/SKILL.md (Cadence bullet) and skills/delegate/SKILL.md (What the main agent still does itself). All five files now agree; the parenthetical naming prefilters, pathspec form and branch/overlap checks per commit is preserved verbatim.
