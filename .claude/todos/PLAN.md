@@ -51,8 +51,9 @@ offered the option to lift the block and declined.
 - [ ] **362** - render-and-diff a built screen against its design tile. **Park candidate** - new
   skill surface, see the header. Ask Joe before executing.
 
-Five are the same shape the hook doctrine below keeps rediscovering: a correct rule with nothing
-enforcing it.
+The rest are enforcement gaps of one kind or another - 356, 357, 360 and 363 are the shape the hook
+doctrine below keeps rediscovering (a correct rule with nothing enforcing it), while 364 and 365 are
+the inverse: a guard that IS enforced, contradicted or bypassed by the path that feeds it.
 
 - [ ] **356** - running `/commit`'s prefilters and `git commit` in one shell call has no gate, so a
   flagged diff commits anyway. This actually happened, twice-em-dashed, in commit `8abd412`. The
