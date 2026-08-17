@@ -255,17 +255,28 @@ exactly. Do not improvise around it and do not skip a step because the change lo
 
 2. Run `git status` and `git diff` scoped to YOUR files only.
 
-3. Run the comment-noise prefilter against exactly the paths you are about to commit, replacing
-   <FILES>. If it prints anything, TRIM those blocks to the cap (2 lines typical, 4 hard per block)
-   before committing. Do not ask, just trim. EXCEPTION: a hit on a file whose flagged lines are a
-   VERBATIM MOVE from another file in this same commit (confirm via `git show HEAD:<old file>`) is
-   expected on a pure code move and must NOT be trimmed - the cap protects newly authored comments
-   only, never carried-over documentation. Trim everything else.
+3. Run all THREE prefilters against exactly the paths you are about to commit, replacing <FILES>.
 
-   Run it via Bash from the repo root, never pasted inline: a bare `$0` in a skill's own body gets
-   rewritten by skill-argument substitution, which is exactly why this lives in a script on disk.
+   Run them via Bash, never pasted inline: a bare `$0` in a skill's own body gets rewritten by
+   skill-argument substitution, which is exactly why these live in scripts on disk. The paths below
+   are absolute on purpose - your repo root is NOT `C:\Users\tecno\.claude`, so a repo-relative path
+   would silently fail to resolve here.
 
-   bash skills/commit/comment-noise.sh <FILES>
+   bash "C:/Users/tecno/.claude/skills/commit/comment-noise.sh" <FILES>
+   bash "C:/Users/tecno/.claude/skills/commit/em-dash.sh" <FILES>
+   bash "C:/Users/tecno/.claude/skills/commit/secret-scan.sh" <FILES>
+
+   They do NOT all get the same treatment:
+
+   - comment-noise: if it prints anything, TRIM those blocks to the cap (2 lines typical, 4 hard per
+     block) before committing. Do not ask, just trim. EXCEPTION: a hit on a file whose flagged lines
+     are a VERBATIM MOVE from another file in this same commit (confirm via `git show HEAD:<old
+     file>`) is expected on a pure code move and must NOT be trimmed - the cap protects newly
+     authored comments only, never carried-over documentation. Trim everything else.
+   - em-dash: fix the flagged added lines now, same do-not-ask treatment as comment-noise.
+   - secret-scan: a hit STOPS YOU. Never auto-fix it and never commit around it - a hardcoded
+     credential needs a human decision. Leave your work uncommitted and report the hit, naming the
+     file, in your report-back.
 
 4. `git add` any UNTRACKED file you created, by name. Tracked files need no add.
 
