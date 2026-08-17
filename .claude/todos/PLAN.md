@@ -1,13 +1,16 @@
 # Plan
 
-**12 active todos.** Updated 2026-08-16 after an `/auto-do-todos` run took the backlog from 18 down
-to 9: **17 executed, 1 archived as superseded, 5 filed** (1 from Joe, 4 from the run's own findings).
-The closing `/close` retrospective then filed 3 more, taking it to 12. Every `## Open questions`
-block that was waiting on Joe is now answered and gone.
+**13 active todos.** Updated 2026-08-17 after a NAMED-SUBSET `/auto-do-todos` run: Joe named five
+ids (352, 354, 358, 359, 361) and all five landed. That run swept no backlog - no dedupe, no
+premise re-verification, no dead-todo archival - because Steps 2-4 are skipped when the queue is
+given, per the rule todo 358 itself added.
 
-Four of the twelve are parked by Joe's own decision, so the real actionable queue is **eight**: 351
-through 358. Run `/plan-todos` to order them; that queue is now past the point where doing it by
-hand is worth the effort.
+Four are parked by Joe, so the actionable queue is **nine**: 351, 353, 355, 356, 357, 360, 362,
+363, 364. Run `/plan-todos` to order them.
+
+**362 is a park candidate nobody has ruled on.** It proposes a new render-and-diff skill, which is
+new skill surface - the exact reason 11 and 30 sit parked behind 58. It is listed as actionable
+only because Joe has not been asked; ask before executing it, do not just run it.
 
 Per the contract in `~/.claude/skills/close/ai-todos-format.md`, claim each todo in
 `.claude/todos/.claims/` before executing it, and archive with `complete-todo.ps1` when done.
@@ -37,30 +40,33 @@ offered the option to lift the block and declined.
   now settled even though its content is not: **this is a `/brainstorm` task, not a build task
   waiting for a green light.** The old build-or-park question is closed.
 
-## Actionable (5)
+## Actionable (9)
 
 - [ ] **351** - unify the 8 ticket skills behind one platform-inferring `/ticket`. Joe's own idea,
   dev-origin. Sized as its own session, and overlaps 58, which would likely shrink it.
-- [ ] **352** - `/autopilot` and `/delegate` still carry the commit-cadence ambiguity todo 347 fixed
-  in the other three files. Consistency work, small.
 - [ ] **353** - three more inline `search/stories` recipes outside todo 343's named scope. Also
   carries the unresolved `+` versus `--data-urlencode` encoding question.
-- [ ] **354** - `hooks/.claude/last-session-status.json` is untracked and unignored, so it shows in
-  every `git status`. Small.
 - [ ] **355** - `-GetId` can still answer confidently wrong from a background dispatch, and the
   script cannot detect it. Needs a background-dispatch measurement BEFORE any fix.
+- [ ] **362** - render-and-diff a built screen against its design tile. **Park candidate** - new
+  skill surface, see the header. Ask Joe before executing.
 
-The last three came out of that run's own `/close` retrospective, and all three are the same shape
-the hook doctrine below keeps rediscovering: a correct rule with nothing enforcing it.
+Five are the same shape the hook doctrine below keeps rediscovering: a correct rule with nothing
+enforcing it.
 
 - [ ] **356** - running `/commit`'s prefilters and `git commit` in one shell call has no gate, so a
   flagged diff commits anyway. This actually happened, twice-em-dashed, in commit `8abd412`. The
-  near miss is that `secret-scan` would have gone the same way. **Highest value of the eight.**
+  near miss is that `secret-scan` would have gone the same way. **Highest value of the nine.**
 - [ ] **357** - the orphan-check preamble line is gated on "runs Node commands", so a subagent's
   whole-drive `find` escaped it and then falsely reported itself killed. Third instance of a builder
   misreporting a process it started.
-- [ ] **358** - `/auto-do-todos` Steps 2-3 are marked "always runs", but a real run substituted a
-  triage subagent. Same contract-versus-practice gap as 347.
+- [ ] **360** - a builder's verification method could not in principle prove the feature worked
+  (synthetic DOM events passing while the real drag was broken), and the report was accepted anyway.
+- [ ] **363** - the content-duplicate guard in `close/ai-todos-format.md` is documented and
+  unenforced.
+- [ ] **364** - following `/mega-todos` verbatim gets the dispatch rejected by
+  `dispatch-preamble-guard.py`, because the skill removes a string the hook hard-requires. Touches
+  the same injected block todo 361 just fixed, but a different failure in it.
 
 ## Resolved questions, kept so nobody re-asks
 
