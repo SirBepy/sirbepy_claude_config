@@ -1,12 +1,12 @@
 # Plan
 
-**13 active todos.** Updated 2026-08-17 after a NAMED-SUBSET `/auto-do-todos` run: Joe named five
+**14 active todos.** Updated 2026-08-17 after a NAMED-SUBSET `/auto-do-todos` run: Joe named five
 ids (352, 354, 358, 359, 361) and all five landed. That run swept no backlog - no dedupe, no
 premise re-verification, no dead-todo archival - because Steps 2-4 are skipped when the queue is
 given, per the rule todo 358 itself added.
 
-Four are parked by Joe, so the actionable queue is **nine**: 351, 353, 355, 356, 357, 360, 362,
-363, 364. Run `/plan-todos` to order them.
+Four are parked by Joe, so the actionable queue is **ten**: 351, 353, 355, 356, 357, 360, 362,
+363, 364, 365. Run `/plan-todos` to order them.
 
 **362 is a park candidate nobody has ruled on.** It proposes a new render-and-diff skill, which is
 new skill surface - the exact reason 11 and 30 sit parked behind 58. It is listed as actionable
@@ -40,7 +40,7 @@ offered the option to lift the block and declined.
   now settled even though its content is not: **this is a `/brainstorm` task, not a build task
   waiting for a green light.** The old build-or-park question is closed.
 
-## Actionable (9)
+## Actionable (10)
 
 - [ ] **351** - unify the 8 ticket skills behind one platform-inferring `/ticket`. Joe's own idea,
   dev-origin. Sized as its own session, and overlaps 58, which would likely shrink it.
@@ -56,7 +56,7 @@ enforcing it.
 
 - [ ] **356** - running `/commit`'s prefilters and `git commit` in one shell call has no gate, so a
   flagged diff commits anyway. This actually happened, twice-em-dashed, in commit `8abd412`. The
-  near miss is that `secret-scan` would have gone the same way. **Highest value of the nine.**
+  near miss is that `secret-scan` would have gone the same way. **Highest value of the ten.**
 - [ ] **357** - the orphan-check preamble line is gated on "runs Node commands", so a subagent's
   whole-drive `find` escaped it and then falsely reported itself killed. Third instance of a builder
   misreporting a process it started.
@@ -67,6 +67,8 @@ enforcing it.
 - [ ] **364** - following `/mega-todos` verbatim gets the dispatch rejected by
   `dispatch-preamble-guard.py`, because the skill removes a string the hook hard-requires. Touches
   the same injected block todo 361 just fixed, but a different failure in it.
+- [ ] **365** - two commit-guard session markers landed on malformed paths (unexpanded
+  `$CLAUDE_CODE_SESSION_ID`, and a missing `/`), so one session wrote no usable marker at all.
 
 ## Resolved questions, kept so nobody re-asks
 
