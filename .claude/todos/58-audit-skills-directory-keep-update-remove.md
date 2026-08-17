@@ -23,23 +23,25 @@ against the current tree. That prompted the dev to want the skills surface itsel
 
 ## Approach
 
-Three backlog todos are deliberately BLOCKED on this audit, because each wants to add a brand new
-skill, and adding them before the prune would immediately outdate it:
+Backlog todos deliberately BLOCKED on this audit, because each wants to add brand new skill surface
+and adding them before the prune would immediately outdate it. **Re-verified 2026-08-17** - the list
+this todo was written with has half rotted, so take this version, not the original:
 
-- **11** (`/orphan-audit`)
-- **30** (`/story-shot`)
-- **44** (a shared Playwright measure + screenshot helper)
+- **11** (`/orphan-audit`) - still live, still blocked.
+- **30** (`/story-shot`) - still live, still blocked.
+- **362** (render-and-diff a built screen against its design tile) - filed 2026-08-17, NOT formally
+  parked because Joe was never asked. Same new-skill-surface shape as 11 and 30. Rule on it here.
+- **44** (shared Playwright measure + screenshot helper) - **DONE**, no longer blocked or pending.
+- **63** (`/screenshot` multi-frame local build mode) - **DONE** 2026-08-13, authorized by Joe ahead
+  of this audit on the reasoning that it extended an existing skill rather than adding one. That
+  reasoning is the precedent to reuse when deciding whether something is surface-growing at all.
 
-The audit should rule on all three explicitly as part of its output, not leave them pending. Note
-that 44 is arguably surface-reducing rather than surface-growing, since it consolidates duplicated
-logic that already exists in `/screenshot` and `/mockup` rather than adding a genuinely new
-capability - weigh it differently from 11 and 30 when deciding whether to unblock it ahead of, or
-independent of, the rest of the sweep.
+The audit should rule on 11, 30 and 362 explicitly as part of its output, not leave them pending.
 
 ## Acceptance
 
 - Every skill under `skills/` has an explicit keep / update / remove verdict.
-- Todos 11, 30, and 44 are each either unblocked (with a stated reason) or closed.
+- Todos 11, 30, and 362 are each either unblocked (with a stated reason) or closed.
 
 ## Open questions
 
@@ -51,11 +53,14 @@ for a session of its own. Do NOT open it as a side quest inside another run.
 
 Two things a future run should know before starting it:
 
-- The count is now **76 directories, 669 files, 664 tracked**, re-enumerated 2026-08-13, not the
-  ~78 this todo was written against.
+- The count is **83 directories, 1101 files, 680 tracked**, re-enumerated 2026-08-17. It was 76 /
+  669 / 664 on 2026-08-13 and ~78 when this todo was first written, so the surface is growing while
+  the audit waits. Note the 421-file gap between files-on-disk and files-tracked: that is untracked
+  runtime spill (Playwright profiles and similar) sitting inside `skills/`, and deciding what to do
+  with it is arguably part of this pass.
 - **12 of those are vendored**, not hand-authored (the 11 Cloudflare-family skills plus
   `impeccable`), all added in one commit, `4cc2977`. They are documented in `skills/VENDORED.md`
   with their patch status. Only ONE carries a local patch. The audit should judge those 12 on
   "do we still want this installed" rather than on quality, since their content is upstream's.
 
-Blocks 11, 30 and 63, all of which stay parked until this runs.
+Blocks 11, 30 and 362, all of which stay parked until this runs.

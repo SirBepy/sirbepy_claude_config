@@ -1,38 +1,47 @@
 # Plan
 
-**14 active todos.** Updated 2026-08-17 after a NAMED-SUBSET `/auto-do-todos` run: Joe named five
+## Next up
+
+- [ ] 366 - handoff: the next session runs 58
+- [ ] 58 - full audit pass over `skills/`, keep / update / remove per skill
+
+**58 is next by Joe's decision on 2026-08-17**, after four deferrals. It is a whole-session job, not
+a side quest - read 366 first, then 58 itself, then claim 58 before touching anything. 366 is a
+pointer and gets archived once 58 is genuinely underway.
+
+**15 active todos.** Updated 2026-08-17 after a NAMED-SUBSET `/auto-do-todos` run: Joe named five
 ids (352, 354, 358, 359, 361) and all five landed. That run swept no backlog - no dedupe, no
 premise re-verification, no dead-todo archival - because Steps 2-4 are skipped when the queue is
 given, per the rule todo 358 itself added.
 
-Four are parked by Joe, so the actionable queue is **ten**: 351, 353, 355, 356, 357, 360, 362,
-363, 364, 365. Run `/plan-todos` to order them.
+Behind 58 the actionable queue is **ten**: 351, 353, 355, 356, 357, 360, 362, 363, 364, 365. Run
+`/plan-todos` to order them, once 58 is done.
 
 **362 is a park candidate nobody has ruled on.** It proposes a new render-and-diff skill, which is
-new skill surface - the exact reason 11 and 30 sit parked behind 58. It is listed as actionable
-only because Joe has not been asked; ask before executing it, do not just run it.
+new skill surface - the exact reason 11 and 30 sit parked behind 58. Todo 58 now names it and is
+expected to rule on it, so it should NOT be picked up independently.
 
 Per the contract in `~/.claude/skills/close/ai-todos-format.md`, claim each todo in
 `.claude/todos/.claims/` before executing it, and archive with `complete-todo.ps1` when done.
 **Ids are now reserved atomically** via `~/.claude/skills/close/reserve-todo-id.ps1`, never by
 hand-scanning for max+1 - see the Resolved questions section.
 
-## Parked by Joe, reconfirmed 2026-08-16 (4)
+## Parked (3)
 
-Joe was asked about all four in this run's question round and kept every one parked. Do not re-ask,
-and do not open them as side quests.
+**58 is no longer here** - Joe unparked it on 2026-08-17 and it is now the Next up item above.
+Current scale, re-enumerated 2026-08-17: **83 directories, 1101 files, 680 tracked**, of which
+**12 are vendored** (11 Cloudflare-family skills plus `impeccable`), documented in
+`skills/VENDORED.md`. Judge those 12 on "do we still want this installed" rather than on quality.
 
-- [ ] **58** - audit `skills/` and decide keep / update / remove per skill
-
-His third deferral. Current scale is **76 directories, 669 files, 664 tracked**, of which **12 are
-vendored** (11 Cloudflare-family skills plus `impeccable`), documented in `skills/VENDORED.md`.
-Judge those 12 on "do we still want this installed" rather than on quality.
+The three below stay parked. Joe was asked about each on 2026-08-16 and kept every one parked. Do
+not re-ask, and do not open them as side quests.
 
 - [ ] **11** - `/orphan-audit`, process forensics gets rewritten ad hoc every time
 - [ ] **30** - `/story-shot`, the Storybook restart-wait-screenshot loop
 
-Both blocked on 58. They add NEW skill surface, which is exactly what the audit might prune. Joe was
-offered the option to lift the block and declined.
+Both blocked on 58, which is now running next, so both are due a verdict from it. They add NEW skill
+surface, which is exactly what the audit might prune. Joe was offered the option to lift the block
+and declined.
 
 - **95** - session activity log. Not a checkbox on purpose. Joe's words on 2026-08-16: *"i think this
   deserves a whole session, its a question of permanent memory, something im very passionate for,
