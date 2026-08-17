@@ -63,6 +63,10 @@ If `hubstaff_org_id` is set, read `skills/clockify-reconciliator/hubstaff.md` no
 
 ### 3. Resolve window
 
+**The dev's timezone is `Europe/Zagreb`.** It is stated here, at skill level, not per project - the dev is in one place, so a copy in every `projects/*.md` would only be a second thing to keep in sync. Every "dev's timezone" and "local" below means that zone. Record the zone NAME and let the runtime resolve the offset: Croatia is UTC+1 in winter and UTC+2 in summer, so any hardcoded numeric offset is wrong half the year.
+
+Clockify's API stores and returns entry times in UTC. Convert explicitly in BOTH directions - `Europe/Zagreb` local to UTC when writing an entry in step 9, UTC to `Europe/Zagreb` when reading one in step 4 - rather than deriving the offset from whatever entries already exist. That derivation (diff a known local time against its stored UTC timestamp) is a legitimate FALLBACK, and it worked on 2026-08-16, but it is unavailable on exactly the day it matters most: a day whose first entry is the one being written has nothing to diff against. The failure mode is silent - right duration, wrong hour, which looks normal in a weekly total.
+
 If `[lookback]` given, parse it. Else: Monday 00:00 of current week to now, in dev's timezone.
 
 For a single-day lookback (`today`, `yesterday`, or an explicit single `YYYY-MM-DD`), the window is always a full local calendar day, true midnight-to-midnight: `<day> 00:00:00` to `<day+1> 00:00:00`, dev's timezone. `today` = the current calendar date; `yesterday` = current calendar date minus 1 calendar day. Compute the calendar date first, then take that date's midnight-to-midnight span - never derive the boundary as "now minus 24h", and never use a rounded/approximate cutoff (e.g. `22:00`) in place of true midnight. This window feeds both the Clockify entry fetch (step 4) and the git-log bounds (step 6). See `~/.claude/projects/c--Users-tecno-Desktop-Projects-zng-app/memory/feedback_verify_date_calculations.md` for the 2026-07-28 incident this rule fixes.
