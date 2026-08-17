@@ -49,3 +49,4 @@ that gets swept into a commit by accident by any writer that reaches for `git ad
 
 - Filed 2026-08-16 by `/auto-do-todos` from its own observation, not a builder report.
 - Small. Good candidate for a batch run rather than a session of its own.
+- Done 2026-08-17: gitignored hooks/.claude/. Writer hunt came back empty - grepping hooks/ for last-session-status, session_status and checkedAt found NO producer anywhere in this repo, and the single file (95 bytes, {checkedAt, ok, codegen, manifests}, mtime 2026-08-14) has not changed since. Treated as a status cache written by a tool that ran with cwd=hooks/. Left the file in place rather than deleting it, since deleting a file with an unidentified writer buys nothing the ignore does not; the reason is recorded as a comment in .gitignore. Verified: git check-ignore matches, and git status --short no longer lists hooks/.claude/.

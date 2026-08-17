@@ -49,6 +49,11 @@ hooks/__pycache__/**
 **/__pycache__/
 **/__pycache__/**
 
+# Status cache that lands here when a tool runs with cwd=hooks/. Nothing in this repo writes or
+# reads it: grepping hooks/ for last-session-status, session_status and checkedAt found no producer.
+hooks/.claude/
+hooks/.claude/**
+
 # commit-guard/pr-guard runtime markers - machine/session-local, never commit
 hooks/.commit-marker*
 hooks/.pr-marker*
