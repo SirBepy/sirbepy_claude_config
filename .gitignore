@@ -35,6 +35,10 @@ skills/shortcut-create-ticket/log.md
 # Runtime artifact written by /commit's build watch, per-machine
 skills/commit/watch-build.pid
 
+# Playwright browser profiles - 419 files of per-machine runtime state that `!skills/**` above
+# would otherwise re-include, putting them in every git status in this repo.
+skills/*/playwright-profiles/
+
 # Claims are machine-local state (session ids, PIDs) - never commit, even though todos/ above is tracked
 .claude/todos/.claims/
 .claude/todos/.claims/**
