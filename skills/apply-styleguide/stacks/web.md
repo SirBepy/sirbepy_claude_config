@@ -15,7 +15,11 @@ Check `index.html` for a `<link>` tag pointing to the styleguide CDN URL (see co
 
 ## 2. Read the project CSS
 
-Read all CSS files in `src/styles/`. Understand the current visual structure - layout, spacing, components, colors.
+Read the project's CSS wherever it lives: glob `**/*.css` excluding `node_modules/`, `dist/`, `build/`
+and `.next/`. Do not assume `src/styles/` - vite, next, tauri and plain-HTML layouts each put it
+somewhere different, and a hardcoded path silently reviews nothing.
+
+Understand the current visual structure - layout, spacing, components, colors.
 
 ## 3. Apply token replacements
 
