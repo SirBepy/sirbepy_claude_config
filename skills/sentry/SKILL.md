@@ -1,5 +1,6 @@
 ---
 name: sentry
+disable-model-invocation: true
 description: Triage open Sentry issues across zng-app, zng-admin, zng-biller. Buckets by ACT/WATCH/REVIEW/CLOSE with delta tracking from a local snapshot.
 argument-hint: "[--issue <id>]"
 ---
