@@ -9,13 +9,14 @@
 a side quest - read 366 first, then 58 itself, then claim 58 before touching anything. 366 is a
 pointer and gets archived once 58 is genuinely underway.
 
-**15 active todos.** Updated 2026-08-17 after a NAMED-SUBSET `/auto-do-todos` run: Joe named five
+**18 active todos.** Updated 2026-08-17 after a NAMED-SUBSET `/auto-do-todos` run: Joe named five
 ids (352, 354, 358, 359, 361) and all five landed. That run swept no backlog - no dedupe, no
 premise re-verification, no dead-todo archival - because Steps 2-4 are skipped when the queue is
-given, per the rule todo 358 itself added.
+given, per the rule todo 358 itself added. The closing `/close` then filed three more (367, 368,
+369), all from that run's own tooling friction.
 
-Behind 58 the actionable queue is **ten**: 351, 353, 355, 356, 357, 360, 362, 363, 364, 365. Run
-`/plan-todos` to order them, once 58 is done.
+Behind 58 the actionable queue is **thirteen**: 351, 353, 355, 356, 357, 360, 362, 363, 364, 365,
+367, 368, 369. Run `/plan-todos` to order them, once 58 is done.
 
 **362 is a park candidate nobody has ruled on.** It proposes a new render-and-diff skill, which is
 new skill surface - the exact reason 11 and 30 sit parked behind 58. Todo 58 now names it and is
@@ -79,6 +80,13 @@ the inverse: a guard that IS enforced, contradicted or bypassed by the path that
   the same injected block todo 361 just fixed, but a different failure in it.
 - [ ] **365** - two commit-guard session markers landed on malformed paths (unexpanded
   `$CLAUDE_CODE_SESSION_ID`, and a missing `/`), so one session wrote no usable marker at all.
+- [ ] **367** - `complete-todo.ps1` never prunes a PLAN.md line written in the bold style, and
+  reports the miss as if it succeeded. Five for five in one run; the stale lines only went away
+  because PLAN.md was rewritten by hand afterwards. **Highest value of the new three.**
+- [ ] **368** - `/commit`'s unpushed-overlap check fires on nearly every commit here, because this
+  repo's unpushed window is 50-plus commits deep rather than one session's work.
+- [ ] **369** - `/auto-do-todos` Step 6 mandates a subagent per todo even where CLAUDE.md says to
+  edit inline. Third instance of this skill stating an absolute that real runs correctly ignore.
 
 ## Resolved questions, kept so nobody re-asks
 
