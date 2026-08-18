@@ -2,12 +2,15 @@
 
 ## Next up
 
-- [ ] 366 - handoff: the next session runs 58
-- [ ] 58 - full audit pass over `skills/`, keep / update / remove per skill
 
-**58 is next by Joe's decision on 2026-08-17**, after four deferrals. It is a whole-session job, not
-a side quest - read 366 first, then 58 itself, then claim 58 before touching anything. 366 is a
-pointer and gets archived once 58 is genuinely underway.
+**58 is DONE as of 2026-08-18**, along with its 366 pointer. Both archived. The audit triaged all 83
+skills, ran 6 independent reviewers over 3 contested clusters, and **removed nothing** - the tree was
+already clean after the 2026-08-01 pass. What it did fix was always-on context: **13 skills flagged
+slash-only, cutting the per-session description budget from 10,445 to 5,892 chars (43.6%)**, plus 4
+correctness fixes. Full record: `skills/AUDIT-2026-08-18.md`.
+
+**Still open from 58:** the 15 high-usage core skills (`commit`, `close`, `code-check`,
+`supervised-run` and the rest) got a mechanical pass only, never a dedicated improvement reviewer.
 
 **18 active todos.** Updated 2026-08-17 after a NAMED-SUBSET `/auto-do-todos` run: Joe named five
 ids (352, 354, 358, 359, 361) and all five landed. That run swept no backlog - no dedupe, no
@@ -18,31 +21,32 @@ given, per the rule todo 358 itself added. The closing `/close` then filed three
 Behind 58 the actionable queue is **thirteen**: 351, 353, 355, 356, 357, 360, 362, 363, 364, 365,
 367, 368, 369. Run `/plan-todos` to order them, once 58 is done.
 
-**362 is a park candidate nobody has ruled on.** It proposes a new render-and-diff skill, which is
-new skill surface - the exact reason 11 and 30 sit parked behind 58. Todo 58 now names it and is
-expected to rule on it, so it should NOT be picked up independently.
+**11, 30 and 362 were all ruled on by 58 on 2026-08-18, and none of them is parked any more:**
+
+- **11** (`/orphan-audit`) - unblocked as a SCRIPT, not a skill. The doctrine already exists in
+  `refs/process-hygiene.md`; what is missing is something runnable, and a script costs no description.
+- **30** (`/story-shot`) - unblocked as a **fibo-local** skill. 418 Storybook shell calls in 31 days,
+  but all inside one project family, so a global skill would bill every session for one repo.
+- **362** (render-and-diff) - not a new global skill. Kept separate from `flutter-e2e` rather than
+  bolted into it, and folded into the `/test` and `/e2e` direction Joe set out on 2026-08-18.
 
 Per the contract in `~/.claude/skills/close/ai-todos-format.md`, claim each todo in
 `.claude/todos/.claims/` before executing it, and archive with `complete-todo.ps1` when done.
 **Ids are now reserved atomically** via `~/.claude/skills/close/reserve-todo-id.ps1`, never by
 hand-scanning for max+1 - see the Resolved questions section.
 
-## Parked (3)
+## Parked (1)
 
-**58 is no longer here** - Joe unparked it on 2026-08-17 and it is now the Next up item above.
-Current scale, re-enumerated 2026-08-17: **83 directories, 1101 files, 680 tracked**, of which
-**12 are vendored** (11 Cloudflare-family skills plus `impeccable`), documented in
-`skills/VENDORED.md`. Judge those 12 on "do we still want this installed" rather than on quality.
+**58 is done and archived** (2026-08-18). Scale after that pass: **32 model-invocable skills costing
+5,892 always-on chars**, down from 45 / 10,445. Of the 12 vendored skills, the 11 Cloudflare-family
+ones now carry a `disable-model-invocation` patch recorded in `skills/VENDORED.md` - **a re-vendor
+silently drops it and grows the budget back by 4,243 chars with no error.**
 
-The three below stay parked. Joe was asked about each on 2026-08-16 and kept every one parked. Do
-not re-ask, and do not open them as side quests.
+**11 and 30 are NO LONGER PARKED.** 58 ruled on both (see Next up for the reasoning). They are
+buildable work now, not blocked items:
 
-- [ ] **11** - `/orphan-audit`, process forensics gets rewritten ad hoc every time
-- [ ] **30** - `/story-shot`, the Storybook restart-wait-screenshot loop
-
-Both blocked on 58, which is now running next, so both are due a verdict from it. They add NEW skill
-surface, which is exactly what the audit might prune. Joe was offered the option to lift the block
-and declined.
+- [ ] **11** - `/orphan-audit` as a SCRIPT under an existing skill, not a new skill
+- [ ] **30** - `/story-shot` as a **fibo-local** skill in that repo's own `.claude/skills/`, not global
 
 - **95** - session activity log. Not a checkbox on purpose. Joe's words on 2026-08-16: *"i think this
   deserves a whole session, its a question of permanent memory, something im very passionate for,
