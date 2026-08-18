@@ -49,26 +49,36 @@ def check(case) -> bool:
 
 fails = _testlib.run_cases(CASES, check)
 
-# Marker freshness: the guard allows only on a marker inside the window.
+# Marker freshness, per accepted name. `.outbound-marker*` is the shared one written by
+# refs/outbound-ground-check.md; `.shortcut-marker*` is the legacy name kept working.
+MARKER_NAMES = {".outbound-marker*": ".outbound-marker-abc", ".shortcut-marker*": ".shortcut-marker-abc"}
+
 with tempfile.TemporaryDirectory() as tmp:
     tmpdir = Path(tmp)
-    fresh = tmpdir / ".shortcut-marker-abc"
-    fresh.touch()
-    found = guard.oldest_fresh_marker(tmpdir, guard.MARKER_GLOB, guard.FRESHNESS_SECONDS)
-    if not _testlib.report(found is not None, "fresh marker is found"):
-        fails.append("fresh marker is found")
+    for glob in guard.MARKER_GLOBS:
+        fresh = tmpdir / MARKER_NAMES[glob]
+        fresh.touch()
+        label = f"fresh {fresh.name} is found"
+        if not _testlib.report(
+            guard.oldest_fresh_marker(tmpdir, glob, guard.FRESHNESS_SECONDS) is not None, label
+        ):
+            fails.append(label)
 
-    stale_time = time.time() - (guard.FRESHNESS_SECONDS + 60)
-    os.utime(fresh, (stale_time, stale_time))
-    found = guard.oldest_fresh_marker(tmpdir, guard.MARKER_GLOB, guard.FRESHNESS_SECONDS)
-    label = f"marker older than {guard.FRESHNESS_SECONDS}s is ignored"
-    if not _testlib.report(found is None, label):
-        fails.append(label)
+        stale_time = time.time() - (guard.FRESHNESS_SECONDS + 60)
+        os.utime(fresh, (stale_time, stale_time))
+        label = f"{fresh.name} older than {guard.FRESHNESS_SECONDS}s is ignored"
+        if not _testlib.report(
+            guard.oldest_fresh_marker(tmpdir, glob, guard.FRESHNESS_SECONDS) is None, label
+        ):
+            fails.append(label)
+        fresh.unlink()
 
-    fresh.unlink()
     (tmpdir / ".commit-marker-session-xyz").touch()
-    found = guard.oldest_fresh_marker(tmpdir, guard.MARKER_GLOB, guard.FRESHNESS_SECONDS)
-    if not _testlib.report(found is None, "a commit marker never satisfies this guard"):
-        fails.append("a commit marker never satisfies this guard")
+    for glob in guard.MARKER_GLOBS:
+        label = f"a commit marker never satisfies {glob}"
+        if not _testlib.report(
+            guard.oldest_fresh_marker(tmpdir, glob, guard.FRESHNESS_SECONDS) is None, label
+        ):
+            fails.append(label)
 
 sys.exit(_testlib.summarize(fails, style="count"))
