@@ -75,6 +75,8 @@
 - Before claiming done or handing to Joe: run every FAST check the project HAS (typecheck, unit, lint, build) - all must pass. No size exemption; a one-line edit gets the same floor as a rewrite. Never skip silently because something "looks small."
 - If a project has no tests, or the change is genuinely untestable by Claude (native UI, hardware, visual judgment), say so explicitly instead of skipping quietly.
 - Slow end-to-end suites (Playwright, etc.) are NOT part of this floor; projects opt in via `@import ~/.claude/snippets/test-e2e.md`.
+- When e2e looks genuinely worth running on a change, SAY so in one line of the summary and stop there - never ask, never run it unprompted. Joe declines if he disagrees. Decided 2026-08-18: he wanted fewer automatic tests, but e2e was never in the floor to begin with, and a per-task "want a test?" card would violate the front-load rule.
+- Joe running `/test` explicitly means unit AND e2e, stack inferred from the repo. That is the slow path and it is opt-in by typing it; this floor stays fast-only.
 
 ## UI & visual changes
 
