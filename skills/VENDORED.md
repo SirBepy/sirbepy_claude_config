@@ -27,18 +27,37 @@ frontmatter carries one (`impeccable` does; the Cloudflare skills don't).
 
 | Skill | Source | Version / commit | Vendored | Local patch |
 |---|---|---|---|---|
-| agents-sdk | github.com/cloudflare/skills | unknown (no version field, not plugin-installed) | 2026-08-12 (commit 4cc2977) | No |
-| cloudflare | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | No |
-| cloudflare-email-service | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | No |
-| cloudflare-one | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | No |
-| cloudflare-one-migrations | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | No |
-| durable-objects | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | No |
-| sandbox-sdk | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | No |
-| turnstile-spin | github.com/cloudflare/skills (explicitly "Mirrors developers.cloudflare.com/turnstile/spin") | unknown | 2026-08-12 (commit 4cc2977) | No |
-| web-perf | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | No |
-| workers-best-practices | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | No |
-| wrangler | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | No |
+| agents-sdk | github.com/cloudflare/skills | unknown (no version field, not plugin-installed) | 2026-08-12 (commit 4cc2977) | **Yes** - flag only (see below) |
+| cloudflare | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | **Yes** - flag only |
+| cloudflare-email-service | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | **Yes** - flag only |
+| cloudflare-one | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | **Yes** - flag only |
+| cloudflare-one-migrations | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | **Yes** - flag only |
+| durable-objects | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | **Yes** - flag only |
+| sandbox-sdk | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | **Yes** - flag only |
+| turnstile-spin | github.com/cloudflare/skills (explicitly "Mirrors developers.cloudflare.com/turnstile/spin") | unknown | 2026-08-12 (commit 4cc2977) | **Yes** - flag only |
+| web-perf | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | **Yes** - flag only |
+| workers-best-practices | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | **Yes** - flag only |
+| wrangler | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | **Yes** - flag only |
 | impeccable | github.com/pbakaus/impeccable (npm package `impeccable`, author Paul Bakaus) | 4.0.4 (from the skill's own frontmatter, not independently verified against current upstream) | 2026-08-12 (commit 4cc2977) | **Yes** - `reference/new-work.md`, commit `540c946 FIX: scope code-check by language, unbloat impeccable's contract, pin SRI hashes (94, 106, 248, 282)` |
+
+## The "flag only" patch, 2026-08-18
+
+All 11 Cloudflare-family skills gained one frontmatter line during the todo 58 audit:
+
+```yaml
+disable-model-invocation: true
+```
+
+Nothing else in them changed, so `git diff 4cc2977 HEAD -- skills/<name>` should show exactly
+that one added line per skill. Why: their descriptions totalled 4,243 chars of always-on session
+context, 41 percent of the whole model-invocable budget, against **2 invocations in the 31 days
+to 2026-08-18**, while Joe ran 59 real `wrangler` commands in `Desktop\Projects\hubbub\apps\worker`
+over the same window. So the domain is live but the auto-invoke was not earning its cost. They stay
+fully usable as `/cloudflare`, `/wrangler` and so on.
+
+**Re-vendoring will silently drop this line.** Upstream does not carry it. Anyone refreshing this
+pack from `github.com/cloudflare/skills` must re-apply the flag to all 11, or the always-on budget
+quietly grows back by 4,243 chars with no error anywhere.
 
 Evidence for the Cloudflare-family source: every one of these `SKILL.md`
 descriptions carries the phrase "Biases towards retrieval from Cloudflare docs"
