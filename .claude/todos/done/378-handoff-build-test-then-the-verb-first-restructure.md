@@ -98,3 +98,4 @@ chars (43.6%)**. Full record in `skills/AUDIT-2026-08-18.md`. Do NOT re-audit.
   shell call have no gate, so a flagged diff can still land. It already happened once, in `8abd412`.
 - Expect company in this repo. Several concurrent sessions were writing throughout; todos 370, 371,
   374 and the `respawn` skill all arrived mid-session from other chats. Commit strictly by pathspec.
+- Done 2026-08-18. /test shipped at skills/test/SKILL.md - slash-only (zero always-on description budget), stack inferred from marker files (Flutter, Node/web, Rust/Tauri, Roblox/Luau, plus a scripts-repo fallback), e2e delegated to /flutter-e2e and /jest-lua rather than absorbed. Joe answered all three open decisions: floor stays fast-only but Claude now flags when e2e looks worth running (two new bullets in CLAUDE.md), all four stacks in v1, slash-only invocation. The /ticket half of this handoff was folded into todo 351, which now carries the settled create/update/pickup scope.

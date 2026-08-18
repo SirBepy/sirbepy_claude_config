@@ -2,7 +2,21 @@
 
 ## Next up
 
-- [ ] 378 - handoff: build /test, then continue the verb-first restructure
+- [ ] 351 - build `/ticket`: create/update/pickup only, platform looked up from the repo
+
+**`/test` shipped 2026-08-18** (handoff 378 archived), the smallest complete instance of the
+verb-first pattern: `skills/test/SKILL.md`, slash-only so it costs zero always-on description
+budget, stack inferred from marker files across Flutter, Node/web, Rust/Tauri, Roblox/Luau and a
+scripts-repo fallback, with e2e delegated to `/flutter-e2e` and `/jest-lua` rather than absorbed.
+Joe settled all three open decisions in one card: **the automatic floor stays fast-checks-only**,
+but Claude now says in one line when e2e looks worth running instead of asking (two new bullets in
+`CLAUDE.md`); all four stacks in v1; slash-only invocation. **351 now carries the settled `/ticket`
+scope** - create/update/pickup merged, `priorities` and `done-audit` left alone, and the tree-wide
+router idea explicitly dead at 3/10.
+
+**Still open from 375:** the `/linear` SKILL.md pointer to the ground check. Blocked three times now
+because a concurrent session holds uncommitted changes in that file. Enforcement does not depend on
+it - the guard's deny message already names the ref.
 
 **The outbound gate shipped 2026-08-18** (Joe's pick for the first restructure build): Linear
 creates and claim-bearing updates on both platforms are now gated by the shared ground check in
@@ -25,8 +39,10 @@ premise re-verification, no dead-todo archival - because Steps 2-4 are skipped w
 given, per the rule todo 358 itself added. The closing `/close` then filed three more (367, 368,
 369), all from that run's own tooling friction.
 
-Behind 58 the actionable queue is **thirteen**: 351, 353, 355, 356, 357, 360, 362, 363, 364, 365,
-367, 368, 369. Run `/plan-todos` to order them, once 58 is done.
+The actionable queue was **thirteen** when 58 closed: 351, 353, 355, 356, 357, 360, 362, 363, 364,
+365, 367, 368, 369. Concurrent sessions have since filed more (370, 371, 372, 373, 374, 376, 377,
+379, plus two slug-only files with no id). **58 is done, so nothing gates ordering any more - run
+`/plan-todos`**; only 351 is placed on the lane above.
 
 **11, 30 and 362 were all ruled on by 58 on 2026-08-18, and none of them is parked any more:**
 
