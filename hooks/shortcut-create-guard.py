@@ -9,7 +9,7 @@ go in front of the dev instead. Absence of a marker is the verdict.
 REST carries most of the enforcement: SKILL.md says the Shortcut MCP is "frequently not
 connected", so nearly every real creation is a curl/Invoke-RestMethod POST.
 
-Deliberately a separate file from `skills/shortcut-create-ticket/hooks/guard_mutation.py`:
+Deliberately a separate file from `hooks/shortcut-mutation-guard.py`:
 that guard fail-closed denies when no `storyPublicId` is present, which is every
 not-yet-created story, so adding `stories-create` to its matcher would kill all filing.
 

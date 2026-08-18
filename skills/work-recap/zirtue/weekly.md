@@ -189,7 +189,7 @@ If yes:
 
 - Move the ticket from **Today** to **Done** in the payload.
 - Offer to draft a "done" comment for the dev to paste on the ticket. Mention any teammates already tagged in the thread.
-- Do **not** post the comment automatically — Shortcut mutations route through `mcp__shortcut__create-comment` and the `guard_mutation.py` hook requires explicit dev approval. Hand the draft to the dev for review.
+- Do **not** post the comment automatically: Shortcut mutations route through `mcp__shortcut__create-comment` and the `hooks/shortcut-mutation-guard.py` hook requires explicit dev approval. Hand the draft to the dev for review.
 
 ### 7. Build the clipboard payload (only if `copy` flag passed)
 

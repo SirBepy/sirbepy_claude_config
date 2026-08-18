@@ -186,7 +186,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"C:\\Users\\tecno\\.claude\\skills\\shortcut-create-ticket\\hooks\\guard_mutation.py\""
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\shortcut-mutation-guard.py\""
           }
         ]
       },

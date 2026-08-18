@@ -17,7 +17,7 @@ On 2026-07-30 a session hand-wrote four throwaway Python scripts to `C:/tmp/` to
 
 REST is the primary path (Shortcut MCP is frequently not connected). Token extraction: `~/.claude/refs/shortcut-api.md`.
 
-**Ownership note:** the `guard_mutation.py` PreToolUse hook (wired in `settings.json`) only guards `mcp__shortcut__stories-update` and friends - it does not see raw REST `curl` PUTs. This skill is meant for stories the dev names explicitly (his own, or ones he's asked to be edited on someone's behalf); it does not re-implement the hook's owner check. Don't use it to mutate a story whose ownership hasn't been confirmed with the dev.
+**Ownership note:** the `hooks/shortcut-mutation-guard.py` PreToolUse hook (wired in `settings.json`) only guards `mcp__shortcut__stories-update` and friends - it does not see raw REST `curl` PUTs. This skill is meant for stories the dev names explicitly (his own, or ones he's asked to be edited on someone's behalf); it does not re-implement the hook's owner check. Don't use it to mutate a story whose ownership hasn't been confirmed with the dev.
 
 ## Fixed identity & constants
 

@@ -21,6 +21,16 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+_HOOKS_DIR = Path(__file__).resolve().parent
+if str(_HOOKS_DIR) not in sys.path:
+    sys.path.insert(0, str(_HOOKS_DIR))
+
+try:
+    from _hooklib import read_payload
+except Exception as e:
+    sys.stderr.write(f"[shortcut-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
+    sys.exit(2)
+
 API_BASE = "https://api.app.shortcut.com/api/v3"
 ENV_FILE = Path.home() / ".claude" / ".env"
 
@@ -84,8 +94,8 @@ def fetch_story(story_id: int, token: str) -> dict:
 def is_release_only_mutation(tool_input: dict) -> bool:
     """True if the tool_input changes ONLY the Release custom field.
 
-    Any other key present (name, description, workflow_state_id, etc.) — or a
-    custom_fields entry for any other field — fails this check so the regular
+    Any other key present (name, description, workflow_state_id, etc.), or a
+    custom_fields entry for any other field, fails this check so the regular
     owner guard still applies.
     """
     allowed_keys = {"storyPublicId", "custom_fields"}
@@ -110,9 +120,11 @@ def extract_story_ids(tool_input: dict) -> list[int]:
 
 
 def main() -> None:
+    # Via _hooklib so a UTF-8 BOM on stdin is stripped. Parsing it by hand here used to
+    # deny every BOM-prefixed payload as malformed, which reads as a guard hit, not a bug.
     try:
-        payload = json.loads(sys.stdin.read() or "{}")
-    except json.JSONDecodeError as e:
+        payload = read_payload()
+    except Exception as e:
         deny(f"hook received invalid JSON on stdin: {e}")
 
     tool_name = payload.get("tool_name", "<unknown>")
@@ -123,7 +135,7 @@ def main() -> None:
         deny(
             f"{tool_name}: no recognized story-id key in tool_input "
             f"(checked {', '.join(STORY_ID_KEYS)}). "
-            f"Add the correct key to STORY_ID_KEYS in guard_mutation.py "
+            f"Add the correct key to STORY_ID_KEYS in hooks/shortcut-mutation-guard.py "
             f"before using this tool."
         )
 

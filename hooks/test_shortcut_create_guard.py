@@ -32,7 +32,7 @@ CASES = [
     ("Bash", f'curl -X POST "{URL}/12345/comments" -d @c.json', False, "POST to /stories/<id>/comments"),
     ("Bash", f'curl -s "{URL}/12345" -H "Shortcut-Token: $TOKEN"', False, "plain GET of one story"),
     ("Bash", f'echo "we POST to {URL} in the skill"', False, "URL mentioned in prose, no data flag"),
-    ("mcp__shortcut__stories-update", None, False, "MCP update tool, guard_mutation's job"),
+    ("mcp__shortcut__stories-update", None, False, "MCP update tool, shortcut-mutation-guard's job"),
     ("Bash", "git commit -m 'FEAT: stories'", False, "unrelated command"),
     ("Read", None, False, "non-shell tool"),
 ]
