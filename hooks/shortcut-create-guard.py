@@ -32,7 +32,9 @@ except Exception as e:
     sys.exit(2)
 
 MARKER_DIR = _HOOKS_DIR
-MARKER_GLOB = ".shortcut-marker*"
+# Shared with linear-create-guard.py. `.shortcut-marker*` is the legacy name, still accepted
+# so instructions written before the 2026-08-18 split keep working.
+MARKER_GLOBS = (".outbound-marker*", ".shortcut-marker*")
 FRESHNESS_SECONDS = 120
 OVERRIDE_ENV = "CLAUDE_SHORTCUT_CREATE_HOOK_BYPASS"
 CREATE_TOOL = "mcp__shortcut__stories-create"
@@ -74,12 +76,12 @@ def main() -> None:
     if os.environ.get(OVERRIDE_ENV):
         sys.exit(0)
 
-    if consume_fresh_marker(MARKER_DIR, MARKER_GLOB, FRESHNESS_SECONDS):
+    if any(consume_fresh_marker(MARKER_DIR, glob, FRESHNESS_SECONDS) for glob in MARKER_GLOBS):
         sys.exit(0)
 
     deny(
         "[shortcut-create-guard] Ticket creation blocked: no fresh ground-check marker. "
-        "Run the ground check in skills/shortcut-create-ticket/ground-check.md first. "
+        "Run the ground check in refs/outbound-ground-check.md first. "
         "If it returned a HARD STOP, that is the point - the work may already be done; "
         "put the hit in front of the dev instead of filing. "
         f"If the ground check itself is broken, set {OVERRIDE_ENV}=1 to bypass."
