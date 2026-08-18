@@ -2,6 +2,13 @@
 
 ## Next up
 
+- [ ] 378 - handoff: build /test, then continue the verb-first restructure
+
+**The outbound gate shipped 2026-08-18** (Joe's pick for the first restructure build): Linear
+creates and claim-bearing updates on both platforms are now gated by the shared ground check in
+`refs/outbound-ground-check.md`. Todo 375 archived. Two bugs fell out of it, both fixed: a test
+broken by my own rename, and a UTF-8 BOM in `~/.claude/.env` that had been making the Shortcut
+owner check fail closed on every mutation.
 
 **58 is DONE as of 2026-08-18**, along with its 366 pointer. Both archived. The audit triaged all 83
 skills, ran 6 independent reviewers over 3 contested clusters, and **removed nothing** - the tree was
