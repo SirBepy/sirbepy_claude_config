@@ -178,6 +178,10 @@
           {
             "type": "command",
             "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\linear-create-guard.py\""
+          },
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\linear-update-guard.py\""
           }
         ]
       },

@@ -26,12 +26,20 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload
+    from _hooklib import read_payload, consume_fresh_marker, oldest_fresh_marker
 except Exception as e:
     sys.stderr.write(f"[shortcut-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
 
 API_BASE = "https://api.app.shortcut.com/api/v3"
+
+MARKER_DIR = _HOOKS_DIR
+MARKER_GLOBS = (".outbound-marker*", ".shortcut-marker*")
+FRESHNESS_SECONDS = 120
+
+# Only these updates carry a CLAIM, so only these need the ground check. Moving a card or
+# self-assigning asserts nothing, and gating those would train the dev to bypass the gate.
+CLAIM_BEARING_KEYS = ("name", "description", "text")
 ENV_FILE = Path.home() / ".claude" / ".env"
 
 # Release custom field UUID. Mutations that touch ONLY this field are allowed
@@ -59,10 +67,14 @@ STORY_ID_KEYS = (
 
 
 def load_env_file(path: Path) -> None:
-    """Minimal .env loader. Does NOT overwrite existing env vars."""
+    """Minimal .env loader. Does NOT overwrite existing env vars.
+
+    utf-8-sig, not utf-8: the live ~/.claude/.env carries a BOM, which made the FIRST key
+    parse as '\\ufeffSHORTCUT_API_TOKEN' and never match, denying every mutation.
+    """
     if not path.is_file():
         return
-    for raw in path.read_text(encoding="utf-8").splitlines():
+    for raw in path.read_text(encoding="utf-8-sig").splitlines():
         line = raw.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
@@ -108,6 +120,16 @@ def is_release_only_mutation(tool_input: dict) -> bool:
     return all(cf.get("field_id") == RELEASE_FIELD_ID for cf in cfs)
 
 
+def is_claim_bearing(tool_name: str, tool_input: dict) -> bool:
+    """True if this mutation asserts something about the code, rather than just moving it.
+
+    A comment is always a claim; an update is one only when it rewrites text.
+    """
+    if tool_name.endswith("create-comment"):
+        return True
+    return any(tool_input.get(key) for key in CLAIM_BEARING_KEYS)
+
+
 def extract_story_ids(tool_input: dict) -> list[int]:
     ids: list[int] = []
     for key in STORY_ID_KEYS:
@@ -145,6 +167,17 @@ def main() -> None:
     # by the dev.
     if is_release_only_mutation(tool_input):
         allow()
+
+    # Cheap local check before the network-bound owner check below, so a missing marker
+    # fails without burning an API round trip per story.
+    if is_claim_bearing(tool_name, tool_input):
+        if not any(consume_fresh_marker(MARKER_DIR, glob, FRESHNESS_SECONDS) for glob in MARKER_GLOBS):
+            deny(
+                f"{tool_name} rewrites ticket text, so it needs a ground check: no fresh marker. "
+                "Run the ground check in refs/outbound-ground-check.md first. On an update the only "
+                "hard stop is the claim being absent at the tracked branch - see its 'Updates are a "
+                "different question' section. Moving state or self-assigning needs no check."
+            )
 
     load_env_file(ENV_FILE)
     token = os.environ.get("SHORTCUT_API_TOKEN")
