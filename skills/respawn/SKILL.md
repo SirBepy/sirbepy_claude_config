@@ -25,34 +25,33 @@ spawn call, so a close-then-spawn ordering silently loses the successor and the 
 ## What this is NOT
 
 - **No `/code-check`.** Backlog sweeps are deliberate work Joe runs himself. Skipped by design.
-- **No commits.** The successor inherits the same dirty tree and continues the same work, so
-  nothing is at risk of being lost - but that makes Phase 3's git snapshot load-bearing, not
-  optional. A successor that doesn't know what's half-finished in its own tree starts blind.
+- **No commits.** Respawn's own invocation takes a freeform note/model override, never a chained
+  command, so `/close`'s Phase 5 (run chained commands, where `/commit` would live) never fires
+  here. The successor inherits the same dirty tree and continues the same work, so nothing is at
+  risk of being lost - but that makes Phase 4's git snapshot below load-bearing, not optional. A
+  successor that doesn't know what's half-finished in its own tree starts blind.
 - **No handoff file.** If Joe wants a durable record instead of a live pickup, that's `/handoff`,
   which is a different gesture: defer without picking up.
 
-## Phase 0 - Safe-to-close
+## Phases 0-3 - run /close verbatim, minus code review
 
-Run `/close`'s Phase 0 verbatim (`~/.claude/skills/close/SKILL.md`), with one change: an unfinished
-item is NOT filed as a todo. It goes into Phase 3's "Where it stalled" and "Next steps" instead -
-the successor is about to start work, so handing it the item beats parking it in a backlog.
+Run `/close --skip-review --dont-close`'s Phases 0, 1, 3, and 4 exactly as written in
+`~/.claude/skills/close/SKILL.md` - no respawn-specific overrides:
 
-Still ask Joe the "finish it first / hand it over" question when he's watching, same as /close.
+- **Phase 0 - Safe-to-close check.** Same AskUserQuestion prompt when Joe is watching an
+  unfinished dev commitment. Unfinished items get filed as todos in Phase 3 below exactly like a
+  normal close - this skill's own handoff prompt (Phase 4 below) surfaces them to the successor
+  live on top of that, it doesn't replace the todo.
+- **Phase 1 - Retrospective.** Including the transcript-grounding step for long sessions. Print
+  nothing here - Phases 3 and 4 (of this skill) consume it.
+- **Phase 3 - Persist.** All three steps: memory writes through the rubric gate, todo files for
+  every qualifying item, and the screenshot summary count.
+- **Phase 4 - Counter summary.** Print the one-line counter, same format as a normal close.
 
-## Phase 1 - Retrospective (internal)
+## Phase 4 - Compose the handoff prompt
 
-Run `/close`'s Phase 1, including its transcript-grounding step for long sessions. Print nothing.
-It exists here only to feed Phase 2's memory writes and Phase 3's prompt.
-
-## Phase 2 - Memory writes
-
-`/close`'s Phase 3 step 1, unchanged: route each correction and confirmed non-obvious fact through
-`~/.claude/refs/memory-rubric.md`'s ADD/UPDATE/DELETE/NONE gate. NONE is a normal outcome.
-
-## Phase 3 - Compose the prompt
-
-This is the whole skill. Joe reads this message, so lead with what he'd want to see at a glance
-and put the depth underneath.
+This is respawn's own addition on top of /close. Joe reads this message, so lead with what he'd
+want to see at a glance and put the depth underneath.
 
 ```
 We're continuing <one line: the original ask, not the last subtask>.
@@ -84,20 +83,20 @@ too much work - cut, don't reword.
 If the invocation carried a freeform note, honor it in the prompt; it never overrides the derived
 context, it adds to it.
 
-## Phase 4 - Spawn
+## Phase 5 - Spawn
 
-Call `spawn_chat` with `cwd` = this session's own cwd and `prompt` = Phase 3's text. Omit `model`
+Call `spawn_chat` with `cwd` = this session's own cwd and `prompt` = Phase 4's text. Omit `model`
 and `effort` so the successor inherits this chat's model, effort, account, character and
 auto-accept - unless the invocation named an override (`/respawn opus`).
 
 The tool refuses a cwd that isn't this session's own, and refuses a second spawn in the same turn.
 Both refusals mean something is wrong with the call, not with the daemon - fix the call, and if
-the second one fires, you already spawned: do NOT retry, go straight to Phase 5.
+the second one fires, you already spawned: do NOT retry, go straight to Phase 6.
 
 On `{ok: false}`: stop. Report the error and leave this chat open. A failed spawn followed by a
 close loses the session for nothing.
 
-## Phase 5 - Close
+## Phase 6 - Close
 
 Tell Joe the successor's session id, then run `/close`'s Phase 6 exactly: `close_session` first,
 the rename/kill script second. That ordering is a hard rule over there and it holds here.
