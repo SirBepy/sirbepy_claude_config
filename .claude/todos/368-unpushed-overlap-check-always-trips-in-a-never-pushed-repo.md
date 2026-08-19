@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=7, reconfirm-count=1, content-hash=4fc6c18e -->
 # `/commit`'s unpushed-overlap check is permanently tripped in a repo with no push cadence
 
 **Type:** skill-improvement

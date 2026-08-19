@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=5, reconfirm-count=1, content-hash=11dbc1bd -->
 # "Claim-bearing" is defined in three places and they can drift apart silently
 
 **Type:** task

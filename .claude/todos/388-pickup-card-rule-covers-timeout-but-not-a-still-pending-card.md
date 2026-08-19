@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=8, reconfirm-count=1, content-hash=edef29dc -->
 # `/pickup`'s card rule covers a timed-out card but not one that is still pending
 
 **Type:** skill-improvement

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=6, reconfirm-count=1, content-hash=59a398dc -->
 # Skill candidate: render-and-diff a built screen against its design tile
 
 **Type:** skill-improvement

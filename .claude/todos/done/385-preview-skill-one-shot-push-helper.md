@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=EASY, worth=4, reconfirm-count=1, content-hash=9639d5a2 -->
 # /preview skill: reduce the 4-step manual push dance to one command
 
 **Type:** skill-improvement
@@ -15,3 +16,8 @@ Observed 2026-08-19 in `claude_usage_in_taskbar`: pushed 7 mockup revisions in o
 ## Approach
 
 Add a small helper script alongside `SKILL.md` (e.g. `push-preview.ps1`/`push-preview.sh`) that takes a file path, title, and optional slug, and does the JSON-build + curl POST + (optionally) leaves cleanup to the caller. Update `SKILL.md`'s primary/fallback recipe to call the script instead of hand-rolling `node -e`/`ConvertTo-Json` inline. Keep the existing manual recipe as a documented fallback for when the script itself isn't present (matches the "Primary" / "No-Node fallback" structure already in the skill).
+
+
+## Notes
+
+- Dropped via /cleanup-todos 2026-08-19: worth 4/10, pure convenience wrapper around an existing one-line curl, no failure ever cited and the todo's own Context says there is no functional problem. Archived on the ai-origin worth<=4 rule, not deleted - move back out of done/ to revive it.

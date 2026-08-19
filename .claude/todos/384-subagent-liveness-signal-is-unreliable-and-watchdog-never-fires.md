@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=8, reconfirm-count=1, content-hash=f46feb19 -->
 # The doctrine's subagent liveness signal is unreliable, and its watchdog rule never actually fires
 
 **Type:** skill-improvement

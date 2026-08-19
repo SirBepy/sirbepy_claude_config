@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=9, reconfirm-count=1, content-hash=c92f3392 -->
 # The orphan-check preamble is gated on "runs Node commands", so a subagent's `find` sweep escapes it
 
 **Type:** skill-improvement

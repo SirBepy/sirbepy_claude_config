@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=5, reconfirm-count=1, content-hash=44950f5d -->
 # Three more `search/stories` recipes are still inline, outside todo 343's named scope
 
 **Type:** skill-improvement

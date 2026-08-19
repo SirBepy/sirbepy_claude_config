@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=EASY, worth=9, reconfirm-count=1, content-hash=aecb4b7a -->
 # /commit step 8 cannot catch a peer's dirty hunks inside a file you name
 
 **Type:** skill-improvement

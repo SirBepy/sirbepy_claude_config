@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=EASY, worth=8, reconfirm-count=1, content-hash=6d49250e -->
 # /cleanup-todos verifies premises against whatever is checked out, and says so
 
 **Type:** skill-improvement

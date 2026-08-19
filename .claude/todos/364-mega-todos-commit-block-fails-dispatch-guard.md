@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=7, reconfirm-count=1, content-hash=bd2d8122 -->
 # Following /mega-todos verbatim gets your dispatch rejected by dispatch-preamble-guard
 
 **Type:** skill-improvement

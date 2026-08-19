@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=5, reconfirm-count=1, content-hash=1448a771 -->
 # Six guard hooks each redefine FRESHNESS_SECONDS and the marker-glob constants
 
 **Type:** task

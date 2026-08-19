@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=EASY, worth=6, reconfirm-count=1, content-hash=7af3c2fd -->
 # `figma-tiles` calls the desktop MCP server "unmetered"; Figma documents a daily cap
 
 **Type:** skill-improvement

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=EASY, worth=8, reconfirm-count=1, content-hash=9401e9c1 -->
 # `complete-todo.ps1` never prunes a PLAN.md line written in the bold style, and says so as if it succeeded
 
 **Type:** skill-improvement

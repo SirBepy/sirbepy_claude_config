@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=EASY, worth=8, reconfirm-count=1, content-hash=c936744e -->
 # /close: state that Phases 0-4 run immediately, and narrow the background-work gate
 
 **Type:** skill-improvement

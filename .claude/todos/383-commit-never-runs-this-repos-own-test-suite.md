@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=9, reconfirm-count=1, content-hash=1c19496d -->
 # /commit's test gate only looks for .claude/skills/run-tests/, so ~/.claude's own suite never runs
 
 **Type:** skill-improvement

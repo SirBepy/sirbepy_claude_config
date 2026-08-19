@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=7, reconfirm-count=1, content-hash=7ffd74ba -->
 # /create-pr's preview card can never render under the Conductor turn-status rule
 
 **Type:** bug

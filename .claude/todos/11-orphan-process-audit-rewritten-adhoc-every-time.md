@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-15, complexity=HARD, worth=5, reconfirm-count=3, content-hash=3e2b2b3e -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=6, reconfirm-count=4, content-hash=3e2b2b3e -->
 # Orphan-process forensics gets rewritten from scratch every time it is needed
 
 **Type:** skill-improvement

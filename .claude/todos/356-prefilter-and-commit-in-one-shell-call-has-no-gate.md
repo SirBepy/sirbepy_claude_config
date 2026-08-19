@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=9, reconfirm-count=1, content-hash=27881814 -->
 # Running `/commit`'s prefilters and `git commit` in one shell call lets a flagged diff through
 
 **Type:** skill-improvement

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=6, reconfirm-count=1, content-hash=08701f74 -->
 # hs_addtime.cjs is unwired and hardcoded, so nothing can reach it
 
 **Type:** task

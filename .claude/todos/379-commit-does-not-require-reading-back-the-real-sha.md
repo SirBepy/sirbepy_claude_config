@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=EASY, worth=9, reconfirm-count=1, content-hash=4bb6d7d4 -->
 # /commit never requires reading the real sha back, so a fabricated one reaches the dev
 
 **Type:** skill-improvement

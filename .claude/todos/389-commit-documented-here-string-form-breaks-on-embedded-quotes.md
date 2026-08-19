@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=6, reconfirm-count=1, content-hash=9a51781c -->
 # `/commit`'s documented inline here-string form broke on a message containing double quotes
 
 **Type:** skill-improvement

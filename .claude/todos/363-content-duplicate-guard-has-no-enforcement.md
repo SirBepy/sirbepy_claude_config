@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=7, reconfirm-count=1, content-hash=ec0c6c76 -->
 # The content-duplicate guard is documented but nothing enforces it
 
 **Type:** skill-improvement

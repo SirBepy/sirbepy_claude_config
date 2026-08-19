@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=EASY, worth=8, reconfirm-count=1, content-hash=590e4b89 -->
 # /linear's recipes select numeric `priority`, which reads as the opposite of what it means
 
 **Type:** skill-improvement

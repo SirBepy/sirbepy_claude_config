@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=6, reconfirm-count=1, content-hash=e97d156e -->
 # Two session-marker writes landed on malformed paths, leaving strays `git status` never stops showing
 
 **Type:** skill-improvement

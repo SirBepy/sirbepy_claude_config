@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-15, complexity=HARD, worth=6, reconfirm-count=3, content-hash=a3bae045 -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=6, reconfirm-count=4, content-hash=a3bae045 -->
 # Skill for the Storybook restart-wait-screenshot loop
 
 **Type:** skill-improvement

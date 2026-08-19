@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=EASY, worth=8, reconfirm-count=1, content-hash=ad0998d2 -->
 # shortcut-mutation-guard has no test, and two guards carry an unused import
 
 **Type:** task

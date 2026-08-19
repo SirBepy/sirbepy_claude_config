@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=HARD, worth=6, reconfirm-count=1, content-hash=59618fe4 -->
 # `/auto-do-todos` Step 6 mandates a subagent per todo, including for edits CLAUDE.md says to do inline
 
 **Type:** skill-improvement

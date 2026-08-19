@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=EASY, worth=6, reconfirm-count=1, content-hash=49ac9891 -->
 # `/linear` still owns write plumbing after the `/ticket` merge, and its file has been locked four times
 
 **Type:** skill-improvement

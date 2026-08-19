@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-19, complexity=EASY, worth=8, reconfirm-count=1, content-hash=fdf651f9 -->
 # watch-build.ps1 reports BUILD_RESULT=failure when a triggered workflow is `skipped`
 
 **Type:** task
