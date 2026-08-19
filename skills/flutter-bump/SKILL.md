@@ -1,6 +1,6 @@
 ---
 name: flutter-bump
-description: Bumps the pinned Flutter stable SDK across the three ZNG repos (zng-app, zng-admin, zng-biller) sequentially via fvm, verifies each with analyze/test/build, then commits and pushes the bump files per repo (established message style "Bump Flutter to <version>").
+description: Bumps the pinned Flutter stable SDK across the three ZNG repos (zng-app, zng-admin, zng-biller) sequentially via fvm, verifies each with `fvm flutter` analyze/test/build (gated on output text, not exit code), then commits and pushes the bump files per repo (established message style "Bump Flutter to <version>").
 disable-model-invocation: true
 ---
 
@@ -21,11 +21,23 @@ disable-model-invocation: true
 
 ## 0. Resolve the target version
 
-Fetch `https://storage.googleapis.com/flutter_infra_release/releases/releases_windows.json`.
-`current_release.stable` is a hash — find the entry in `releases` whose `hash`
-matches it (or, if that fails, the first entry with `channel: "stable"`) and
-read its `version`. If the fetch or parse fails, fall back to `fvm releases
---channel stable` and take the latest listed stable version.
+**This project always uses fvm: only bump to a version fvm itself recognizes
+as a stable-channel release.** `fvm install <version>` will happily fetch and
+build ANY version string as a raw git ref (log shows `channel [user-branch]`
+and a from-source `Building flutter tool...` step) even when that version
+isn't a real release yet: found 2026-08-13 with 3.47.0, which Flutter's own
+release feed already listed but fvm's release index didn't. That's a
+different, unvetted install path, not a normal channel release.
+
+1. Run `fvm releases --channel stable` and read the last row (or the row
+   marked `✓`): that's the true target version, fvm's own authoritative
+   list.
+2. Optionally cross-check against
+   `https://storage.googleapis.com/flutter_infra_release/releases/releases_windows.json`
+   (`current_release.stable` hash → matching `releases` entry's `version`) -
+   if it names a newer version than fvm's list does, that version has been
+   released but fvm hasn't indexed it yet. Do NOT target it; note the gap in
+   the final report instead.
 
 Print the resolved target version before continuing.
 
@@ -65,49 +77,61 @@ re-run `fvm use` or the verify steps for that repo.
 
 ### 2c. Bump
 
-1. `fvm use <version>` inside the repo (updates `.fvmrc` and
-   `.vscode/settings.json`, runs `pub get` automatically).
+1. `fvm use <version> --force` inside the repo (updates `.fvmrc` and
+   `.vscode/settings.json`, runs `pub get` automatically). `--force` skips an
+   interactive version-mismatch prompt this skill never wants to hit.
 2. Overwrite `flutter.version` at the repo root with the plain version
    string only — ASCII, no trailing newline, nothing else in the file.
-3. **Rewrite `.vscode/settings.json`'s `dart.flutterSdkPath` from the
-   relative value `fvm use` just wrote (`.fvm/versions/<version>`) to the
-   absolute equivalent (`C:/Users/tecno/fvm/versions/<version>`).** Found
-   2026-07-31: Dart-Code resolves a relative `flutterSdkPath` against the
-   directory containing the open `.code-workspace` FILE, not the individual
-   workspace folder it's set in, whenever the repo is opened as one folder of
-   a multi-root workspace (e.g. `zng-admin.code-workspace`, which bundles
-   zng-api/zng-admin/zng-app/zng-biller). That resolves to a nonexistent path
-   and the analysis server silently falls back to whatever Flutter is on
-   PATH — the stale global install — producing real compile errors in the
-   editor for APIs the pinned version genuinely has (verified by grepping the
-   pinned SDK's own source). Absolute paths bypass this entirely.
-4. **Confirm the pin actually took (mandatory — see "fvm falls back silently"
-   below).** Read `.dart_tool/package_config.json` and check its `flutterRoot`:
+3. **Leave `.vscode/settings.json`'s `dart.flutterSdkPath` exactly as `fvm
+   use` wrote it**: the relative `.fvm/versions/<version>`. Never rewrite it
+   to an absolute, machine-specific path (a prior version of this skill did;
+   Joe rejected that 2026-08-13 as unscalable: hardcoding
+   `C:/Users/tecno/...` breaks for every other dev and any CI). This
+   knowingly re-accepts the multi-root-workspace risk described in
+   `references/fvm-landmines.md`: see Section 3 below for the current
+   trade-off and mitigation.
+4. **Confirm the pin actually took.** Read `.dart_tool/package_config.json`
+   and check its `flutterRoot`:
 
    ```
    "flutterRoot": "file:///C:/Users/tecno/fvm/versions/<version>"
    ```
 
    If it points anywhere else (typically `file:///C:/Users/tecno/develop/flutter`,
-   a stray global checkout), repair it with the pinned SDK's own binary — NOT
-   with `fvm`, which is what wrote the wrong value:
-
-   `& "C:\Users\tecno\fvm\versions\<version>\bin\flutter.bat" pub get`
-
-   Re-read `flutterRoot` and confirm it now matches before continuing. If it
-   still doesn't, stop this repo and report it — do not run 2d, since the
-   verify would be measuring the wrong SDK.
+   a stray global checkout), repair with `fvm flutter pub get`: the PATH bug
+   that used to make `fvm flutter` write the wrong `flutterRoot` was fixed
+   2026-07-31 (confirmed still holding 2026-08-13 across all three repos
+   after repeated `fvm flutter analyze/test/build` calls), so this repair no
+   longer needs the pinned binary directly. Re-read `flutterRoot` and confirm
+   it now matches before continuing. If it still doesn't, stop this repo and
+   report it; do not run 2d, since the verify would be measuring the wrong
+   SDK, and say plainly that the PATH fix has regressed.
 
 ### 2d. Verify
 
-Run each from the repo root. Call the **pinned SDK's binary directly**, never `fvm flutter` — the
-whole point of this step is proving the code is valid under `<version>`, and
-`fvm flutter` can silently execute a different SDK (see below), which would
-make every PASS meaningless:
+**This project always uses fvm: run every command as `fvm flutter
+<command>`, never the pinned SDK binary directly.** The PATH bug that used to
+make `fvm flutter` silently execute the wrong SDK was fixed 2026-07-31; this
+skill previously bypassed fvm entirely to route around it, but that's no
+longer necessary and contradicts how this project is meant to be used.
 
-1. `& "C:\Users\tecno\fvm\versions\<version>\bin\flutter.bat" analyze`
-2. `& "C:\Users\tecno\fvm\versions\<version>\bin\flutter.bat" test`
-3. `& "C:\Users\tecno\fvm\versions\<version>\bin\flutter.bat" build web`
+1. `fvm flutter analyze`
+2. `fvm flutter test`
+3. `fvm flutter build web`
+
+**Gate PASS/FAIL on the command's own output text, never on `$LASTEXITCODE` /
+the process exit code.** Confirmed 2026-08-13: `fvm flutter test` returns
+exit code 0 even when tests genuinely fail (verified against the pinned
+binary directly, which correctly returns 1 for the identical failure), a
+distinct fvm bug from the PATH-resolution one, and still open. Read the
+output instead:
+
+- `analyze`: PASS = `No issues found!`. Anything else (an issue count, an
+  error) = FAIL.
+- `test`: PASS = `All tests passed!`. FAIL = `Some tests failed.` (the
+  failing test names follow on `Failing tests:`).
+- `build web`: PASS = ends with `Built build\web` (Windows) / `Built
+  build/web`. A compile error before that line = FAIL.
 
 Record PASS/FAIL for each. On FAIL, capture the last ~20-30 lines of that
 command's output for the report.
@@ -136,69 +160,56 @@ style used by every prior bump commit in all three repos. No prefixes.
 If ANY of analyze/test/build FAILED for this repo: do NOT commit or push it.
 Leave its tree dirty, report the failure, and continue to the next repo.
 
-## 3. Multi-root workspace file (once, after the repo loop)
+## 3. Multi-root workspace file - no longer touched by this skill
 
 `C:\Users\tecno\Desktop\Projects\zng-admin.code-workspace` bundles all four
 repos (`zng-api`, `zng-admin`, `zng-app`, `zng-biller`) as one VS Code
-multi-root workspace. A *relative* `dart.flutterSdkPath` resolves against
-the wrong directory whenever this workspace is open, silently falling back
-to the stale global Flutter on PATH — full root-cause detail (Dart-Code's
-`extension.js` internals) is in `references/fvm-landmines.md`. 2c step 3
-already neutralizes this per-repo by writing an absolute path instead. This
-step does the same at the workspace level, since a genuinely correct
-absolute path here is a reliable backstop regardless of which folder's
-settings the analyzer ends up consulting.
+multi-root workspace. A *relative* `dart.flutterSdkPath` resolves against the
+directory containing the open `.code-workspace` FILE, not the individual
+workspace folder it's set in, whenever this workspace is open - full
+root-cause detail (Dart-Code's `extension.js` internals) is in
+`references/fvm-landmines.md`. That can make Dart-Code silently fall back to
+whatever Flutter is on PATH when the repo is opened through this workspace
+file specifically.
 
-Fix: after the repo loop, only if **all three** Flutter repos (zng-app,
-zng-admin, zng-biller) ended up on the exact same final version (freshly
-bumped or already-on-target — never a skipped/failed one), set or update an
-explicit workspace-level SDK path so the shared server has no ambiguity to
-fall back from:
+This skill previously wrote an absolute `dart.flutterSdkPath` into the
+workspace file's `settings` block to neutralize that. **Joe rejected the
+absolute-path approach entirely 2026-08-13** (not scalable: hardcodes a
+single machine's home directory), so this skill no longer edits the
+workspace file at all, and the multi-root-workspace risk above is a known,
+accepted trade-off, not something this skill fixes. If in-editor analysis
+inside the multi-root workspace ever looks stale or wrong, that's the likely
+cause: reload the window first; if that doesn't help, it may need a one-off
+manual `dart.flutterSdkPath` set in the workspace file (or opening the repo
+standalone instead of through the workspace), but that's a manual call for
+Joe, not something this skill does automatically.
 
-```jsonc
-{
-  "folders": [ ... ],  // unchanged
-  "settings": {
-    "dart.flutterSdkPath": "C:/Users/tecno/fvm/versions/<version>"
-  }
-}
-```
-
-Edit only the `settings` block (add it if absent); never touch `folders`.
-
-If the three repos are NOT all on the same version (one was skipped or
-failed verify), leave the workspace file untouched and say so explicitly in
-the final report — forcing the new version here would break analysis for
-whichever repo didn't move.
-
-After this edit, one manual `pub get` inside the multi-root workspace
-(Command Palette → "Dart: Get Packages", or run it in any repo's terminal)
-is still needed before Dart-Code picks up the corrected SDK — a plain
-reload/restart isn't enough on its own. Mention this in the final report as
-the last manual step needed.
-
-## fvm falls back silently — do not trust `fvm flutter`
+## fvm reliability notes
 
 Full post-mortem (two stacked fvm bugs, consequences, PATH root cause) is in
-`references/fvm-landmines.md`. The operative rules:
+`references/fvm-landmines.md`. Current state:
 
-- Never run `fvm flutter <command>` for real work (`pub get` above all) — it
-  can silently execute against whatever plain `flutter` resolves to on PATH
-  instead of the project's pin.
-- Always call the pinned SDK's binary directly for verify and repair (2d,
-  2c step 4).
+- **PATH-resolution bug (fvm silently running the wrong SDK): fixed
+  2026-07-31.** `fvm flutter <command>` is safe for real work now, confirmed
+  again 2026-08-13 (`flutterRoot` stayed correct across all three repos
+  through repeated `fvm flutter analyze/test/build` calls). This skill uses
+  `fvm flutter` throughout: do not reintroduce the direct-pinned-binary
+  bypass without new evidence the PATH bug regressed.
+- **Exit-code bug (open, found 2026-08-13):** `fvm flutter test` returns exit
+  code 0 even on genuine test failures. 2d gates on output text specifically
+  because of this: never trust `$LASTEXITCODE` from an `fvm flutter` call.
 - Always verify `flutterRoot` in `.dart_tool/package_config.json` after
   `fvm use` (2c step 4) — a correctly symlinked `.fvm/flutter_sdk` and a
   correct `fvm flutter --version` both prove nothing; only `flutterRoot` does.
-- Always use the absolute `dart.flutterSdkPath` (2c step 3, workspace-level
-  write in Section 3), never the relative value `fvm use` writes.
+- Use the relative `dart.flutterSdkPath` `fvm use` writes natively (2c step
+  3): never an absolute, machine-specific path.
 
-**New skill step:** whenever a bump changes the version, after step 2 of the
-per-repo loop completes for all three repos, also run `fvm global <version>`
-once (matching whichever version they landed on, same gating as the
-workspace-file step: only if all three agree) to keep `fvm\default` — and
-therefore PATH — pointed at the current pin. Mention in the final report
-whether this ran or was skipped (and why).
+Whenever a bump changes the version, after step 2 of the per-repo loop
+completes for all three repos, also run `fvm global <version>` once
+(matching whichever version they landed on, only if all three genuinely
+landed on it, a skipped or failed repo breaks the match) to keep
+`fvm\default`, and therefore PATH, pointed at the current pin. Mention in
+the final report whether this ran or was skipped (and why).
 
 ## fvm quirks (not failures)
 
@@ -217,17 +228,19 @@ For each of the 3 repos, report:
   bump + verify detail as above.
 - **zng-biller**: same as zng-admin.
 
-Then: whether `zng-admin.code-workspace`'s `dart.flutterSdkPath` was updated
-to `<version>`, or left alone because the three repos landed on mismatched
-versions (name which repo(s) lagged and why). Same for whether `fvm global
-<version>` ran to keep the PATH alias current.
+Then: whether `fvm global <version>` ran to keep the PATH alias current, or
+was skipped and why (a skipped/failed repo breaks the "all three landed on
+it" match).
 
 Then:
 
 - Reminder: reload the VS Code window (Dart/Flutter language server) before
   trusting in-editor analysis.
 - Whether any repo needed the `flutterRoot` repair in 2c step 4, and whether
-  the `Can't load Kernel binary` fallback fired — if either did, say plainly
-  that fvm is broken on this machine and needs reinstalling.
+  the `Can't load Kernel binary` warning fired: this is now a known
+  benign-but-persistent quirk (fires on nearly every `fvm` invocation, does
+  not affect command results) rather than an automatic "fvm is broken, needs
+  reinstalling" signal; only escalate that if `flutterRoot` itself came
+  back wrong or a repair didn't hold.
 - Per repo: the commit sha + push result, or "not committed — verify failed"
   with the failing check named.
