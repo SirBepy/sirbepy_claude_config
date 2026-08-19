@@ -2,7 +2,7 @@
 
 ## Next up
 
-**14 todos. Nothing is ordered yet: run `/plan-todos`.**
+**17 todos. Nothing is ordered yet: run `/plan-todos`.**
 
 A `/mega-todos` run on 2026-08-19 closed **33 todos in one pass**, 16 file-ownership lanes, one
 commit per todo. Zero silent drops (reconciled as a set difference, not a count), zero barrier
@@ -25,6 +25,18 @@ lane owned.
 - **402** - `oldest_fresh_marker` reads as a dead import in three guards
 - **391** - builders have no sanctioned way to take a whole-tree baseline (filed by a builder itself,
   which violated the contract's no-subagent-writes rule; the finding is real, the channel was wrong)
+
+The session's own `/close` then added three more:
+
+- **403** - `**Origin:** dev`. Reopen the comment rule from what comments are actually WORTH, in a
+  dedicated `/brainstorm` session. Joe does not value comments for their own sake, does not care how
+  they look in his own repos, does care about noise in client repos, and wants to know what a comment
+  buys an AI reader. **399 is gated on this** and may be closed by it.
+- **404** - nothing mechanically stops a subagent writing into `.claude/todos/`, and one did (391).
+  Carries forward the doctrine's own earlier rejection of a write-guard hook, plus the new evidence
+  that the report-back channel it relied on was bypassed.
+- **405** - `/mega-todos` Step D places its verify barriers inside the Workflow script, which has no
+  shell access, so they cannot run there. Same shape as 347, 358 and 369.
 
 Four gaps the run left were fixed immediately rather than filed: the duplicate-guard hook was never
 wired into `settings.json` (`5f9bf9e`), `/commit` still hand-built the session-marker path instead of
