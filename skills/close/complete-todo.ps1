@@ -230,7 +230,20 @@ if (Test-Path $planPath) {
         Write-Info "WARNING: no PLAN.md line matched todo $Id - searched for pattern '$lineIdPattern' (plain/bold/underscore/backtick id, optional [P]). If a line for this id exists in a format outside that set, it was NOT pruned."
     }
     else {
-        $keptLines = $lines | Where-Object { $_ -notmatch $lineIdPattern }
+        # Drop the whole markdown list item, not just its first line: a wrapped entry's
+        # continuation lines are indented and carry no id, so filtering line-by-line
+        # leaves orphaned prose behind (reproduced 2026-08-19, mangled 10 PLAN.md entries).
+        $keptLines = New-Object System.Collections.Generic.List[string]
+        $i = 0
+        while ($i -lt $lines.Count) {
+            if ($lines[$i] -match $lineIdPattern) {
+                $i++
+                while ($i -lt $lines.Count -and $lines[$i] -match '^\s+\S' -and $lines[$i] -notmatch '^\s*-\s*\[') { $i++ }
+            }
+            else {
+                $keptLines.Add($lines[$i]); $i++
+            }
+        }
         $utf8NoBom = New-Object System.Text.UTF8Encoding $false
         [System.IO.File]::WriteAllText($planPath, (($keptLines -join "`r`n") + "`r`n"), $utf8NoBom)
         if ($matchCount -gt 1) {
