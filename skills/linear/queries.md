@@ -9,7 +9,7 @@ Ready-made GraphQL recipes for the `/linear` skill. Paste the `Invoke-Linear` he
 Linear accepts team-prefixed IDs like `MOB-123` directly in `issue(id:)`. Pass the id as a variable:
 
 ```powershell
-(Invoke-Linear -Query 'query($id:String!){ issue(id:$id){ identifier title description state{name} assignee{name} priority labels{nodes{name}} url } }' `
+(Invoke-Linear -Query 'query($id:String!){ issue(id:$id){ identifier title description state{name} assignee{name} priorityLabel labels{nodes{name}} url } }' `
     -Variables @{ id = "MOB-123" }).issue
 ```
 
@@ -25,8 +25,10 @@ Use **`searchIssues(term:)`**. Do NOT use `issueSearch(query:)` — it is **depr
 ### List tickets assigned to the dev
 
 ```powershell
-(Invoke-Linear -Query '{ issues(filter:{ assignee:{ isMe:{ eq:true } }, state:{ type:{ neq:"completed" } } }){ nodes{ identifier title state{name} priority dueDate url } } }').issues.nodes
+(Invoke-Linear -Query '{ issues(filter:{ assignee:{ isMe:{ eq:true } }, state:{ type:{ neq:"completed" } } }){ nodes{ identifier title state{name} priorityLabel dueDate url } } }').issues.nodes
 ```
+
+Always select `priorityLabel` (String), never bare `priority` (Int, where 0 means No priority) - a low number is not a low P-number, it means unprioritised.
 
 ### List issues in a project or cycle (sprint)
 
