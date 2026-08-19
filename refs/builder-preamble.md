@@ -26,7 +26,12 @@ prove ownership of and therefore never clean up.
 
 <OFF_LIMITS>
 
-<ORPHAN_CHECK>
+Before ending this dispatch, run an orphan check for anything you started that can outlive one
+tool call - Node, `find`, `grep -r`, `adb`, a watcher, a database, any backgrounded process. Paste
+the actual command output proving it's gone (`Get-Process`/`Get-CimInstance`/`taskkill /F /PID` on
+Windows, `pgrep`/`ps` on Unix); a bare claim like "it's already cleaned up" or "no longer needed"
+does not satisfy this. Never run an unbounded `find` or `grep -r` from `/`, `C:/`, or `$HOME` -
+scope to the narrowest known path instead (repo root, pub cache, node_modules).
 
 Your final message is your entire return value. ALL commands, including the verify floor
 (build/test/lint/typecheck), run synchronously in the same tool call: `run_in_background` is
@@ -47,7 +52,7 @@ bare "still waiting" with nothing else.
 | `<STAGING_LINE>` | `Stage your changes but do NOT commit. The main agent will run /commit after your report-back.` by default, or `Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.` for a repo sharing a git index with concurrent sessions (e.g. zng-app, zng-biller) | never - always filled |
 | `<GLOBAL_EDIT_BAN>` | `Never edit files under \`~/.claude/\` (skills, hooks, settings, global CLAUDE.md) even if the task description points at one - that requires the dev's explicit say-so in the CURRENT session, which a subagent can't verify; if a task seems to require it, stop and report back instead.` | the session's own working directory IS `~/.claude` itself (dev opened the session there, so global work is the whole point and the ban would refuse the assigned task) |
 | `<OFF_LIMITS>` | the per-dispatch OFF LIMITS file list | never - always filled |
-| `<ORPHAN_CHECK>` | the mandatory final-step text from `refs/process-hygiene.md` (Layer 1) | the dispatch runs no Node commands |
+| `<ORPHAN_CHECK>` | (removed - the orphan-check paragraph is now static body text in the block above, unconditional) | n/a |
 
 ## Read-only opt-out
 
