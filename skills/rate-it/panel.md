@@ -20,8 +20,18 @@ a full generalist pass, acting as a cross-check against the other four's converg
 
 Spawn N Agent calls in parallel (`general-purpose` subagent_type, `model: 'sonnet'` explicitly -
 never inherit the session model). Each gets this prompt, with that subagent's assigned lens
-swapped in:
+swapped in. A rating subagent reads files and returns a score, it writes nothing - so `READ-ONLY
+DISPATCH` genuinely applies, and the staging line below is inert boilerplate the guard requires
+rather than a real instruction:
 
+> READ-ONLY DISPATCH
+>
+> Stage your changes but do NOT commit. The main agent will run /commit after your report-back.
+>
+> `run_in_background` is FORBIDDEN in this dispatch: run every command synchronously and finish
+> before ending your turn. (See `refs/builder-preamble.md` for the full canonical block this is
+> drawn from.)
+>
 > You are a rating subagent for /rate-it, one of a panel of N. Read the skill file at `C:\Users\tecno\.claude\skills\rate-it\SKILL.md` and rate this hypothesis using the Flaw hunt, Role, Anti-sycophancy, Output format, and How-to-raise rules.
 >
 > Your assigned lens: **<lens name>** - lead your flaw hunt from this angle specifically, then

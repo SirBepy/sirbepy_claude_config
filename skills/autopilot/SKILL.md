@@ -23,6 +23,8 @@ For the duration of an `/autopilot` run, this contract **SUPERSEDES** the global
 
 An autopilot run ADOPTS `~/.claude/refs/delegation-doctrine.md` in full: the 90/10 rule (subagents do all building and all broad reading; the main loop keeps only surgical rights), dispatch discipline (scout spec packs, embedded verify floor, the verbatim stage-don't-commit line, restated global rules), orchestrator hygiene (keep one-line outcomes, discard transcripts), and the quality tells for distrusting a report. Read it at the start of the run. `/delegate` adopts the same file for interactive sessions; everything below is the AFK-only layer on top.
 
+`hooks/dispatch-preamble-guard.py` rejects any `Agent`/`Task` dispatch missing three verbatim markers - name them here so a fan-out never gets built before the doctrine file is read: the staging line (`Stage your changes but do NOT commit` or `Leave all changes unstaged`), a `run_in_background` ... `FORBIDDEN` sentence, and either a `.for_bepy/screenshots/` id line or the `READ-ONLY DISPATCH` opt-out for read-only scouts. Paste the canonical block from `refs/builder-preamble.md` into every dispatch prompt.
+
 ## Behavior contract (hold until the task is fully complete AND verified)
 
 1. **No questions to the dev.** A question never blocks progress.
