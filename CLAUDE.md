@@ -76,7 +76,7 @@
 - If a project has no tests, or the change is genuinely untestable by Claude (native UI, hardware, visual judgment), say so explicitly instead of skipping quietly.
 - Slow end-to-end suites (Playwright, etc.) are NOT part of this floor; projects opt in via `@import ~/.claude/snippets/test-e2e.md`.
 - When e2e looks genuinely worth running on a change, SAY so in one line of the summary and stop there - never ask, never run it unprompted. Joe declines if he disagrees. Decided 2026-08-18: he wanted fewer automatic tests, but e2e was never in the floor to begin with, and a per-task "want a test?" card would violate the front-load rule.
-- Joe running `/test` explicitly means unit AND e2e, stack inferred from the repo. That is the slow path and it is opt-in by typing it; this floor stays fast-only.
+- `/test` means the normal (fast) tests, stack inferred from the repo, whatever `/test` itself defines. Browser/app-driven end-to-end runs are a separate command, `/e2e`; this floor and `/test` both stay fast-only.
 
 ## UI & visual changes
 

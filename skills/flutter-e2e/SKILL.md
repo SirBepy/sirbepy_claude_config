@@ -31,6 +31,23 @@ For any app whose flow starts behind an email-OTP or similar login (e.g. zng-bil
 
 Node + Playwright reachable (`npx playwright` or the project's own `node_modules`) - note the resolved path, you'll need it as a literal `require()` path. Screenshots go to `.for_bepy/screenshots/<session-id>/`, the id `rename-session.ps1 -GetId` returns (gitignored, per-session, matching `/close`'s purge scheme), resolved automatically by `e2e-helpers.js`'s `SHOT_DIR` via the shared `session-shot-dir.cjs` helper - never hand-fill the id.
 
+## Capture gotchas (Flutter web)
+
+Read this before any screenshot that will feed `/e2e`'s diff mode or a manual fidelity review - a
+bad capture makes every downstream measurement wrong regardless of tool. General to Flutter web,
+not one app's quirk (generalized from a zng-app session, todo 362):
+
+- **`enableSemantics` resets the scroll offset.** Capture screenshots BEFORE activating the
+  semantics tree (the `flt-semantics-placeholder` click above), or the shot lands scrolled back to
+  the top of whatever you'd scrolled to.
+- **A full-page pixel diff false-passes past a loading spinner.** A CTA that flashes a spinner
+  mid-transition can make an otherwise-broken button "match" the design by accident. Clip the CTA
+  bar out of the diffed region (`/e2e diff`'s `--exclude-built`) rather than trusting a whole-frame
+  compare.
+- **Mouse drag never scrolls Flutter web; wheel does.** And the semantics overlay swallows wheel
+  events until `flt-semantics-host` is removed from the DOM - if a scroll step silently does
+  nothing, check for that element before assuming the scroll target is wrong.
+
 ## Mode A - Scripted
 
 1. Check whether the app uses Firebase (`firebase.json` has an `emulators` block). If yes, read `references/firebase-emulators.md` first and layer its boot/build/sign-in/seed steps in. If no - which is every current zng repo (zng-app/admin/biller run a local zng-api + Postgres instead) - skip that file entirely.
@@ -72,3 +89,5 @@ Final report: append a `## Run summary` to the plan file - totals (passed/failed
 - `~/.claude/refs/flutter-web-playwright.md` - driving mechanics, read first, both modes.
 - `references/e2e-helpers.js` - Playwright helper module: semantics/click/type helpers for both modes, plus Firebase-only `signIn`/`fetchJson`/`getUidFromIndexedDb`.
 - `references/firebase-emulators.md` - optional Firebase layer (boot, build flag, sign-in, seed/assert REST); read only when the target app uses Firebase.
+- `~/.claude/skills/e2e/SKILL.md` - the router that delegates here for run mode, and owns the
+  design-fidelity diff mode that consumes a screenshot captured per this file's gotchas above.
