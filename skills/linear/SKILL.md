@@ -95,23 +95,33 @@ someone else's; a wrong edit is visible to the whole team and there is no undo.
 
 - **Create** a new issue (`issueCreate`). Assigning it to anyone is fine - filing
   a ticket for a colleague is normal, editing theirs is not.
+- **Assign an unassigned ticket to the dev himself** (`assigneeId` = the dev's
+  own id, on a ticket whose `assignee` is currently null). Picking up unclaimed
+  work is the same class of act as dragging your own card across the board, and
+  the old gate blocked it for no benefit - it forced a manual click before Claude
+  could touch a ticket it was already told to work on. Taking a ticket **off**
+  someone else, or handing one **to** someone else, stays forbidden below.
 - Any read.
 
 **Permitted only on tickets the dev CREATED** (`creator.id` == the dev's id):
 
 - Change `title`, `description`, labels, priority, estimate, project, or delete.
 
-**The single exception on tickets the dev did NOT create:**
+**The two exceptions on tickets the dev did NOT create:**
 
 - **Moving `stateId` (status) - and nothing else - when the dev is the assignee**
   (`assignee.id` == the dev's id). Dragging your own card across the board is
   expected of you; rewriting the ticket is not.
+- **Claiming it**, per the self-assign rule above: `assigneeId` = the dev's own
+  id, and only when `assignee` is currently null.
 
 **Never, on a ticket the dev did not create:**
 
 - Touch `title` or `description`. No "small clarification", no typo fix, no
   reformatting, no appending a note. This is the rule that matters most.
-- Reassign it, delete it, or change priority/labels/project.
+- Delete it, or change priority/labels/project.
+- Set `assigneeId` to anyone other than the dev, or clear an assignee that is
+  already set. Self-claiming an unassigned ticket is the only assignment write.
 
 **Before ANY `issueUpdate`,** fetch `creator { id }` and `assignee { id }` first
 and prove the edit is allowed. If it isn't, stop and tell the dev what you would
