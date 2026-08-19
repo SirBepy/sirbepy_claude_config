@@ -1,6 +1,6 @@
 # Shortcut API — shared core
 
-Canonical reference for the shortcut-* skill family (shortcut-create-ticket, shortcut-pickup-ticket, shortcut-done-audit, shortcut-priorities, shortcut-update-ticket, work-recap). Fix drift here, not per-skill.
+Canonical reference for every Shortcut caller (`ticket` and its `shortcut.md` quirks file, shortcut-done-audit, shortcut-priorities, work-recap, zirtue-release-backfill). Fix drift here, not per-skill. The create/update/pickup trio merged into `/ticket` on 2026-08-18.
 
 ## Token extraction
 
@@ -52,7 +52,7 @@ If no prefix match, also try a broad `--grep "$id"` to catch bundled references,
 curl -s "https://api.app.shortcut.com/api/v3/stories/<id>" -H "Shortcut-Token: $TOKEN"
 ```
 
-Full story JSON includes `comments[]`, `description`, `workflow_state_id`, `blocked`/`blocker`, `story_links`, `branches`, `pull_requests`, `commits`. Read `comments[]` in full, chronological order: a comment can silently reverse, narrow, or add scope the description never mentions (see `shortcut-pickup-ticket`). For provenance-checking a claim attributed to Shortcut (e.g. a todo's "per PM decision" citation), the comment thread is often the only place that backing actually lives.
+Full story JSON includes `comments[]`, `description`, `workflow_state_id`, `blocked`/`blocker`, `story_links`, `branches`, `pull_requests`, `commits`. Read `comments[]` in full, chronological order: a comment can silently reverse, narrow, or add scope the description never mentions (see `/ticket`'s Pickup flow). For provenance-checking a claim attributed to Shortcut (e.g. a todo's "per PM decision" citation), the comment thread is often the only place that backing actually lives.
 
 ## Searching stories
 

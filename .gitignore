@@ -30,7 +30,7 @@
 !favicon.ico
 
 # Per-user ticket log, not shared
-skills/shortcut-create-ticket/log.md
+skills/ticket/log.md
 
 # Runtime artifact written by /commit's build watch, per-machine
 skills/commit/watch-build.pid

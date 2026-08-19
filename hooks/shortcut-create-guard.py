@@ -1,6 +1,6 @@
 """PreToolUse hook: block Shortcut story CREATION unless the ground check passed.
 
-`/shortcut-create-ticket`'s ground check writes `.shortcut-marker-<suffix>` only when
+`/ticket`'s ground check writes `.shortcut-marker-<suffix>` only when
 its queries come back clean or soft. A hard-stop signal (a hit in Done/Testing, a merged
 PR touching the same file, the asserted symptom already absent at origin) means the
 marker is deliberately NOT written, so the create call dies here and the finding has to

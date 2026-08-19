@@ -1,7 +1,9 @@
 # Outbound ground check
 
-> The shared gate every outbound ticket write passes before it happens. Extracted from
-> `skills/shortcut-create-ticket/ground-check.md` on 2026-08-18 so Linear stops being ungated.
+> The shared gate every outbound ticket write passes before it happens. Extracted on 2026-08-18
+> from what was then `skills/shortcut-create-ticket/ground-check.md`, so Linear stopped being
+> ungated. That skill merged into `/ticket` later the same day and its copy is gone; this file is
+> now the only definition, called from `skills/ticket/SKILL.md`.
 >
 > Enforced by `hooks/shortcut-create-guard.py` and `hooks/linear-create-guard.py`. Both consume
 > the same marker, so this file is the single definition of when that marker may be written.
