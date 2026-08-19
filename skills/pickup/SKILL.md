@@ -52,9 +52,16 @@ If the todo records open decisions (in `## Notes` or elsewhere):
   unresolved decision blocks the work, write the blocker per the caller's blocker-log convention
   (autopilot: `.for_bepy/autopilot-logs/<slug>.md`), release the claim, and stop this todo -
   never guess, never silently skip the decision.
-- **Card timed out mid-run** (an interactive question died unanswered - `sent no response or
-  progress` / `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT`, ~45 min of dead wall clock, the dev walked away):
-  this is a TOOL ERROR, not a "no", and not a signal to abandon the todo.
+- **Card still pending, dev sends an unrelated or non-answering message** (`continue`, `go`, a
+  question about something else, no answers to the open decisions): this is NOT the timeout case
+  and NOT permission to proceed on recommendations - the card is still alive. Re-send the card, or
+  ask which of the pending decisions to skip. Distinguish mechanically, not by judgment: only an
+  actual MCP idle-timeout error means the card died. No error means it is still pending.
+- **Card timed out mid-run** - REQUIRES an actual MCP idle-timeout error as its precondition (an
+  interactive question died unanswered - `sent no response or progress` /
+  `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT`, ~45 min of dead wall clock, the dev walked away). Absent
+  that error, the card never died - use the still-pending branch above instead. This is a TOOL
+  ERROR, not a "no", and not a signal to abandon the todo.
   - An option is explicitly badged/labelled recommended AND the resulting action is reversible (a
     code change; never a deploy, push, or destructive/outward-facing op) - proceed on it.
   - No option is marked recommended, or the decision is high-stakes or hard to reverse - stop and
