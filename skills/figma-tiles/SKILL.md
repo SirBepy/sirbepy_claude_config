@@ -22,9 +22,17 @@ different budgets, both exhaustible independently. The rules below are enforced 
   only image renders are cached (by filename in `--out`); tree and comment fetches are not.
 - On a 429, the client backs off honoring `Retry-After` for up to 8 attempts, then raises instead
   of spinning forever. If that happens, stop and use the `slice` fallback below.
-- **Unmetered alternative:** the Figma desktop app's Dev Mode MCP server (`127.0.0.1:3845`) has no
-  quota, but it is selection-driven - it can inspect whatever is selected in the open file, not
-  sweep a whole board. Use it for a single screen, not this skill's job.
+- **Desktop MCP alternative:** the Figma desktop app's Dev Mode MCP server (`127.0.0.1:3845`) is
+  metered too - 200 tool calls/day + 10-15/min on a Starter/Pro Dev or Full seat, 600/day + 20/min
+  on Organization (`whoami`, `add_code_connect_map`, `generate_figma_design` exempt). See
+  https://developers.figma.com/docs/figma-mcp-server/rate-limits-access/. It is also
+  selection-driven - it can inspect whatever is selected in the open file, not sweep a whole
+  board. Use it for a single screen, not this skill's job. Whether its daily budget shares a
+  bucket with the REST API quota above is not documented and not verified here - do not assume
+  either way.
+- Figma also documents a remote MCP server at `https://mcp.figma.com/mcp`, available on all
+  plans. Whether it is node-id addressable (and so usable unattended, unlike the selection-driven
+  desktop one) is unverified - check before relying on it.
 
 ## Setup
 
