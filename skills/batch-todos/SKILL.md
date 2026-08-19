@@ -84,7 +84,15 @@ again; `cancel` -> stop, no changes.
 
 ## Step 5 - Evaluate EASY todos before executing
 
-Dispatch ONE read-only subagent (`model: 'sonnet'`, per the global subagent rule) that reads every EASY todo in full and verifies its premise against the current tree - still valid? actually easy? any downgrade risk (hidden design question, stale assumption, feature that's really HARD)? It returns one verdict per todo with a one-line evidence note:
+**Reference-point check, before dispatch.** Resolve trunk (repo's own convention, e.g.
+`GIT_FLOW.md`; default `develop` then `main`), then compute and PRINT
+`git rev-list --left-right --count HEAD...origin/<trunk>`. If behind is `0`, the checkout matches
+trunk - no further ceremony. If behind is nonzero, the dispatch prompt below MUST state the
+ahead/behind numbers and instruct the subagent to cite evidence via `git show origin/<trunk>:<path>`
+rather than the working copy, naming which ref each citation came from - a todo can be DONE or MOOT
+on trunk while its premise still reads valid against a stale checkout.
+
+Dispatch ONE read-only subagent (`model: 'sonnet'`, per the global subagent rule) that reads every EASY todo in full and verifies its premise against the reference point resolved above - still valid? actually easy? any downgrade risk (hidden design question, stale assumption, feature that's really HARD)? It returns one verdict per todo with a one-line evidence note, stating which ref the evidence came from:
 
 - **DO** - premise holds, proceed to execution.
 - **SKIP** - already done, stale, or superseded. Move to `done/` (create if missing), prune its PLAN.md line, note the evidence; do not execute.

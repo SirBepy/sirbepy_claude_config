@@ -68,6 +68,16 @@ other todo, never added out-of-band.
 The old rule deep-passed only the 40 lowest ids, which silently starved the NEWEST half of any
 backlog past 40 - exactly the half most likely to still be wrong. Chunking replaces that.
 
+**Reference-point check, before dispatch.** Resolve trunk (repo's own convention, e.g.
+`GIT_FLOW.md`; default `develop` then `main`), then compute and PRINT
+`git rev-list --left-right --count HEAD...origin/<trunk>`. The dispatch cannot proceed without this
+count having been printed. If behind is `0`, the checkout matches trunk - no further ceremony, move
+straight to dispatch. If behind is nonzero, every chunk's dispatch prompt MUST state the ahead/behind
+numbers and instruct that subagent to cite `ai`-origin re-verification evidence via
+`git show origin/<trunk>:<path>` rather than the working copy, naming which ref (`origin/<trunk>` or
+working tree) each citation came from. Carry the ahead/behind numbers into Step 6's report so a
+reader can see which universe the verdicts describe.
+
 **Deep pass:** dispatch one subagent per chunk (`model: 'sonnet'`, `effort: 'high'`), all chunks in
 a single parallel dispatch, each carrying the full text of its own todos. Each returns one verdict
 per todo, as prose (evidence, reasons) AND as one CSV row per todo appended at the end of its
@@ -82,9 +92,11 @@ transcription step that caused the 2026-08-12 corruption.
   - `dev`-origin: a quick read of referenced files/paths, same spot-check as before - the premise
     is the dev's own intent, which cannot go stale the same way a Claude-noticed observation can.
   - `ai`-origin, or the field is absent (unknown, treated as `ai` per the contract): an actual
-    re-verification against the current tree, not a spot-read - re-run the check the todo describes
-    (grep the symbol, re-read the referenced lines, re-run the command it cites) and the verdict
-    must cite the concrete evidence, `file:line` or the command run, rather than asserting validity.
+    re-verification against the reference point resolved above (trunk if behind is nonzero,
+    otherwise the checkout), not a spot-read - re-run the check the todo describes (grep the
+    symbol, re-read the referenced lines, re-run the command it cites) and the verdict must cite
+    the concrete evidence, `file:line` or the command run, PLUS which ref it was read against,
+    rather than asserting validity.
 - `suggested_drop`: true/false + one-line reason. Flag ONLY if the todo looks genuinely stale,
   superseded, or no-longer-relevant. Never flag on age or "not important" alone - that judgment
   belongs to the dev. Age is a report-level signal only (Step 6), never a triage verdict. An
@@ -195,6 +207,9 @@ Deliver as the turn's FINAL message - nothing may follow it in the same turn, si
 
 Contents, in order:
 
+0. The Step 4 reference-point line: "Checked out `<N>` behind / `<M>` ahead of `origin/<trunk>`" (or
+   "checkout matches `origin/<trunk>`" when behind is `0`) - state this even when zero, so the
+   report always names which universe the verdicts describe.
 1. Folder-location audit hits (or "No stray locations found.").
 2. Dedupe-pair count: "Dedupe pairs found: `<N>` (see confirm list below)." or "No duplicates
    found." if zero.
@@ -340,4 +355,7 @@ into the closing summary as still-pending, for confirmation on a later run.
 - Sibling divergence: `/cleanup-todos` archives duplicate-losers and confirmed drops to `done/`
   (contract-correct). `/batch-todos`'s own dedupe step currently deletes the loser outright - a
   pre-existing divergence from the parent contract that is not this skill's to fix.
+- Failure mode this guards against: on a branch behind its trunk, a todo can be DONE or MOOT on
+  trunk while its premise still reads valid against the stale checkout - the reference-point check
+  in Step 4 exists to stop that from producing a confidently wrong `still_valid: true`.
 - Source of truth: `.claude/todos/` only.
