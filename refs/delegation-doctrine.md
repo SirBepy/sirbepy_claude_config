@@ -202,6 +202,8 @@ report is suspect when it is:
   in the main thread.
 - Vague where it should be concrete: claims a check passed without the output, or describes work
   in the abstract without `file:line`.
+- Verified by a method that could not have failed: the check's own construction guarantees a pass
+  regardless of whether the feature works (see "Interaction work" below for the concrete case).
 
 Response: a targeted re-check (cheap, scoped to the doubt) or, for a high-stakes diff, one solo
 higher-tier verifier per the global CLAUDE.md escalation triggers. Never accept a suspect report
@@ -215,3 +217,19 @@ include a rendered artifact, or the orchestrator renders one before accepting. F
 look right", reach for a render before reaching for an explanation. (Table Night redesign,
 2026-08-03: an 11/11-typecheck, 105-test, 4/4-build report shipped a screen nothing like the
 approved mockup - a stale Vite dependency shadow that no automated check could see.)
+
+## Interaction work
+
+A builder whose task depends on real browser input plumbing (drag and drop, focus and blur
+ordering, pointer capture, native scroll, IME, paste, keyboard activation of links) must verify
+with real input APIs, not `dispatchEvent`: Playwright `page.mouse.*`, `page.keyboard.*`,
+`locator.dragTo()`, a real `focus()` plus typing rather than setting `.value`. A synthetic event
+lets the test author choose `target`, `isTrusted`, and the event sequence, which are precisely the
+things the real browser decides and the bug usually lives in. This does not ban synthetic events
+outright: they stay fine for unit-level logic and for driving app state in a controlled way; the
+failure is using them as proof of an integration that depends on browser plumbing. (Honeymoon-tools
+drag-to-reorder, 2026-08-16: synthetic `dragstart`/`dragover`/`drop` events all passed while the
+feature was fully broken for a real user, because the code's `e.target.closest('.drag-handle')`
+guard can never be true when the browser sets `e.target` to the drag source, not the child under
+the pointer - a dispatched event let the test choose `target` and hid exactly that bug. Re-verifying
+with real `mouse.move`/`mouse.down`/`mouse.move`/`mouse.up` found the cause in one pass.)
