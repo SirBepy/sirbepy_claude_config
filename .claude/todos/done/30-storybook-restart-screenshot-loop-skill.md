@@ -96,3 +96,4 @@ of `src/`, rather than requiring the human to notice the render looks wrong.
   recorded. Blocked on the skill audit, todo 58. This was produced by a strict second-pass
   re-triage that specifically asked whether a defensible answer exists without the dev; it
   concluded yes. Not executed only because the session ended.
+- Relocated to todo 258 in C:\Users\tecno\Desktop\Projects\fibo via /cleanup-todos 2026-08-19: the 58 audit ruled /story-shot a fibo-local skill, and the dev confirmed on 2026-08-19 that this ruling stands over the 2026-08-07 move into ~/.claude.

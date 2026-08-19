@@ -76,7 +76,6 @@ silently drops it and grows the budget back by 4,243 chars with no error.**
 buildable work now, not blocked items:
 
 - [ ] **11** - `/orphan-audit` as a SCRIPT under an existing skill, not a new skill
-- [ ] **30** - `/story-shot` as a **fibo-local** skill in that repo's own `.claude/skills/`, not global
 
 - **95** - session activity log. Not a checkbox on purpose. Joe's words on 2026-08-16: *"i think this
   deserves a whole session, its a question of permanent memory, something im very passionate for,
