@@ -10,7 +10,7 @@
 
 param(
   [string]$Sha,
-  [Parameter(Mandatory = $true)][string]$Branch,
+  [Parameter(Mandatory = $true)][string]$Branch, # kept for the caller's convention; no longer used to filter runs, see Get-RunsForSha
   [string]$RepoPath = (Get-Location).Path,
   [int]$TimeoutMinutes = 30
 )
@@ -69,8 +69,9 @@ if ([string]::IsNullOrWhiteSpace($RepoSlug)) {
 }
 
 function Get-RunsForSha {
+  # No --branch filter: headBranch mismatches $Branch for tag-triggered runs (todo 371).
   try {
-    $json = gh run list -R $RepoSlug --branch $Branch --limit 30 --json databaseId,headSha,status,workflowName
+    $json = gh run list -R $RepoSlug --limit 50 --json databaseId,headSha,status,workflowName
     if (-not $json) { return @() }
     return @(($json | ConvertFrom-Json) | Where-Object { $_.headSha -eq $Sha })
   } catch {
@@ -159,10 +160,11 @@ function Wait-ForRunCompletion {
 
     $info = Get-RunConclusion -RunId $Run.databaseId
     if ($info -and $info.status -eq 'completed') {
-      if ($info.conclusion -eq 'success') {
-        return @{ Outcome = 'success' }
+      # Only failure/timed_out are red; skipped/cancelled/neutral are not (todo 371).
+      if ($info.conclusion -in @('failure', 'timed_out')) {
+        return @{ Outcome = 'failure'; Conclusion = $info.conclusion }
       }
-      return @{ Outcome = 'failure'; Conclusion = $info.conclusion }
+      return @{ Outcome = 'success'; Conclusion = $info.conclusion }
     }
 
     # watch exited but gh does not positively confirm completion -> transient
@@ -184,12 +186,16 @@ function Wait-ForRunCompletion {
 # remaining unwatched runs don't extend the wall-clock ceiling further.
 $failed = @()
 $watchErrors = @()
+$nonSuccess = @()
 $timedOut = $false
 foreach ($r in $runs) {
   $result = Wait-ForRunCompletion -Run $r
   if ($result.Outcome -eq 'failure') { $failed += $r }
   elseif ($result.Outcome -eq 'watch_error') { $watchErrors += $r }
   elseif ($result.Outcome -eq 'timeout') { $timedOut = $true; break }
+  elseif ($result.Outcome -eq 'success' -and $result.Conclusion -and $result.Conclusion -ne 'success') {
+    $nonSuccess += "$($r.workflowName)=$($result.Conclusion)"
+  }
 }
 
 if ($timedOut) {
@@ -200,6 +206,10 @@ if ($timedOut) {
 if ($failed.Count -eq 0 -and $watchErrors.Count -eq 0) {
   $names = ($runs | ForEach-Object { $_.workflowName }) -join ', '
   Write-Output "BUILD_RESULT=success RUNS=$($runs.Count) ($names)"
+  # skipped/cancelled conclusions still deserve a callout (build-watch.md reporting discipline).
+  if ($nonSuccess.Count -gt 0) {
+    Write-Output "NOTE: non-success conclusions (not failures): $($nonSuccess -join ', ')"
+  }
   exit 0
 }
 

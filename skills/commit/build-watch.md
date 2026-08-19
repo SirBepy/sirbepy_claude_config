@@ -5,7 +5,7 @@ not needed for a plain `/commit`.
 
 After a successful `git push` in `push`, `pushbump`, or `pushnbump`, watch the GitHub Actions run(s) that push triggered. A single push can kick off several workflows (test + lint + build); the watcher tracks **all** runs for the pushed sha and reports failure if any of them fails. **Non-blocking**: launch the watcher in the background, tell the user it's watching, and yield control immediately. The user can ignore it or say "drop it" to stop caring.
 
-**Timeout & killing a stuck watcher:** the watcher has a wall-clock ceiling, default 30 minutes (`-TimeoutMinutes`, override if needed). Past that it stops watching, prints `BUILD_RESULT=timeout`, and exits cleanly - no orphan process. It also writes its own PID to `skills\commit\watch-build.pid` on launch (removed on exit). If the dev says "drop it" and you want it gone immediately rather than waiting for the timeout:
+**Timeout & killing a stuck watcher:** the watcher has a wall-clock ceiling, default 30 minutes (`-TimeoutMinutes`, override if needed). Past that it stops watching, prints `BUILD_RESULT=timeout`, and exits cleanly - no orphan process. A Tauri-style multi-platform release build routinely runs longer than 30 minutes across all its runners - pass a higher `-TimeoutMinutes` (e.g. 60) for that kind of workflow rather than trusting the default. It also writes its own PID to `skills\commit\watch-build.pid` on launch (removed on exit). If the dev says "drop it" and you want it gone immediately rather than waiting for the timeout:
 
 `Stop-Process -Id (Get-Content "C:\Users\tecno\.claude\skills\commit\watch-build.pid") -Force`
 
