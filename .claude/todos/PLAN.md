@@ -2,123 +2,66 @@
 
 ## Next up
 
+**The lane is empty. Three todos remain in the whole backlog and none of them is ordinary queued work.**
 
-**`/test` shipped 2026-08-18** (handoff 378 archived), the smallest complete instance of the
-verb-first pattern: `skills/test/SKILL.md`, slash-only so it costs zero always-on description
-budget, stack inferred from marker files across Flutter, Node/web, Rust/Tauri, Roblox/Luau and a
-scripts-repo fallback, with e2e delegated to `/flutter-e2e` and `/jest-lua` rather than absorbed.
-Joe settled all three open decisions in one card: **the automatic floor stays fast-checks-only**,
-but Claude now says in one line when e2e looks worth running instead of asking (two new bullets in
-`CLAUDE.md`); all four stacks in v1; slash-only invocation.
+A `/mega-todos` run on 2026-08-19 closed **33 todos in one pass**, 16 file-ownership lanes, one
+commit per todo, 40 commits total on `master` from `002760e` to the run's end. Zero silent drops
+(reconciled as a set difference, not a count), zero barrier failures, zero blocked builders. The
+full record is in each todo's own Notes line under `done/`.
 
-**`/ticket` shipped 2026-08-18 too, and 351 is archived.** `skills/ticket/` holds a model-invocable
-`SKILL.md` plus `shortcut.md` and `linear.md` quirks files, with the tracker resolved from the git
-remote by a 2-row table (`zirtue-corp` -> Shortcut, `revaire` -> Linear). **`shortcut-create-ticket`,
-`shortcut-update-ticket` and `shortcut-pickup-ticket` were deleted** on Joe's call - the first skill
-removals since the 2026-08-01 pass. Fibo and personal repos are deliberately out of scope: `/ticket`
-names the remote and stops, because Fibo tracks tickets nowhere consistent. `priorities`,
-`done-audit`, `/linear`'s read half and `/obsidian-pickup-ticket` were all left alone, and the
-tree-wide router idea stays dead at 3/10.
+**Rebuild this lane with `/plan-todos` once new todos accumulate.** Right now there is nothing to
+order.
 
-**Still open, now as todo 387:** `/linear`'s reverse pointer at `/ticket` for writes. Blocked a
-**fourth** time by uncommitted changes in `skills/linear/SKILL.md` - and on the 351 attempt
-`list_peers` returned no sessions at all, so those hunks are orphaned state from a dead session, not
-live work. 387 says to resolve that diff with Joe before editing, never to sweep it into a commit.
-
-**The outbound gate shipped 2026-08-18** (Joe's pick for the first restructure build): Linear
-creates and claim-bearing updates on both platforms are now gated by the shared ground check in
-`refs/outbound-ground-check.md`. Todo 375 archived. Two bugs fell out of it, both fixed: a test
-broken by my own rename, and a UTF-8 BOM in `~/.claude/.env` that had been making the Shortcut
-owner check fail closed on every mutation.
-
-**58 is DONE as of 2026-08-18**, along with its 366 pointer. Both archived. The audit triaged all 83
-skills, ran 6 independent reviewers over 3 contested clusters, and **removed nothing** - the tree was
-already clean after the 2026-08-01 pass. What it did fix was always-on context: **13 skills flagged
-slash-only, cutting the per-session description budget from 10,445 to 5,892 chars (43.6%)**, plus 4
-correctness fixes. Full record: `skills/AUDIT-2026-08-18.md`.
-
-**Still open from 58:** the 15 high-usage core skills (`commit`, `close`, `code-check`,
-`supervised-run` and the rest) got a mechanical pass only, never a dedicated improvement reviewer.
-
-**18 active todos.** Updated 2026-08-17 after a NAMED-SUBSET `/auto-do-todos` run: Joe named five
-ids (352, 354, 358, 359, 361) and all five landed. That run swept no backlog - no dedupe, no
-premise re-verification, no dead-todo archival - because Steps 2-4 are skipped when the queue is
-given, per the rule todo 358 itself added. The closing `/close` then filed three more (367, 368,
-369), all from that run's own tooling friction.
-
-The actionable queue was **thirteen** when 58 closed: 351, 353, 355, 356, 357, 360, 362, 363, 364,
-365, 367, 368, 369. Concurrent sessions have since filed more (370, 371, 372, 373, 374, 376, 377,
-379, plus two slug-only files with no id). 351 has since landed and 387 was filed from it. **Nothing
-gates ordering any more - run `/plan-todos`**; the lane above is currently empty.
-
-**11, 30 and 362 were all ruled on by 58 on 2026-08-18, and none of them is parked any more:**
-
-- **11** (`/orphan-audit`) - unblocked as a SCRIPT, not a skill. The doctrine already exists in
-  `refs/process-hygiene.md`; what is missing is something runnable, and a script costs no description.
-- **30** (`/story-shot`) - unblocked as a **fibo-local** skill. 418 Storybook shell calls in 31 days,
-  but all inside one project family, so a global skill would bill every session for one repo.
-- **362** (render-and-diff) - not a new global skill. Kept separate from `flutter-e2e` rather than
-  bolted into it, and folded into the `/test` and `/e2e` direction Joe set out on 2026-08-18.
-
-Per the contract in `~/.claude/skills/close/ai-todos-format.md`, claim each todo in
-`.claude/todos/.claims/` before executing it, and archive with `complete-todo.ps1` when done.
-**Ids are now reserved atomically** via `~/.claude/skills/close/reserve-todo-id.ps1`, never by
-hand-scanning for max+1 - see the Resolved questions section.
-
-## Parked (1)
-
-**58 is done and archived** (2026-08-18). Scale after that pass: **32 model-invocable skills costing
-5,892 always-on chars**, down from 45 / 10,445. Of the 12 vendored skills, the 11 Cloudflare-family
-ones now carry a `disable-model-invocation` patch recorded in `skills/VENDORED.md` - **a re-vendor
-silently drops it and grows the budget back by 4,243 chars with no error.**
-
-**11 and 30 are NO LONGER PARKED.** 58 ruled on both (see Next up for the reasoning). They are
-buildable work now, not blocked items:
-
-- [ ] **11** - `/orphan-audit` as a SCRIPT under an existing skill, not a new skill
+## Parked (2) and skipped (1)
 
 - **95** - session activity log. Not a checkbox on purpose. Joe's words on 2026-08-16: *"i think this
   deserves a whole session, its a question of permanent memory, something im very passionate for,
   but its best we shelf it for now, that should be brainstormed in its own session."* Its shape is
   now settled even though its content is not: **this is a `/brainstorm` task, not a build task
-  waiting for a green light.** The old build-or-park question is closed.
+  waiting for a green light.** The old build-or-park question is closed. Scored 2/10 on worth by
+  `/cleanup-todos` 2026-08-19 and deliberately NOT archived: a parked-by-the-dev todo is the
+  rubric's own carve-out, the score is measuring the wrong thing.
+- **391** - a builder needing a whole-tree "before" baseline has no sanctioned mechanism, so it
+  reaches for `git stash` in a tree other agents are working in. Filed 2026-08-19. Note that the
+  builder filed this **itself**, violating the contract's "a subagent never writes into
+  `.claude/todos/`" rule (see `refs/delegation-doctrine.md`, Out-of-scope findings). The finding is
+  real and kept; the channel was wrong.
+- **372** - move the 419-file / 55.7MB Playwright profile out of `skills/`. `**Origin:** dev`, so it
+  never auto-executes. Joe explicitly skipped it on 2026-08-19: the `.gitignore` stopgap already
+  neutralises the harm, and a botched profile move costs a HubStaff re-login. Cleanliness, not
+  correctness.
 
-## Actionable (9, plus the newly filed 387)
+## What the 2026-08-19 run settled
 
-- [ ] **353** - three more inline `search/stories` recipes outside todo 343's named scope. Also
-  carries the unresolved `+` versus `--data-urlencode` encoding question. **Restated 2026-08-18**
-  after the `/ticket` merge deleted two of its three named paths; two real recipes remain.
-- [ ] **355** - `-GetId` can still answer confidently wrong from a background dispatch, and the
-  script cannot detect it. Needs a background-dispatch measurement BEFORE any fix.
-- [ ] **362** - render-and-diff a built screen against its design tile. **Park candidate** - new
-  skill surface, see the header. Ask Joe before executing.
+**Todo 30 left this backlog.** `/story-shot` is now fibo's todo `258`. The 58 audit ruled it a
+fibo-local skill (418 Storybook calls in 31 days, all one repo family), which reversed the
+2026-08-07 decision to move it here. Joe confirmed the reversal. The location history is written
+into the fibo file so it does not get re-litigated a fourth time.
 
-The rest are enforcement gaps of one kind or another - 356, 357, 360 and 363 are the shape the hook
-doctrine below keeps rediscovering (a correct rule with nothing enforcing it), while 364 and 365 are
-the inverse: a guard that IS enforced, contradicted or bypassed by the path that feeds it.
+**`/test` split into `/test` and `/e2e`** on Joe's call, reversing what he concluded on 2026-08-18.
+`/test` is fast checks only; the new `skills/e2e/SKILL.md` owns browser-driven runs and delegates to
+`/flutter-e2e` and `/jest-lua`. `CLAUDE.md`'s testing bullet no longer says `/test` means unit AND
+e2e. Todo 362's render-and-diff landed as a **mode on `/e2e`**, not a third global skill, so it cost
+no new always-on description budget.
 
-- [ ] **356** - running `/commit`'s prefilters and `git commit` in one shell call has no gate, so a
-  flagged diff commits anyway. This actually happened, twice-em-dashed, in commit `8abd412`. The
-  near miss is that `secret-scan` would have gone the same way. **Highest value of the ten.**
-- [ ] **357** - the orphan-check preamble line is gated on "runs Node commands", so a subagent's
-  whole-drive `find` escaped it and then falsely reported itself killed. Third instance of a builder
-  misreporting a process it started.
-- [ ] **360** - a builder's verification method could not in principle prove the feature worked
-  (synthetic DOM events passing while the real drag was broken), and the report was accepted anyway.
-- [ ] **363** - the content-duplicate guard in `close/ai-todos-format.md` is documented and
-  unenforced.
-- [ ] **364** - following `/mega-todos` verbatim gets the dispatch rejected by
-  `dispatch-preamble-guard.py`, because the skill removes a string the hook hard-requires. Touches
-  the same injected block todo 361 just fixed, but a different failure in it.
-- [ ] **365** - two commit-guard session markers landed on malformed paths (unexpanded
-  `$CLAUDE_CODE_SESSION_ID`, and a missing `/`), so one session wrote no usable marker at all.
-- [ ] **367** - `complete-todo.ps1` never prunes a PLAN.md line written in the bold style, and
-  reports the miss as if it succeeded. Five for five in one run; the stale lines only went away
-  because PLAN.md was rewritten by hand afterwards. **Highest value of the new three.**
-- [ ] **368** - `/commit`'s unpushed-overlap check fires on nearly every commit here, because this
-  repo's unpushed window is 50-plus commits deep rather than one session's work.
-- [ ] **369** - `/auto-do-todos` Step 6 mandates a subagent per todo even where CLAUDE.md says to
-  edit inline. Third instance of this skill stating an absolute that real runs correctly ignore.
+**Todo 389's premise was disproven, not implemented.** The builder reproduced the failure in a
+scratch repo and found the cause is PowerShell mistokenizing a native `git -m` argument containing a
+literal double quote, identically inline and via a variable. The todo's own "assign to a variable
+first" theory was wrong. The fix is backslash-escaping, and that is what got documented.
+
+**Two bugs were reproduced live by the run itself**, which is the strongest evidence either could
+have had:
+
+- **367** - `complete-todo.ps1` failed to prune `- [ ] **30**` when archiving todo 30, and reported
+  success. Fixed, then the fix immediately exposed a second defect: the widened regex pruned only
+  the FIRST line of a wrapped list item, orphaning its continuation prose and mangling ten entries
+  in this file. Both are fixed now; the multi-line prune is covered by a scratch-repo test.
+- **365** - both malformed session-marker strays were physically in the tree that morning.
+
+**Known script/contract mismatch, still open.** `claim-todo.ps1` and `complete-todo.ps1` both reject
+a slug-only todo id, even though `close/ai-todos-format.md` says the full filename stem is a valid
+`-Id`. The three slug-only todos in this run had to be claimed and archived by hand. Worth a todo
+next time someone touches those scripts.
 
 ## Resolved questions, kept so nobody re-asks
 
@@ -131,6 +74,8 @@ the inverse: a guard that IS enforced, contradicted or bypassed by the path that
 2. **Session markers moved** to `hooks/.session-markers/<session_id>`, out of reach of a
    non-recursive `hooks/.commit-marker-*` glob. A permanent read-only legacy fallback covers
    stragglers. This is the structural half of todo 341; the preamble also now bans glob cleanup.
+   As of todo 365 the write itself goes through `hooks/write-session-marker.ps1`, which either lands
+   the marker at the right path or errors rather than silently concatenating.
 3. **Vendored skills.** The wholesale commit already happened in `4cc2977` (2026-08-12, 516 files).
    `skills/VENDORED.md` found exactly ONE local patch in the whole vendored set,
    `skills/impeccable/reference/new-work.md`. Narrowly still open: whether to `git rm --cached` the
@@ -144,6 +89,11 @@ the inverse: a guard that IS enforced, contradicted or bypassed by the path that
    waits, unless the invocation carries a go-word ("then implement it", "just do it", "go") or the
    change is a single existing file adding no new file and no new skill/hook/rule surface. The
    gate-free promise now covers only those two escapes.
+7. **`/commit` now has teeth it used to lack**, all landed 2026-08-19: `prefilter-gate.sh` makes a
+   flagged diff structurally unable to commit (356), step 8 requires a `git diff` of every pathspec
+   entry before committing (377) and a `rev-parse` readback of the real sha after (379), step 6a
+   detects a real test suite when no `run-tests` skill exists (383), and the unpushed-overlap check
+   confirms via `git blame` instead of firing on every commit in a 50-deep unpushed window (368).
 
 ## Hook doctrine, and what the 2026-08-16 run added to it
 
@@ -165,3 +115,7 @@ The 2026-08-13 lesson stands and got two more data points:
 
 Measure against a real corpus BEFORE wiring anything, and prefer inverting the problem (require an
 explicit marker on the legitimate case) over detecting the violation.
+
+The 2026-08-19 run added a fourth guard on the same principle: `hooks/todo-duplicate-guard.py` (363)
+is advisory with an override path rather than a hard block, precisely because "is this todo a
+duplicate" is a judgment call and this repo has already killed three guess-based hooks in one day.
