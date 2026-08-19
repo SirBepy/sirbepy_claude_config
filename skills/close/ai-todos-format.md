@@ -99,6 +99,14 @@ file>` (e.g. `CLAUDE.md`) grepped for the todo's keywords surfaces a removal com
 autopilot): never block on this - log the supersession and continue. `/create-todo`'s own
 Anti-patterns section carries the concrete recipe this mirrors.
 
+Backstopped by `hooks/todo-duplicate-guard.py`, a `PreToolUse` hook on `Write` matching
+`\.claude/todos/\d+-.*\.md$`: it greps the destination backlog and `done/` for salient tokens
+from the new file's title and blocks advisory-style, listing the candidate hit(s), when the
+overlap is real (3+ shared tokens, or 2+ covering most of a short title) - a shared word or two
+never trips it. Resolve a genuine hit via the three outcomes above; a false positive on a
+distinct todo that only shares vocabulary is unblocked by adding `<!-- duplicate-checked -->`
+anywhere in the new content.
+
 ## Backlog file: content
 
 ```md
