@@ -47,12 +47,16 @@ Read every file's frontmatter (`name`, `description`, `metadata.type`) and full 
 
 ## Step 2 - Index/file consistency (mechanical, read-only)
 
-Cross-check `MEMORY.md`'s entries against the files actually on disk:
+Cross-check `MEMORY.md`'s entries against the files actually on disk. A file counts as reachable if
+`MEMORY.md` links it either way: a `(file.md)` link or a `[[wikilink]]` reference (memory files
+cross-reference each other via `[[name]]`, and a `(file.md)`-only sweep overcounts orphans - a
+reproduction on `claude_usage_in_taskbar` found 62 vs the real 58 for exactly this reason).
 
-- A file with no `MEMORY.md` line pointing to it: `orphan-file`.
+- A file reachable from neither form: `orphan-file`.
 - A `MEMORY.md` line whose linked file doesn't exist: `orphan-index-entry`.
 
-Both are mechanical - no subagent needed, no judgment call. Carry into the report as-is.
+Both are mechanical - no subagent needed, no judgment call. Report the counts of both
+(`orphan-file: N`, `orphan-index-entry: N`) even when zero - Step 7 carries these forward.
 
 ## Step 3 - Dedupe (read-only)
 
@@ -180,6 +184,8 @@ message is the report the dev is meant to read). Short and auditable, not a re-r
 - What moved: dedupe merges (loser -> keeper, folded-detail note), drops, re-indexed orphans,
   link fixes.
 - Any item excluded by Step 5.5, named with the reason.
+- Step 2's counts for both desync directions (`orphan-file`, `orphan-index-entry`), before and
+  after apply.
 - Result of the mandatory final consistency check (clean, or what still mismatches).
 
 ## Non-goals (v1)
