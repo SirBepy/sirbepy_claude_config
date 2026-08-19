@@ -8,6 +8,10 @@ argument-hint: "<ticket-id or query>"
 
 > Read-only access to Linear tickets, projects, and sprints via the GraphQL API.
 
+**Writes live in `/ticket`.** `skills/ticket/linear.md` is the write entrypoint (create,
+update, pickup) and points back at this file for the `Invoke-Linear` helper and the
+ownership gate below - both stay defined here, not duplicated there.
+
 ## Setup check
 
 Before any API call, read `~/.claude/.env` and confirm `LINEAR_API_KEY` is present.
