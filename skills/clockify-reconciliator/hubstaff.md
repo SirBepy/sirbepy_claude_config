@@ -142,3 +142,31 @@ or empty table). Report any `warning` to the dev instead of treating that week's
 
 To READ exact per-slot time boundaries when verifying alignment (not for the screenshot itself), use
 the Calendar view instead: `https://app.hubstaff.com/organizations/{hubstaff_org_id}/time_entries/calendar?date={mon}&date_end={sun}&filters%5Buser%5D={hubstaff_user_id}`.
+
+## hs_addtime.cjs - bulk Add-time (NOT YET VALIDATED AGAINST A LIVE RUN)
+
+**Status: wired but unproven.** The dev has not yet run this script against a live HubStaff
+account. Do not treat the shape below as confirmed working - it is the intended call, not an
+observed one. The dev validates the first real run.
+
+Bulk-writes HubStaff time entries via the web UI Add-time dialog (the v2 API is read-only for
+time), one entry per call to `skills/clockify-reconciliator/scripts/hs_addtime.cjs`. Only offer
+this inside "HubStaff update mode" above, for the "Add missing" case, and only after the dev has
+seen and approved the proposed-edit table.
+
+Entries file shape, one object per HubStaff entry to create:
+```json
+[{"date": "YYYY-MM-DD", "from": "9:00 am", "to": "11:30 am", "note": "..."}]
+```
+
+Run `node skills/clockify-reconciliator/scripts/hs_addtime.cjs --org {hubstaff_org_id} --user
+{hubstaff_user_id} --profile skills/clockify-reconciliator/playwright-profiles/hubstaff --entries
+<path-to-json> --project-label {hubstaff_project_label} --reason-label {hubstaff_reason_label}`.
+`--project-label` is required (project config field `hubstaff_project_label`, same source as
+`hubstaff_org_id`/`hubstaff_user_id` - never hardcode an account's project name here).
+`--reason-label` is optional, defaulting to `Forgot to start/stop timer` per the Reason default
+documented above. Same orphan-browser guard as steps 2 and 12 applies before opening the browser.
+
+Prints one JSON array line, one object per input entry: `{...entry, ok: true}` on success or
+`{...entry, ok: false, error}` on failure. Report any `ok:false` entry to the dev instead of
+assuming the run fully succeeded.
