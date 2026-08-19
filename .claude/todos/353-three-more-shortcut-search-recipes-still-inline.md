@@ -22,6 +22,18 @@ whole tree afterwards found three more that were outside that todo's scope and d
   a staleness-check note, not a runnable block. Cheapest of the three.
 - `skills/zirtue-release-backfill/reference.md:16` - a full inline recipe.
 
+**Restated 2026-08-18, after todo 351 merged the shortcut-* trio into `/ticket`.** Two of those three
+paths no longer exist, so re-grep before working this - the finding shrank but did not go away. A
+tree-wide grep for `search/stories` outside `.claude/todos/` now returns exactly two real recipes:
+
+- `refs/outbound-ground-check.md:49` - where the ground-check recipe went when it was extracted. It
+  is in a ref now rather than a skill, but it is still a **second full copy** of mechanics
+  `refs/shortcut-api.md:60` already owns, so this half of the todo stands.
+- `skills/zirtue-release-backfill/reference.md:16` - untouched, still a full inline recipe.
+
+The `shortcut-create-ticket/SKILL.md:81` staleness note is **resolved**: its replacement in
+`skills/ticket/shortcut.md` describes the staleness check in prose with no inline query at all.
+
 ## Approach
 
 Same pointer refactor todo 343 used: keep only the query string, page size and client-side filters

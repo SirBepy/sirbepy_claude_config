@@ -2,7 +2,6 @@
 
 ## Next up
 
-- [ ] 351 - build `/ticket`: create/update/pickup only, platform looked up from the repo
 
 **`/test` shipped 2026-08-18** (handoff 378 archived), the smallest complete instance of the
 verb-first pattern: `skills/test/SKILL.md`, slash-only so it costs zero always-on description
@@ -10,13 +9,21 @@ budget, stack inferred from marker files across Flutter, Node/web, Rust/Tauri, R
 scripts-repo fallback, with e2e delegated to `/flutter-e2e` and `/jest-lua` rather than absorbed.
 Joe settled all three open decisions in one card: **the automatic floor stays fast-checks-only**,
 but Claude now says in one line when e2e looks worth running instead of asking (two new bullets in
-`CLAUDE.md`); all four stacks in v1; slash-only invocation. **351 now carries the settled `/ticket`
-scope** - create/update/pickup merged, `priorities` and `done-audit` left alone, and the tree-wide
-router idea explicitly dead at 3/10.
+`CLAUDE.md`); all four stacks in v1; slash-only invocation.
 
-**Still open from 375:** the `/linear` SKILL.md pointer to the ground check. Blocked three times now
-because a concurrent session holds uncommitted changes in that file. Enforcement does not depend on
-it - the guard's deny message already names the ref.
+**`/ticket` shipped 2026-08-18 too, and 351 is archived.** `skills/ticket/` holds a model-invocable
+`SKILL.md` plus `shortcut.md` and `linear.md` quirks files, with the tracker resolved from the git
+remote by a 2-row table (`zirtue-corp` -> Shortcut, `revaire` -> Linear). **`shortcut-create-ticket`,
+`shortcut-update-ticket` and `shortcut-pickup-ticket` were deleted** on Joe's call - the first skill
+removals since the 2026-08-01 pass. Fibo and personal repos are deliberately out of scope: `/ticket`
+names the remote and stops, because Fibo tracks tickets nowhere consistent. `priorities`,
+`done-audit`, `/linear`'s read half and `/obsidian-pickup-ticket` were all left alone, and the
+tree-wide router idea stays dead at 3/10.
+
+**Still open, now as todo 387:** `/linear`'s reverse pointer at `/ticket` for writes. Blocked a
+**fourth** time by uncommitted changes in `skills/linear/SKILL.md` - and on the 351 attempt
+`list_peers` returned no sessions at all, so those hunks are orphaned state from a dead session, not
+live work. 387 says to resolve that diff with Joe before editing, never to sweep it into a commit.
 
 **The outbound gate shipped 2026-08-18** (Joe's pick for the first restructure build): Linear
 creates and claim-bearing updates on both platforms are now gated by the shared ground check in
@@ -41,8 +48,8 @@ given, per the rule todo 358 itself added. The closing `/close` then filed three
 
 The actionable queue was **thirteen** when 58 closed: 351, 353, 355, 356, 357, 360, 362, 363, 364,
 365, 367, 368, 369. Concurrent sessions have since filed more (370, 371, 372, 373, 374, 376, 377,
-379, plus two slug-only files with no id). **58 is done, so nothing gates ordering any more - run
-`/plan-todos`**; only 351 is placed on the lane above.
+379, plus two slug-only files with no id). 351 has since landed and 387 was filed from it. **Nothing
+gates ordering any more - run `/plan-todos`**; the lane above is currently empty.
 
 **11, 30 and 362 were all ruled on by 58 on 2026-08-18, and none of them is parked any more:**
 
@@ -77,12 +84,11 @@ buildable work now, not blocked items:
   now settled even though its content is not: **this is a `/brainstorm` task, not a build task
   waiting for a green light.** The old build-or-park question is closed.
 
-## Actionable (10)
+## Actionable (9, plus the newly filed 387)
 
-- [ ] **351** - unify the 8 ticket skills behind one platform-inferring `/ticket`. Joe's own idea,
-  dev-origin. Sized as its own session, and overlaps 58, which would likely shrink it.
 - [ ] **353** - three more inline `search/stories` recipes outside todo 343's named scope. Also
-  carries the unresolved `+` versus `--data-urlencode` encoding question.
+  carries the unresolved `+` versus `--data-urlencode` encoding question. **Restated 2026-08-18**
+  after the `/ticket` merge deleted two of its three named paths; two real recipes remain.
 - [ ] **355** - `-GetId` can still answer confidently wrong from a background dispatch, and the
   script cannot detect it. Needs a background-dispatch measurement BEFORE any fix.
 - [ ] **362** - render-and-diff a built screen against its design tile. **Park candidate** - new
