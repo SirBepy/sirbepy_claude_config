@@ -35,7 +35,9 @@ const weeks = weeksArg.split(',').map(pair => {
       await page.goto(url, { waitUntil: 'domcontentloaded' });
 
       const collapseToggle = page.getByText('left_panel_close', { exact: true });
-      if (await collapseToggle.count() > 0) await collapseToggle.click();
+      if (await collapseToggle.count() > 0) {
+        await collapseToggle.click({ timeout: 3000 }).catch(() => {});
+      }
 
       try {
         await page.waitForSelector('table tr, [data-testid*="row"]', { timeout: 10000 });
@@ -43,6 +45,8 @@ const weeks = weeksArg.split(',').map(pair => {
         results.push({ mon, sun, warning: `weekly table did not load for ${mon} - skipped` });
         continue;
       }
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(1500);
 
       const outPath = path.join(outDir, `hubstaff-weekly-${mon}_to_${sun}.png`);
       await page.screenshot({ path: outPath });
