@@ -26,7 +26,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, consume_fresh_marker, oldest_fresh_marker, FRESHNESS_SECONDS, OUTBOUND_MARKER_GLOB
+    from _hooklib import read_payload, consume_fresh_marker, oldest_fresh_marker, FRESHNESS_SECONDS, OUTBOUND_MARKER_GLOB, CLAIM_FIELDS
 except Exception as e:
     sys.stderr.write(f"[shortcut-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -36,9 +36,9 @@ API_BASE = "https://api.app.shortcut.com/api/v3"
 MARKER_DIR = _HOOKS_DIR
 MARKER_GLOBS = (OUTBOUND_MARKER_GLOB, ".shortcut-marker*")
 
-# Only these updates carry a CLAIM, so only these need the ground check. Moving a card or
-# self-assigning asserts nothing, and gating those would train the dev to bypass the gate.
-CLAIM_BEARING_KEYS = ("name", "description", "text")
+# Only these updates carry a CLAIM, so only these need the ground check. Field list lives
+# once in hooks/_hooklib.py's CLAIM_FIELDS (todo 381), not restated here.
+CLAIM_BEARING_KEYS = CLAIM_FIELDS["shortcut"]
 ENV_FILE = Path.home() / ".claude" / ".env"
 
 # Release custom field UUID. Mutations that touch ONLY this field are allowed

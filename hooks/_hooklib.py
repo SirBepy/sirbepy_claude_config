@@ -18,6 +18,15 @@ from pathlib import Path
 FRESHNESS_SECONDS = 120
 OUTBOUND_MARKER_GLOB = ".outbound-marker*"
 
+# Per-platform claim-bearing field names (todo 381). A write to one of these fields
+# asserts something about the code; a state move or self-assign does not, so it stays
+# ungated. Kept as its own mapping, never merged into the freshness constants above -
+# each guard derives its own matcher (dict-key check or regex) from its own tuple here.
+CLAIM_FIELDS = {
+    "shortcut": ("name", "description", "text"),
+    "linear": ("title", "description"),
+}
+
 
 def read_payload() -> dict:
     """Read stdin, strip a leading BOM, parse as JSON.

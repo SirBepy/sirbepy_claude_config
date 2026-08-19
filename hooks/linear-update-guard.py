@@ -27,7 +27,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, consume_fresh_marker, oldest_fresh_marker, FRESHNESS_SECONDS, OUTBOUND_MARKER_GLOB
+    from _hooklib import read_payload, deny, consume_fresh_marker, oldest_fresh_marker, FRESHNESS_SECONDS, OUTBOUND_MARKER_GLOB, CLAIM_FIELDS
 except Exception as e:
     sys.stderr.write(f"[linear-update-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -39,8 +39,9 @@ OVERRIDE_ENV = "CLAUDE_LINEAR_UPDATE_HOOK_BYPASS"
 ENDPOINT_RE = re.compile(r"api\.linear\.app/graphql", re.IGNORECASE)
 UPDATE_MUTATION_RE = re.compile(r"\bissueUpdate\b")
 COMMENT_MUTATION_RE = re.compile(r"\bcommentCreate\b")
+# Built from CLAIM_FIELDS["linear"] in hooks/_hooklib.py (todo 381), not hand-written here.
 # `stateId` and `assigneeId` deliberately absent: those are the moves that assert nothing.
-CLAIM_FIELD_RE = re.compile(r"\b(title|description)\b", re.IGNORECASE)
+CLAIM_FIELD_RE = re.compile(r"\b(" + "|".join(CLAIM_FIELDS["linear"]) + r")\b", re.IGNORECASE)
 
 CLAIM_TOOL_RE = re.compile(r"^mcp__.*linear.*__.*(update_issue|issue.?update|create_comment|comment.?create).*$", re.IGNORECASE)
 

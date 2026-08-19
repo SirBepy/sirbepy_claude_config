@@ -111,6 +111,10 @@ finding the claim absent at the tracked branch, which means the update is about 
 something that is not true. Queries 1 and 2 are informational on an update path; report them,
 never block on them.
 
+Which fields count as claim-bearing per platform is defined once, in `hooks/_hooklib.py`'s
+`CLAIM_FIELDS` mapping - not restated here. A state move or self-assign is never in that mapping
+and stays ungated.
+
 ## Writing the marker, on a clean or soft verdict
 
 ```powershell
