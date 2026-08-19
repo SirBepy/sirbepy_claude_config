@@ -60,3 +60,15 @@ Either way, state the decision where the next reader hits it, and make the two a
 - `CLAUDE.md` says plainly whether these two constructs are in or out of the cap.
 - `comment-noise.sh` behaves the way `CLAUDE.md` says.
 - If option 2: every pre-existing offender is under the cap, so the check passes repo-wide.
+
+## Notes
+
+- **Gated on todo 403** as of 2026-08-19. Joe reopened the comment rule itself rather than answering
+  this in isolation: he does not value comments for their own sake, does not care how they look in
+  his own repos, does care about noise in client repos, and wants to know what a comment is actually
+  worth to an AI reader before more tooling is built on the current cap. 403 is a `/brainstorm`
+  session for that.
+- Do not answer this todo independently. Whatever 403 settles about who the rule is for and which
+  repos it binds determines whether docstrings and comment-based help belong in the rule at all. 403
+  may close this one outright.
+
