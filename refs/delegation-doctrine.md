@@ -87,7 +87,9 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
   it from a process-tree walk and never hand-pick a folder name: `/close` can only delete its own
   authoritative subfolder, so a wrong id is permanently un-cleanable and may collide with a live
   session's folder.
-- The orphan-check final step from `~/.claude/refs/process-hygiene.md` if it runs Node commands.
+- The orphan-check final step from `~/.claude/refs/process-hygiene.md`, unconditionally. It used to
+  be gated on "if it runs Node commands", which let a subagent's whole-drive `find` escape it twice
+  (todo 357); `refs/builder-preamble.md` now carries it as static body text, not a placeholder.
 - The ban on `run_in_background` in builders, the mandatory explicit `timeout` past 120s, and what
   to do if a command still outlives its own 600000ms cap (report the partial output and name the
   command still running, never a bare "still waiting", todo 335) - verbatim text lives in
