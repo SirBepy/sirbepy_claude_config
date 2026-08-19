@@ -205,7 +205,11 @@ then diff reported ids against it after return - a set difference, never a count
 Per todo:
 
 1. Claim it per `close/ai-todos-format.md`.
-2. Execute via a subagent under the adopted contracts above. Heartbeat the claim at checkpoints.
+2. Execute per CLAUDE.md's "Subagent-Driven vs Inline Execution" size gate - most todos here are
+   small enough for inline. Dispatch a subagent when that gate calls for one, OR independently when
+   the todo's context weight warrants it (reading material - wide greps, large files - that gets
+   discarded once you have the answer), even for a one-file edit. When a subagent does run, it
+   follows the adopted contracts above. Heartbeat the claim at checkpoints.
 3. `~/.claude/skills/close/complete-todo.ps1 -Id <id> -Note "<what happened>"` - one call records
    the Notes line, archives it, prunes its PLAN.md line, and releases the claim.
 4. `/commit` - invoke and read the skill in full only for this run's first commit; every commit
@@ -297,3 +301,5 @@ test/e2e pass-fail), immediately followed by `<cc-autopilot:off>` on its own lin
   commit after that follows its procedure directly, same cadence as `/batch-todos`.
 - Source of truth for the backlog: `.claude/todos/` per `close/ai-todos-format.md`.
 - Thresholds live in Step 6 (`HARD_STOP_AT = 40%`) and Step 7 (`SLOW_AT = 30%`) - tune there.
+- This file has twice stated an absolute that a real run correctly deviated from (todos 347, 358,
+  369). When adding a new step, point at an existing gate rather than restating a rule as unconditional.
