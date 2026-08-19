@@ -238,11 +238,22 @@ pass/fail. Never file bodies, never transcripts.
 
 This is the deliberate divergence from the delegation doctrine. `/commit` is pure procedure - git
 commands, one awk prefilter, and a marker file - so it CAN be followed by an agent that cannot invoke
-skills. Paste this verbatim into every builder prompt when `COMMIT_MODE = per-builder` (Step A) -
+skills. Paste the full `refs/builder-preamble.md` block first (unmodified, including its screenshot-id
+paragraph and its `run_in_background ... FORBIDDEN` line - those two are hook-enforced markers, see
+that file's own note), then append this block verbatim when `COMMIT_MODE = per-builder` (Step A) -
 see "Barrier COMMIT_MODE" below for the `barrier` case. Substitute `<EXPECTED_BRANCH>` from Step A;
-leave `<FILES>` as-is, the agent fills that with its own owned paths:
+leave `<FILES>` as-is, the agent fills that with its own owned paths.
+
+The opening two lines below are load-bearing, not decoration: `hooks/dispatch-preamble-guard.py`
+hard-requires the literal staging sentence somewhere in the prompt, and this skill's whole point is
+that the builder commits, so the honest move is to quote the normal-case sentence and then say
+plainly that this dispatch is the documented exception - never silently drop it or invent a
+different phrasing, both were tried and both either got rejected or misled the builder:
 
 ```
+A normal dispatch says: "Stage your changes but do NOT commit." THIS DISPATCH IS THE DOCUMENTED
+EXCEPTION - see the COMMITTING section below.
+
 COMMITTING IS PART OF YOUR JOB. You cannot invoke /commit as a skill, so follow this procedure
 exactly. Do not improvise around it and do not skip a step because the change looks small.
 
@@ -316,10 +327,11 @@ commit at each barrier instead, once per completed todo, in lane order:
 
 Same HARD RULES apply, main thread substituted for builder throughout.
 
-Alongside it, every builder prompt still carries the doctrine's canonical preamble minus its
-stage-don't-commit line: working dir, PowerShell, the
-`<OFF_LIMITS>` file list (this is where the lane's non-owned files are named), `<ORPHAN_CHECK>` when
-it runs Node, and the no-`run_in_background` clause.
+Alongside it, every builder prompt still carries the doctrine's full canonical preamble from
+`refs/builder-preamble.md`, `<STAGING_LINE>` included as-is: in `barrier` mode the builder genuinely
+never touches git, so "Leave all changes unstaged. The main agent will run /commit by pathspec after
+your report-back." is simply true here, unlike in `per-builder` mode where the same line would be a
+lie the injected block immediately overrides.
 
 **The `<OFF_LIMITS>` list is load-bearing here in a way it is not in a normal dispatch.** In a
 stage-only dispatch a stray edit is caught at review; here it goes straight into history. Name the

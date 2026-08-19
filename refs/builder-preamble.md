@@ -62,3 +62,21 @@ anywhere in the prompt. This is an explicit marker the orchestrator sets, not so
 from the dispatch's content: `hooks/dispatch-preamble-guard.py` checks for that exact string, it
 never guesses whether a dispatch is read-only. Never add the marker to a dispatch that does capture
 screenshots.
+
+## What the guard actually enforces
+
+`hooks/dispatch-preamble-guard.py` blocks any `Agent`/`Task` dispatch whose prompt is missing one of
+three literal substrings - it is a pure string check, not a semantic one, so pasting the block above
+verbatim is what makes a dispatch pass, not merely following its intent:
+
+1. `Stage your changes but do NOT commit` OR `Leave all changes unstaged` (the two `<STAGING_LINE>`
+   variants above).
+2. `run_in_background` AND `FORBIDDEN` both present (covered by the orphan-check paragraph's
+   `run_in_background` sentence in the block above - static, unconditional, never trim it out).
+3. `.for_bepy/screenshots/` OR the literal line `READ-ONLY DISPATCH`.
+
+A dispatch that genuinely commits its own work (e.g. `/mega-todos`'s per-builder `COMMIT_MODE`)
+cannot use `<STAGING_LINE>` truthfully, since the builder does commit. Do not drop the requirement
+or invent a different phrasing to dodge it - quote the normal-case sentence and say plainly that
+this dispatch is the documented exception; see `skills/mega-todos/SKILL.md`'s injected commit block
+for the worked example.
