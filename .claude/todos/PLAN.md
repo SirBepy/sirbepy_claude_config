@@ -2,15 +2,35 @@
 
 ## Next up
 
-**The lane is empty. Three todos remain in the whole backlog and none of them is ordinary queued work.**
+**14 todos. Nothing is ordered yet: run `/plan-todos`.**
 
 A `/mega-todos` run on 2026-08-19 closed **33 todos in one pass**, 16 file-ownership lanes, one
-commit per todo, 40 commits total on `master` from `002760e` to the run's end. Zero silent drops
-(reconciled as a set difference, not a count), zero barrier failures, zero blocked builders. The
-full record is in each todo's own Notes line under `done/`.
+commit per todo. Zero silent drops (reconciled as a set difference, not a count), zero barrier
+failures, zero blocked builders. The full record is in each todo's own Notes line under `done/`.
 
-**Rebuild this lane with `/plan-todos` once new todos accumulate.** Right now there is nothing to
-order.
+Its own wrap-up then filed **twelve** new ones, which is the honest shape of a run that wide: three
+lanes shipped something correct that was not wired up, because the wiring lived in a file another
+lane owned.
+
+- **392** - sweep the remaining skills whose dispatch templates miss the guard's three markers
+- **393** - `claim-todo.ps1`/`complete-todo.ps1` reject a slug-only id the contract calls valid
+- **394** - settle how Conductor's card parser reads markers (needs a live session)
+- **395** - move the advanced-but-not-finished outcome into the contract, not just `/pickup`
+- **396** - the clockify config template omits the two new HubStaff label fields
+- **397** - `outbound-ground-check.md` names two of the four hooks that enforce it
+- **398** - verify whether Shortcut decodes a literal `+` as a space
+- **399** - the comment cap is unenforced for Python docstrings and PowerShell help blocks
+- **400** - two model-invocable skill descriptions are over the always-on budget
+- **401** - `design_diff.py` duplicates figma-pixel-diff's pixel sampler
+- **402** - `oldest_fresh_marker` reads as a dead import in three guards
+- **391** - builders have no sanctioned way to take a whole-tree baseline (filed by a builder itself,
+  which violated the contract's no-subagent-writes rule; the finding is real, the channel was wrong)
+
+Four gaps the run left were fixed immediately rather than filed: the duplicate-guard hook was never
+wired into `settings.json` (`5f9bf9e`), `/commit` still hand-built the session-marker path instead of
+calling the new helper (`f615d51`), the doctrine still gated the orphan check on Node (`45cff85`),
+and the newly-wired duplicate guard false-positived on every write until it learned document
+frequency (`29debda`).
 
 ## Parked (2) and skipped (1)
 
