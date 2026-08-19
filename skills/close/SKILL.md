@@ -48,6 +48,8 @@ Honest reviewer, not cheerleader. Same anti-sycophancy bar as /rate-it. If sessi
 
 Manual only. The dev triggers /close when a session reaches a natural end. Never auto-fire on token thresholds: deciding "this session is done" is what makes the retrospective land.
 
+Phases 0-5 start in the SAME turn /close is invoked, never deferred behind in-flight background work (a running Bash command, subagent, `/loop`, etc). Only Phase 6 is gated on background work - see its skip list below. Persistence is the point of this skill, so it cannot wait on optional work landing green.
+
 ## Host app integration (Claude Conductor)
 
 When this session is hosted by Claude Conductor (claude_usage_in_taskbar), the host handles the "Closing" row state and the teardown itself - no text markers:
@@ -202,7 +204,7 @@ If no chained commands, skip this phase.
 
 - `--dont-close` was passed.
 - Any chained command in Phase 5 failed.
-- Any background work is still running in this session: spawned `Agent` with `run_in_background: true`, active `/loop`, or pending `ScheduleWakeup`. Check before killing.
+- Any background work is still running in this session: spawned `Agent` with `run_in_background: true`, a Bash command with `run_in_background: true`, active `/loop`, or pending `ScheduleWakeup`. Check before killing.
 
 **Explicit non-blocker: a CI/release build watcher.** `commit/build-watch.md`'s watcher (launched after `/commit push`/`pushbump`/`pushnbump`) does NOT count as background work above and must NEVER hold Phase 6 open, even mid-watch. It is fire-and-forget by design - the dev checks the result later via `gh run list`/GitHub directly, not by keeping this terminal alive. Closing kills the watcher process; that is accepted, not a bug. Proceed through Phase 6 normally regardless of watcher state.
 
@@ -236,3 +238,4 @@ If kill was skipped, print on its own line:
 - Auto-committing without `/commit` in the chain. Dev opts in explicitly now.
 - Writing memories about ephemeral session state. Re-read auto-memory rules before writing.
 - Trying to invoke `/exit` as a skill or chained command. Terminal kill is now built into Phase 6 by default.
+- Promising to run /close later. If the dev asked for it, its phases run now.
