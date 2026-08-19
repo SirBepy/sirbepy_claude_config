@@ -162,16 +162,31 @@ and a fan-out that outlives the session's own token budget. Both leave the orche
 subagents it can no longer see into - context% tracks the ORCHESTRATOR's own usage, not the
 children's, so a healthy context reading proves nothing about either hazard.
 
-**Liveness.** The harness's "you'll be notified when it completes" phrasing invites trusting the
-notification channel unconditionally - that is the exact failure mode (2h15m silent stall, 2026-07-28).
-Before ending any turn with subagents still outstanding and nothing new to report, check the task
-output dir's `LastWriteTime` (the `output_file` path is in every Agent tool result) against dispatch
-time - NOT file size, a 0-byte output file is not evidence of death, one legitimately succeeded that
-way. No growth in roughly the last 10 minutes on a dispatch expected to take 1-3 minutes (a read-only
-scout) means presumed dead. Any fan-out of 3+ agents, or one with a 5-minute-plus ETA, additionally
-gets a background watchdog: `Bash` with `run_in_background: true` running `sleep N` then a directory
-listing of the task output dir, so a forced check-in happens even if every notification is lost.
-Clean it up via `TaskStop` if the agents return first.
+**Liveness.** The task output file's `LastWriteTime`/size is not a liveness signal, in either
+direction - measured directly (zng-app session `7ed111fd`, 2026-08-18/19, todo 384): an agent that
+was demonstrably alive (writing PNGs to disk, 70-second-old timestamps) had an output file 775
+seconds stale, and all four agents that had actually died silently had a 0-byte output file, the
+exact case the old rule said not to trust. Never read that file's mtime or size as evidence of
+anything. Check the agent's real effects instead:
+
+- `git status --short` / `git diff --stat` scoped to the paths the dispatch assigned it - growth
+  there is real progress.
+- The artifacts it was told to produce (screenshots in its session subfolder, etc.) - check file
+  presence/count directly, not the harness's own bookkeeping file.
+- Whether it is still running at all: `TaskStop` against a bogus task id fails with a message
+  listing every currently-running background agent ("Running background agents: ..."). That list is
+  authoritative - if the dispatch's id isn't in it, the agent has already exited (cleanly or
+  silently) and its last known state is final, not "still working." This is the cheapest true
+  liveness probe available and costs one throwaway tool call.
+
+**No background watchdog.** The old rule (`run_in_background` sleep-then-list on any 3+ fan-out or
+5-minute-plus ETA) fired zero times across 8 dispatches in the incident session that prompted this
+todo - a rule that depends on being remembered mid-fan-out does not survive being remembered.
+Deleted, not fixed. Replace it with the unconditional habit that actually caught all four silent
+deaths that session: **verify the tree yourself after every dispatch returns, and again before
+ending any turn that has dispatches still outstanding** - run the effects check above (git
+status/diff-stat, artifact check, project's own fast checks) every time, not only on suspicion. This
+needs no new machinery and is cheaper than standing up and tearing down a watchdog process.
 
 **Session budget.** Context% is not a session-budget signal: subagent tokens barely touch the
 orchestrator's context (the whole point of delegating) while spending the same API session quota. No
@@ -181,9 +196,11 @@ typecheck-gated codebase, always), so an interruption leaves either completed-an
 untouched work, never a half-applied refactor spread across several files (4 agents died mid-edit
 simultaneously on a session-limit reset, 2026-08-07, zero reports, an 18-file half-applied dedupe).
 
-**Recovery when a fan-out is interrupted with no report.** Reconstruct state from `git status` plus a
-real lint/test run before doing anything else; label every reconstructed verdict INFERRED, never
-reported; file the handoff first.
+**Recovery when a dispatch returns quiet or with no report.** This is not a rare-case branch
+anymore - the liveness check above already puts the orchestrator here after every dispatch, so
+"recovery" is just what that check IS. Reconstruct state from `git status` plus a real lint/test run
+before doing anything else; label every reconstructed verdict INFERRED, never reported; file the
+handoff first.
 
 ## Orchestrator hygiene
 
