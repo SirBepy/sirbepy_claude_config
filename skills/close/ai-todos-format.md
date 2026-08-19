@@ -214,6 +214,12 @@ Pointers only - task content lives in the todo files, never copied here.
   is the only authoritative part - never trust a label over the todo file's title) and an
   optional `[P]` marker meaning "safe to run in parallel with adjacent [P] items" (used by
   orchestrators dispatching subagents; unmarked = sequential).
+- **The id is written plain, never bold/underscored/backtick-wrapped** (`- [ ] 12`, not
+  `- [ ] **12**`). This settles a conflict found 2026-08-19: practice had drifted to bold ids,
+  and `complete-todo.ps1`'s prune step didn't recognize that style, so completed todos left
+  stale bold lines behind while the script reported success. The prune regex now tolerates
+  `**id**`/`__id__`/`` `id` `` on read (so old bold lines and hand-edits still get cleaned up),
+  but every writer of a NEW line uses the plain form from here on.
 - `## Phase` headings group items; order within and across phases is top-to-bottom execution order.
 - NO claim or done state lives here. Claims live in `.claims/`; done = the line gets deleted.
 - **Vanished ids:** a line whose todo file no longer exists in the backlog is silently pruned by

@@ -216,24 +216,29 @@ else {
 
 if (Test-Path $planPath) {
     $lines = Get-Content -Path $planPath
-    $lineIdPattern = "^\s*-\s*\[\s*\]\s*0*$([regex]::Escape($numericId))(\s|$)"
+    # Canonical form is plain "- [ ] <id>" (ai-todos-format.md); tolerate bold/
+    # underscore/backtick wrapping and "[P]" too, since hand-edits use them and
+    # a stale line in any style still needs pruning. Step 1 already resolved a
+    # single file for this id, so every matching line here is that same file's.
+    $idPart = "0*$([regex]::Escape($numericId))"
+    $backtick = [char]0x60
+    $wrappedId = "(\*\*$idPart\*\*|__${idPart}__|$backtick$idPart$backtick|$idPart)"
+    $lineIdPattern = "^\s*-\s*\[\s*\]\s*$wrappedId(\s*\[P\])?(\s|$)"
     $matchCount = ($lines | Where-Object { $_ -match $lineIdPattern }).Count
 
     if ($matchCount -eq 0) {
-        Write-Info "No PLAN.md line found for todo $Id - nothing to prune."
-    }
-    elseif ($matchCount -gt 1) {
-        # Id shared by >1 PLAN.md line (duplicate-id backlog): the label alone
-        # isn't authoritative per this file's own contract, so don't guess which
-        # line belongs to the file we just completed - that could delete a still-open
-        # sibling's line. Leave both; the caller prunes the right one by hand.
-        Write-Info "PLAN.md has $matchCount lines for id $numericId (duplicate-id backlog) - not auto-pruning, remove the correct line by hand."
+        Write-Info "WARNING: no PLAN.md line matched todo $Id - searched for pattern '$lineIdPattern' (plain/bold/underscore/backtick id, optional [P]). If a line for this id exists in a format outside that set, it was NOT pruned."
     }
     else {
         $keptLines = $lines | Where-Object { $_ -notmatch $lineIdPattern }
         $utf8NoBom = New-Object System.Text.UTF8Encoding $false
         [System.IO.File]::WriteAllText($planPath, (($keptLines -join "`r`n") + "`r`n"), $utf8NoBom)
-        Write-Info "Pruned PLAN.md line(s) for todo $Id"
+        if ($matchCount -gt 1) {
+            Write-Info "Pruned $matchCount PLAN.md line(s) for todo $Id (multiple formatting variants matched the same id)."
+        }
+        else {
+            Write-Info "Pruned PLAN.md line(s) for todo $Id"
+        }
     }
 }
 else {
