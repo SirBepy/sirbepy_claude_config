@@ -13,6 +13,10 @@ param(
 # -GetId prints "<pid>-<procStart-ticks>" for the current session and exits - the canonical
 # screenshot-subfolder id other skills (/close Phase 0, /screenshot, /mockup) should call instead
 # of hand-rolling their own walk.
+# Todo 355 (2026-08-19): measured from an actual Task-tool subagent dispatch - its pid,
+# CLAUDE_CODE_SESSION_ID, and -GetId output were byte-identical to the orchestrator's, because
+# Task-tool subagents run inside the orchestrator's own claude.exe process, not a separate one,
+# so accepted as-is - the hole only exists for a genuinely separate-process spawn (cron/manual claude -p).
 
 $ErrorActionPreference = 'Stop'
 
