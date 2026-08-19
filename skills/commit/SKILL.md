@@ -138,7 +138,7 @@ Folds newly-staged-or-named fixes into an existing commit `<sha>` that is not ye
    - No upstream configured: nothing to push to yet, so `<sha>` cannot be "already pushed" - safe on this axis, continue.
    - Upstream exists: `git branch -r --contains <sha>`. Any output means `<sha>` is reachable from a remote branch - **refuse**, name the sha, and tell the dev to make a normal follow-up `FIX:` commit instead (same fix-forward wording as auto-commit.md's "Fixes: `<short-sha>`" body line). Stop, do not touch history.
 3. **Overlap check.** `git log --format=%H <sha>..HEAD` lists every commit on top of the target. For each, `git show --name-only --format= <commit>` and intersect with the file list this fold is about to touch. Any overlap: a clean pathspec split can't separate the hunks - **refuse this mode**, point the dev at "Splitting one file across commits" in `skills/commit/edge-cases.md` instead.
-4. Step 5a prefilters (`comment-noise.sh`, `em-dash.sh`, `secret-scan.sh`) run against the fold's own file set, same as any other commit.
+4. Step 5a's `prefilter-gate.sh` runs against the fold's own file set, same as any other commit.
 5. Branch guard: record `git rev-parse --abbrev-ref HEAD` now, and re-check it immediately before the reset below - same rule as step 8's, stop if it moved. Same peer check (7a) too: announce the pathspec about to be rewritten before touching history.
 
 **Recipe, once every precondition passes:**
