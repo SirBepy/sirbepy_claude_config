@@ -20,6 +20,8 @@ The environment block at session start states the platform (`win32` = Windows, `
 
 Each platform file is fully self-contained: it owns its scan commands, output rules, self-improvement confirmation gate, and its own NEVER-TOUCH / KNOWN-SAFE / SCAN LOG sections.
 
+For "is anything orphaned / what is eating my RAM" specifically (Windows), run `skills/disk-doctor/orphan-audit.ps1` - advise-only, reports top consumers, chromium window vs process count, and rootless processes.
+
 ## Step 3 — Self-improvement edits go in the platform file
 
 When invoked as `/disk-doctor`, any proposed NEVER-TOUCH / KNOWN-SAFE / SCAN LOG additions are appended to the **platform file you loaded** (`windows.md` or `macos.md`) via that file's confirmation gate. Never edit this router file for scan findings.
