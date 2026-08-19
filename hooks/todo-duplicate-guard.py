@@ -30,6 +30,11 @@ except Exception as e:
 
 OVERRIDE_MARKER = "<!-- duplicate-checked -->"
 
+# A token in more than this share of the backlog's titles+goals carries no signal.
+COMMON_TOKEN_RATIO = 0.25
+COMMON_TOKEN_MIN_DOCS = 3
+COMMON_TOKEN_MIN_CORPUS = 8
+
 PATH_SEP_RE = re.compile(r"[\\/]+")
 FILENAME_RE = re.compile(r"^\d+-.*\.md$", re.IGNORECASE)
 TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
@@ -97,19 +102,52 @@ def is_plausible_hit(tokens: list[str], matched: list[str]) -> bool:
     return len(matched) / len(tokens) >= 0.6
 
 
+def comparable_text(content: str) -> str:
+    """Title plus Goal, never the whole body: matching full text made every long
+    todo a hit on shared vocabulary (5 false positives on 2 real writes, 2026-08-19).
+    """
+    title = extract_title(content)
+    goal = ""
+    m = re.search(r"(?ms)^##[ \t]+Goal[ \t]*\r?\n(.*?)(?=^##[ \t]|\Z)", content or "")
+    if not m:
+        m = re.search(r"(?mi)^[ \t]*Goal[ \t]*:[ \t]*(.+)$", content or "")
+    if m:
+        goal = m.group(1)
+    return f"{title}\n{goal}"
+
+
 def find_hits(todos_dir: Path, target_name: str, tokens: list[str]) -> list[tuple[Path, list[str]]]:
-    candidates = [f for f in sorted(todos_dir.glob("*.md")) if f.name.lower() != target_name]
+    # Only real backlog files compare: PLAN.md is the ordered lane, not a todo,
+    # and it names nearly every id in the backlog, so it matched everything.
+    candidates = [
+        f for f in sorted(todos_dir.glob("*.md"))
+        if f.name.lower() != target_name and FILENAME_RE.match(f.name)
+    ]
     done_dir = todos_dir / "done"
     if done_dir.is_dir():
-        candidates += sorted(done_dir.glob("*.md"))
+        candidates += [f for f in sorted(done_dir.glob("*.md")) if FILENAME_RE.match(f.name)]
 
-    hits = []
+    texts = []
     for f in candidates:
         try:
-            text = f.read_text(encoding="utf-8", errors="ignore")
+            texts.append((f, comparable_text(f.read_text(encoding="utf-8", errors="ignore"))))
         except OSError:
             continue
-        matched = matched_tokens(tokens, text)
+
+    # Domain terms ("skill", "dispatch", "marker") killed signal here and no English
+    # stopword list catches those; document frequency finds them per-repo. Needs a
+    # real corpus: under ~8 candidates the ratio drops below a single document.
+    if len(texts) >= COMMON_TOKEN_MIN_CORPUS:
+        floor = max(COMMON_TOKEN_MIN_DOCS, len(texts) * COMMON_TOKEN_RATIO)
+        common = {
+            t for t in tokens
+            if sum(1 for _, txt in texts if matched_tokens([t], txt)) > floor
+        }
+        tokens = [t for t in tokens if t not in common] or tokens
+
+    hits = []
+    for f, txt in texts:
+        matched = matched_tokens(tokens, txt)
         if is_plausible_hit(tokens, matched):
             hits.append((f, matched))
     return hits
