@@ -83,3 +83,4 @@ runtime spill living inside `skills/` (Playwright profiles and similar).
 - The highest-value item in the remaining queue is **356** (a flagged diff can still be committed
   because the prefilters and `git commit` run in one shell call). It is not 58's problem, but if
   the audit finishes early it is the next thing worth doing.
+- Archived 2026-08-18: todo 58 ran and completed this session. This was a pointer, not work.

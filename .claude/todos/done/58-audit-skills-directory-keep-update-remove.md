@@ -43,6 +43,10 @@ The audit should rule on 11, 30 and 362 explicitly as part of its output, not le
 - Every skill under `skills/` has an explicit keep / update / remove verdict.
 - Todos 11, 30, and 362 are each either unblocked (with a stated reason) or closed.
 
+## Notes
+
+- Completed 2026-08-18. 83 skills triaged, 6 independent reviewers over 3 contested clusters. Zero removals - the tree was already clean. 13 skills flagged slash-only, cutting always-on description budget 10445 to 5892 chars (43.6%). 4 correctness fixes. Rulings: 11 unblocked as a script, 30 unblocked as a fibo-local skill, 362 kept separate and folded into the /test-and-/e2e direction. Full record in skills/AUDIT-2026-08-18.md. NOT done: the 15 high-usage core skills got a mechanical pass only, no dedicated improvement reviewer.
+
 ## Open questions
 
 Answered 2026-08-13. No open question remains, only a scheduling decision.

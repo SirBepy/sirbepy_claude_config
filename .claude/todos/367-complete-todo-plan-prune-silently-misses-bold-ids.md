@@ -68,5 +68,13 @@ to be loud.
 ## Notes
 
 - Filed 2026-08-17 by `/close` Phase 1 from a five-for-five failure in one `/auto-do-todos` run.
+- **Reproduced again 2026-08-18** archiving todo 351, in the mixed case this todo predicts but does
+  not yet have an example of: PLAN.md held BOTH a plain `- [ ] 351 - build /ticket...` lane line and
+  a bold `- [ ] **351** - unify the 8 ticket skills...` line under Actionable.
+  `complete-todo.ps1 -Id 351` pruned the plain one, reported `Pruned PLAN.md line(s) for todo 351`,
+  and left the bold one in place. So the success message is not merely ambiguous on a total miss, it
+  is **affirmatively wrong on a partial one** - it says pruned, singular-or-plural, while a stale
+  line survives. Worth adding to Acceptance: a file containing both styles for the same id must lose
+  both lines.
 - Related: [[10-archiving-a-todo-needs-a-bespoke-script-every-time]] and
   [[102-claim-todo-script-counterpart]] in `done/`, which created this script and its sibling.

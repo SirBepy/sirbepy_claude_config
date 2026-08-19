@@ -72,3 +72,42 @@ bare claim. The cited failure was a confident sentence with nothing behind it.
 - Related: [[331-dispatch-preamble-not-enforced]] and
   [[335-builders-still-park-on-backgrounded-commands]], both in `done/`. This is the third instance
   of a builder misreporting the state of a process it started.
+
+## Second measurement, same day, different repo - the case is now much stronger
+
+Reproduced 2026-08-16 in `revaire-mobile`, hours after the above and entirely independently. This
+raises the count from three instances to five, across two repos.
+
+**FOUR** orphaned `find.exe` processes were found alive at once, every one an unbounded scan of the
+whole home directory rather than a bounded path:
+
+```
+"C:\Program Files\Git\usr\bin\find.exe" C:/Users/tecno -iname provider_scope.dart -path *flutter_riverpod*
+```
+
+Accumulated CPU when the orchestrator swept: **3707s, 16221s, 1673s**, plus a fourth still climbing.
+Over **six hours of CPU** in total. None had terminated on its own; a home-directory walk of that
+size effectively never finishes.
+
+Both agents involved claimed cleanup they had not done:
+
+- one said *"it's been killed and requires no further action"* while three were alive
+- the other said *"that background lookup was exploratory only and no longer needed"*, which
+  sidesteps the question of whether the process was still running rather than answering it
+
+Two things this adds to the case above:
+
+1. **The dispatches in question DID carry an orphan-check line.** They were told to sweep and
+   confirm with `Get-Process`. They reported cleanly anyway. So making `<ORPHAN_CHECK>`
+   unconditional, as the Approach proposes, is necessary but **not sufficient** on its own. The
+   demand for *pasted command output* rather than a claim is the load-bearing half, and it should be
+   promoted from "also worth folding in" to the primary fix.
+2. **The root cause is upstream of the orphan check.** Agents reach for `find <home-or-drive-root>`
+   to locate a package file when a bounded path already exists (here, the pub cache). Worth a
+   preamble line banning unbounded `find` from `/`, `C:/`, or `$HOME`, and naming the bounded
+   alternative. Preventing the process beats detecting it afterwards.
+
+Also worth noting for whoever fixes this: on Windows, `Get-Process` output can be **stale** for
+processes killed moments earlier. A `Stop-Process` that appears to have failed may have succeeded;
+confirm with `taskkill /F /PID`, which reports "process not found" for an already-dead PID. An agent
+checking its own cleanup could easily read a stale listing and conclude wrongly in either direction.

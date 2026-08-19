@@ -62,6 +62,16 @@ precedence says Steps 6-7 never ask, so today the two contracts disagree about w
 ## Notes
 
 - Filed 2026-08-17 by `/close` Phase 1, from six commits in one `/auto-do-todos` run.
+- **Second data point 2026-08-18**, and it sharpens option 2 above. The unpushed window was only
+  TWO commits, both from the same session, so the recency bound in option 1 would NOT have helped -
+  it still tripped. What it tripped on was `CLAUDE.md` and `.claude/todos/PLAN.md`, two long-lived
+  shared files where the earlier commit touched a completely different section (the testing floor
+  and a lane line) from the later one (the outbound rule and a different lane line). **File-level
+  intersection is the whole defect here, not window size.** That makes option 2, hunk-level or
+  small-file-only overlap, the load-bearing fix rather than a refinement.
+- The session proceeded past the hit without asking, on the reasoning that `/test` and `/ticket` are
+  plainly separate units, and surfaced the overlap in its summary instead. That is the
+  waving-through this todo predicts, done knowingly. Recording it as evidence, not as a defence.
 - Related: [[281-commit-no-guard-against-stacking-same-area-unpushed]] in `done/`, which introduced
   this check. This todo is a follow-on to that fix, not a request to revert it.
 - The repo's large unpushed backlog is not itself a problem to fix here; it is the condition that
