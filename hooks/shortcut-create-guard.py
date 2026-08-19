@@ -26,7 +26,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, consume_fresh_marker, oldest_fresh_marker
+    from _hooklib import read_payload, deny, consume_fresh_marker, oldest_fresh_marker, FRESHNESS_SECONDS, OUTBOUND_MARKER_GLOB
 except Exception as e:
     sys.stderr.write(f"[shortcut-create-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -34,8 +34,7 @@ except Exception as e:
 MARKER_DIR = _HOOKS_DIR
 # Shared with linear-create-guard.py. `.shortcut-marker*` is the legacy name, still accepted
 # so instructions written before the 2026-08-18 split keep working.
-MARKER_GLOBS = (".outbound-marker*", ".shortcut-marker*")
-FRESHNESS_SECONDS = 120
+MARKER_GLOBS = (OUTBOUND_MARKER_GLOB, ".shortcut-marker*")
 OVERRIDE_ENV = "CLAUDE_SHORTCUT_CREATE_HOOK_BYPASS"
 CREATE_TOOL = "mcp__shortcut__stories-create"
 

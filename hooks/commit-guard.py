@@ -33,7 +33,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, consume_fresh_marker
+    from _hooklib import read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS
 except Exception as e:
     sys.stderr.write(f"[commit-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -42,7 +42,6 @@ MARKER_DIR = _HOOKS_DIR
 MARKER_GLOB = ".commit-marker*"
 SESSION_MARKER_DIR = _HOOKS_DIR / ".session-markers"
 LEGACY_SESSION_MARKER_PREFIX = ".commit-marker-session-"
-FRESHNESS_SECONDS = 120
 OVERRIDE_ENV = "CLAUDE_COMMIT_HOOK_BYPASS"
 
 # Short flags that consume a separate following token as their value (so it

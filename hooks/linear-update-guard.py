@@ -27,14 +27,13 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, consume_fresh_marker, oldest_fresh_marker
+    from _hooklib import read_payload, deny, consume_fresh_marker, oldest_fresh_marker, FRESHNESS_SECONDS, OUTBOUND_MARKER_GLOB
 except Exception as e:
     sys.stderr.write(f"[linear-update-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
 
 MARKER_DIR = _HOOKS_DIR
-MARKER_GLOB = ".outbound-marker*"
-FRESHNESS_SECONDS = 120
+MARKER_GLOB = OUTBOUND_MARKER_GLOB
 OVERRIDE_ENV = "CLAUDE_LINEAR_UPDATE_HOOK_BYPASS"
 
 ENDPOINT_RE = re.compile(r"api\.linear\.app/graphql", re.IGNORECASE)

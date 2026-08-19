@@ -14,6 +14,10 @@ import sys
 import time
 from pathlib import Path
 
+# Shared across all six guards; verified byte-identical before the move (todo 380).
+FRESHNESS_SECONDS = 120
+OUTBOUND_MARKER_GLOB = ".outbound-marker*"
+
 
 def read_payload() -> dict:
     """Read stdin, strip a leading BOM, parse as JSON.
