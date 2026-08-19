@@ -42,13 +42,8 @@ hit looks identical to an open one unless state is surfaced explicitly.
 
 ### Shortcut
 
-Token extraction: `refs/shortcut-api.md`. Run 1-2 keyword variants, picking a distinctive noun,
-never the title prefix.
-
-```bash
-curl -s -G "https://api.app.shortcut.com/api/v3/search/stories" -H "Shortcut-Token: $TOKEN" \
-  --data-urlencode "query=<distinctive keyword>"
-```
+Token extraction and the search recipe: `refs/shortcut-api.md` ("Searching stories"). Run 1-2
+keyword variants, picking a distinctive noun, never the title prefix, as the `query` value.
 
 Surface `workflow_state_id` for every hit and name the state. State IDs are in
 `refs/shortcut-api.md`. **Done and Testing are the states that matter.**

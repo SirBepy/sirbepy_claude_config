@@ -12,7 +12,9 @@ TOKEN=$(grep -a SHORTCUT_API_TOKEN ~/.claude/.env | sed 's/^\xef\xbb\xbf//' | cu
 # Get story
 curl -s "https://api.app.shortcut.com/api/v3/stories/<id>" -H "Shortcut-Token: $TOKEN"
 
-# Search
+# Search (raw query-string form, not curl -G --data-urlencode - see refs/shortcut-api.md
+# "Searching stories" for the canonical recipe, pagination, and query operators; the two
+# encoding forms' equivalence is unverified, so this one stays as-is)
 curl -s "https://api.app.shortcut.com/api/v3/search/stories?query=<urlencoded>&detail=full&page_size=25" -H "Shortcut-Token: $TOKEN"
 
 # Update story

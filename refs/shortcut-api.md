@@ -61,7 +61,7 @@ curl -s -G "https://api.app.shortcut.com/api/v3/search/stories" -H "Shortcut-Tok
   --data-urlencode "query=owner:josipmui !is:archived !is:done" --data-urlencode "page_size=25"
 ```
 
-Common query operators: `owner:<mention>`, `!is:archived`, `!is:done`, `completed:<date>..*`, `title:"<exact phrase>"`. Paginate via the response's `.next` field (a full relative URL, `null` when exhausted): don't assume `page_size` alone means one page. The search API rejects `workflow_state_ids` as a query/body key; filter to specific states client-side after fetching.
+Common query operators: `owner:<mention>`, `!is:archived`, `!is:done`, `completed:<date>..*`, `title:"<exact phrase>"`. Add `--data-urlencode "detail=full"` for full story objects (comments, description) in the same response instead of a second per-story fetch. Paginate via the response's `.next` field (a full relative URL, `null` when exhausted): don't assume `page_size` alone means one page. The search API rejects `workflow_state_ids` as a query/body key; filter to specific states client-side after fetching.
 
 **Free-text `query` is fuzzy/relevance-ranked, even combined with `state:"X"`: it returns unrelated stories ranked in, not a real AND filter.** `title:"exact phrase"` scopes more precisely. Carried forward, not re-verified this session (from a single hand-rolled-script session, 2026-08-13/14): a colon inside the quoted phrase (`title:"AP:"`) gets dropped, and the search falls back to matching the bare token as a substring of unrelated words (e.g. "Web App" contains "AP"), so a punctuated `title:` phrase needs a local post-filter on the returned `name` field before trusting the result set.
 
