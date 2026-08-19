@@ -183,10 +183,26 @@ per the global subagent-model rule; never inherit.
      ```
      The title must not contain `>` characters. The base64 values must be
      single lines with no spaces or line breaks.
-   - **Step 4 must be the FINAL action of its turn - no tool call after it.**
-     Text emitted right before a tool call can be invisible to the dev, so the
-     rendered preview and the markers have to land in a turn with nothing
-     after them. Step 5's `AskUserQuestion` opens a NEW turn, never the same one.
+   - **Step 4 must be the FINAL action of its turn - no tool call after it,**
+     with one exemption below for Claude Conductor. Text emitted right before a
+     tool call can be invisible to the dev, so the rendered preview and the
+     markers have to land in a turn with nothing after them. Step 5's
+     `AskUserQuestion` opens a NEW turn, never the same one.
+   - **Claude Conductor specifically:** Conductor mandates `report_turn_status`
+     as the literal last action of every turn (a Stop hook blocks the turn
+     otherwise), so "no tool call after it" is unsatisfiable there as written.
+     Which fix applies depends on an unverified fact - whether Conductor's
+     card parser reads raw assistant text or only `send_message` payloads -
+     that cannot be confirmed from outside a live Conductor session:
+     - If the parser reads raw assistant text: the "no tool call after it"
+       rule is exempt for `report_turn_status` only, since that call is
+       harness-mandated and carries no user-visible text - emit the markers
+       as plain text same as elsewhere, then call `report_turn_status`.
+     - If the parser only reads `send_message` payloads: emit the three
+       marker lines as the body of a `send_message` call instead of raw
+       assistant text.
+     Do not do both - the rendered inline preview from this step plus a
+     rendered card is a duplicate wall of text for the dev.
 
 See `skills/create-pr/drafting-rules.md` for the auto-tier rubric, the
 comment-noise check, the secret-scan check, the visual-scan rules, and the
