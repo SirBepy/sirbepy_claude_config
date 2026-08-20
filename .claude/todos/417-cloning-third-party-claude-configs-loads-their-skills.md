@@ -51,11 +51,12 @@ strictly more dangerous because they are instructions rather than code that has 
    supply-chain concern one level up. Keep it short; the procedure goes in a ref, not in CLAUDE.md.
    The rule states: never clone or unpack a third-party agent-config tree into a scanned directory;
    neutralize it first.
-3. Write the procedure as a ref (or fold it into the new skill from todo 418, if that lands first,
-   to avoid two homes for one idea). It needs: clone to a location outside any scanned tree, OR
-   clone then immediately rename `.claude`, `.claude-plugin`, `.agents` to `dot-*` deepest-first
-   before reading anything. The deepest-first ordering matters: a shallow `find -maxdepth 3` pass
-   missed 222 nested directories on the first attempt.
+3. ~~Write the procedure as a ref (or fold it into the new skill from todo 418, if that lands first,
+   to avoid two homes for one idea).~~ **DONE 2026-08-20 by todo 418.** The procedure lives in
+   `skills/supply-chain-audit/SKILL.md`, section "Reading an untrusted tree safely", which is the
+   fold-in this step sanctioned. It carries the outside-a-scanned-tree option, the `dot-*` rename,
+   the deepest-first ordering with the 222-directory miss, and the re-check-the-listing step. Do not
+   write a second copy as a ref. What is left of this todo is steps 1, 2 and 4.
 4. Consider mechanical enforcement, and be honest about whether it is reachable. A `PreToolUse` hook
    on `Bash` matching `git clone` could warn when the destination is inside a scanned tree. Do NOT
    build this until step 1 establishes what "scanned tree" means concretely, or the guard will be

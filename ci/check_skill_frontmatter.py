@@ -15,6 +15,8 @@ from pathlib import Path
 # Census of every top-level key across all 83 SKILL.md files, taken 2026-08-20.
 # Counts: name(83) description(83) disable-model-invocation(50) argument-hint(38)
 # references(2) license(1) allowed-tools(1) version(1) user-invocable(1).
+# context/agent/background are not from that census: they were read out of the
+# claude binary's own frontmatter schema on 2026-08-20 (todo 418).
 ALLOWED_KEYS = {
     "name",
     "description",
@@ -25,6 +27,9 @@ ALLOWED_KEYS = {
     "allowed-tools",
     "version",
     "user-invocable",
+    "context",
+    "agent",
+    "background",
 }
 
 REQUIRED_KEYS = ("name", "description")

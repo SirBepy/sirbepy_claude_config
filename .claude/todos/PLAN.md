@@ -33,9 +33,8 @@ suites, not 13. 415 moved the impeccable and status-marker-guard wiring into the
 `settings.json`, both proven live by real nested-session triggers; `settings.local.json` stays
 untracked and now says so in its own `description`.
 
-### Phase 2 - security. 418 first: phase 5 adopts third-party skills.
+### Phase 2 - security. 418 done 2026-08-20: `/supply-chain-audit`, read-only fork, three live runs.
 
-- [ ] 418 - supply-chain audit skill for untrusted skills/hooks
 - [ ] 420 - write-time secret scan + sensitive-file guard (self-protects `hooks/`)
 - [ ] 419 - generic destructive-shell-command guard
 
