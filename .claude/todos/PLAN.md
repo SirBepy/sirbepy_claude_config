@@ -1,8 +1,90 @@
 # Plan
 
+## Harvest implementation - ordered, 2026-08-20
+
+**33 todos from the open-source `.claude` harvest: 414-444, plus 450-451 from Joe's own review of the
+report.** Full findings in `refs/harvest-2026-08-20-oss-claude-repos.md`. Ordered by RISK ASCENDING,
+not by value: 8 of them edit `hooks/` or `settings.json`, where a mistake is silent and breaks every
+future session, and Joe does not read code. So the safety net comes first and the blast radius comes
+last.
+
+**One fresh chat per phase.** The todos were deliberately written so a cold session executes from the
+file alone; carrying harvest context forward buys nothing and costs the context the work needs.
+`/mega-todos` is the proven machinery for a phase (33 todos closed in one pass on 2026-08-19, one
+commit per todo, zero drops) but note many of these touch the SAME files, so file-ownership lanes
+matter and the marked sequences must stay sequential.
+
+### Phase 0 - safety net. Alone, before anything else.
+
+- [ ] push the 55 unpushed commits first, so a recovery point exists off this machine
+- [ ] 423 - CI: hook tests actually run, skill frontmatter validated, always-loaded token budget baselined
+
+Rationale: right now nothing mechanically tells you a hook change broke a hook. Every later phase
+edits hooks or settings. 423 is what makes phases 2-6 verifiable at all.
+
+### Phase 1 - the three real defects. Cheap, isolated, proves the loop.
+
+- [ ] 414 [P] - flutter-version-check docstring contradicts its live wiring
+- [ ] 415 [P] - settings.local.json is versioned nowhere
+- [ ] 416 [P] - EXPERIMENTAL hooks sit beside live guards
+
+### Phase 2 - security. 418 first: phase 5 adopts third-party skills.
+
+- [ ] 418 - supply-chain audit skill for untrusted skills/hooks
+- [ ] 420 - write-time secret scan + sensitive-file guard (self-protects `hooks/`)
+- [ ] 419 - generic destructive-shell-command guard
+
+### Phase 3 - skill quality. Strictly sequential.
+
+- [ ] 422 - eval harness (fixtures + independent grader), pilot on `/rate-it`
+- [ ] 421 - `/rate-it` lens isolation + adversarial verify. **Needs 422 to prove it worked.**
+- [ ] 436 - heal-skill. Needs 422.
+
+### Phase 4 - CLAUDE.md weight and rules. Same file, so sequential.
+
+- [ ] 424 - path-scoped `.claude/rules/` to cut always-loaded weight
+- [ ] 429 - Timeless Present comment rule + strength-tagged bullets
+- [ ] 442 - Evidence Rule for own-codebase claims, deferred-work, numeric ratchets, Ask First
+
+### Phase 5 - the review loop Joe actually asked for, plus discipline skills.
+
+- [ ] 451 - refactor findings are filed for a reader who does not read. **Do this before 450.**
+- [ ] 450 - `/code-check` fires post-write in a fresh subagent, drops out of `/close`
+- [ ] 425 - engineering-discipline skills. Item 2 (refactoring) is gated on 451's classification.
+
+### Phase 6 - harness surgery. Highest blast radius, so last.
+
+- [ ] 427 - Stop-hook verify gate. **Runs on every turn end. Build the escape hatch first.**
+- [ ] 426 - PreCompact, PermissionRequest, generic PostToolUse; the unused JSON control fields
+- [ ] 434 - per-agent hooks, which could make the delegation ban list real instead of prose
+- [ ] 437 - OS sandbox namespace. Likely only `credentials.mask` survives contact.
+
+### Phase 7 - evaluations. "No" is an acceptable outcome for several of these.
+
+- [ ] 431 - declarative hook engine. **Expected to close negative**; the 27 guards encode incident history a config row cannot hold.
+- [ ] 433 - config layering. Likely a five-line move, not an architecture.
+- [ ] 444 - prove-it-works / analytical Q&A / MCP scoping. Joe already judged prove-it-works redundant with `/test` and `/e2e`.
+- [ ] 430 - cross-model delegation. Close it without building if the disagreement protocol has no answer.
+- [ ] 438 [P] - permissions deny list (noise half is the real win; namespacing is probably a no)
+- [ ] 440 [P] - config-protection guard. Gated on 427's signal.
+- [ ] 441 [P] - `/supervised-run` enforcement
+- [ ] 439 [P] - config-default deep-merge. Gated on 415.
+- [ ] 443 [P] - `/create-pr` body anti-patterns
+- [ ] 428 [P] - repo README, CONTRIBUTING, generated skills index
+- [ ] 432 [P] - local statusline, kill the per-launch npx fetch
+- [ ] 435 [P] - voice profile. **Blocked on Joe supplying real writing samples.**
+
+### The three tips that matter
+
+1. **Never let a session edit the hook currently guarding it.** Copy to scratch, test there, then
+   install. A broken guard is silent.
+2. **One commit per todo, never batched**, so a revert is surgical. `/mega-todos` already does this.
+3. **Verification cannot be "Joe reviews the diff."** Every phase needs a mechanical check, which is
+   the whole reason phase 0 exists.
+
 ## Next up
 
-**17 todos. Nothing is ordered yet: run `/plan-todos`.**
+**63 live todos, 295 in `done/`.** The harvest set above is ordered; the rest below is not.
 
 A `/mega-todos` run on 2026-08-19 closed **33 todos in one pass**, 16 file-ownership lanes, one
 commit per todo. Zero silent drops (reconciled as a set difference, not a count), zero barrier
