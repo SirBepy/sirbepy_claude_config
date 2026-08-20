@@ -27,7 +27,6 @@ deliberately. That is the ratchet working, not a bug to route around.
 
 ### Phase 1 - the three real defects. Cheap, isolated, proves the loop.
 
-- [ ] 414 [P] - flutter-version-check docstring contradicts its live wiring
 - [ ] 415 [P] - settings.local.json is versioned nowhere
 - [ ] 416 [P] - EXPERIMENTAL hooks sit beside live guards
 

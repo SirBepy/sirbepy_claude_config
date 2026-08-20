@@ -43,3 +43,4 @@ docstring: it invites a cleanup pass to delete a live guard.
 ## Notes
 
 Do not "fix" this by unwiring the hook. It is wired on purpose; the comment is what is wrong.
+- Done 2026-08-20 (01d5cb8). Header now reads: SessionStart hook, matcher `startup`, 15s timeout in settings.json. Comment lines only, the hook body is untouched. Swept the leading docstring of all 27 hooks/*.py|*.sh|*.ps1 files against the wired entries in settings.json AND settings.local.json: this was the ONLY contradiction in the tree, so the count is 1 found, 1 fixed. The three EXPERIMENTAL spikes correctly said 'not wired' (deleted under todo 416); status-marker-guard.py correctly says Stop hook, wired via settings.local.json.
