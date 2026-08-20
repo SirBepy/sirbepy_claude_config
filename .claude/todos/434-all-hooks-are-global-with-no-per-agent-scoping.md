@@ -64,7 +64,8 @@ bigger change than adding a frontmatter block. That is the thing to establish be
 - A stated answer on whether named agent types are a prerequisite.
 - One guard scoped to one agent type, verified to fire there and verified NOT to fire on the main
   thread.
-- No existing global hook's behavior changes. All 13 hook tests still pass, real output pasted.
+- No existing global hook's behavior changes. `python ci/run_all.py` still exits 0 with every
+  `hooks/test_*.py` suite passing, real output pasted.
 - If named agent types get defined, the builder-preamble consolidation is at least assessed, since
   that is the larger win hiding behind this.
 

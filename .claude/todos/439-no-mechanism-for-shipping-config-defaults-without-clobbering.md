@@ -76,7 +76,7 @@ Constraints specific to this environment, both non-negotiable:
 - Idempotent: two consecutive runs produce no diff, shown with real output.
 - A local edit provably survives a default change, tested on a scratch copy, never on the live
   `settings.json` first.
-- Claude Code still starts and all 13 hook tests still pass after any settings change, real output
+- Claude Code still starts and `python ci/run_all.py` still exits 0 after any settings change, real output
   pasted.
 
 ## Notes
