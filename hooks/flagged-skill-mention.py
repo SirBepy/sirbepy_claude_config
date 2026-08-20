@@ -27,7 +27,11 @@ if _normalized.startswith('[SYSTEM NOTIFICATION') or _ENVELOPE_TAG_RE.match(_nor
 first_line = prompt.split('\n', 1)[0]
 line_starts = [ln.strip() for ln in prompt.split('\n')]
 
-skills_dir = os.path.expanduser('~/.claude/skills')
+# Resolve relative to this file first: the hook lives next to skills/ in the
+# same config tree, and $HOME/~ has no ".claude" in CI or a fresh clone.
+skills_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'skills')
+if not os.path.isdir(skills_dir):
+    skills_dir = os.path.expanduser('~/.claude/skills')
 contexts = []
 
 for path in sorted(glob.glob(os.path.join(skills_dir, '*', 'SKILL.md'))):
