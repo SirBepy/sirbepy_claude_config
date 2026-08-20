@@ -4,7 +4,18 @@ Run 2026-08-19/20. Method: 3 discovery scouts, a full baseline inventory of this
 9-group wide skim across 32 shallow clones. Every repo was covered; nothing was silently dropped.
 
 Working notes and the raw per-group reports live in `C:\tmp\claude-harvest\` (disposable). This file
-is the durable conclusion. Todos filed from it are 414-416 and 417-430.
+is the durable conclusion.
+
+**Todos filed from it: 414-444.** 414-416 are defects in this repo found by the baseline pass.
+417-430 are the first tier. 431-444 are the second tier, filed on request so nothing depends on being
+remembered: declarative hook engine (431), local statusline (432), config layering (433), per-agent
+hooks (434), voice profile (435), heal-skill (436), OS sandbox (437), permissions denylist (438),
+config-default merge (439), config-protection guard (440), `/supervised-run` enforcement (441),
+CLAUDE.md rules batch two (442), `/create-pr` anti-patterns (443), three smaller skill gaps (444).
+
+Several carry an explicit "the honest answer may be no" instruction. That is deliberate: 431, 433,
+437 and 444 in particular are evaluations, and closing them with a negative finding is a valid
+outcome rather than a failure to deliver.
 
 ---
 
