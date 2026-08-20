@@ -17,9 +17,9 @@ matter and the marked sequences must stay sequential.
 ### Phase 0 - safety net. DONE 2026-08-20.
 
 Push landed, and 423 shipped `ci/run_all.py` plus `.github/workflows/ci.yml`. Every later phase now
-has a mechanical check: `python ci/run_all.py` runs the 13 hook self-test suites, validates skill
-frontmatter across all 83 skills, and gates `CLAUDE.md` at 6732 tokens. `/commit` step 6a runs it too,
-so a local pass and a green CI run mean the same thing.
+has a mechanical check: `python ci/run_all.py` runs every `hooks/test_*.py` self-test suite,
+validates skill frontmatter across all 83 skills, and gates `CLAUDE.md` at 6732 tokens. `/commit`
+step 6a runs it too, so a local pass and a green CI run mean the same thing.
 
 **The token ceiling has ZERO headroom by design** (6732 is the measured current weight), so phase 4
 (429, 442) cannot add a `CLAUDE.md` rule without either cutting elsewhere or raising `CEILING_TOKENS`
@@ -28,7 +28,6 @@ deliberately. That is the ratchet working, not a bug to route around.
 ### Phase 1 - the three real defects. Cheap, isolated, proves the loop.
 
 - [ ] 415 [P] - settings.local.json is versioned nowhere
-- [ ] 416 [P] - EXPERIMENTAL hooks sit beside live guards
 
 ### Phase 2 - security. 418 first: phase 5 adopts third-party skills.
 
@@ -221,8 +220,9 @@ The 2026-08-13 lesson stands and got two more data points:
   and `ui-screenshot-reminder.py` (path-extension gate, fails open, once per session).
 - **Heuristic judgment calls do not.** The unverified-mechanism detector hit 67 percent false
   positives, the bare-question detector missed 20 to 25 percent against ~4025 real messages, and the
-  command-chaining detector flagged 55 percent of 30047 real commands. All three stay as
-  `hooks/EXPERIMENTAL-*.py` with their measurements.
+  command-chaining detector flagged 55 percent of 30047 real commands. Todo 416 deleted all three
+  prototypes on 2026-08-20; the measurements live in `done/270`, `done/308` and `done/311`, and each
+  of those notes says a revisit would not reuse the code.
 - **Measuring can also SAVE a change.** Todo 342 measured three match scopes against 7128 real
   prompts. `whole_prompt` would have caught every invocation but also fired inside all 131
   task-notification bodies, reproducing the exact injection bug todo 332 fixed. The middle option

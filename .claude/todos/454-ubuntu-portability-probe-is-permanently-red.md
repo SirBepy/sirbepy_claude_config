@@ -62,8 +62,9 @@ scratch tree, reproduce, fix and verify there, then install and re-run `python c
 
 ## Acceptance
 
-- `python ci/run_all.py` still exits 0 on Windows, with all 13 suites discovered. A dropped suite is
-  a regression, so state the discovered count.
+- `python ci/run_all.py` still exits 0 on Windows, with every `hooks/test_*.py` suite discovered. A
+  dropped suite is a regression, so state the discovered count. Expect **11**, not the 13 quoted
+  above: todo 416 deleted the two spike suites on 2026-08-20, after the run this todo cites.
 - If option 1: a real `ubuntu-latest` CI run where `portability-probe` concludes **success**, linked.
   The two skipped cases must be visible as skipped in that run's log, not absent.
 - If option 2: the job is gone and the workflow still concludes success on a real run, linked.

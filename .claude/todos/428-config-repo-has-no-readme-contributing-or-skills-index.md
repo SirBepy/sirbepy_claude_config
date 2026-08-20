@@ -26,8 +26,10 @@ Concretely, three things are missing:
 Non-obvious things a new session cannot infer and currently has to be told: that `refs/` holds
 procedures read on demand while `snippets/` holds `@import`-ed rule fragments; that
 `.claude-personal` and `.claude-fibo` are junctions into `skills/`; that `.claude/todos/` is
-repo-relative even for this repo; that hooks prefixed `EXPERIMENTAL-` are not wired (todo 416); that
-`hooks/.commit-marker-*` and `.session-markers/` are live runtime state no cleanup may touch.
+repo-relative even for this repo; that every hook in `hooks/` is live, because unadopted spikes are
+deleted rather than parked there (settled by todo 416, which deleted the three `EXPERIMENTAL-*.py`
+files); that `hooks/.commit-marker-*` and `.session-markers/` are live runtime state no cleanup may
+touch.
 
 **2. A CONTRIBUTING-equivalent for authoring.** `zircote/.claude/skills/CONTRIBUTING.md` documents a
 skill-authoring template and process. `alirezarezvani/claude-skills/CONVENTIONS.md` goes further with

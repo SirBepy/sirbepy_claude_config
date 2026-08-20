@@ -86,8 +86,7 @@ def extract_field(tool_input: dict, path: str):
 
 def iter_turn_tool_uses(transcript_path: str):
     """Yield (name, input) for tool_use blocks in assistant entries after the
-    most recent user entry, an approximation of "this turn" shared with
-    EXPERIMENTAL-bare-question-detector.py's turn_had_auq."""
+    most recent user entry, an approximation of "this turn"."""
     path = Path(transcript_path)
     if not path.exists():
         return
