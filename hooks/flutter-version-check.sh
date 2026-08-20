@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# SessionStart-style hook (registration is a separate step; this file is not
-# wired into settings.json yet). Warns when the Flutter repo in the current
-# working dir is pinned behind the latest published stable release.
+# SessionStart hook, matcher `startup`, 15s timeout in settings.json. Warns when
+# the Flutter repo in the current working dir is pinned behind the latest
+# published stable release.
 #
 # Fast exit unless the cwd (or CLAUDE_PROJECT_DIR) is a Flutter repo pinning
 # via a flutter.version file. Network is throttled to once per 24h via a
