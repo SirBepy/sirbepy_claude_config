@@ -117,7 +117,13 @@
       "Skill(schedule)",
       "Skill(schedule:*)",
       "PowerShell($run = Get-ItemProperty -Path 'HKCU:\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run'; \"Claude Usage exists: $\\($null -ne $run.'Claude Usage'\\)\"; \"Claude Usage Taskbar Tool: $\\($run.'Claude Usage Taskbar Tool'\\)\")",
-      "Bash(mkdir -p C:/Users/tecno/.claude/snippets)"
+      "Bash(mkdir -p C:/Users/tecno/.claude/snippets)",
+      "Bash(claude plugin:*)",
+      "Skill(caveman:caveman)",
+      "PowerShell(Get-Volume *)",
+      "Bash(ollama ps *)",
+      "Bash(ollama list *)",
+      "Skill(claude-api)"
     ],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [
@@ -158,6 +164,19 @@
           {
             "type": "command",
             "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/tecno/.claude/aiusage-hook.ps1 notify"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -f \"C:\\\\Users\\\\tecno\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\hook.mjs\" ] || node \"C:\\\\Users\\\\tecno\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\hook.mjs\"",
+            "timeout": 5,
+            "statusMessage": "Checking UI changes"
           }
         ]
       }
@@ -371,6 +390,25 @@
             "statusMessage": "Checking for a UI screenshot reminder"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -f \"C:\\\\Users\\\\tecno\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\hook.mjs\" ] || node \"C:\\\\Users\\\\tecno\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\hook.mjs\"",
+            "timeout": 30,
+            "statusMessage": "Design deep pass"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\\\Users\\\\tecno\\\\.claude\\\\hooks\\\\status-marker-guard.py\"",
+            "statusMessage": "Checking status marker form"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -424,6 +462,7 @@
     "mode": "hold"
   },
   "theme": "dark",
+  "outputStyle": "Silent",
   "autoCompactEnabled": true,
   "remoteControlAtStartup": true,
   "agentPushNotifEnabled": true,

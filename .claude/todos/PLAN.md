@@ -25,9 +25,13 @@ step 6a runs it too, so a local pass and a green CI run mean the same thing.
 (429, 442) cannot add a `CLAUDE.md` rule without either cutting elsewhere or raising `CEILING_TOKENS`
 deliberately. That is the ratchet working, not a bug to route around.
 
-### Phase 1 - the three real defects. Cheap, isolated, proves the loop.
+### Phase 1 - the three real defects. DONE 2026-08-20.
 
-- [ ] 415 [P] - settings.local.json is versioned nowhere
+414, 415 and 416 all landed, one commit each. 414 fixed the lying docstring and its sweep found no
+second one. 416 DELETED the three unadopted spikes, so `hooks/` is now all-live and CI discovers 11
+suites, not 13. 415 moved the impeccable and status-marker-guard wiring into the tracked
+`settings.json`, both proven live by real nested-session triggers; `settings.local.json` stays
+untracked and now says so in its own `description`.
 
 ### Phase 2 - security. 418 first: phase 5 adopts third-party skills.
 
