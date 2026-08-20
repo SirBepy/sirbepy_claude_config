@@ -94,3 +94,15 @@ The default answer for all three should be skip unless a concrete case argues ot
 plausible-sounding skills is exactly the kind of addition that produced a 12-skill deletion audit.
 
 Do not adopt all three to be thorough. Thoroughness here is the reasoning, not the count.
+
+**SETTLED 2026-08-20 by Joe, do not re-litigate: `prove-it-works` is SKIPPED.** On reading the
+harvest report his response was "sounds like my test and e2e skills, no?" and that is correct - it
+overlaps `/test` and `/e2e`, which were deliberately split on 2026-08-19 precisely so fast checks and
+browser-driven runs had separate homes. Adopting a third skill over the same ground would cost
+description budget for nothing.
+
+The one non-redundant element is its framing question, "how would I observe this if I had no test
+suite at all?" That is worth **one line added to `/e2e`**, not a skill. Do that instead, and treat
+item 1 of this todo as closed.
+
+Items 2 (analytical Q&A) and 3 (MCP scoping) are untouched by this and still need their own verdicts.

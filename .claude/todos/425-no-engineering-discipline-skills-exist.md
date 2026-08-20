@@ -100,3 +100,27 @@ one stack he works in daily; most are load-bearing for him and dead weight here.
 If `tdd` turns out to conflict with how work actually gets done here (much of this repo is prose,
 config and hooks rather than testable application code), say so. A TDD skill that never fires
 honestly is a finding, not a failure.
+
+**SETTLED 2026-08-20 by Joe, do not re-litigate. Two of the five are downgraded:**
+
+- **Item 2, `refactoring`: GATED on todo 451, and likely dropped.** Joe: *"we have todos, they get
+  made by code-check and it suggests refactoring right? keep in mind i never end up rly reading the
+  code... so... i dont even ask for the refactor."* This todo's original argument was that CLAUDE.md
+  has a no-drive-by-refactors rule with no method behind it. That argument assumed someone drains the
+  refactor queue. Nobody does. Adopting a refactoring skill behind a queue that never drains is
+  motion, not progress. **Do not adopt it until 451's classification shows there is a class of
+  finding that actually reaches execution.**
+- **Item 5, `characterisation-tests`: LOW priority.** Joe's pushback: *"couldnt we just make AIs
+  document their code better and then that way we dont have to have the AI have to rediscover what
+  the code does?"* Mostly right. The distinction that survives: documentation records **intent**,
+  tests record **actual behavior including the bugs**, and docs drift silently while a test cannot,
+  because it runs. The concrete proof is in this very backlog: **todo 414 is a hook whose docstring
+  says it is "not wired into settings.json yet" while `settings.json` wires it.** So the split is
+  document-for-intent by default (cheap, do it), characterisation tests only when about to change
+  untested code that cannot afford to break.
+
+Items 1 (`tdd`), 3 (`mutation-testing`) and 4 (`debugging`) are unaffected and remain the real targets.
+
+For context on why the review timing matters at all here, read todos 450 and 451 first: Joe's stated
+reason `/code-check` runs late is that **AI is very bad at reviewing its own code**, which is a
+constraint to design around, not a bug to fix.

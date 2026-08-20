@@ -90,3 +90,17 @@ validated. One pilot, proven, then decide.
 Note the tension with the earlier scout claim: `context: fork`, `allowed-tools`, `paths:` and
 `model:` were reported as underexploited frontmatter fields, but Anthropic's own examples use none of
 them. Available is not the same as recommended.
+
+**SETTLED 2026-08-20 by Joe, do not re-litigate: WRAP, do not replace.** He asked whether to stop
+using `bepy-skill-creator` or have it call Anthropic's `skill-creator` instead. The answer is the
+second one, layered:
+
+- `bepy-skill-creator` keeps owning **"does this match bepy conventions"**. Those conventions are
+  Joe's own and are the reason the skill exists; deleting it would throw away the part no upstream
+  tool can supply.
+- The eval loop is the part that is genuinely missing, and it answers a different question:
+  **"did this edit actually make the skill better at its job"**.
+
+So the shape is `bepy-skill-creator` gaining a handoff step to the eval harness, not being retired
+and not being rewritten around upstream. Do not delete or deprecate `bepy-skill-creator` as part of
+this todo.
