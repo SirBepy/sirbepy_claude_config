@@ -30,6 +30,10 @@
 !favicon.svg
 !favicon.png
 !favicon.ico
+!ci/
+!ci/**
+!.github/
+!.github/**
 
 # Per-user ticket log, not shared
 skills/ticket/log.md

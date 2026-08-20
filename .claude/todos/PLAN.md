@@ -14,13 +14,16 @@ file alone; carrying harvest context forward buys nothing and costs the context 
 commit per todo, zero drops) but note many of these touch the SAME files, so file-ownership lanes
 matter and the marked sequences must stay sequential.
 
-### Phase 0 - safety net. Alone, before anything else.
+### Phase 0 - safety net. DONE 2026-08-20.
 
-- [ ] push the 55 unpushed commits first, so a recovery point exists off this machine
-- [ ] 423 - CI: hook tests actually run, skill frontmatter validated, always-loaded token budget baselined
+Push landed, and 423 shipped `ci/run_all.py` plus `.github/workflows/ci.yml`. Every later phase now
+has a mechanical check: `python ci/run_all.py` runs the 13 hook self-test suites, validates skill
+frontmatter across all 83 skills, and gates `CLAUDE.md` at 6732 tokens. `/commit` step 6a runs it too,
+so a local pass and a green CI run mean the same thing.
 
-Rationale: right now nothing mechanically tells you a hook change broke a hook. Every later phase
-edits hooks or settings. 423 is what makes phases 2-6 verifiable at all.
+**The token ceiling has ZERO headroom by design** (6732 is the measured current weight), so phase 4
+(429, 442) cannot add a `CLAUDE.md` rule without either cutting elsewhere or raising `CEILING_TOKENS`
+deliberately. That is the ratchet working, not a bug to route around.
 
 ### Phase 1 - the three real defects. Cheap, isolated, proves the loop.
 

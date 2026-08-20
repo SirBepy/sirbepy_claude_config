@@ -1,0 +1,34 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Windows is the only platform this config is ever used on, so it is the job
+  # allowed to fail the build.
+  checks:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - run: python ci/run_all.py
+
+  # Answers "are the hook tests portable?" empirically without ever blocking a
+  # merge. The 13 suites were only ever run on Windows before 2026-08-20.
+  portability-probe:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - run: python ci/run_all.py

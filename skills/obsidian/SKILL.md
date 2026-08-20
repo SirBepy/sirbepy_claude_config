@@ -1,7 +1,7 @@
 ---
 name: obsidian
 disable-model-invocation: true
-description: Triggers on /obsidian only. Works with the dev's Obsidian vault: plans projects, manages tickets, captures notes, updates journal, manages people. Reads vault CLAUDE.md first.
+description: "Triggers on /obsidian only. Works with the dev's Obsidian vault: plans projects, manages tickets, captures notes, updates journal, manages people. Reads vault CLAUDE.md first."
 ---
 
 # /obsidian

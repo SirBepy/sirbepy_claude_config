@@ -1,6 +1,6 @@
 ---
 name: android-drive
-description: Drives an installed Android app via adb: tap, type, screenshot. For test-on-device or tap-through asks. Not Flutter web (/flutter-e2e) or Patrol.
+description: "Drives an installed Android app via adb: tap, type, screenshot. For test-on-device or tap-through asks. Not Flutter web (/flutter-e2e) or Patrol."
 ---
 
 # android-drive

@@ -1,6 +1,6 @@
 ---
 name: autopilot
-description: Dev is AFK and wants maximum autonomous progress: never block - delegate to subagents, resolve judgment calls via a bounded /iterate-it, auto-answer nested skills' questions, log only genuine blockers, and grind to a verified finish.
+description: "Dev is AFK and wants maximum autonomous progress: never block - delegate to subagents, resolve judgment calls via a bounded /iterate-it, auto-answer nested skills' questions, log only genuine blockers, and grind to a verified finish."
 disable-model-invocation: true
 argument-hint: "[--sleep]"
 ---

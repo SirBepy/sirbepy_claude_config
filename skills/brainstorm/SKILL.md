@@ -1,6 +1,6 @@
 ---
 name: brainstorm
-description: Use before ANY creative or feature work: creating features, components, adding functionality, modifying behavior, or designing a change.
+description: "Use before ANY creative or feature work: creating features, components, adding functionality, modifying behavior, or designing a change."
 ---
 
 # /brainstorm
