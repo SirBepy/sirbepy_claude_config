@@ -33,9 +33,18 @@ suites, not 13. 415 moved the impeccable and status-marker-guard wiring into the
 `settings.json`, both proven live by real nested-session triggers; `settings.local.json` stays
 untracked and now says so in its own `description`.
 
-### Phase 2 - security. 418 and 420 done: `/supply-chain-audit`, plus the write-time secret and sensitive-file guards.
+### Phase 2 - security. DONE 2026-08-21.
 
-- [ ] 419 - generic destructive-shell-command guard
+418, 420 and 419 all landed, one commit each. 418 shipped `/supply-chain-audit`, a read-only
+`context: fork` skill proven on three live runs. 420 shipped the write-time secret scan and the
+sensitive-file guard, both `ask` not `deny`, sharing one pattern source with `/commit`'s prefilter.
+419 shipped the tiered destructive-command guard, `CLAUDE_HOOK_PROFILE` defaulting to `standard`.
+
+**The phase's real lesson, worth more than the three guards:** a corpus proves only that no PAST
+command tripped a rule. All eleven CORE rules measured 0 hits across 62,270 real commands, and the
+guard still had **three separate false-positive classes** that only hand-probing found, two of them
+caught by the guard denying its own author's commands minutes after going live. Measure first, then
+probe the built thing by hand. Neither step substitutes for the other.
 
 **Heads-up for phase 6 and 7, which do harness surgery:** 420's `sensitive-file-guard.py` now asks on
 every write under a `.claude/hooks/` directory and on every `settings*.json` write. Measured at 288
@@ -85,7 +94,9 @@ deliberate (an agent that can edit its own guards has no guards), not a bug to r
 ### The three tips that matter
 
 1. **Never let a session edit the hook currently guarding it.** Copy to scratch, test there, then
-   install. A broken guard is silent.
+   install. A broken guard is silent. Phase 2 found this is sharper than it reads: a `settings.json`
+   hook edit IS picked up mid-session for `Bash`/`PowerShell` matchers, contradicting what phase 1
+   recorded, so a guard wired mid-run starts policing the very session that wrote it.
 2. **One commit per todo, never batched**, so a revert is surgical. `/mega-todos` already does this.
 3. **Verification cannot be "Joe reviews the diff."** Every phase needs a mechanical check, which is
    the whole reason phase 0 exists.

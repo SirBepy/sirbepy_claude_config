@@ -342,6 +342,16 @@
             "statusMessage": "Checking for a credential, lockfile or guard-file write"
           }
         ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\destructive-command-guard.py\"",
+            "statusMessage": "Checking for a destructive command"
+          }
+        ]
       }
     ],
     "SessionEnd": [
