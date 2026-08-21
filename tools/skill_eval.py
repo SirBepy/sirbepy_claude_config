@@ -527,7 +527,11 @@ def main() -> int:
     )
 
     history_path = skill_dir / "evals" / "history.json"
-    if not args.no_history:
+    if summary["total"] == 0:
+        # A run where every fixture errored produced no verdicts. Recording it
+        # leaves a 0.0 pass rate in the lineage that reads like a result.
+        print("no verdicts produced (every fixture errored), history not written")
+    elif not args.no_history:
         history = read_history(history_path)
         prior = next((r for r in history.get("runs", []) if r["label"] == args.parent), None)
         entry["verdict"] = compare(prior, entry)
