@@ -51,8 +51,37 @@ every write under a `.claude/hooks/` directory and on every `settings*.json` wri
 prompts across 22,992 historical writes, so a hook-heavy phase will see several per session. That is
 deliberate (an agent that can edit its own guards has no guards), not a bug to route around.
 
-### Phase 3 - skill quality. Strictly sequential.
+### Phase 3 - skill quality. DONE 2026-08-22.
 
+422, 421 and 436 all landed, one commit each. 422 shipped `tools/skill_eval.py`: each fixture runs
+in a fresh `claude -p` process and is graded by a SECOND process launched with every file, exec and
+delegate tool denied and no mention of which skill produced the text, so the grader's independence
+is a property of the dispatch. `tools/test_skill_eval.py` rebuilds every real grader prompt in CI
+and fails if one echoes any 12-word run of the skill under test. 421 added `/rate-it`'s adversarial
+verification pass (its lens isolation was already shipped in `fa3dcf8`, so that half of the todo was
+stale). 436 shipped `/heal-skill`, manual-only, with a taxonomy rewritten from this repo's own
+failures after the upstream one was tested and failed.
+
+**The phase's real lesson, and it is the same shape as phase 2's:** the harness did not catch its
+first TWO deliberate regressions, and the fixtures were the defect. Fixture 5 graded conditional
+behaviour unconditionally, so a correct answer using `/rate-it`'s own no-lift escape hatch failed
+four assertions, and the fixture's own variance ran 6/6 to 1/6 against an unmodified skill. A
+measurement whose noise is five expectations wide cannot detect a deleted section. Once the
+assertions were made conditional the same mutation was caught cleanly, 18/18 against 11/18.
+**A single-run pass rate from this harness is noise.** Use `--repeat 3` or higher, and read the
+per-expectation stability table rather than the headline percentage.
+
+**Two costs to know before using it.** A 6-fixture pass with fresh executors is about $2.90. A
+panel fixture is about $2 on its own because it spawns 6 subagents, and running two of them hit the
+**account session limit** mid-run, which kills the nested processes outright. Budget panel work, and
+expect to retry after a reset.
+
+**Also useful for phase 4 onward:** the same before/after machinery works on any skill, and
+`/heal-skill` will hand a patch to it. Two findings that fell out of phase 3 are filed rather than
+fixed: 475 (`/rate-it` states two different bullet caps 7 lines apart) and 477 (`skills/wrangler/
+SKILL.md` at 923 lines is the one real progressive-disclosure outlier out of 85 skills; the sidecar
+convention is otherwise already the norm). 476 records a third false-positive class on the
+shell-write guard, hit while doing this work.
 
 ### Phase 4 - CLAUDE.md weight and rules. Same file, so sequential.
 
