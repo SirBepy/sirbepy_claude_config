@@ -74,6 +74,14 @@ force, not prod" and "per project rules."
 Joe chose to leave the six commits pushed when asked (2026-08-21). That settles that instance and is
 explicitly NOT a standing grant, which is the whole reason this todo exists.
 
+Two neighbours, neither a duplicate, both worth reading first:
+
+- **455** - a bare `git push` outside `/commit push` never triggers `build-watch`. Same seam (a push
+  that happens outside the skill's push modes), different consequence. Whatever wording lands here
+  should not contradict 455's fix, and doing them together may be cheaper than separately.
+- **467** - `snippets/auto-commit.md` was never read this session, which is why its commit-only scope
+  was not known at push time. That is the second-order contributor; this todo is the direct cause.
+
 Do not fix this by adding a "should I push?" question to the end of every autopilot run. Autopilot's
 entire contract is that it never blocks on a question, and a run that ends by asking is a run that
 stalls until Joe returns. The fix is that it commits, reports, and stops.
