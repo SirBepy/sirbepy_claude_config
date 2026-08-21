@@ -322,6 +322,26 @@
             "statusMessage": "Checking dispatch prompt for canonical preamble markers"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\secret-write-guard.py\"",
+            "statusMessage": "Scanning the write for secret literals"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\sensitive-file-guard.py\"",
+            "statusMessage": "Checking for a credential, lockfile or guard-file write"
+          }
+        ]
       }
     ],
     "SessionEnd": [

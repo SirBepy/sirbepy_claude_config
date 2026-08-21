@@ -33,10 +33,14 @@ suites, not 13. 415 moved the impeccable and status-marker-guard wiring into the
 `settings.json`, both proven live by real nested-session triggers; `settings.local.json` stays
 untracked and now says so in its own `description`.
 
-### Phase 2 - security. 418 done 2026-08-20: `/supply-chain-audit`, read-only fork, three live runs.
+### Phase 2 - security. 418 and 420 done: `/supply-chain-audit`, plus the write-time secret and sensitive-file guards.
 
-- [ ] 420 - write-time secret scan + sensitive-file guard (self-protects `hooks/`)
 - [ ] 419 - generic destructive-shell-command guard
+
+**Heads-up for phase 6 and 7, which do harness surgery:** 420's `sensitive-file-guard.py` now asks on
+every write under a `.claude/hooks/` directory and on every `settings*.json` write. Measured at 288
+prompts across 22,992 historical writes, so a hook-heavy phase will see several per session. That is
+deliberate (an agent that can edit its own guards has no guards), not a bug to route around.
 
 ### Phase 3 - skill quality. Strictly sequential.
 

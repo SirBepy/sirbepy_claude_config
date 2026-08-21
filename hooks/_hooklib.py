@@ -44,6 +44,22 @@ def deny(reason: str, suffix: str = "") -> None:
     sys.exit(2)
 
 
+def ask(reason: str) -> None:
+    """Emit an advisory PreToolUse 'ask' decision: JSON on stdout, exit 0.
+
+    Not exit 2 - that is deny()'s hard-block path. The harness only reads
+    permissionDecision:"ask" from stdout when the process exits 0.
+    """
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "ask",
+            "permissionDecisionReason": reason,
+        }
+    }))
+    sys.exit(0)
+
+
 def strip_quotes(tok: str) -> str:
     if len(tok) >= 2 and tok[0] == tok[-1] and tok[0] in ("\"", "'"):
         return tok[1:-1]
