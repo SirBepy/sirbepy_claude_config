@@ -32,6 +32,8 @@
 !favicon.ico
 !ci/
 !ci/**
+!tools/
+!tools/**
 !.github/
 !.github/**
 

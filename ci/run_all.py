@@ -13,6 +13,7 @@ from pathlib import Path
 
 CHECKS = (
     ("hook self-tests", "run_hook_tests.py"),
+    ("tool self-tests", "run_tool_tests.py"),
     ("skill frontmatter", "check_skill_frontmatter.py"),
     ("instruction budget", "check_instruction_budget.py"),
 )

@@ -65,6 +65,31 @@ Then ask:
 
 ---
 
+## Eval handoff - after any fix that changes behavior
+
+This skill checks conformance to conventions. It cannot tell whether an edit made a skill BETTER at
+its job, and it must not claim to. That question belongs to the eval harness.
+
+After applying fixes in Mode 2, check whether the skill has `skills/<name>/evals/evals.json`:
+
+- **It does** - tell the dev the exact before/after commands and let them decide whether to spend it
+  (a pass costs real money, roughly $0.20 per fixture per side):
+
+  ```
+  python tools/skill_eval.py --skill <name> --label <before-label> --parent <prior label>
+  ```
+
+  Run the baseline BEFORE the edit when possible; `history.json` records the won/lost verdict and
+  refuses to compare two runs whose fixture set changed.
+
+- **It does not** - say so plainly rather than implying the fixes are verified. A convention fix with
+  no eval behind it is unmeasured, and `/rate-it` is currently the only skill with fixtures.
+
+Never invent a pass rate, and never grade a skill's output yourself in the same session that edited
+it: the harness spawns a separate tool-less process for exactly that reason.
+
+---
+
 ## Validation checklist
 
 Rules are split into two severity levels. FAIL means the skill has a real problem that will hurt agent effectiveness or break conventions. WARN means it's worth flagging but might be intentional.

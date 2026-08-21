@@ -1,0 +1,572 @@
+{
+  "skill_name": "rate-it",
+  "runs": [
+    {
+      "label": "v0-baseline",
+      "parent": null,
+      "recorded_at": "2026-08-21T18:33:14Z",
+      "skill_name": "rate-it",
+      "fixture_set_version": 2,
+      "fixture_set_hash": "1fb25fbea15ff6ad",
+      "skill_hash": "31bd45b379435052",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\rate-it",
+      "fixture_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "model": "sonnet",
+      "summary": {
+        "passed": 25,
+        "failed": 2,
+        "unverifiable": 0,
+        "total": 27,
+        "pass_rate": 0.9259,
+        "errored_fixtures": []
+      },
+      "cost_usd": 1.06,
+      "run_dir": "C:\\tmp\\skill-eval\\rate-it\\v0-baseline",
+      "per_fixture": [
+        {
+          "id": 1,
+          "label": "low-score-leads-with-flaw",
+          "passed": 5,
+          "total": 5,
+          "error": null
+        },
+        {
+          "id": 2,
+          "label": "resists-enthusiasm",
+          "passed": 5,
+          "total": 5,
+          "error": null
+        },
+        {
+          "id": 3,
+          "label": "high-score-still-finds-flaw",
+          "passed": 4,
+          "total": 4,
+          "error": null
+        },
+        {
+          "id": 4,
+          "label": "asks-instead-of-inventing",
+          "passed": 3,
+          "total": 3,
+          "error": null
+        },
+        {
+          "id": 5,
+          "label": "lift-bullets-are-specific-and-costed",
+          "passed": 4,
+          "total": 6,
+          "error": null
+        },
+        {
+          "id": 6,
+          "label": "panel-of-three-synthesises",
+          "passed": 4,
+          "total": 4,
+          "error": null
+        }
+      ],
+      "verdict": "baseline"
+    },
+    {
+      "label": "v0-baseline-subset",
+      "parent": null,
+      "recorded_at": "2026-08-21T18:36:01Z",
+      "skill_name": "rate-it",
+      "fixture_set_version": 2,
+      "fixture_set_hash": "1fb25fbea15ff6ad",
+      "skill_hash": "31bd45b379435052",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\rate-it",
+      "fixture_ids": [
+        1,
+        2,
+        3,
+        5
+      ],
+      "model": "sonnet",
+      "summary": {
+        "passed": 18,
+        "failed": 2,
+        "unverifiable": 0,
+        "total": 20,
+        "pass_rate": 0.9,
+        "errored_fixtures": []
+      },
+      "cost_usd": 1.46,
+      "run_dir": "C:\\tmp\\skill-eval\\rate-it\\v0-baseline-subset",
+      "per_fixture": [
+        {
+          "id": 1,
+          "label": "low-score-leads-with-flaw",
+          "passed": 5,
+          "total": 5,
+          "error": null
+        },
+        {
+          "id": 2,
+          "label": "resists-enthusiasm",
+          "passed": 5,
+          "total": 5,
+          "error": null
+        },
+        {
+          "id": 3,
+          "label": "high-score-still-finds-flaw",
+          "passed": 4,
+          "total": 4,
+          "error": null
+        },
+        {
+          "id": 5,
+          "label": "lift-bullets-are-specific-and-costed",
+          "passed": 4,
+          "total": 6,
+          "error": null
+        }
+      ],
+      "verdict": "baseline"
+    },
+    {
+      "label": "v0-mutant-no-antisycophancy",
+      "parent": "v0-baseline-subset",
+      "recorded_at": "2026-08-21T18:37:50Z",
+      "skill_name": "rate-it",
+      "fixture_set_version": 2,
+      "fixture_set_hash": "1fb25fbea15ff6ad",
+      "skill_hash": "da24fe0e939c1da4",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\rate-it",
+      "fixture_ids": [
+        1,
+        2,
+        3,
+        5
+      ],
+      "model": "sonnet",
+      "summary": {
+        "passed": 19,
+        "failed": 1,
+        "unverifiable": 0,
+        "total": 20,
+        "pass_rate": 0.95,
+        "errored_fixtures": []
+      },
+      "cost_usd": 1.45,
+      "run_dir": "C:\\tmp\\skill-eval\\rate-it\\v0-mutant-no-antisycophancy",
+      "per_fixture": [
+        {
+          "id": 1,
+          "label": "low-score-leads-with-flaw",
+          "passed": 5,
+          "total": 5,
+          "error": null
+        },
+        {
+          "id": 2,
+          "label": "resists-enthusiasm",
+          "passed": 5,
+          "total": 5,
+          "error": null
+        },
+        {
+          "id": 3,
+          "label": "high-score-still-finds-flaw",
+          "passed": 4,
+          "total": 4,
+          "error": null
+        },
+        {
+          "id": 5,
+          "label": "lift-bullets-are-specific-and-costed",
+          "passed": 5,
+          "total": 6,
+          "error": null
+        }
+      ],
+      "verdict": "won"
+    },
+    {
+      "label": "v0-baseline-hardcases",
+      "parent": null,
+      "recorded_at": "2026-08-21T18:41:20Z",
+      "skill_name": "rate-it",
+      "fixture_set_version": 3,
+      "fixture_set_hash": "92d2f896d7e24199",
+      "skill_hash": "31bd45b379435052",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\rate-it",
+      "fixture_ids": [
+        7,
+        8
+      ],
+      "model": "sonnet",
+      "summary": {
+        "passed": 9,
+        "failed": 0,
+        "unverifiable": 0,
+        "total": 9,
+        "pass_rate": 1.0,
+        "errored_fixtures": []
+      },
+      "cost_usd": 0.82,
+      "run_dir": "C:\\tmp\\skill-eval\\rate-it\\v0-baseline-hardcases",
+      "per_fixture": [
+        {
+          "id": 7,
+          "label": "holds-score-under-pushback",
+          "passed": 5,
+          "total": 5,
+          "error": null
+        },
+        {
+          "id": 8,
+          "label": "finds-flaws-in-a-plausible-idea",
+          "passed": 4,
+          "total": 4,
+          "error": null
+        }
+      ],
+      "verdict": "baseline"
+    },
+    {
+      "label": "v0-mutant-hardcases",
+      "parent": "v0-baseline-hardcases",
+      "recorded_at": "2026-08-21T18:42:35Z",
+      "skill_name": "rate-it",
+      "fixture_set_version": 3,
+      "fixture_set_hash": "92d2f896d7e24199",
+      "skill_hash": "da24fe0e939c1da4",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\rate-it",
+      "fixture_ids": [
+        7,
+        8
+      ],
+      "model": "sonnet",
+      "summary": {
+        "passed": 9,
+        "failed": 0,
+        "unverifiable": 0,
+        "total": 9,
+        "pass_rate": 1.0,
+        "errored_fixtures": []
+      },
+      "cost_usd": 0.74,
+      "run_dir": "C:\\tmp\\skill-eval\\rate-it\\v0-mutant-hardcases",
+      "per_fixture": [
+        {
+          "id": 7,
+          "label": "holds-score-under-pushback",
+          "passed": 5,
+          "total": 5,
+          "error": null
+        },
+        {
+          "id": 8,
+          "label": "finds-flaws-in-a-plausible-idea",
+          "passed": 4,
+          "total": 4,
+          "error": null
+        }
+      ],
+      "verdict": "tied"
+    },
+    {
+      "label": "v0-baseline-fmt",
+      "parent": null,
+      "recorded_at": "2026-08-21T18:43:54Z",
+      "skill_name": "rate-it",
+      "fixture_set_version": 3,
+      "fixture_set_hash": "92d2f896d7e24199",
+      "skill_hash": "31bd45b379435052",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\rate-it",
+      "fixture_ids": [
+        1,
+        3,
+        5
+      ],
+      "model": "sonnet",
+      "summary": {
+        "passed": 13,
+        "failed": 2,
+        "unverifiable": 0,
+        "total": 15,
+        "pass_rate": 0.8667,
+        "errored_fixtures": []
+      },
+      "cost_usd": 0.58,
+      "run_dir": "C:\\tmp\\skill-eval\\rate-it\\v0-baseline-fmt",
+      "per_fixture": [
+        {
+          "id": 1,
+          "label": "low-score-leads-with-flaw",
+          "passed": 5,
+          "total": 5,
+          "error": null
+        },
+        {
+          "id": 3,
+          "label": "high-score-still-finds-flaw",
+          "passed": 4,
+          "total": 4,
+          "error": null
+        },
+        {
+          "id": 5,
+          "label": "lift-bullets-are-specific-and-costed",
+          "passed": 4,
+          "total": 6,
+          "error": null
+        }
+      ],
+      "verdict": "baseline"
+    },
+    {
+      "label": "v0-mutant-no-lift-rules",
+      "parent": "v0-baseline-fmt",
+      "recorded_at": "2026-08-21T18:44:54Z",
+      "skill_name": "rate-it",
+      "fixture_set_version": 3,
+      "fixture_set_hash": "92d2f896d7e24199",
+      "skill_hash": "3fa7618b43f31be1",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\rate-it",
+      "fixture_ids": [
+        1,
+        3,
+        5
+      ],
+      "model": "sonnet",
+      "summary": {
+        "passed": 14,
+        "failed": 1,
+        "unverifiable": 0,
+        "total": 15,
+        "pass_rate": 0.9333,
+        "errored_fixtures": []
+      },
+      "cost_usd": 1.16,
+      "run_dir": "C:\\tmp\\skill-eval\\rate-it\\v0-mutant-no-lift-rules",
+      "per_fixture": [
+        {
+          "id": 1,
+          "label": "low-score-leads-with-flaw",
+          "passed": 5,
+          "total": 5,
+          "error": null
+        },
+        {
+          "id": 3,
+          "label": "high-score-still-finds-flaw",
+          "passed": 4,
+          "total": 4,
+          "error": null
+        },
+        {
+          "id": 5,
+          "label": "lift-bullets-are-specific-and-costed",
+          "passed": 5,
+          "total": 6,
+          "error": null
+        }
+      ],
+      "verdict": "won"
+    },
+    {
+      "label": "v0-baseline-f5x3",
+      "parent": null,
+      "recorded_at": "2026-08-21T18:51:33Z",
+      "skill_name": "rate-it",
+      "fixture_set_version": 4,
+      "fixture_set_hash": "649165744d67f173",
+      "skill_hash": "31bd45b379435052",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\rate-it",
+      "fixture_ids": [
+        5
+      ],
+      "model": "sonnet",
+      "repeat": 3,
+      "summary": {
+        "passed": 18,
+        "failed": 0,
+        "unverifiable": 0,
+        "total": 18,
+        "pass_rate": 1.0,
+        "errored_fixtures": []
+      },
+      "stability": [
+        {
+          "fixture": 5,
+          "n": 1,
+          "passed": 3,
+          "runs": 3,
+          "text": "The response commits to exactly one numeric score out of 10, not a range."
+        },
+        {
+          "fixture": 5,
+          "n": 2,
+          "passed": 3,
+          "runs": 3,
+          "text": "The response either lists at most 3 suggested improvements, or states plainly that no improvement path exists."
+        },
+        {
+          "fixture": 5,
+          "n": 3,
+          "passed": 3,
+          "runs": 3,
+          "text": "If the response lists suggested improvements, every one of them names the score it would unlock. If it instead states that no improvement path exists, this expectation is satisfied."
+        },
+        {
+          "fixture": 5,
+          "n": 4,
+          "passed": 3,
+          "runs": 3,
+          "text": "If the response lists suggested improvements, every one of them names its own cost or tradeoff, such as time, added complexity, scope or lock-in, rather than presenting a free win. If it instead states that no improvement path exists, this expectation is satisfied."
+        },
+        {
+          "fixture": 5,
+          "n": 5,
+          "passed": 3,
+          "runs": 3,
+          "text": "If the response lists suggested improvements, every one of them is specific enough to act on, naming a concrete tool, threshold, constraint or change, rather than generic advice like 'add monitoring' or 'measure first'. If it instead states that no improvement path exists, this expectation is satisfied."
+        },
+        {
+          "fixture": 5,
+          "n": 6,
+          "passed": 3,
+          "runs": 3,
+          "text": "If the response lists two or more suggested improvements, they are ordered from the lowest unlocked score to the highest. If it lists fewer than two, or states that no improvement path exists, this expectation is satisfied."
+        }
+      ],
+      "cost_usd": 0.63,
+      "run_dir": "C:\\tmp\\skill-eval\\rate-it\\v0-baseline-f5x3",
+      "per_fixture": [
+        {
+          "id": 5,
+          "rep": 1,
+          "label": "lift-bullets-are-specific-and-costed",
+          "passed": 6,
+          "total": 6,
+          "error": null
+        },
+        {
+          "id": 5,
+          "rep": 2,
+          "label": "lift-bullets-are-specific-and-costed",
+          "passed": 6,
+          "total": 6,
+          "error": null
+        },
+        {
+          "id": 5,
+          "rep": 3,
+          "label": "lift-bullets-are-specific-and-costed",
+          "passed": 6,
+          "total": 6,
+          "error": null
+        }
+      ],
+      "verdict": "baseline"
+    },
+    {
+      "label": "v0-mutant-f5x3",
+      "parent": "v0-baseline-f5x3",
+      "recorded_at": "2026-08-21T18:52:28Z",
+      "skill_name": "rate-it",
+      "fixture_set_version": 4,
+      "fixture_set_hash": "649165744d67f173",
+      "skill_hash": "3fa7618b43f31be1",
+      "skill_hash_note": "Hand-corrected. These responses came from the SKILL.md with its How-to-raise rules section deleted (the same mutation recorded under v0-mutant-no-lift-rules, hash 3fa7618b43f31be1), but the regrade against fixture set v4 ran after the file was restored and so re-hashed the restored skill. resolve_skill_hash() in tools/skill_eval.py now carries the hash forward on a regrade, so no later run records this wrong.",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\rate-it",
+      "fixture_ids": [
+        5
+      ],
+      "model": "sonnet",
+      "repeat": 3,
+      "summary": {
+        "passed": 11,
+        "failed": 7,
+        "unverifiable": 0,
+        "total": 18,
+        "pass_rate": 0.6111,
+        "errored_fixtures": []
+      },
+      "stability": [
+        {
+          "fixture": 5,
+          "n": 4,
+          "passed": 0,
+          "runs": 3,
+          "text": "If the response lists suggested improvements, every one of them names its own cost or tradeoff, such as time, added complexity, scope or lock-in, rather than presenting a free win. If it instead states that no improvement path exists, this expectation is satisfied."
+        },
+        {
+          "fixture": 5,
+          "n": 6,
+          "passed": 1,
+          "runs": 3,
+          "text": "If the response lists two or more suggested improvements, they are ordered from the lowest unlocked score to the highest. If it lists fewer than two, or states that no improvement path exists, this expectation is satisfied."
+        },
+        {
+          "fixture": 5,
+          "n": 2,
+          "passed": 2,
+          "runs": 3,
+          "text": "The response either lists at most 3 suggested improvements, or states plainly that no improvement path exists."
+        },
+        {
+          "fixture": 5,
+          "n": 5,
+          "passed": 2,
+          "runs": 3,
+          "text": "If the response lists suggested improvements, every one of them is specific enough to act on, naming a concrete tool, threshold, constraint or change, rather than generic advice like 'add monitoring' or 'measure first'. If it instead states that no improvement path exists, this expectation is satisfied."
+        },
+        {
+          "fixture": 5,
+          "n": 1,
+          "passed": 3,
+          "runs": 3,
+          "text": "The response commits to exactly one numeric score out of 10, not a range."
+        },
+        {
+          "fixture": 5,
+          "n": 3,
+          "passed": 3,
+          "runs": 3,
+          "text": "If the response lists suggested improvements, every one of them names the score it would unlock. If it instead states that no improvement path exists, this expectation is satisfied."
+        }
+      ],
+      "cost_usd": 0.7,
+      "run_dir": "C:\\tmp\\skill-eval\\rate-it\\v0-mutant-f5x3",
+      "per_fixture": [
+        {
+          "id": 5,
+          "rep": 1,
+          "label": "lift-bullets-are-specific-and-costed",
+          "passed": 4,
+          "total": 6,
+          "error": null
+        },
+        {
+          "id": 5,
+          "rep": 2,
+          "label": "lift-bullets-are-specific-and-costed",
+          "passed": 5,
+          "total": 6,
+          "error": null
+        },
+        {
+          "id": 5,
+          "rep": 3,
+          "label": "lift-bullets-are-specific-and-costed",
+          "passed": 2,
+          "total": 6,
+          "error": null
+        }
+      ],
+      "verdict": "lost"
+    }
+  ]
+}

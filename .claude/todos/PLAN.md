@@ -53,7 +53,6 @@ deliberate (an agent that can edit its own guards has no guards), not a bug to r
 
 ### Phase 3 - skill quality. Strictly sequential.
 
-- [ ] 422 - eval harness (fixtures + independent grader), pilot on `/rate-it`
 - [ ] 421 - `/rate-it` lens isolation + adversarial verify. **Needs 422 to prove it worked.**
 - [ ] 436 - heal-skill. Needs 422.
 
