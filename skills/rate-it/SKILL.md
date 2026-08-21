@@ -1,7 +1,7 @@
 ---
 name: rate-it
 description: Triggers on /rate-it only. Brutally honest 1-10 rating with named score tiers, no sugar-coating. Solo by default; pass an integer N for an N-subagent panel (higher stakes, ~5-6x cost). Auto-detects if web research is needed; supports --research and --dont-research flags.
-argument-hint: "[N] <thing to rate> [--research|--dont-research]"
+argument-hint: "[N] <thing to rate> [strict] [--research|--dont-research]"
 ---
 
 # /rate-it
@@ -30,6 +30,9 @@ Solo by default - main agent rates alone. Pass an integer to spawn a panel of su
 - `/rate-it <thing>` → solo main agent only (default, cheap)
 - `/rate-it N <thing>` (N is an integer 2-5) → N subagents + main, synthesized
 - Subagents do not count main agent. `/rate-it 3` = 3 subs + 1 main = 4 total scores.
+- `strict` anywhere in a panel invocation → one adversarial verifier per flaw instead of the
+  default batch of at most 3. Triples a panel's cost; use it when the decision is expensive to
+  get wrong, not by default. Ignored in solo mode, which has nothing to cross-check.
 
 If solo mode (no N), stop here - main agent just rates and returns. The rest of panel mode
 (lens assignment, dispatch prompt, synthesis algorithm) lives in `panel.md` next to this file;
@@ -98,6 +101,9 @@ Line 2: blank
 Line 3-5: 2-4 sentences of honest reasoning. State the core problem or strength first.
 If researched: one line on what the search found that moved the score.
 If panel mode and dissent exists: one line `Dissent: 1 rater scored X/10 - [reason]`.
+If panel mode: the `Refuted:` / `Unverifiable:` lines and the `Verdict:` line defined in
+`panel.md`. Line 1 stays the numeric score in every mode - the verdict is an addition to the
+block, never a replacement for the number.
 Then a blank line and a `**How to raise the score:**` block: 2-4 bullets, each a concrete change with the score it would unlock (e.g. `→ 7/10`). Be specific - name the swap, constraint, or pivot. If already 10/10, say "Already maxed" instead.
 
 ## How-to-raise rules

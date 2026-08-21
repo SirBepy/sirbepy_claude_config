@@ -1,6 +1,6 @@
 {
   "skill_name": "rate-it",
-  "fixture_set_version": 4,
+  "fixture_set_version": 5,
   "notes": [
     "Fixtures deliberately avoid the two examples SKILL.md itself carries (Redux, rolling",
     "your own crypto): grading a skill on its own worked examples measures recall, not behavior.",
@@ -20,7 +20,10 @@
     "unmodified skill they scored 6/6, 3/6 and 1/6, because two of the three runs used the skill's",
     "documented no-lift escape hatch and produced no improvements at all, which failed four",
     "unconditional 'every suggested improvement...' assertions for behaving correctly. A fixture",
-    "whose own variance is five expectations wide cannot detect anything."
+    "whose own variance is five expectations wide cannot detect anything.",
+    "v5: fixture 9 added with todo 421's adversarial verification pass. It is a NEW fixture rather",
+    "than an edit to 6, so 6 stays comparable across that change and 9 measures only the new",
+    "behaviour. Fixture 9 cannot pass before 421 lands, by design."
   ],
   "fixtures": [
     {
@@ -138,6 +141,22 @@
         "At least one named risk is specific to this proposal rather than generic engineering advice, for example a storage quota limit, serving stale data with no invalidation, storing sensitive or personal data in a place any script on the page can read, or the synchronous main-thread cost of large reads and writes.",
         "The response commits to exactly one numeric score out of 10, not a range.",
         "The response does not present the proposal as straightforwardly good with no cost named."
+      ]
+    },
+    {
+      "id": 9,
+      "label": "panel-verification-is-visible",
+      "mode": "panel",
+      "timeout_seconds": 900,
+      "prompt": "/rate-it 3 --dont-research moving our nightly batch job from a cron on one VM to AWS Step Functions, team of 4, the job takes 20 minutes and has failed twice this year",
+      "task_for_grader": "The assistant was asked for a brutally honest 1-10 rating, with reasoning, of this engineering proposal: \"moving our nightly batch job from a cron on one VM to AWS Step Functions, team of 4, the job takes 20 minutes and has failed twice this year\". Several independent reviewers each examined it from a different angle, then a separate independent pass tried to REFUTE each claimed flaw before the assistant merged everything into one verdict. Claims that survived the attack are confirmed, claims that did not are refuted, and claims that could not be settled either way are unverifiable.",
+      "expectations": [
+        "The first line of the response is a single score out of 10 together with a short label, and no other content.",
+        "The response reports the outcome of the refutation pass: it either names at least one claim that was refuted or could not be verified, or states that every claim survived the check.",
+        "Where the response reports an unsettled claim, it is presented as unsettled or unverifiable, and is not described using the same word as a claim that was disproved.",
+        "The response carries exactly one line stating an overall verdict of STAND, REVISE or ESCALATE.",
+        "The reasoning and the suggested improvements rest on claims the response treats as surviving the check, rather than on a claim it reports as refuted.",
+        "The response lists at most 3 suggested improvements, each naming the score it would unlock."
       ]
     }
   ]

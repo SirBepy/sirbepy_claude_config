@@ -567,6 +567,135 @@
         }
       ],
       "verdict": "lost"
+    },
+    {
+      "label": "v1-verify-pass",
+      "parent": null,
+      "recorded_at": "2026-08-21T23:39:04Z",
+      "skill_name": "rate-it",
+      "fixture_set_version": 5,
+      "fixture_set_hash": "995abc59e3d09324",
+      "skill_hash": "0a78e2167d0c8cf8",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\rate-it",
+      "fixture_ids": [
+        6,
+        9
+      ],
+      "model": "sonnet",
+      "repeat": 1,
+      "summary": {
+        "passed": 9,
+        "failed": 1,
+        "unverifiable": 0,
+        "total": 10,
+        "pass_rate": 0.9,
+        "errored_fixtures": []
+      },
+      "stability": null,
+      "cost_usd": 3.98,
+      "run_dir": "C:\\tmp\\skill-eval\\rate-it\\v1-verify-pass",
+      "per_fixture": [
+        {
+          "id": 6,
+          "rep": 1,
+          "label": "panel-of-three-synthesises",
+          "passed": 4,
+          "total": 4,
+          "error": null
+        },
+        {
+          "id": 9,
+          "rep": 1,
+          "label": "panel-verification-is-visible",
+          "passed": 5,
+          "total": 6,
+          "error": null
+        }
+      ],
+      "verdict": "baseline"
+    },
+    {
+      "label": "v2-lift-consistency",
+      "parent": "v1-verify-pass",
+      "recorded_at": "2026-08-21T23:44:26Z",
+      "skill_name": "rate-it",
+      "fixture_set_version": 5,
+      "fixture_set_hash": "995abc59e3d09324",
+      "skill_hash": "3bb731a8e0b5895f",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\rate-it",
+      "fixture_ids": [
+        6,
+        9
+      ],
+      "model": "sonnet",
+      "repeat": 1,
+      "summary": {
+        "passed": 10,
+        "failed": 0,
+        "unverifiable": 0,
+        "total": 10,
+        "pass_rate": 1.0,
+        "errored_fixtures": []
+      },
+      "stability": null,
+      "cost_usd": 3.56,
+      "run_dir": "C:\\tmp\\skill-eval\\rate-it\\v2-lift-consistency",
+      "per_fixture": [
+        {
+          "id": 6,
+          "rep": 1,
+          "label": "panel-of-three-synthesises",
+          "passed": 4,
+          "total": 4,
+          "error": null
+        },
+        {
+          "id": 9,
+          "rep": 1,
+          "label": "panel-verification-is-visible",
+          "passed": 6,
+          "total": 6,
+          "error": null
+        }
+      ],
+      "verdict": "won"
+    },
+    {
+      "label": "v0-preverify-f9",
+      "parent": null,
+      "recorded_at": "2026-08-21T23:48:31Z",
+      "skill_name": "rate-it",
+      "fixture_set_version": 5,
+      "fixture_set_hash": "995abc59e3d09324",
+      "skill_hash": "f9fa95e337a089e8",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\rate-it",
+      "fixture_ids": [
+        9
+      ],
+      "model": "sonnet",
+      "repeat": 1,
+      "summary": {
+        "passed": 3,
+        "failed": 2,
+        "unverifiable": 1,
+        "total": 6,
+        "pass_rate": 0.5,
+        "errored_fixtures": []
+      },
+      "stability": null,
+      "cost_usd": 1.24,
+      "run_dir": "C:\\tmp\\skill-eval\\rate-it\\v0-preverify-f9",
+      "per_fixture": [
+        {
+          "id": 9,
+          "rep": 1,
+          "label": "panel-verification-is-visible",
+          "passed": 3,
+          "total": 6,
+          "error": null
+        }
+      ],
+      "verdict": "baseline"
     }
   ]
 }

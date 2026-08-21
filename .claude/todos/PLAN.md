@@ -53,7 +53,6 @@ deliberate (an agent that can edit its own guards has no guards), not a bug to r
 
 ### Phase 3 - skill quality. Strictly sequential.
 
-- [ ] 421 - `/rate-it` lens isolation + adversarial verify. **Needs 422 to prove it worked.**
 - [ ] 436 - heal-skill. Needs 422.
 
 ### Phase 4 - CLAUDE.md weight and rules. Same file, so sequential.
