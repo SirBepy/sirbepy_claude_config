@@ -1,0 +1,93 @@
+<!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- duplicate-checked -->
+# `/commit` step 8's hunk-level overlap check should be a script, not prose to re-derive
+
+**Type:** skill-improvement
+**Origin:** ai
+
+## Goal
+
+Stop every commit from re-implementing the unpushed-overlap check by hand. It is a precise
+algorithm, it is easy to get wrong, and it was gotten wrong twice in one session.
+
+## Context
+
+Hit 2026-08-21 during an `/auto-do-todos` run in `hubbub` (11 commits, five repos).
+
+`skills/commit/SKILL.md` step 8's "Unpushed-overlap check (hunk-level, not file-level - see todo
+368)" specifies a real algorithm in prose: list unpushed shas, intersect names as a pre-filter, then
+for each surviving file parse each hunk's `@@ -a,b @@` old-side range, skip `b=0` pure additions,
+`git blame -L a,a+b-1 HEAD -- <file>`, and only count a match between a blamed sha and a candidate
+sha as a real hit.
+
+Across that run the loop was hand-written **four separate times**, and the sha-comparison step was
+wrong in two of them: the candidate shas from `git log --format=%h` are 7 chars while `git blame`
+prints 8, so a naive `case "$c" in "$s"*)` compared them in the wrong direction and silently
+reported zero hits. It was only caught by eyeballing the raw blame output and noticing a candidate
+sha sitting right there in a list the script had just called clean.
+
+A check whose failure mode is "silently reports no overlap" is exactly the wrong thing to leave as
+prose. The whole point of todo 368's hunk-level upgrade was to make this check trustworthy enough
+to stop asking about file-level noise; a mis-implementation quietly returns it to useless.
+
+## Approach
+
+1. Add `skills/commit/overlap-check.sh`, same shape as the existing `comment-noise.sh` /
+   `em-dash.sh` / `secret-scan.sh` prefilters: takes the commit's pathspec, prints nothing when
+   clean, prints real hits (file, line range, blamed sha, that sha's subject) and exits non-zero
+   when it finds one.
+2. Normalise sha length explicitly inside it (compare via `git rev-parse` full hashes, not string
+   prefixes) so the bug above cannot recur.
+3. Rewrite step 8's bullet to call the script and describe only the DECISION (interactive: ask via
+   `AskUserQuestion`; unattended: proceed and record), keeping the algorithm in exactly one place.
+4. Do NOT fold it into `prefilter-gate.sh`. That gate's contract is "exit non-zero blocks the
+   commit", and a real overlap hit is not always a block: unattended runs are explicitly told to
+   proceed and record. Keep it a separate call with its own exit-code meaning, and say so in the
+   script header.
+
+## Acceptance
+
+- Step 8 contains no `@@` parsing or `git blame -L` instructions.
+- The script reports a known-overlapping pair correctly, and reports clean for a file that
+  file-matches an unpushed commit but shares no lines (the common false positive todo 368 removed).
+- A 7-vs-8 char sha comparison cannot produce a false clean; add a fixture for exactly that.
+- `python ci/run_all.py` passes.
+
+## Folded in 2026-08-22: "interactive" is never defined, so the session self-classifies
+
+Step 3 of the approach above says the rewritten bullet should describe the DECISION, and that
+decision is exactly where a second gap sits. Step 8 branches on **interactive** (stop and ask via
+`AskUserQuestion`) versus **unattended** (proceed and record in the run's summary), and defines
+neither.
+
+Hit for real on 2026-08-22 in `~/.claude`. A session that started as a live chat with the dev
+answering a question card was still running hours later on scheduler daemon pings, at 01:40, with a
+genuine hunk-level hit on an unpushed commit. Neither branch fits: it was not launched by
+`/auto-do-todos` or `/autopilot`, so nothing declared it unattended, and the dev was plainly not
+there to answer. It took the unattended branch and recorded the hit in its report, which is the
+right outcome but was a judgement call the skill left to the session, and a different session would
+have blocked on a card nobody would answer for hours.
+
+This is the same shape as todo 261 (`done/`), where a run that STARTED interactive and became
+unattended matched neither of `/pickup`'s two branches. That one is fixed for `/pickup` only; step 8
+still has it, and so does anything else that branches on this distinction.
+
+**What to decide, and it needs the dev's call, not an invented rule:** what signal marks a session
+unattended when it was not launched that way. Candidates worth putting on a card: the invoking
+prompt came from a scheduler or daemon rather than a typed message; a question card in this session
+already expired unanswered (see the recorded ~30-minute `ask_user_question` timeout behaviour); or
+an explicit per-session flag the dev sets. Prefer whichever is mechanically checkable, since a rule
+that asks the session to judge its own attendedness is a rule that will be judged differently every
+time.
+
+Two extra acceptance lines if this is taken with the script work: the script or the step names the
+signal explicitly, and a session running from a daemon ping resolves to the same branch every time
+without judgement.
+
+## Notes
+
+- Related: [[473-cleanup-todos-calls-a-script-that-does-not-exist]]. Same class of defect.
+- Related: 261 in `done/`, the same interactive-became-unattended gap, fixed for `/pickup` only.
+- Worth noting for whoever picks this up: the check DID earn its keep once the comparison was fixed.
+  In that run it correctly cleared several file-level matches as line-disjoint and correctly flagged
+  four genuine ones, which is the signal-to-noise todo 368 was aiming for.
