@@ -90,3 +90,53 @@ and narrowing it by accident would undo that. Additive or skipped, nothing in be
 
 Do not adopt all four in one commit. (1) and (2) are safe; (3) needs a measurement; (4) may not ship at
 all.
+- Done 2026-08-22. Items 1 and 2 shipped as prose; 3 and 4 skipped with reasoning recorded above. Item 3's skip rests on the metric being wrong for the goal, NOT on fire rate: the draft's 2-of-119 figure was wrong (real: 5 of 118), and 3 of those 5 are legitimate todo-backlog commits. Item 4 is redundant against the existing front-load rule, which already names the same five decision categories.
+
+## Outcome, 2026-08-22
+
+**(1) and (2) shipped as prose.** (1) is folded into the existing unverified-claim bullet in
+Execution Discipline, not added as a second rule about citations. (2) is a new bullet in the same
+section, with its lack of enforcement stated in the rule itself rather than claimed away.
+
+**(3) SKIPPED. The measurement is below and it is not the one this todo was drafted against.**
+
+Last 118 commits, total changed lines per commit:
+
+```
+p50 =   45      over 800 lines:  5 commits (4.2%)
+p75 =  157      over 400 lines: 11 commits (9.3%)
+p90 =  368
+p95 =  666
+max = 1702
+```
+
+An earlier pass through this session reported "2 of 119 (1.7%)" over 800. That was wrong: it was
+inferred from p95 rather than counted. Two independent raters caught it and the recount confirmed
+**5 of 118**. Recorded here because the wrong number is the kind that gets quoted later.
+
+Decomposing those five is what actually settles the item. **Three of the five are `CHORE: file
+todos ...` backlog-filing commits** (`f5f28ca` 1521, `bab7935` 1412, `3043ee4` 1195) touching only
+`.claude/todos/`. They are legitimate, entirely traceable to their stated purpose, and there is
+nothing in them to catch. The other two are ordinary code commits.
+
+So the reason to skip is **not** "it fires too rarely", which was the original draft reasoning and
+does not survive the corrected number. The reason is that **changed-lines is the wrong metric for
+the goal**. The rules this was meant to sharpen ("every changed line must trace to the request",
+"no drive-by refactors") are about scope and traceability. A requested 900-line bulk rename should
+never fire; a 40-line commit carrying one untraceable drive-by edit should. Line count cannot
+separate those in either direction, and this repo's own top-5 proves it: 60% of the firings are the
+false-positive case.
+
+Also noted against the original draft: citing the three deleted heuristic hooks as precedent was a
+category error, since a `git diff --numstat` sum is an exact count, not a judgment call. And this
+todo mischaracterised 423's ratchet as "slightly above current practice to catch outliers"; it sits
+at the measured baseline with zero headroom and blocks the next addition on purpose.
+
+**(4) SKIPPED as redundant, as this todo's own Approach anticipated.** `CLAUDE.md`'s front-load
+rule already names the categories: *"check whether there's a UX/ARCH/SEC/DATA/TOOLING decision that
+isn't already dictated 1:1 by an existing pattern being copied - if so, ask it now"*. That IS the
+scoped allowlist Prisma's rule provides, already written and already broader. Restating it in new
+words would add tokens and a second place for the two to drift apart.
+
+**Net CLAUDE.md cost of this todo: 3 new sentences.** Phase 4 as a whole took the file from 6732 to
+6558 tokens, and `CEILING_TOKENS` was ratcheted down to match.
