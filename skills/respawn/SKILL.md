@@ -7,20 +7,25 @@ argument-hint: "[optional note / model override, e.g. `opus` or `focus on the da
 
 # /respawn
 
-> This chat dies, the work survives. Spawn a successor in the same project, hand it everything as
-> a real visible message, then close.
+> This chat is replaced, the work survives. One call spawns a successor in the same project, hands
+> it everything as a real visible message, and closes this chat at turn end.
 
 Replaces Claude Conductor's retired "Handoff to next AI" menu button, which hid its context in
 `.for_bepy/HANDOFF.md` and coordinated through a `<HANDOFF_READY/>` sentinel. Both are gone. The
 context now lives in the successor's first user message, where Joe can read it.
 
-**Requires the `spawn_chat` MCP tool** (Conductor-hosted sessions only). If it isn't in your tool
-list, stop and say so - do not fall back to writing a handoff file, and do not close.
+**Requires the `respawn` MCP tool** (Conductor-hosted sessions only). If it isn't in your tool
+list, stop and say so - do not fall back to `spawn_chat` + `close_session`, do not write a handoff
+file, and do not close.
 
-## Hard ordering rule
+`respawn` does both halves in one call, so there is no ordering to get wrong and no separate
+`close_session`. It also stamps `successor_of` on the new chat, which is what makes the app move
+Joe onto the successor in place - same window, same sidebar slot, composer draft intact. The
+visible messages do NOT carry over; that is the point, and it is why `prompt` has to restate
+everything.
 
-`spawn_chat` FIRST, `close_session` second. `close_session` kills the process that would make the
-spawn call, so a close-then-spawn ordering silently loses the successor and the context with it.
+Do not use `spawn_chat` here. That one starts a chat that runs ALONGSIDE this one, sets no
+successor link, and closes nothing.
 
 ## What this is NOT
 
@@ -83,20 +88,26 @@ too much work - cut, don't reword.
 If the invocation carried a freeform note, honor it in the prompt; it never overrides the derived
 context, it adds to it.
 
-## Phase 5 - Spawn
+## Phase 5 - Respawn
 
-Call `spawn_chat` with `cwd` = this session's own cwd and `prompt` = Phase 4's text. Omit `model`
-and `effort` so the successor inherits this chat's model, effort, account, character and
-auto-accept - unless the invocation named an override (`/respawn opus`).
+Call `respawn` with `cwd` = this session's own cwd and `prompt` = Phase 4's text. Omit `model` and
+`effort` so the successor inherits this chat's model, effort, account, character and auto-accept -
+unless the invocation named an override (`/respawn opus`).
 
 The tool refuses a cwd that isn't this session's own, and refuses a second spawn in the same turn.
 Both refusals mean something is wrong with the call, not with the daemon - fix the call, and if
-the second one fires, you already spawned: do NOT retry, go straight to Phase 6.
+the second one fires, you already respawned: do NOT retry, go straight to Phase 6.
 
-On `{ok: false}`: stop. Report the error and leave this chat open. A failed spawn followed by a
-close loses the session for nothing.
+On `{ok: false}`: stop. Report the error and leave this chat open. Nothing was closed, so the
+session is intact - a retry or a manual handoff is still possible.
 
 ## Phase 6 - Close
 
-Tell Joe the successor's session id, then run `/close`'s Phase 6 exactly: `close_session` first,
-the rename/kill script second. That ordering is a hard rule over there and it holds here.
+The close is already done: `respawn` flagged this chat and its own pump tears it down at turn end.
+Do NOT call `close_session` - it is redundant here.
+
+Tell Joe the successor's session id, then run the rename/kill script from `/close`'s Phase 6:
+
+```powershell
+& "C:\Users\tecno\.claude\skills\close\rename-session.ps1" -Close
+```
