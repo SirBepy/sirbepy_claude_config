@@ -36,6 +36,19 @@ fixed and archived, so the pattern is the guard's scanning scope rather than any
 - **289** (`done/`) - a command that merely NAMES a write cmdlet.
 - this one - a `>` inside a heredoc body, i.e. text that is not shell at all.
 
+**Second instance of this same class, 2026-08-22, and it matters more than the first because it
+fires on a standard workflow rather than an ad-hoc script.** A `git commit -F-` heredoc was blocked
+by the trailing `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>` line, which every commit
+message written per `CLAUDE.md` ends with. The guard reported:
+
+> `>` redirect writes file content to `EOF` through the shell.
+
+The captured target being the heredoc's own closing tag is the same token-split tell. Effect: the
+heredoc route to `git commit -F-` is unusable for any conforming commit message, so the session fell
+back to writing the message to a temp file with the `Write` tool and passing `-F <path>`. That
+workaround is fine, but nobody should have to discover it three commits into a phase. Fixing the
+heredoc-body scope (step 2 below) fixes this case too - no separate work.
+
 The guard's job is load-bearing and must stay: PowerShell 5.1 prepends a UTF-8 BOM on shell writes
 and that has caused at least two real incidents. This is about scope, not about relaxing it.
 

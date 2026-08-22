@@ -167,7 +167,36 @@ trigger rated a median 3/10 across a 3-lens panel plus verifier: a `decision: bl
 re-injects text into the session that wrote the code, so it cannot make anything structural, and
 `/close` Phase 2 already carries a tuned 50-added-line floor the design was about to discard.
 
-### Phase 6 - harness surgery. Highest blast radius, so last.
+### Phase 6 - harness surgery. Highest blast radius, so last. NEXT UP.
+
+**Start here. `/pickup` with no args takes 427, which is the correct first item and the one
+everything else in this phase leans on.** Four things a cold session needs before touching anything,
+all established 2026-08-22 and none of them derivable from the todo files alone:
+
+1. **`settings.json` is dirty with JOE'S OWN uncommitted change** (`permissions.defaultMode`
+   `acceptEdits` -> `auto`, plus an `outputStyle` line the app relocated). Every phase-6 todo wires
+   a hook, and wiring means editing that file. **Do not commit `settings.json` without asking him**
+   - a phase-5 handoff said so explicitly and it is still true. Ask first, or wire and leave it
+   uncommitted deliberately, but do not let his change ride along in a hook commit by accident.
+2. **Six live guards have no test file** (todo **501**): `commit-guard`, `flutter-workdir-guard`,
+   `package-manager-guard`, `pr-guard`, `schedulewakeup-guard`, `status-marker-guard`.
+   `ci/run_hook_tests.py:15` only discovers `hooks/test_*.py`, so **`ci/run_all.py` printing 4/4
+   green does not mean a guard still works.** In a phase that edits hooks, that is the difference
+   between a real gate and a decorative one. Consider landing 501 first.
+3. **`sensitive-file-guard.py` asks on every write under a hooks directory and on every
+   `settings*.json` write.** That is deliberate. Expect several prompts per session here, and note
+   an `ask` behaves as a hard block in any unattended stretch, so do not run this phase headless.
+4. **The harvest corpus is at `C:\tmp\claude-harvest\repos\`**, not at a repo-relative `repos/`.
+   427's reference implementation
+   (`brain-bootstrap_claude-code-brain-bootstrap/dot-claude/hooks/tdd-loop-check.sh`) and every
+   other corpus path in these todos is relative to that directory. Phase 5 lost time rediscovering
+   this twice.
+
+Phase 5's own conclusion feeds straight into 427: a `Stop` hook's `{"decision": "block"}` re-injects
+text into the SAME session and cannot make anything structural, which is what killed 450's trigger
+design at 3/10. 427 wants a gate, not a nudge, so that limitation is the central design problem to
+solve, not a detail. `hooks/ui-screenshot-reminder.py:110` is the live example of the mechanism and
+its once-per-session sentinel is a single boolean, not per-file state.
 
 - [ ] 427 - Stop-hook verify gate. **Runs on every turn end. Build the escape hatch first.**
 - [ ] 450 - the post-write TRIGGER half only. **Gated on 427's source-file-edited signal**; build
