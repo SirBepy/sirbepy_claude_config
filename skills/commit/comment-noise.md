@@ -12,6 +12,24 @@ by naming a constraint, a gotcha, or a measurement the code cannot show.
 Restating the next line, narrating steps, labelling JSX sections, or parking
 design rationale in code all fail; rationale goes in the PR body.
 
+**Timeless Present.** A comment is written for someone meeting the code for
+the first time, so it states what IS, never what changed. `// Added mutex to
+fix race condition` is a changelog entry stranded in the source: six months on
+the reader does not know which race, cannot tell whether the mutex is still
+needed, and does not care that it was added. `// Mutex serializes cache access
+from concurrent requests` states the invariant instead. Same instinct as the
+rationale rule above, different axis: that one is about length, this one is
+about tense. Checked by `comment-tense.sh` in the same prefilter, which is
+deliberately high-precision and low-recall - it flags a change verb opening a
+comment block (`Added`/`Removed`/`Renamed`/`Replaced`/`Refactored`/`Migrated`/
+`Bumped`), plus `we decided to`, `unlike the old`, `as of this change` and
+`TODO from the`. Measured 2026-08-22 over the whole tracked tree as one
+all-added diff: **1 hit in 86 code files**, and that one is arguably genuine.
+Bare `no longer` and `previously` were tried and CUT - they produced 36 hits,
+nearly all legitimate, because both are ordinary ways to state a current
+invariant. Known recall gap: inside an unbroken run of `//` lines only the
+first is checked, which is the price of not flagging wrapped continuations.
+
 **Write within the cap - this is a writing budget, not just a gate checked
 after the fact.** Before writing a block, decide if it names a constraint,
 gotcha, or measurement the code can't show; if not, don't write it.
