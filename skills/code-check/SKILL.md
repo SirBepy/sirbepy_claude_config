@@ -107,9 +107,45 @@ that breaks a rule the repo spent a page explaining.
    written as a code todo. If such an observation is worth enforcing, the todo to file is a
    documentation change to the pattern doc, not a fix to the reviewed code.
 
+## Step 4a - Classify and route each finding
+
+Every finding from Steps 0-4 gets exactly one class, and the class decides whether it is applied
+here or filed for later. Filing is the default; applying is the exception that must earn itself.
+
+| Class | What it covers | Route |
+|-------|----------------|-------|
+| 1 - mechanical | An unused import, a symbol nothing references, a duplicated helper collapsed onto one that already exists, a description over budget | Apply it, if and only if the exercise test below passes |
+| 2 - structural | Splitting an over-long file, extracting a repeated block, centralising constants | File it, unless the exercise test passes AND the suite is green |
+| 3 - judgment | The abstraction is wrong, the boundary is in the wrong place, a convention breach with a real decision inside it | Always file it. Never apply |
+
+**The exercise test, and it is the whole gate.** Before applying anything, name the specific test
+file or command that would FAIL if this change were wrong, and say why it would reach the changed
+lines. A repo-wide suite passing is not evidence for a file that no test imports.
+
+This is not a hypothetical caution. Measured 2026-08-22 while writing this section: a mechanical
+dead-symbol scan flagged `hooks/_hooklib.py`'s `strip_quotes` as having zero references, when
+`hooks/package-manager-guard.py:28` and `hooks/flutter-workdir-guard.py:37` both import it under
+an alias. Deleting it would have made both guards fail closed on every invocation, and
+`python ci/run_all.py` would still have passed, because neither guard has a `hooks/test_*.py`
+suite. The detector was confident and wrong, and the verification floor could not see it.
+
+After applying, run the named command, paste its real output, and report the change in one line.
+Never file a todo for something already applied.
+
+**The honest exit.** A class-1 finding whose exercise test cannot be named is neither applied nor
+filed. Append one line to `.claude/todos/dropped-findings.log` instead:
+
+```
+<ISO date>  <class>  <path:line>  <one-line finding>  dropped: <what verification was missing>
+```
+
+A finding nobody will action and nobody can verify does not belong in a backlog that already
+needs `/cleanup-todos` sweeps. The log exists so a misclassification stays recoverable rather
+than vanishing silently.
+
 ## Step 5 - Output
 
-Merge findings from Steps 0-4.
+Merge findings from Steps 0-4, minus anything Step 4a applied or dropped.
 
 **If the project has a repo root for `.claude/todos/`:** write each finding as a `.md` file there, per `~/.claude/skills/close/ai-todos-format.md` (filename/id rules, git-policy self-heal; create the folder if missing). Format:
 
@@ -138,8 +174,11 @@ Merge findings from Steps 0-4.
 Print a summary line:
 
 ```
-code-check: N findings (A size, B DRY, C dead code, D desc, E convention). M written to todos.
+code-check: N findings (A size, B DRY, C dead code, D desc, E convention). M written to todos, P applied, Q dropped.
 ```
+
+`P` and `Q` come from Step 4a. Name each applied finding and each dropped one on its own line
+below the summary; a bare count hides which file changed.
 
 Print any "unwritten-rule observations" from Step 4 below that line, under their own heading, so
 they are visibly NOT part of the finding count.

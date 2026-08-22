@@ -15,7 +15,13 @@ All per-project, at the project root:
   PLAN.md                      # ordered To-Do lane (optional per project)
   done/                        # completed todos (moved here, ids stay burned)
   .claims/                     # active-claim lock files (NEVER git-tracked)
+  dropped-findings.log         # findings /code-check dropped rather than filed (append-only)
 ```
+
+`dropped-findings.log` is not a todo and is never parsed as one. `/code-check` Step 4a appends
+one line to it when a mechanical finding has no verification that would catch a mistake, so the
+call stays recoverable instead of disappearing. Nothing reads it automatically; it is forensic
+record, not a queue. It follows the same tracking rule as the backlog around it.
 
 `.claude/todos/` is ALWAYS resolved relative to the repo root, with no exceptions. That includes
 the global config repo itself: a session working on `C:\Users\tecno\.claude` writes to

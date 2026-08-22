@@ -1,0 +1,6 @@
+# /code-check findings dropped rather than filed, per Step 4a's honest exit.
+# Append-only. One line per drop. Nothing reads this automatically - it exists so a
+# misclassification stays recoverable instead of vanishing silently.
+# Format: <ISO date>  <class>  <path:line>  <finding>  dropped: <verification that was missing>
+
+2026-08-22  class-1  skills/roblox-animation/bvh_to_keyframes.py:29  unused import math; the four `math.rad(` occurrences at :210-218 are inside f-strings emitting Luau, not Python references  dropped: no test imports or runs this script, ci/run_all.py does not reach skills/, and the only command that would exercise it needs a .bvh fixture that does not exist

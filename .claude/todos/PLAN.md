@@ -83,15 +83,48 @@ SKILL.md` at 923 lines is the one real progressive-disclosure outlier out of 85 
 convention is otherwise already the norm). 476 records a third false-positive class on the
 shell-write guard, hit while doing this work.
 
-### Phase 4 - CLAUDE.md weight and rules. Same file, so sequential.
+### Phase 4 - CLAUDE.md weight and rules. DONE 2026-08-22.
 
-- [ ] 424 - path-scoped `.claude/rules/` to cut always-loaded weight
-- [ ] 429 - Timeless Present comment rule + strength-tagged bullets
-- [ ] 442 - Evidence Rule for own-codebase claims, deferred-work, numeric ratchets, Ask First
+424, 429 and 442 all landed, four commits (`2b49016`, `1a830f2`, `2e2296c`, `74e3aff`).
+**`CLAUDE.md` went 6732 -> 6558 tokens and `CEILING_TOKENS` was ratcheted down to match**, back to
+zero headroom. That is a 412-token cut minus 206 spent back on three new rules.
+
+**424 did NOT ship a `.claude/rules/` tree, and the reason is worth carrying forward.** The
+mechanism is real and was verified two ways (the loader inside the `claude` binary, plus four live
+nested `claude -p` runs): the frontmatter field is `paths:`, a junction into the config dir loads,
+and glob matching is gitignore semantics. **But its only trigger is the `Read` tool.** Write and
+Edit never load a scoped rule, so every rule the todo named (icons, persistence, the comment
+budget) would have stopped firing on file creation, which is when they matter most. The full
+verified behaviour is written into `done/424-*.md` so nobody re-derives it. The creation-path gap
+is now todo **493**.
+
+What shipped instead: 11 incident narratives moved into `refs/incidents.md`, leaving every rule
+sentence in place. That property is mechanically checkable, and was checked - every removed
+fragment begins with "Past incident" or "Decided 2026-08-18".
+
+429 shipped the Timeless Present rule plus `skills/commit/comment-tense.sh` in the prefilter gate,
+and deliberately did NOT ship the strength-tagging half; the audit ran instead and is in
+`refs/claude-md-rule-force-audit.md`, with a re-open trigger. 442 shipped the evidence rule for
+own-codebase claims and the deferred-work rule, and skipped the line-count ratchet.
+
+**The phase's lesson, and it is a new shape:** verification tells you how a mechanism behaves, and
+says nothing about whether to use it. `.claude/rules/` passed every behavioural test put to it and
+was still the wrong tool, because `code-style/`'s content was never in the gated budget in the
+first place - converting it would have bought **44 tokens** in exchange for a mechanism no check in
+`ci/run_all.py` can test. That was arithmetic, not a probe, and no amount of further verification
+would have surfaced it.
+
+**A second lesson, less flattering.** A 4-lens `/rate-it` panel with an adversarial verifier pass
+overturned the recommendation 4/4 and caught **two wrong numbers** in the briefs it was given: the
+800-line commit fire rate (claimed 2 of 119, actually 5 of 118) and the `CLAUDE.md` bullet count
+(claimed ~150, actually 81). The first was inferred from a percentile instead of counted, which is
+the third recurrence of that class here (see `done/270`). The panel earned its cost on the
+arithmetic alone. Note also that the verifier pass then **refuted the majority preference on 442** -
+three of four raters preferred a option whose central premise (that extending `comment-noise.sh` is
+near-free) does not survive reading the script. Raters converging is not evidence.
 
 ### Phase 5 - the review loop Joe actually asked for, plus discipline skills.
 
-- [ ] 451 - refactor findings are filed for a reader who does not read. **Do this before 450.**
 - [ ] 450 - `/code-check` fires post-write in a fresh subagent, drops out of `/close`
 - [ ] 425 - engineering-discipline skills. Item 2 (refactoring) is gated on 451's classification.
 
@@ -139,6 +172,11 @@ Its own wrap-up then filed **twelve** new ones, which is the honest shape of a r
 lanes shipped something correct that was not wired up, because the wiring lived in a file another
 lane owned.
 
+- **481** - nothing checks a todo is filed in the repo it changes, and an autopilot run executed
+  four commits into sibling game repos from a platform session because of it. Joe raised it
+  2026-08-22; 479 below is the same defect in the other direction
+- **479** - Obsidian daily-note automation (screenpipe pipe) is a month stale; re-filed here
+  from zng-app's backlog 2026-08-22, it was global tooling sitting in a project repo
 - **392** - sweep the remaining skills whose dispatch templates miss the guard's three markers
 - **393** - `claim-todo.ps1`/`complete-todo.ps1` reject a slug-only id the contract calls valid
 - **394** - settle how Conductor's card parser reads markers (needs a live session)
