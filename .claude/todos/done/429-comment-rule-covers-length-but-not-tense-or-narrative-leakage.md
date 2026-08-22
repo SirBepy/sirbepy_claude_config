@@ -96,3 +96,4 @@ The tagging pass is the risky half. Re-reading 17 sections and assigning force i
 any rule's intended force is unclear, tag it PREFER and flag it rather than guessing upward.
 
 Do the two halves as separate commits. They are unrelated and one is far riskier than the other.
+- Done 2026-08-22. Half 1 shipped: Timeless Present in CLAUDE.md plus skills/commit/comment-tense.sh in the prefilter gate, 1 false positive across 86 tracked code files after 'no longer' and 'previously' were measured at 36 mostly-legitimate hits and cut. Half 2 SKIPPED by design: tags were not applied, the audit ran instead and is in refs/claude-md-rule-force-audit.md. It found 4 entries that are not rules, exactly 1 bullet with two forces in one sentence, and exactly 1 genuine AVOID in 81 bullets, so the prose already carries the distinction in 76 of 81. Re-open trigger recorded in that file.
