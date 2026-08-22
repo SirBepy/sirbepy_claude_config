@@ -66,6 +66,14 @@ interruptions for a question with a known answer.
 Related but distinct from 368, which fixed the file-level false-positive rate. This is about the
 surviving true positives being uninteresting in one specific, predictable situation.
 
+**Sibling: todo 474, and they are NOT duplicates - check both before touching step 8.** 474 says the
+overlap check should be a script instead of prose, because the algorithm was hand-written four times
+in one run and silently mis-compared 7-char against 8-char shas twice. That is a correctness defect:
+the check reports clean when it should not. This todo is a policy defect: the check reports a real
+hit correctly and then asks a question the dev already answered. Fixing either one leaves the other
+standing, and whoever scripts 474 should decide there whether the sweep-aware behaviour from this
+todo belongs in the same script.
+
 Do not treat this as licence to skip the check. Two commits in this session took the
 genuinely-separate branch and both said so explicitly in their report; the silent version of that is
 the actual hazard.
