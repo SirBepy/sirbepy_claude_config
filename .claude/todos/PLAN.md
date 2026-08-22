@@ -125,12 +125,22 @@ near-free) does not survive reading the script. Raters converging is not evidenc
 
 ### Phase 5 - the review loop Joe actually asked for, plus discipline skills.
 
-- [ ] 450 - `/code-check` fires post-write in a fresh subagent, drops out of `/close`
 - [ ] 425 - engineering-discipline skills. Item 2 (refactoring) is gated on 451's classification.
+
+**450 was SPLIT on 2026-08-22 by Joe.** Its fresh-reviewer half shipped; its trigger half moved to
+phase 6 behind 427. The reason is worth carrying: the todo assumed isolation was a property of
+firing earlier, and the review was in fact running **inside the authoring session all along** -
+`skills/close/SKILL.md:149` invoked `/code-check` via the Skill tool, and `CLAUDE.md:27` says
+subagents cannot invoke skills. `/code-check` now dispatches its own analysis. The `Stop`-hook
+trigger rated a median 3/10 across a 3-lens panel plus verifier: a `decision: block` only
+re-injects text into the session that wrote the code, so it cannot make anything structural, and
+`/close` Phase 2 already carries a tuned 50-added-line floor the design was about to discard.
 
 ### Phase 6 - harness surgery. Highest blast radius, so last.
 
 - [ ] 427 - Stop-hook verify gate. **Runs on every turn end. Build the escape hatch first.**
+- [ ] 450 - the post-write TRIGGER half only. **Gated on 427's source-file-edited signal**; build
+      it once, not twice. Full flaw list and the rejected `claude -p` alternative are in the todo.
 - [ ] 426 - PreCompact, PermissionRequest, generic PostToolUse; the unused JSON control fields
 - [ ] 434 - per-agent hooks, which could make the delegation ban list real instead of prose
 - [ ] 437 - OS sandbox namespace. Likely only `credentials.mask` survives contact.

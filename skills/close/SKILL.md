@@ -148,6 +148,8 @@ makes it resolve empty - two symptoms of one root cause):
 
 Invoke `/code-check` with that scope arg via the Skill tool. It handles the analysis and writes the todos directly. Read its summary line (`code-check: N findings ...`) to extract the finding count for the Phase 4 counter.
 
+`/code-check` dispatches the analysis itself, into a subagent that did not write this session's code - see its "The analysis runs in a fresh subagent, always" section. Do not pass it what this session was trying to achieve, and do not summarise the work for it. Scope is the only input it gets from here; the reasoning behind the code is exactly what must not travel.
+
 ## Phase 3 - Persist
 
 Run in this order:

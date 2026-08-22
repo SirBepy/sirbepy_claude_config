@@ -1,14 +1,19 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
 <!-- duplicate-checked -->
-# /code-check should fire right after code is written, always in a fresh subagent
+# /code-check should fire right after code is written, not only at /close
 
 **Type:** skill-improvement
 **Origin:** dev
 
+> **SPLIT 2026-08-22 by Joe. Half of this shipped; what remains is the TRIGGER only, and it is
+> sequenced behind todo 427 in phase 6. Read "Status" at the bottom before doing anything.**
+
 ## Goal
 
-Move `/code-check` from a `/close`-time sweep to an automatic post-write pass that always runs in a
-fresh subagent, and remove it from `/close` once that lands.
+Give `/code-check` an automatic post-write trigger, so the review fires when code is written
+rather than only when a session reaches `/close`, and remove the `/close` call once that lands.
+
+The fresh-subagent half of this todo is DONE and is no longer in scope here.
 
 ## Context
 
@@ -75,3 +80,52 @@ Do not "improve" this by having the authoring session review its own diff before
 whole premise, in Joe's words, is that AI is very bad at reviewing its own code.
 
 Sequence after todo 427 if possible, so the source-file-edited signal is built once rather than twice.
+
+## Status 2026-08-22 - split in two, half shipped
+
+**Shipped: the fresh-reviewer property.** `/code-check` now dispatches its own analysis into a
+subagent, in a new "The analysis runs in a fresh subagent, always" section at the top of
+`skills/code-check/SKILL.md`. The invoking session resolves scope, dispatches, and writes the todo
+files (the backlog contract forbids a subagent doing that); the subagent runs Steps 0-4 read-only
+and returns findings. The dispatch may carry the scope, the file list and the diff, and may never
+carry what the session was trying to do. `skills/close/SKILL.md:149` now says so at the call site,
+and there is a stated `isolation: NOT held` fallback for runners with the Agent tool disabled
+(pre-empting todo 483 for this one skill).
+
+**Why that half became urgent.** This todo assumed the fresh-subagent property was a property of
+firing EARLIER. It is not, and worse, it was not held anywhere: `skills/close/SKILL.md:149`
+invoked `/code-check` **via the Skill tool, in the authoring session**, and `CLAUDE.md:27` records
+that subagents cannot invoke skills at all. So the review has been running inside the session that
+wrote the code this whole time, which is the exact thing this todo objects to, live and unnoticed.
+Fixing it needed no hook, no `settings.json` and no dependency on 427.
+
+**Deferred: the trigger, and it stays deferred.** A `Stop`-hook design was written and rated at a
+median **3/10** by a 3-lens `/rate-it` panel plus an adversarial verifier. Confirmed flaws, each
+checked against the files:
+
+- A `Stop` hook's `{"decision": "block"}` (the live pattern at `hooks/ui-screenshot-reminder.py:110`)
+  only re-injects text into the SAME session that wrote the code. It cannot make anything
+  structural, so it fails this todo's own Approach step 3.
+- `/close` Phase 2 already has a tuned size floor (`skills/close/SKILL.md:130`: skip under 50 added
+  lines, with a written rationale). The proposed trigger discarded it and reinvented a cruder one.
+- `ui-screenshot-reminder.py`'s sentinel is a single boolean, fired once per session
+  (`:96`). The per-file freshness set this trigger needs is new state, not reuse.
+- Six `Stop` hook blocks are already wired and three of them can emit `decision: block`. A fourth
+  stacking on the same turn is untested.
+- Todo **427 is still open** and is building the source-file-edited signal. Building a second one
+  here is what this todo's own last line warns against.
+
+One structural alternative was found and rejected on cost, not principle: the hook could spawn its
+own `claude -p` reviewer, which `tools/skill_eval.py` already proves works here (fresh process,
+`--disallowed-tools`, `subprocess.run`). That harness runs on a 300s timeout at roughly $0.20 a
+call, against a repo where every wired `Stop` hook is capped at 15 to 30 seconds. Worth
+reconsidering only if 427 lands and the signal turns out to be the only missing piece.
+
+**One rater claim was refuted** and should not be recycled: that firing more often would multiply
+the false positives in todos 471 and 456. Those are `/commit`'s regex prefilters
+(`skills/commit/prefilter-gate.sh`), structurally unrelated to `/code-check`.
+
+**The cost figure is still unmeasured.** An earlier estimate of ~60.8k tokens per dispatch came
+from rating subagents, not a `/code-check` dispatch, and does not transfer; the standing note for
+a general-purpose subagent is 15-20k. Whoever builds the trigger owes a real measurement, per this
+todo's own Acceptance.

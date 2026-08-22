@@ -8,6 +8,52 @@ argument-hint: "[uncommitted|unpushed|<path>|<hash>] (default: uncommitted)"
 
 > Structural review: file splits, DRY, dead code. Writes findings to ai_todos.
 
+## The analysis runs in a fresh subagent, always
+
+**The session that wrote the code never reviews it.** That is the whole reason this skill exists
+separately from the work, in Joe's words: AI is very bad at reviewing its own code. Running the
+review later did not give that property, it only delayed the same reviewer. A subagent gives it
+for free, because it has no memory of the authoring decisions and no investment in the approach.
+
+Split of duties, and it is not negotiable:
+
+- **The invoking session** resolves the scope (below), dispatches, then acts on what comes back:
+  Step 4a's routing, Step 5's output, and any todo files. Writing into `.claude/todos/` stays here
+  because the backlog contract forbids a subagent doing it.
+- **The subagent** runs Steps 0-4 read-only and returns findings. It edits nothing and writes no
+  todo.
+
+**What the dispatch may carry:** the scope arg, the resolved file list, and the diff. **What it must
+never carry:** what the session was trying to do, why it chose an approach, or any assurance that
+the code is correct. Passing the authoring rationale reintroduces exactly the bias this dispatch
+exists to remove, and a reviewer told "this is fine, just check it" is no longer independent.
+
+Dispatch with `general-purpose` and `model: 'sonnet'` explicitly. The three preamble markers below
+are required by `hooks/dispatch-preamble-guard.py`, which rejects a dispatch missing any of them:
+
+```
+READ-ONLY DISPATCH
+
+Stage your changes but do NOT commit. The main agent will run /commit after your report-back.
+
+`run_in_background` is FORBIDDEN in this dispatch: run every command synchronously and finish
+before ending your turn.
+
+You are reviewing code you did not write, and you are not being told who wrote it or why.
+
+Scope: <scope arg>
+Files: <resolved file list>
+Diff: <the diff, or the command that produces it>
+
+Run Steps 0 through 4 of ~/.claude/skills/code-check/SKILL.md against that scope. Edit nothing.
+Write no todo files. Return the findings as the JSON blocks that skill defines, each with your
+class-1/2/3 judgement from Step 4a and the reason for it.
+```
+
+**If the Agent tool is unavailable** (some runners disable it), say so in one line, run the
+analysis in-session, and label the output `isolation: NOT held`. A review that quietly loses the
+property is worse than one that admits it.
+
 ## Scope resolution
 
 Determine what to review based on args:
