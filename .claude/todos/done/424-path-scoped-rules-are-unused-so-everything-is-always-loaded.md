@@ -77,3 +77,36 @@ the dev actually edits. That is strictly worse than an always-loaded rule, becau
 the absence. Hence the per-rule trigger check in acceptance.
 
 Do not migrate the whole CLAUDE.md in one pass. Migrate, verify the rule still fires, then continue.
+- Done 2026-08-22. Shipped refs-extraction, NOT the rules dir: a 4-lens panel plus an adversarial verifier rated the code-style migration 4/10 and preferred extraction 4/4. Mechanism verified and written up above so it is never re-derived. CLAUDE.md 6732 -> 6352 tokens, 380 headroom, by moving 11 incident narratives to refs/incidents.md with zero rule text touched.
+
+## What the mechanism actually does, verified 2026-08-22 - do not re-derive this
+
+Established two independent ways: by reading the loader in the `claude` binary (`Rgv`, `Hgv`, `Hor`,
+`Hli`, `hvp`, `wWm`) and by four live nested `claude -p` runs. Both agree.
+
+- The frontmatter field is **`paths:`**, not `globs:`. `paths: "**"` is treated as unscoped.
+  A trailing `/**` is stripped per glob. Matching uses the `ignore` npm package, so gitignore
+  semantics, not picomatch.
+- Scopes: **user** = `$CLAUDE_CONFIG_DIR/rules/` (recursive, `.md` only), **project** =
+  `<project>/.claude/rules/`. A junction from the config dir to `~/.claude/rules` works.
+- A rule with no `paths:` loads **always**, so it costs always-loaded weight and cannot help the
+  ceiling. Only a rule WITH `paths:` is conditional.
+- **The only trigger is the `Read` tool** (plus IDE-opened files and `@`-mentions). The binary has
+  exactly one push site into the trigger queue and it is inside `FileReadTool`. Write and Edit do
+  not push. Proven live: writing a new `.tsx` left the scoped rule absent; reading one loaded it;
+  reading a non-matching `.txt` correctly did not.
+- Because `Edit` requires a prior `Read`, **editing an existing matching file loads the rule.
+  Creating a new file does not.**
+- For user-scope rules the glob matches the path **relative to the session cwd**; anything
+  resolving outside cwd never matches.
+
+**Why nothing was migrated.** All three candidates this todo named (Phosphor icons, persistence,
+the comment budget) matter most when Claude CREATES a file, which is exactly the case that cannot
+fire. `code-style/` was the last candidate standing and it failed on arithmetic rather than
+mechanism: its file CONTENT was never in the gated budget, only the 175-char bullet pointing at it,
+so converting it would have bought **44 tokens** in exchange for a mechanism no check in
+`ci/run_all.py` can test. A 4-rater panel with an adversarial verifier pass rated that trade 4/10
+and preferred refs-extraction 4/4 unanimously.
+
+The real fix for the creation gap is a `PreToolUse` hook that injects style content on Write/Edit
+by file extension. Filed separately; measure before wiring, per the hook doctrine.
