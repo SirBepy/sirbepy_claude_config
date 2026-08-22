@@ -123,9 +123,40 @@ arithmetic alone. Note also that the verifier pass then **refuted the majority p
 three of four raters preferred a option whose central premise (that extending `comment-noise.sh` is
 near-free) does not survive reading the script. Raters converging is not evidence.
 
-### Phase 5 - the review loop Joe actually asked for, plus discipline skills.
+### Phase 5 - the review loop Joe actually asked for, plus discipline skills. DONE 2026-08-22.
 
-- [ ] 425 - engineering-discipline skills. Item 2 (refactoring) is gated on 451's classification.
+451, 450 and 425 all landed, three commits (`6643b7c`, `37b5b8c`, and this one). 451 shipped
+`/code-check`'s Step 4a class taxonomy plus the drop log; 450 shipped the fresh-reviewer property
+and deferred its trigger; 425 adopted two methods as `refs/` files and skipped three skills.
+
+**The phase's lesson, and it is a measurement lesson three times over.** Every one of the three
+todos had its central premise or recommendation overturned by counting something:
+
+- **451's premise was false.** It assumed refactor findings are write-only waste because Joe never
+  reads code. He does not, and it does not matter: 18 `/code-check` findings, **13 executed, 1
+  dropped, 4 open**, and **zero of the 13 executed by Joe naming an id** - batch runners drained
+  every one. "He does not read the code" and "the finding never happens" are different claims.
+- **450's isolation was never held anywhere.** The todo assumed a fresh reviewer was a property of
+  firing EARLIER. In fact `skills/close/SKILL.md:149` invoked `/code-check` via the Skill tool, in
+  the authoring session, and `CLAUDE.md:27` says subagents cannot invoke skills at all. The thing
+  the todo wanted was missing from the path it already had.
+- **425's five candidates all lost on the same fact**, which none of them were judged on
+  originally: a skill cannot reach a subagent, and subagents do the work. Two became `refs/` files
+  reached from the builder preamble; three were skipped.
+
+**Every phase-5 recommendation I made was wrong before a panel corrected it, and the corrections
+were arithmetic, not taste.** The 425 design scored 4/10, the 450 design 3/10. Three numbers I
+published were wrong and caught by raters: a per-dispatch token cost measured off the wrong class
+of subagent, a count of six dangling skill references reported as two, and a `mutation-testing`
+skip argued from this repo's own file composition when `~/.claude` is GLOBAL config whose skills
+fire in client repos. That last one is the newest trap and worth naming: **for anything in this
+repo, the denominator is usually not this repo.**
+
+The one thing that went right by accident is the most reusable. A mechanical dead-symbol scan
+flagged `hooks/_hooklib.py`'s `strip_quotes` as unreferenced; two guards import it under an alias,
+deleting it would have failed both closed across every session, and `ci/run_all.py` would still
+have printed 4/4 green because **six live guards have no test file** (todo **501**). That is why
+`/code-check` Step 4a now requires naming the command that would fail before applying anything.
 
 **450 was SPLIT on 2026-08-22 by Joe.** Its fresh-reviewer half shipped; its trigger half moved to
 phase 6 behind 427. The reason is worth carrying: the todo assumed isolation was a property of
