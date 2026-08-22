@@ -35,18 +35,25 @@ actually shipped before the skill started depending on it.
 Note the commit landed **mid-session** from a concurrent session, ten minutes after an unrelated
 session's first commit, which is how it was caught at all.
 
+## RESOLVED on the acute half, 2026-08-22 - it was version skew, not a missing tool
+
+Joe restarted Conductor and `mcp__cc_conductor__respawn` registered immediately; `/respawn` then ran
+end to end. **The tool exists and the skill is correct.** The failure was purely that
+`mcp__cc_conductor__*` tools are registered at SESSION START, so a session that began before the
+build shipping `respawn` cannot see it no matter how current the skill file is - and `f78b339`
+landed mid-session, which is the worst possible timing for exactly this.
+
+Steps 1-3 below are answered and kept only as the record. **Step 4 is the surviving open question
+and the only reason this todo is still live.**
+
 ## Approach
 
-1. Establish which side is wrong. Check whether a Conductor build exposing `respawn` exists and is
-   simply not installed here, or whether the tool was never implemented. `mcp__cc_conductor__*` tool
-   registration happens at session start, so a session older than the build will not see a new tool
-   even after an app update - rule that out first by checking a freshly started session.
-2. If the tool exists in a newer build: the skill is fine and this is a version-skew note. Record
-   the minimum build in the skill so the next person does not re-diagnose it.
-3. If the tool does not exist: either implement it in the Conductor MCP server, or revert the skill
-   to the `spawn_chat` + `close_session` ordering, which was working and whose hazard (close before
-   spawn kills the process that would spawn) was already documented.
-4. Whichever way it goes, the general defect is worth fixing separately: **a skill's hard
+1. ~~Establish which side is wrong.~~ Answered: the tool exists, the session predated it.
+2. ~~If the tool exists in a newer build~~ - it did. Worth noting in the skill that a session older
+   than the tool must be restarted, since the guard's message ("if it isn't in your tool list, stop
+   and say so") reads like a permanent absence rather than a restart-fixable one.
+3. ~~If the tool does not exist~~ - not applicable.
+4. The general defect survives and is worth fixing separately: **a skill's hard
    precondition was pointed at a tool with no check that the tool shipped.** Consider whether
    `ci/check_skill_frontmatter.py` (or a sibling check in `ci/run_all.py`) can assert that any MCP
    tool a skill names as REQUIRED is one the app actually registers. That would have caught this
@@ -54,12 +61,13 @@ session's first commit, which is how it was caught at all.
 
 ## Acceptance
 
-- `/respawn` completes end to end in a real session, proven by an actual successor chat, not by
-  reading the skill.
-- The skill and the deployed tool set agree, and whichever one moved is recorded so the skew is not
-  re-diagnosed.
+- ~~`/respawn` completes end to end in a real session~~ - DONE 2026-08-22, a real successor chat was
+  spawned after an app restart.
+- ~~The skill and the deployed tool set agree~~ - DONE, they did all along.
+- The skill's guard says what to do about skew: a missing `respawn` may just mean this session is
+  older than the tool, so "restart the app and retry" belongs in that sentence before "stop".
 - A decision is recorded on step 4: either a mechanical check exists for required-tool names, or the
-  reason not to build one is written down.
+  reason not to build one is written down. **This is the only part still open.**
 
 ## Notes
 
