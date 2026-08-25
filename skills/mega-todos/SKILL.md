@@ -56,7 +56,8 @@ skill - say so and offer `/auto-do-todos` instead.
 3. Triage and the one question round, per `/auto-do-todos` Steps 4-5.
 4. Exclusion pass (Step B) - drop what must not be automated.
 5. Lane assignment (Step C) - a scout partitions the AUTO queue by file ownership.
-6. The workflow run (Step D) - lanes execute in parallel, barriers verify.
+6. The workflow run (Step D) - lanes execute in parallel; the main thread verifies at each barrier
+   between batches, since a Workflow script cannot run a shell command.
 7. Archival and wrap-up (Step E).
 
 ## Step A - Preflight
@@ -173,20 +174,28 @@ Author the script inline. Shape:
   agent call chain, so ordering within a lane is guaranteed.
 - One builder agent per todo, `model: 'sonnet'`, `agentType` default. Tune `effort` down for
   mechanical splits, up for anything with judgment.
-- A **barrier** every batch for the cheap ladder, and a second, rarer barrier for the full one.
+- Barriers do NOT live in the script. **A Workflow script has no shell and no filesystem** - its only
+  primitives are `agent()`, `parallel()`, `pipeline()`, `log()`, `phase()` and `workflow()` - so a
+  barrier that runs `cargo check` or `pytest` cannot be a step in it. Return the workflow between
+  batches and run the barrier in the MAIN THREAD, which is where Step E already has to archive from
+  anyway. Do not spend a whole subagent per barrier just to run three commands.
 
-**Verify ladder** (settled with the dev 2026-08-10; generalised 2026-08-12).
+**Verify ladder** (settled with the dev 2026-08-10; generalised 2026-08-12; thread ownership made
+explicit 2026-08-25 per todo 405).
 
 Defined by ROLE, not by command. Resolve each role to the project's real commands during Step A and
 state them in the run's opening `log()`. A ladder whose roles cannot be filled at all is a **hard
 stop** - a wide parallel run with no verify floor is 15 agents committing unchecked.
 
-| Role | When | Scope |
-|---|---|---|
-| **Cheap per-todo** | by the agent itself, before it commits | only what that agent touched |
-| **Per-batch barrier** | every batch | repo-wide, must stay fast enough to run often |
-| **Full floor** | every 10-15 completed todos | everything, including tests and e2e |
-| **Final barrier** | once, at run end | see the rule below |
+| Role | Runs on | When | Scope |
+|---|---|---|---|
+| **Cheap per-todo** | the builder agent | before it commits | only what that agent touched |
+| **Per-batch barrier** | MAIN THREAD | every batch | repo-wide, must stay fast enough to run often |
+| **Full floor** | MAIN THREAD | every 10-15 completed todos | everything, including tests and e2e |
+| **Final barrier** | MAIN THREAD | once, at run end | see the rule below |
+
+Only the per-todo rung belongs to a builder, because a builder is a real agent with real shell
+access. Every other rung is the main thread's, between workflow invocations.
 
 **In `barrier` COMMIT_MODE (Step A)**, the per-batch and full-floor barriers each additionally
 perform the commit step before their verify commands run - see "Barrier COMMIT_MODE" under the
