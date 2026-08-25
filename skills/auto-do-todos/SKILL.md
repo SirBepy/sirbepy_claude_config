@@ -146,7 +146,8 @@ it silently.
 ## Step 4 - Triage into AUTO and DEV
 
 Dispatch ONE subagent (`model: 'sonnet'`) with the full text of every todo `/batch-todos` parked as
-HARD. Per todo it returns:
+HARD. If the Agent tool is unavailable, triage INLINE per the doctrine's "When the Agent tool is
+unavailable" - the todos are already read here, so inline costs almost nothing. Per todo it returns:
 
 - `bucket`: **AUTO** or **DEV**.
   - **AUTO** - no dev decision is genuinely required. This INCLUDES real design/architecture
@@ -280,7 +281,9 @@ Rules:
 
 ## Step 9 - Wrap-up verification and summary
 
-Dispatch subagents to verify the run's whole diff (`git diff START_SHA..HEAD`):
+Dispatch subagents to verify the run's whole diff (`git diff START_SHA..HEAD`). If the Agent tool is
+unavailable, run all three INLINE per the doctrine's "When the Agent tool is unavailable" - this
+fan-out buys context economy, not capability, so inline loses nothing but main-thread tokens:
 
 1. `/code-check START_SHA..HEAD` - structural + convention review, writes findings to the backlog.
 2. The project's fast-check floor (typecheck, unit tests, lint, build) - whichever it actually has.

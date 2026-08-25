@@ -137,6 +137,10 @@ that breaks a rule the repo spent a page explaining.
    `CLAUDE.md` is large (it gets re-injected on every Read in that tree), dispatch ONE subagent
    (`model: 'sonnet'`, read-only, "report findings, edit nothing") that reads the docs plus
    `git show <range>` and returns findings only. Keeps the raw doc bytes out of the main context.
+   If the Agent tool is unavailable, this one does NOT degrade freely - keeping those bytes out is
+   the entire point, so read the docs inline only when the range is under ~10 files, and above that
+   SKIP this step naming the docs left unread. See the doctrine's "When the Agent tool is
+   unavailable"; this is the bounded-scope exception it describes.
 3. **Judge only against rules that are actually written**, and QUOTE each one. A finding without a
    quote is not a finding. **A rule only binds files in the language/stack it targets** - a
    Dart-specific rule cited against an HTML, Python, or JS file is not a finding; when scope is

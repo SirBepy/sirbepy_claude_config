@@ -31,6 +31,26 @@ The test is cost, not size-in-isolation: dispatch when the round-trip is cheaper
 the work would dump into the main thread. The main agent NEVER does a feature-sized edit itself,
 however tempting the shortcut looks.
 
+### When the Agent tool is unavailable
+
+A harness directive ("do not call the AgentTool unless the user requested it"), a missing tool, or a
+direct instruction from the dev can all put dispatch out of reach. **Do the step INLINE and name the
+substitution in the run's summary.** Never call the tool anyway, and never silently drop the step.
+
+This is a defined path, not a deviation to apologise for. Observed 2026-08-22 in
+`hubbub-game-split-opinions`: the session did two rounds inline under exactly this directive and
+self-reported both times, which worked, but it was a judgement call made twice under ambiguity when
+it should have been a rule.
+
+Inline is not automatically worse. Most fan-outs here buy CONTEXT ECONOMY, not capability, so
+losing them costs main-thread tokens rather than quality - in that same session the inline
+verification was stronger than a summarising subagent's would have been. The exception is a
+dispatch whose whole purpose is keeping large bytes out of the main context: there, inline is a real
+trade, so bound it by scope and SKIP with a stated reason above that bound rather than reading
+everything inline.
+
+A skill adopting this file inherits this clause; it does not need its own copy.
+
 ## Dispatch discipline
 
 **Scout before builder.** For anything non-obvious, dispatch a read-only scout first and have it
