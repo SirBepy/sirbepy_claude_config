@@ -47,7 +47,7 @@ Ask which skill to validate. Read its SKILL.md and run the full checklist below.
 
 ## Mode 3 - Validate all skills
 
-Read every SKILL.md in `~/.claude/skills/` via a subagent (fleet-wide reads are context-heavy; dispatch, don't read inline), one `model: 'sonnet'` dispatch per batch. Run the validation checklist on each one. Print a summary table:
+Read every SKILL.md in `~/.claude/skills/` via a subagent (fleet-wide reads are context-heavy; dispatch, don't read inline), one `model: 'sonnet'` dispatch per batch. Paste the canonical preamble from `refs/builder-preamble.md` into each dispatch prompt (it's read-only, so the `READ-ONLY DISPATCH` opt-out applies) - `hooks/dispatch-preamble-guard.py` rejects a prompt missing its markers. Run the validation checklist on each one. Print a summary table:
 
 ```
 Skill                 Fails  Warns

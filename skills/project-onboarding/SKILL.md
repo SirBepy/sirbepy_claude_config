@@ -59,7 +59,7 @@ Flutter template content files (5):
 
 If `--compare` passed: also dispatch a 6th sub with `prompts/flutter/compare.md`, substituting `{COMPARE_PATH}` and `{COMPARE_NAME}` (basename of path).
 
-For each sub, the dispatch prompt is the full content of the prompt file with `{REPO_ROOT}` substituted to the absolute cwd. Subs are `general-purpose` type, dispatched with `model: 'sonnet'` pinned explicitly (never inherit the session model).
+For each sub, the dispatch prompt is the full content of the prompt file with `{REPO_ROOT}` substituted to the absolute cwd, PREPENDED with the canonical preamble from `refs/builder-preamble.md` (the `<STAGING_LINE>` for "Subs never commit" per the Hard rules above is `Stage your changes but do NOT commit...`) - `hooks/dispatch-preamble-guard.py` rejects a prompt missing its markers. Subs are `general-purpose` type, dispatched with `model: 'sonnet'` pinned explicitly (never inherit the session model).
 
 ### Step 4 - Serial finish (after all subs return)
 

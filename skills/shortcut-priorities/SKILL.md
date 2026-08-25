@@ -159,7 +159,7 @@ Check `completed`, `started`, `blocked`, `workflow_state_id`, and read the full 
 ### 5. Dispatch-volume gate
 
 - **≤ 10 candidate tickets:** read them inline (as above).
-- **> 10:** fan out one `general-purpose` agent per ticket (or batches of 2-3), `model: 'sonnet'`, single message multiple `Agent` calls. Each dispatch only needs the ticket ID + the public API token pattern above (never the session cookie - it's not needed past step 2). Ask each to return: last commenter, is it Joe, is there an unanswered direct question/QA rejection, current workflow state, one-line verdict.
+- **> 10:** fan out one `general-purpose` agent per ticket (or batches of 2-3), `model: 'sonnet'`, single message multiple `Agent` calls. Paste the canonical preamble from `refs/builder-preamble.md` into each dispatch prompt (it's read-only, so the `READ-ONLY DISPATCH` opt-out applies) - `hooks/dispatch-preamble-guard.py` rejects a prompt missing its markers. Each dispatch only needs the ticket ID + the public API token pattern above (never the session cookie - it's not needed past step 2). Ask each to return: last commenter, is it Joe, is there an unanswered direct question/QA rejection, current workflow state, one-line verdict.
 
 ### 6. Cross-reference with real code state before calling something "still open"
 

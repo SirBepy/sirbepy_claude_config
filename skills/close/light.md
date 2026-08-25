@@ -30,8 +30,14 @@ step 5 (unfinished offers) and steps 3-4 (skill-improvement) are `ai`.
 
 Memory writes go through `~/.claude/refs/memory-rubric.md`'s ADD/UPDATE/DELETE/NONE gate before anything is added to the payload, same as the main path's Phase 3 step 1.
 
-Then dispatch ONE `Agent` call with `subagent_type: "general-purpose"`, `model: 'sonnet'`, and this prompt:
+Then dispatch ONE `Agent` call with `subagent_type: "general-purpose"`, `model: 'sonnet'`, and this prompt (the first three lines are the canonical preamble markers `hooks/dispatch-preamble-guard.py` requires - see `refs/builder-preamble.md` for the full block this is drawn from):
 
+> Stage your changes but do NOT commit. The main agent will run /commit after your report-back.
+>
+> `run_in_background` is FORBIDDEN in this dispatch: run every command synchronously and finish before ending your turn.
+>
+> This dispatch writes only inside `<memory dir>` and `.claude/todos/`, never screenshots - no `.for_bepy/screenshots/` id needed.
+>
 > You are a write-only subagent. Execute the following file writes exactly. No analysis, no extra output.
 >
 > Memory dir: derive from the current project per the Global Knowledge Vault section of CLAUDE.md (vault for cross-project facts and people, native per-project Auto Memory under `~/.claude/projects/<sanitized-cwd>/memory/` for project-local ones) - never hardcode a project path.

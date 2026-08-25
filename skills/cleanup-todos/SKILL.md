@@ -79,7 +79,10 @@ working tree) each citation came from. Carry the ahead/behind numbers into Step 
 reader can see which universe the verdicts describe.
 
 **Deep pass:** dispatch one subagent per chunk (`model: 'sonnet'`, `effort: 'high'`), all chunks in
-a single parallel dispatch, each carrying the full text of its own todos. Each returns one verdict
+a single parallel dispatch, each carrying the full text of its own todos. Paste the canonical
+preamble from `refs/builder-preamble.md` into every chunk's prompt (it's read-only, so the
+`READ-ONLY DISPATCH` opt-out applies) - `hooks/dispatch-preamble-guard.py` rejects a prompt missing
+its markers. Each returns one verdict
 per todo, as prose (evidence, reasons) AND as one CSV row per todo appended at the end of its
 report, header `file,complexity,worth,still_valid,relocate_dest` (the first four columns exactly
 match `update-markers.ps1`'s columns, `file` is the exact backlog filename; `relocate_dest` is

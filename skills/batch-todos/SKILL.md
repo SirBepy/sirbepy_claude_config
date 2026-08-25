@@ -92,7 +92,7 @@ ahead/behind numbers and instruct the subagent to cite evidence via `git show or
 rather than the working copy, naming which ref each citation came from - a todo can be DONE or MOOT
 on trunk while its premise still reads valid against a stale checkout.
 
-Dispatch ONE read-only subagent (`model: 'sonnet'`, per the global subagent rule) that reads every EASY todo in full and verifies its premise against the reference point resolved above - still valid? actually easy? any downgrade risk (hidden design question, stale assumption, feature that's really HARD)? It returns one verdict per todo with a one-line evidence note, stating which ref the evidence came from:
+Dispatch ONE read-only subagent (`model: 'sonnet'`, per the global subagent rule) that reads every EASY todo in full and verifies its premise against the reference point resolved above - still valid? actually easy? any downgrade risk (hidden design question, stale assumption, feature that's really HARD)? It returns one verdict per todo with a one-line evidence note, stating which ref the evidence came from. Paste the canonical preamble from `refs/builder-preamble.md` into the dispatch prompt (it's read-only, so the `READ-ONLY DISPATCH` opt-out applies) - `hooks/dispatch-preamble-guard.py` rejects a prompt missing its markers.
 
 - **DO** - premise holds, proceed to execution.
 - **SKIP** - already done, stale, or superseded. Move to `done/` (create if missing), prune its PLAN.md line, note the evidence; do not execute.

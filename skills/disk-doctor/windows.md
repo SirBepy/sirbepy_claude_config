@@ -27,7 +27,9 @@ function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0
 `model: sonnet`, prompted to run the listed PowerShell blocks and return only a digested summary
 (dirs/caches over ~1GB with sizes) - never raw robocopy table dumps into the main thread. One subagent
 call per round (initial sweep, then a separate one per drill-down round) keeps the back-and-forth
-Joe-steered without a monolithic report.
+Joe-steered without a monolithic report. Paste the canonical preamble from `refs/builder-preamble.md`
+into the dispatch prompt (it's read-only, so the `READ-ONLY DISPATCH` opt-out applies) -
+`hooks/dispatch-preamble-guard.py` rejects a prompt missing its markers.
 
 Run these (PowerShell), then rank findings by payoff (GB freed × ease × reversibility). All read-only.
 

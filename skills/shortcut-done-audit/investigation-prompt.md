@@ -4,7 +4,7 @@ Read this file at step 5 (dispatch investigation subagent(s)) before firing any 
 
 ## Dispatch prompt shape
 
-Fan out in parallel — single message, multiple `Agent` calls, `model: 'sonnet'`, `subagent_type: 'general-purpose'`. Never use the Workflow tool for this unless Joe explicitly asks for orchestration (per global CLAUDE.md gate). When batching (volume gate triggered), give one subagent 2-3 tickets with clearly separated sections in the prompt and ask it to return one verdict block per ticket — don't blur evidence across tickets.
+Fan out in parallel - single message, multiple `Agent` calls, `model: 'sonnet'`, `subagent_type: 'general-purpose'`. Never use the Workflow tool for this unless Joe explicitly asks for orchestration (per global CLAUDE.md gate). When batching (volume gate triggered), give one subagent 2-3 tickets with clearly separated sections in the prompt and ask it to return one verdict block per ticket, don't blur evidence across tickets. Paste the canonical preamble from `refs/builder-preamble.md` into every dispatch prompt (it's read-only per the "Explicit read-only instruction" below, so the `READ-ONLY DISPATCH` opt-out applies) - `hooks/dispatch-preamble-guard.py` rejects a prompt missing its markers.
 
 Each dispatch prompt must include, per ticket:
 

@@ -8,7 +8,9 @@ Repeatable cleanup scan for Joe's Mac (darwin/arm64). You **advise**, never dele
 `model: sonnet`, prompted to run the listed commands and return only a digested summary (dirs/caches
 over ~1GB with sizes) - never raw `du`/`find` dumps into the main thread. One subagent call per round
 (initial sweep, then a separate one per drill-down round) keeps the back-and-forth Joe-steered without
-a monolithic report.
+a monolithic report. Paste the canonical preamble from `refs/builder-preamble.md` into the dispatch
+prompt (it's read-only, so the `READ-ONLY DISPATCH` opt-out applies) -
+`hooks/dispatch-preamble-guard.py` rejects a prompt missing its markers.
 
 Run in parallel, then rank findings by payoff (GB freed × ease × reversibility):
 

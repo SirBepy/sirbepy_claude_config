@@ -6,6 +6,14 @@
 ## Subagent prompt template
 
 ```
+READ-ONLY DISPATCH
+
+Stage your changes but do NOT commit. The main agent will run /commit after your report-back.
+
+`run_in_background` is FORBIDDEN in this dispatch: run every command synchronously and finish
+before ending your turn. (See `refs/builder-preamble.md` for the full canonical block this is
+drawn from.)
+
 You are the subagent for /iterate-it round <R>, phase <Explore|Polish>. Read ~/.claude/skills/rate-it/SKILL.md and apply the Flaw hunt, Role, Anti-sycophancy rules.
 
 HARD CONSTRAINTS:

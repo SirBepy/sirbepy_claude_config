@@ -61,7 +61,11 @@ per the global subagent-model rule; never inherit.
 2. **Dispatch the drafting subagent (`general-purpose`, `model: 'sonnet'`) -
    skip this step entirely if the size gate above routed to inline drafting.**
    One call, **`run_in_background: false`** (foreground - its report is needed
-   before anything else can happen).
+   before anything else can happen). Paste the canonical preamble from
+   `refs/builder-preamble.md` into the dispatch prompt (paste it, don't retype
+   it) - `hooks/dispatch-preamble-guard.py` rejects a prompt missing its
+   staging line, `run_in_background`/`FORBIDDEN` sentence, and screenshot-id
+   marker.
    Give it: the branch name, the base branch, whether a PR already exists
    (edit vs. create framing), and an instruction to read
    `C:\Users\tecno\.claude\skills\create-pr\drafting-rules.md` in full for the
