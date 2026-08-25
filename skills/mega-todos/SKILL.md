@@ -123,12 +123,27 @@ Dispatch ONE read-only scout (`model: 'sonnet'`, `effort: 'high'`) with the full
 todo. It returns, per todo: the exact set of files the fix will touch (`file:line` where known), and
 a one-paragraph spec pack a builder can act on without re-deriving the map.
 
+**The scout MUST existence-check every path it returns** (`Test-Path` / `ls`) and mark each
+`verified` or `unverified`, writing `NEW:<path>` for a file the fix creates. A path it cannot
+resolve is reported `unverified`, never silently replaced with a plausible-looking one. Give the
+scout an explicit tool-call and wall-clock budget and tell it to report partial work rather than
+overrun: three scouts died silently mid-run on 2026-08-25 with no partial result, and a budgeted
+replacement over the same material returned cleanly.
+
+**Then the main thread re-checks the union of returned paths itself, in one batch, before any
+dispatch.** One `ls` over the whole set costs nothing and does not depend on the scout cooperating.
+This is the actual gate; the scout's own marking is the cheap first pass.
+
 The main thread then partitions into **lanes** by the transitive closure of file overlap:
 
 - Two todos sharing ANY file are in the SAME lane and run **sequentially** within it.
 - Lanes share no files, so they run **in parallel** with no possibility of one agent's pathspec
   commit capturing another's half-written file.
 - A todo whose file set the scout could not pin down goes in its own lane, alone. Never guess.
+- **A todo with any `unverified` path does not dispatch at all** until that path is resolved by
+  hand. A wrong file set means the builder cannot do its job and the lane map was computed from
+  fiction: 5 of ~30 dispatches in the 2026-08-20 run hit one, including an owned file that did not
+  exist.
 
 Expect the backlog's structural cluster (the daemon-link / `main.ts` / `bootstrap.rs` split-and-dedupe
 todos) to collapse into a few large lanes. That is correct and is the honest ceiling on parallelism:
