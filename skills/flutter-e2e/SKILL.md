@@ -1,6 +1,6 @@
 ---
 name: flutter-e2e
-description: Drives a Flutter web app through a flow with Playwright - scripted mode (raw Playwright, release build, optional Firebase-emulator layer) or plan-file mode (steps through a markdown test plan, marking pass/fail/skip inline). Use for "run an e2e test", "drive the app through a flow", "test this flow in the browser", or any Flutter web QA/automation ask - also /flutter-e2e and /test-flow's plan-file alias.
+description: Drives a Flutter web app through a flow with Playwright, scripted or from a markdown test plan. Use for "run an e2e test", "drive the app through a flow", "test this flow in the browser", or any Flutter web QA/automation ask - also /flutter-e2e and /test-flow's plan-file alias.
 argument-hint: "<flow-description-or-script> | <path-to-test-plan.md> [free-form args]"
 ---
 
