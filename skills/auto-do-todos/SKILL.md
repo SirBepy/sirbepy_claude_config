@@ -35,6 +35,13 @@ qualifying turns, and every Hard Stop in `/autopilot`.
 
 - `~/.claude/refs/delegation-doctrine.md` in full - 90/10 rule, scout spec packs, the verbatim
   stage-don't-commit line in every dispatch, orchestrator hygiene, report quality tells.
+- `~/.claude/refs/builder-preamble.md` - the literal paste source for every builder dispatch. Read
+  it before writing the run's first dispatch, not after one is rejected.
+  `hooks/dispatch-preamble-guard.py` string-checks **three** markers, not just the
+  stage-don't-commit line named above: (1) `Stage your changes but do NOT commit` OR `Leave all
+  changes unstaged`, (2) `run_in_background` AND `FORBIDDEN` both present, (3)
+  `.for_bepy/screenshots/` OR the literal line `READ-ONLY DISPATCH`. It is a pure string check, so
+  pasting the block verbatim is what passes it - following its intent is not enough.
 - `/autopilot`'s **behavior contract** in full - tiered uncertainty resolution, BOUNDED
   `/iterate-it` (`--explore-max=2 --polish-max=1`, max 3 escalations per run), nested-question
   suppression including the ship/another-round/abandon special case, verify-before-done.

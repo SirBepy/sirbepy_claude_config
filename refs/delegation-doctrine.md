@@ -106,9 +106,12 @@ copied directly rather than hand-retyped (and drifted) per dispatch. That file h
 its placeholder table, including the conditional `~/.claude` edit ban (`<GLOBAL_EDIT_BAN>`) and the
 conditional orphan-check line (`<ORPHAN_CHECK>`) - both are placeholders, not body text, precisely
 so neither can be pasted unconditionally by a hurried reader. A `PreToolUse` hook
-(`hooks/dispatch-preamble-guard.py`) blocks a dispatch missing the three always-required markers;
-see that file's docstring and `refs/builder-preamble.md`'s read-only opt-out for what it does and
-does not check. The per-dispatch parts - task, scope, OFF LIMITS file list, verify floor specifics -
+(`hooks/dispatch-preamble-guard.py`) blocks a dispatch missing any of three always-required
+markers, named here so a reader who never opens the other file still knows what they are:
+(1) `Stage your changes but do NOT commit` OR `Leave all changes unstaged`, (2) `run_in_background`
+AND `FORBIDDEN` both present, (3) `.for_bepy/screenshots/` OR the literal line `READ-ONLY
+DISPATCH`. See that file's docstring and `refs/builder-preamble.md`'s read-only opt-out for what it
+does and does not check. The per-dispatch parts - task, scope, OFF LIMITS file list, verify floor specifics -
 stay hand-written, since those are the parts that actually need thought.
 
 **Recovery.** If a builder parks itself waiting on a backgrounded command anyway, send one direct

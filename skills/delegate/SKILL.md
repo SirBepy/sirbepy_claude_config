@@ -17,6 +17,12 @@ On invocation, the session ADOPTS `~/.claude/refs/delegation-doctrine.md` for it
 remainder. Read that file now and follow it as if it were written here: the 90/10 rule, dispatch
 discipline, orchestrator hygiene, and the quality tells for distrusting a report.
 
+Read `~/.claude/refs/builder-preamble.md` too, before the first dispatch rather than after one is
+rejected. `hooks/dispatch-preamble-guard.py` string-checks **three** markers: (1) `Stage your
+changes but do NOT commit` OR `Leave all changes unstaged`, (2) `run_in_background` AND `FORBIDDEN`
+both present, (3) `.for_bepy/screenshots/` OR the literal line `READ-ONLY DISPATCH`. Pure string
+check - pasting the block verbatim is what passes it.
+
 Confirm activation in one line, then continue with whatever the dev was doing.
 
 The mode is **sticky**: it survives across turns, across other skills invoked mid-session, and
