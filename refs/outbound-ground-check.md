@@ -5,8 +5,19 @@
 > ungated. That skill merged into `/ticket` later the same day and its copy is gone; this file is
 > now the only definition, called from `skills/ticket/SKILL.md`.
 >
-> Enforced by `hooks/shortcut-create-guard.py` and `hooks/linear-create-guard.py`. Both consume
-> the same marker, so this file is the single definition of when that marker may be written.
+> Enforced by FOUR hooks, not two. All consume a fresh marker, so this file is the single
+> definition of when one may be written:
+>
+> - `hooks/shortcut-create-guard.py` - blocks Shortcut story CREATION.
+> - `hooks/linear-create-guard.py` - blocks Linear issue CREATION.
+> - `hooks/linear-update-guard.py` - blocks CLAIM-BEARING Linear updates (title or description
+>   rewrites, comments). A state move or self-assign asserts nothing and passes untouched.
+> - `hooks/shortcut-mutation-guard.py` - blocks Shortcut mutations that rewrite ticket text, and
+>   additionally requires every targeted story to be owned by `SHORTCUT_OWNER_UUID`.
+>
+> The two Shortcut guards also accept `.shortcut-marker*`, the legacy name kept for older
+> instructions; the two Linear guards take `.outbound-marker*` only. New call sites write
+> `.outbound-marker*`.
 
 The incident this exists to prevent, 2026-08-14: a ticket was filed for work that was already
 done, and the dev looked bad in front of his team. `CLAUDE.md`'s outbound rule states the
