@@ -20,9 +20,13 @@ and the three Flutter-web capture gotchas this tool does not itself guard.
 import argparse
 import json
 import os
+import sys
 
 import numpy as np
 from PIL import Image
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "_shared"))
+import pixel_utils as pixu
 
 
 def load(path):
@@ -31,10 +35,6 @@ def load(path):
 
 def scale_of(arr, logical_width):
     return arr.shape[1] / logical_width
-
-
-def hexc(rgb):
-    return "#{:02x}{:02x}{:02x}".format(*(int(round(c)) for c in rgb))
 
 
 def bg_color(arr):
@@ -95,11 +95,6 @@ def ink_box(arr, bg, x0, x1, y0, y1, tol):
     }
 
 
-def sample_pixel(arr, x, y, radius=0):
-    box = arr[max(0, y - radius):y + radius + 1, max(0, x - radius):x + radius + 1]
-    return tuple(box.reshape(-1, 3).mean(axis=0))
-
-
 def band_report(arr, scale, tol, min_gap_logical, excludes_logical):
     excludes_px = [(int(a * scale), int(b * scale)) for a, b in excludes_logical]
     clipped = apply_excludes(arr, excludes_px)
@@ -115,7 +110,7 @@ def band_report(arr, scale, tol, min_gap_logical, excludes_logical):
             "ink_right": None if hi is None else hi / scale,
         })
         prev_end = b
-    return {"bg": hexc(bg), "logical_width": arr.shape[1] / scale, "bands": rows}
+    return {"bg": pixu.hex_from_rgb(bg), "logical_width": arr.shape[1] / scale, "bands": rows}
 
 
 def print_bands(label, report):
@@ -180,11 +175,11 @@ def cmd_ink_box(args):
     w = (box_px["x1"] - box_px["x0"] + 1) / scale
     h = (box_px["y1"] - box_px["y0"] + 1) / scale
     cx, cy = (box_px["x0"] + box_px["x1"]) // 2, (box_px["y0"] + box_px["y1"]) // 2
-    corner = sample_pixel(arr, box_px["x0"] + 1, box_px["y0"] + 1)
-    fill = sample_pixel(arr, cx, cy)
+    corner = pixu.sample_box(arr, box_px["x0"] + 1, box_px["y0"] + 1)
+    fill = pixu.sample_box(arr, cx, cy)
     print(f"box: x {box_px['x0']/scale:.1f}..{box_px['x1']/scale:.1f}  "
           f"y {box_px['y0']/scale:.1f}..{box_px['y1']/scale:.1f}  {w:.1f}x{h:.1f} logical")
-    print(f"fill @center {hexc(fill)}   corner {hexc(corner)} (near bg => rounded corner)")
+    print(f"fill @center {pixu.hex_from_rgb(fill)}   corner {pixu.hex_from_rgb(corner)} (near bg => rounded corner)")
 
 
 def cmd_sample(args):
@@ -193,8 +188,8 @@ def cmd_sample(args):
     points = []
     for spec in args.at:
         x, y = (float(v) for v in spec.split(","))
-        rgb = sample_pixel(arr, int(x * scale), int(y * scale), args.radius)
-        points.append({"x": x, "y": y, "hex": hexc(rgb)})
+        rgb = pixu.sample_box(arr, int(x * scale), int(y * scale), args.radius)
+        points.append({"x": x, "y": y, "hex": pixu.hex_from_rgb(rgb)})
     print(json.dumps(points, indent=2))
 
 

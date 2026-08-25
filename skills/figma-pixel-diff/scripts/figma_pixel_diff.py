@@ -20,6 +20,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "_shared"))
 import figma_client as fc
+import pixel_utils as pixu
 
 
 def hex_to_rgb(h):
@@ -29,24 +30,15 @@ def hex_to_rgb(h):
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
 
-def rgb_to_hex(rgb):
-    return "#{:02x}{:02x}{:02x}".format(*(round(c) for c in rgb))
-
-
 def color_distance(a, b):
     return sum((x - y) ** 2 for x, y in zip(a, b)) ** 0.5
 
 
 def sample_pixel(png_path, x, y, radius=0):
-    from PIL import Image
-    img = Image.open(png_path).convert("RGB")
-    if radius <= 0:
-        return img.getpixel((x, y))
     import numpy as np
-    box = (max(0, x - radius), max(0, y - radius),
-           min(img.width, x + radius + 1), min(img.height, y + radius + 1))
-    region = np.asarray(img.crop(box)).reshape(-1, 3).mean(axis=0)
-    return tuple(round(c) for c in region)
+    from PIL import Image
+    arr = np.asarray(Image.open(png_path).convert("RGB")).astype(int)
+    return pixu.sample_box(arr, x, y, radius)
 
 
 def cmd_fetch(args):
@@ -70,7 +62,7 @@ def cmd_sample(args):
     for spec in args.at:
         x, y = (int(v) for v in spec.split(","))
         rgb = sample_pixel(args.png, x, y, args.radius)
-        points.append({"x": x, "y": y, "hex": rgb_to_hex(rgb), "rgb": list(rgb)})
+        points.append({"x": x, "y": y, "hex": pixu.hex_from_rgb(rgb), "rgb": list(rgb)})
     print(json.dumps(points, indent=2))
 
 
@@ -91,7 +83,7 @@ def _walk_inspect(node, name_filter, out):
             if f.get("type") == "SOLID" and f.get("visible", True):
                 c = f["color"]
                 rgb = tuple(round(c[k] * 255) for k in ("r", "g", "b"))
-                fills.append({"hex": rgb_to_hex(rgb), "opacity": f.get("opacity", 1)})
+                fills.append({"hex": pixu.hex_from_rgb(rgb), "opacity": f.get("opacity", 1)})
         if fills:
             entry["fills"] = fills
         out.append(entry)
@@ -117,7 +109,7 @@ def cmd_nearest_token(args):
     )
     best = scored[0]
     print(json.dumps({
-        "target_hex": rgb_to_hex(target),
+        "target_hex": pixu.hex_from_rgb(target),
         "nearest_token": best[0],
         "nearest_hex": best[2],
         "distance": round(best[1], 2),
