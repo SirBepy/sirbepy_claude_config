@@ -60,9 +60,22 @@ else {
 
 # --- Locate the todo being claimed (active backlog only - done/ is not claimable) ---
 
+# A prefix-less filename carries no numeric id, so `<id>-<slug>.md` can never match it.
+# Fall back to the exact stem before giving up: ai-todos-format.md calls such a file
+# malformed, but it must still be claimable or it can only be archived by hand, which
+# bypasses this very mutex.
 $idPattern = "^0*$([regex]::Escape($numericId))-.*\.md$"
-$backlogMatches = Get-ChildItem -Path $todosDir -Filter '*.md' -File -ErrorAction SilentlyContinue |
-    Where-Object { $_.Name -match $idPattern }
+$allBacklog = Get-ChildItem -Path $todosDir -Filter '*.md' -File -ErrorAction SilentlyContinue
+$backlogMatches = $allBacklog | Where-Object { $_.Name -match $idPattern }
+
+if ($backlogMatches.Count -eq 0 -and $numericId -notmatch '^\d+$') {
+    $stemPattern = "^$([regex]::Escape($numericId))\.md$"
+    $backlogMatches = $allBacklog | Where-Object { $_.Name -match $stemPattern }
+    if ($backlogMatches.Count -gt 0) {
+        Write-Warning "Todo '$Id' has no numeric prefix, which ai-todos-format.md treats as malformed. Claiming it anyway; rename it via reserve-todo-id.ps1 so it can be referenced by id."
+        $Slug = $null
+    }
+}
 
 if ($backlogMatches.Count -eq 0) {
     Write-Fail "No active todo matching id '$Id' found in $todosDir."

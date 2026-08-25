@@ -84,6 +84,15 @@ overwrite, never renumber the other session's file.
 <slug>` or the full filename stem as `-Id` to `claim-todo.ps1` / `complete-todo.ps1`; an
 ambiguous id with no disambiguator errors naming both candidate filenames rather than guessing.
 
+**A backlog file with NO numeric prefix is malformed.** The prefix IS the id, so a prefix-less file
+cannot be referenced by the dev, cannot appear in PLAN.md, and cannot be ordered by `/plan-todos`.
+Rename it via `reserve-todo-id.ps1` to give it one. Both helper scripts still accept its bare stem
+as `-Id` and emit a warning naming that fix, deliberately: refusing outright would leave the file
+archivable only by hand, and hand-archiving bypasses the claims mutex, which is the exact race the
+mutex exists to prevent (three such files hit this during the 2026-08-19 run). Settled 2026-08-25
+per todo 393: the scripts tolerate it, the contract calls it malformed, and neither pretends the
+file is well-formed.
+
 **Content-duplicate guard.** Applies to every writer (`/create-todo`, `/handoff`, `/close` Phase 3,
 `/code-check`, autopilot) AND to `/cleanup-todos` relocation - moving a todo into another repo's
 backlog is still a write into that backlog and gets the same check against the DESTINATION, not

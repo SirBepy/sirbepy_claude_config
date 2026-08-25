@@ -48,3 +48,7 @@ for the next prefix-less file someone creates.
 - Either a stem-as-`-Id` works in both scripts, or both fail with a message that names the fix.
 - `ai-todos-format.md` and the two scripts agree; whichever is wrong is corrected.
 - No backlog file needs hand-archiving to leave the backlog.
+
+## Notes
+
+- Fixed 2026-08-25. Premise was NARROWER than written: a prefixed stem as -Id already worked (proven live - claim-todo.ps1 -Id '412-commit-prefilters-are-blind-to-submodule-changes' resolved correctly). The real gap is PREFIX-LESS filenames only, which is what both of the todo's failing examples were: line 53's regex needs a numeric prefix, so a bare stem fell to the else branch and built a pattern that could never match. Half 2 decided and recorded rather than left open: prefix-less files ARE malformed (the prefix is the id, so they cannot be referenced, planned or ordered), but the scripts now RESOLVE them and warn, naming reserve-todo-id.ps1 as the fix. Refusing outright would leave such a file archivable only by hand, and hand-archiving bypasses the claims mutex - the exact race the mutex exists to prevent. Verified in a scratch repo at C:/tmp/todo393test: prefix-less claim + archive both work with the warning, numeric ids unaffected.

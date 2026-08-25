@@ -120,6 +120,22 @@ if ($Slug) { $slugPattern = "^0*$([regex]::Escape($numericId))-$([regex]::Escape
 $backlogMatches = Get-ChildItem -Path $todosDir -Filter '*.md' -File -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -match $idPattern }
 
+# A prefix-less filename carries no numeric id, so `<id>-<slug>.md` can never match it.
+# Fall back to the exact stem before giving up, in the backlog and in done/ alike -
+# ai-todos-format.md calls such a file malformed, but it must still be archivable by
+# script or it can only leave the backlog by hand.
+if (-not $backlogMatches -and $numericId -notmatch '^\d+$') {
+    $stemPattern = "^$([regex]::Escape($numericId))\.md$"
+    $backlogMatches = Get-ChildItem -Path $todosDir -Filter '*.md' -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match $stemPattern }
+    if ($backlogMatches) {
+        Write-Warning "Todo '$Id' has no numeric prefix, which ai-todos-format.md treats as malformed. Archiving it anyway; future files should get an id from reserve-todo-id.ps1."
+        $idPattern = $stemPattern
+        $Slug = $null
+        $slugPattern = $null
+    }
+}
+
 # Apply the slug filter whenever one is known - not only when the id is
 # currently ambiguous, or a stale/mismatched -Slug could silently resolve to
 # the WRONG file once a sibling collision is no longer present.
