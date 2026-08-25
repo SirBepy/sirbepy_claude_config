@@ -143,11 +143,11 @@ or empty table). Report any `warning` to the dev instead of treating that week's
 To READ exact per-slot time boundaries when verifying alignment (not for the screenshot itself), use
 the Calendar view instead: `https://app.hubstaff.com/organizations/{hubstaff_org_id}/time_entries/calendar?date={mon}&date_end={sun}&filters%5Buser%5D={hubstaff_user_id}`.
 
-## hs_addtime.cjs - bulk Add-time (NOT YET VALIDATED AGAINST A LIVE RUN)
+## hs_addtime.cjs - bulk Add-time
 
-**Status: wired but unproven.** The dev has not yet run this script against a live HubStaff
-account. Do not treat the shape below as confirmed working - it is the intended call, not an
-observed one. The dev validates the first real run.
+**Status: validated 2026-08-21.** First live run wrote 21 entries (30h) to the zirtue project,
+verified via the activities API and the weekly-screenshot total afterward - all 21 reported
+`ok:true` and matched. The shape below is confirmed working, not just intended.
 
 Bulk-writes HubStaff time entries via the web UI Add-time dialog (the v2 API is read-only for
 time), one entry per call to `skills/clockify-reconciliator/scripts/hs_addtime.cjs`. Only offer

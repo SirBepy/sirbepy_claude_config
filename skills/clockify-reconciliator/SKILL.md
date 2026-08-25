@@ -76,18 +76,20 @@ For a single-day lookback (`today`, `yesterday`, or an explicit single `YYYY-MM-
 - **Reconciliation** (default): fill empty descriptions on existing entries, surface commit-backed
   gaps for approval (step 6a). No override needed - this is always safe to run.
 - **Reconstruction**: the window has zero or sparse existing entries and the dev's ask implies
-  building the period from scratch (e.g. "I haven't logged anything this week", "rebuild my week").
-  Confirm scope once via AskUserQuestion, "This session only" as the only offered option, before
-  sourcing anything beyond commits, then read `skills/clockify-reconciliator/modes.md`'s
-  "Reconstruction mode" section for the full procedure.
+  building the period from scratch (e.g. "I haven't logged anything this week", "rebuild my week", a
+  stated hour target to fill toward). This is the dev's primary way of running this skill as of
+  2026-08-21 - no confirmation gate. Go straight to reading `skills/clockify-reconciliator/modes.md`'s
+  "Reconstruction mode" section for the full procedure; the step 9 apply/some/cancel gate is still the
+  approval checkpoint before anything is written.
 - **Audit**: the dev explicitly asks to check/fix a period that already has entries (e.g. "check the
   whole month", "audit July"). Requires one AskUserQuestion confirming the override of the "never
   touch existing / never create in gaps" defaults, scoped to this session only, then read
   `skills/clockify-reconciliator/modes.md`'s "Audit mode" section for the checklist.
 
-Reconstruction and Audit are never inferred silently from window contents alone - the trigger is the
-dev's own phrasing, confirmed once via AskUserQuestion before any of their extra sourcing/checklist
-work begins. A plain Reconciliation run never needs to read `modes.md`.
+Audit is never inferred silently from window contents alone - the trigger is the dev's own phrasing,
+confirmed once via AskUserQuestion before any of its extra checklist work begins. Reconstruction is
+triggered the same way (dev's phrasing, sparse/empty window) but proceeds without asking. A plain
+Reconciliation run never needs to read `modes.md`.
 
 ### 4. Fetch Clockify entries
 
@@ -152,7 +154,13 @@ For each target:
 - If duration > 3h, plan split into 1-3h chunks (prefer 1h or 2h). Respect original start + end total.
 - Distribute the day's commits across chunks by rough chronology: earliest commits → earliest chunks. Assume the dev worked on things in the order committed, even if the commit timestamp falls outside the chunk (e.g. commit at 18:00 can describe the 15:00-17:00 chunk if it represents that chunk's work in the dev's workflow).
 - Round every chunk boundary (start and end, including the overall entry's original start/end) to the nearest 5-minute mark (:00/:05/:10/.../:55), seconds always :00. Round the shared boundary between adjacent chunks once and reuse that value as both the earlier chunk's end and the later chunk's start, so rounding never introduces a gap or overlap. Do this before presenting the plan in step 9, not after approval.
-- Draft description from the chunk's assigned commit subjects. Max 80 chars. Drop filler to fit.
+- Draft a description of the actual work delivered, phrased the way a person would summarize their
+  day, not a commit log pasted together. Rephrase commit subjects into plain language; don't just
+  join their raw text with commas. Max 80 chars, drop filler to fit.
+- Never name the AI workflow steps used to build it (brainstorm, implement, code-check, commit, run
+  tests, run Patrol) as if they were the deliverable. Those describe how the work got done, not what
+  shipped - say what changed, not which commands ran. "Add the travel plans capture flow" is a
+  description; "implement, code-check, commit" is not.
 - If a matched commit subject hits `ticket_regex`, strip the matched ticket prefix from the description body (don't repeat it in the text) and append ` (53794)` using just the captured number, once, at the end only. Never leave the ticket number both leading the body and trailing in parens.
 - **Never use the same description verbatim on two chunks.** If all commits land in one chunk leaving others empty, split the description on semicolons: assign the pre-semicolon part to the first chunk and the post-semicolon part(s) to the remaining chunk(s). If there are more chunks than semicolon-delimited parts, the last non-ticket part fills the extras.
 - If a day has zero commits at all across all repos, ask the dev what was done before proposing.
@@ -211,6 +219,9 @@ If gated in, read `skills/clockify-reconciliator/hubstaff.md` and follow its "St
   existing entries only. A stated weekly target is a ceiling to fill toward, never a license to invent
   hours beyond real evidence.
 - Max 80 chars per description.
+- Descriptions read like a person summarizing their day, not a concatenated commit log. Never
+  include AI-workflow verbs (brainstorm, implement, code-check, commit, test, run Patrol) as content -
+  those are how it got done, not what got done.
 - Ticket suffix only if a matched commit carries one. One ticket per description, most relevant. Number appears once, in parens, at the end - never repeated as a leading prefix too.
 - No em dashes. Commas or hyphens.
 - Every entry's start and end time, written or created, lands on a 5-minute mark with :00 seconds. Never a raw commit-derived minute (18:56, 22:12, etc).
