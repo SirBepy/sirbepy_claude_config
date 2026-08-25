@@ -146,6 +146,10 @@ Per ticket, track: `reasons` (union across events — `mention`, `assignment`, `
 
 Not every grouped ticket needs a deep read. Skip tickets whose only reasons are `follower`/`group-assignment-*` with zero comments — that's pure board-hygiene noise. Candidates worth a full read: any ticket with `mentions > 0` OR `comments > 0` from someone other than Joe.
 
+**Then drop every candidate in an off-Joe's-plate state: the two `done` states plus Ready for deploy.** Resolve all three ids from `~/.claude/refs/shortcut-api.md`'s state list, same as every other id in this skill; do not inline the numbers here. Note that Ready for deploy is classed `started` there, not `done`: this filter deliberately treats it as finished anyway. Joe's rule, 2026-08-25: once a ticket reaches Ready for deploy it is out of his hands, so late QA pushback on it is not his queue. Drop it silently, no FYI line. This is a hard filter applied BEFORE ranking, so such a ticket can never surface as a tier-1 regression no matter how recent or how pointed the comment is.
+
+**One carve-out, and only this one:** if a dropped ticket's comments ask Joe to do something OUTSIDE that ticket that has no evidence of having happened (most often "can you file a follow-up ticket for this"), surface it. That is new work landing on him, not a status alert about a ticket he is done with, so his rule above does not cover it. One line, no tier.
+
 For each candidate:
 ```bash
 curl -s "https://api.app.shortcut.com/api/v3/stories/<id>" -H "Shortcut-Token: $TOKEN" > story_<id>.json
@@ -172,13 +176,17 @@ and compare commit timestamps against the comment timestamp. A same-day-or-later
 
 Rank by actual urgency, not recency:
 
-1. **Regressions / QA-rejected fixes on things Joe shipped** — a mention saying "this doesn't meet the requirement" or "still reproduces" on a ticket Joe owns/authored. Highest priority — someone is blocked re-verifying Joe's own work.
-2. **Direct blocking questions** — someone asked Joe something specific and can't proceed without an answer (design clarification, "where is X used").
-3. **Bugs found on active/in-flight epics** — QA-reported bugs on tickets currently In Progress/PR Review/Testing that Joe owns.
-4. **Long-open unresolved threads** — real back-and-forth that's been open a while with no resolution, lower urgency but worth closing out.
-5. **FYI/no-action** — "live in dev" info comments, reactions, already-`Complete`/`Won't do` tickets, pure board-hygiene events. Mention only if something dangling depends on them (e.g. someone asked Joe to file a follow-up ticket and it's unclear whether that happened).
+Everything still standing is on Joe's plate (step 4 already dropped Complete, Won't do and Ready for deploy).
 
-For each item in tiers 1-4: ticket id + title + link, one-line summary of what's being asked, and why it's ranked where it is (unanswered since when / regression on which commit / etc).
+1. **Commitments Joe made** - he replied with a date or a "will do" and the work has no commit yet. Highest priority: someone is expecting it on a stated day.
+2. **Regressions / QA-rejected fixes on things Joe shipped** - a mention saying "this doesn't meet the requirement" or "still reproduces" on a ticket Joe owns/authored, on a ticket step 4 did not drop.
+3. **Direct blocking questions** - someone asked Joe something specific and can't proceed without an answer (design clarification, "where is X used").
+4. **Bugs found on active/in-flight epics** - QA-reported bugs on tickets currently In Progress/PR Review/Testing that Joe owns.
+5. **Long-open unresolved threads** - real back-and-forth that's been open a while with no resolution, lower urgency but worth closing out.
+
+There is no FYI tier. A ticket that is finished, answered, or someone else's call does not get a line, with the single step-4 carve-out above (a dangling request to do something outside the ticket) as the only exception.
+
+For every item: ticket id + title + link, one-line summary of what's being asked, and why it's ranked where it is (unanswered since when / regression on which commit / etc).
 
 ## What this skill never does
 
