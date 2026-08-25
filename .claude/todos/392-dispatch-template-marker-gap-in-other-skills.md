@@ -29,6 +29,10 @@ as a confusing hook error rather than as "this skill's template is stale".
 Candidates named by 373 but not checked: `skills/iterate-it/`, `skills/delegate/`,
 `skills/auto-do-todos/`, `skills/code-check/`. There may be others.
 
+Confirmed hit 2026-08-24: `skills/disk-doctor/windows.md`'s "How to run a scan" section instructs
+dispatching the scan to a `general-purpose` subagent but includes none of the three markers. A live
+`/disk-doctor` session hit two straight hook rejections before hand-assembling a passing preamble.
+
 ## Approach
 
 1. Grep the whole `skills/` tree for text that reads as a dispatch template (a prompt block passed

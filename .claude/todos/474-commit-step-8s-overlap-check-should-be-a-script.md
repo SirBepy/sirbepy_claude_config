@@ -84,6 +84,26 @@ Two extra acceptance lines if this is taken with the script work: the script or 
 signal explicitly, and a session running from a daemon ping resolves to the same branch every time
 without judgement.
 
+## Folded in 2026-08-22: a third run, and a second silent-failure path the text above misses
+
+Third independent hit, so this is frequency and not a one-off: an `/auto-do-todos` run in
+`hubbub-game-split-opinions` hand-wrote the loop **six more times**, once per commit. That is 10
+hand-derivations across three runs and three repos in two days.
+
+The new information is a second way this check fails silently, which the sha-comparison bug above
+does not cover. The old-side range fed to `git blame -L` is not in the `@@` header - it has to be
+computed from it, as `a` to `a+b-1` out of `@@ -a,b @@`. In this run that arithmetic was done by eye
+for **eight hunks** across six commits. Get one wrong and `git blame` happily reports the shas for
+whatever lines you did name, the comparison runs clean against them, and the output is
+indistinguishable from a genuine no-overlap result. So the check has (at least) two independent
+paths to a false clean: comparing shas wrongly, and blaming the wrong lines. Both belong inside the
+script; neither is visible to a reader of the prose.
+
+One useful negative data point for the interactive-vs-unattended section above: this run hit it
+zero times. It was launched by `/auto-do-todos`, so the branch was declared and unambiguous. That
+narrows the gap to sessions NOT launched by a runner skill, which is exactly the shape todo 261
+described - worth saying on the card, since it makes the fix smaller than the section implies.
+
 ## Notes
 
 - Related: [[473-cleanup-todos-calls-a-script-that-does-not-exist]]. Same class of defect.

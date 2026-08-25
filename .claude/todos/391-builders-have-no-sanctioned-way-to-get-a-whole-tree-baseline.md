@@ -74,6 +74,15 @@ knows it owes the builder either the number or the ordering instruction.
 - A cold builder reading the block can tell what to do when asked for a before/after comparison,
   without inventing a mechanism.
 
+## Second case, 2026-08-24 (`claude_usage_in_taskbar`)
+
+`git show HEAD:<file>` does not cover proving a new regression test RED either: a test runner has
+to IMPORT the old version from its real path, and `git show` only writes to stdout. The workaround
+used twice that session was `cp <file> <scratch> && git checkout HEAD -- <file> && <test> ; cp
+<scratch> <file>` - single-file, so no stash blast radius, but still an improvised rewind of a
+tracked path in a shared tree. Whatever sanctioned mechanism this todo lands on should name the
+red/green case, not just the whole-tree measurement one.
+
 ## Notes
 
 Filed from a `hubbub` session per global CLAUDE.md's rule that a finding about the global tree goes
