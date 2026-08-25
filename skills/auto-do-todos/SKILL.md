@@ -218,8 +218,10 @@ Per todo:
    the todo's context weight warrants it (reading material - wide greps, large files - that gets
    discarded once you have the answer), even for a one-file edit. When a subagent does run, it
    follows the adopted contracts above. Heartbeat the claim at checkpoints.
-3. `~/.claude/skills/close/complete-todo.ps1 -Id <id> -Note "<what happened>"` - one call records
-   the Notes line, archives it, prunes its PLAN.md line, and releases the claim.
+3. End it per `close/ai-todos-format.md`'s "Two endings" - only a genuinely Completed todo gets
+   `~/.claude/skills/close/complete-todo.ps1 -Id <id> -Note "<what happened>"`, which in one call
+   records the Notes line, archives it, prunes its PLAN.md line, and releases the claim. One that
+   advanced but did not finish is NOT archived; follow the contract's other ending instead.
 4. `/commit` - invoke and read the skill in full only for this run's first commit; every commit
    after that follows `/commit`'s procedure directly (session marker already written, prefilters,
    pathspec form, branch/overlap checks all still apply) without re-invoking the skill file.

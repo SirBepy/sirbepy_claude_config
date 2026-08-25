@@ -83,27 +83,13 @@ Do the task per the todo's Approach/Acceptance. Touch the claim file's mtime aft
 
 ## Step 7 - Complete
 
-First decide which outcome applies. The tell is decidable, not a judgement call: check it against
-the todo file, not against how the session felt.
+Decide which of the two endings applies per `close/ai-todos-format.md`'s "Two endings, and the tell
+that picks between them" - Completed versus Advanced but not finished, decided against the todo
+file rather than against how the session felt. That contract owns the rule and every executor obeys
+it; it is not restated here.
 
-- **Completed** - every `## Acceptance` item is satisfied, and the Goal does not name an epic or
-  multi-ticket outcome.
-- **Advanced but not finished** - either the Goal names an epic/multi-ticket outcome, or one or
-  more `## Acceptance` items are still unmet and this session did not (or could not) address them.
-  Real work can still have landed; that alone never makes it "Completed".
-
-**Completed:** run `~/.claude/skills/close/complete-todo.ps1 -Id <id>` to move the todo to
-`done/`, prune its PLAN.md line, and release the claim in one call. Fall back to the contract's
-manual three-step sequence if the script is unavailable. Then run `/commit` if the work produced
-changes.
-
-**Advanced but not finished:** do NOT move the todo to `done/` and do NOT run
-`complete-todo.ps1`. Instead: update the todo file with what changed this session, refresh its
-PLAN.md line so the lane reflects the new state (re-read PLAN.md first per its CAS edit
-discipline), then release the claim (delete `.claims/<id>.claim`) - the todo stays planned for a
-future `/pickup`. Run `/commit` if the work produced changes. Name the remaining work explicitly
-in the completion summary. `--unattended` runs follow the same rule: never archive a todo with
-unmet Acceptance items just because the run reached Step 7.
+Then run `/commit` if the work produced changes, and name any remaining work explicitly in the
+completion summary. `--unattended` runs get no exemption from either ending.
 
 Finish by naming the next item on the lane (or "lane empty") so the dev knows what another
 `/pickup` would grab.

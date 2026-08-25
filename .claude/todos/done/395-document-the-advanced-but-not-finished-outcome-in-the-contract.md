@@ -40,3 +40,7 @@ entrypoint still gets wrongly archived.
 - `ai-todos-format.md` describes both outcomes and the tell that picks between them.
 - `skills/pickup/SKILL.md` no longer carries its own copy of the rule.
 - The other executors either follow the contract or explicitly say why they do not.
+
+## Notes
+
+- Fixed 2026-08-25, all three approach steps. ai-todos-format.md gained a 'Two endings, and the tell that picks between them' section stating it binds EVERY executor, not just /pickup. pickup/SKILL.md Step 7 no longer carries its own copy, it points at the contract. Step 3 decided and written down: complete-todo.ps1 gets NO flag for the not-finished path, because its three jobs are archive/prune/release and that path wants only release - a flag skipping two of three would blur what the script guarantees, and deleting your own claim is not a race since the mutex governs acquisition. Also closed the third acceptance item, which the todo's own approach did not spell out: auto-do-todos Step 6.3 and mega-todos Step E.1 both said 'archive it' unconditionally and now defer to the contract, so no executor contradicts it.

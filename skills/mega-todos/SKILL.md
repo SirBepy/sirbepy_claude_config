@@ -365,8 +365,10 @@ lane's owned files explicitly and state that everything else in the repo is anot
 
 Archival is **main-thread only**, because `complete-todo.ps1` prunes the shared `PLAN.md`:
 
-1. At each barrier, for every todo that passed: `~/.claude/skills/close/complete-todo.ps1 -Id <id>
-   -Note "<what happened>"`. One call per todo, sequential.
+1. At each barrier, for every todo that passed: decide its ending per `close/ai-todos-format.md`'s
+   "Two endings" first, then run `~/.claude/skills/close/complete-todo.ps1 -Id <id> -Note "<what
+   happened>"` for the Completed ones only. One call per todo, sequential. A todo that advanced but
+   left `## Acceptance` items unmet is not archived, however clean its builder's report read.
 2. Commit the archival as one `CHORE: archive completed todos` commit per barrier, via `/commit`
    (the main thread CAN invoke skills, so it uses the real one).
 3. Diff the set of ids actually archived or parked against the lane map from Step C, per

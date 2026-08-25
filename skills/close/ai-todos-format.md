@@ -298,6 +298,30 @@ under this file's CAS discipline (fresh read immediately before the write). Idem
 re-running against an already-completed id reports clearly and makes no further changes. The
 manual three-step sequence above remains the documented fallback if the script is unavailable.
 
+## Two endings, and the tell that picks between them
+
+**Every executor obeys this**, not just `/pickup`: `/batch-todos`, `/autopilot`, `/auto-do-todos`,
+`/mega-todos` and an ad-hoc "do todo 07" all end a todo through this contract. Decide against the
+todo FILE, not against how the session felt.
+
+- **Completed** - every `## Acceptance` item is satisfied AND the Goal does not name an epic or
+  multi-ticket outcome. Run `complete-todo.ps1` (or the manual three-step fallback): the file moves
+  to `done/`, its PLAN.md line is pruned, the claim is released.
+- **Advanced but not finished** - the Goal names an epic/multi-ticket outcome, OR one or more
+  `## Acceptance` items are still unmet and this session did not address them. Real work landing
+  never by itself makes a todo Completed.
+
+For **advanced but not finished**: do NOT move the file to `done/` and do NOT run
+`complete-todo.ps1`. Update the todo with what changed, refresh its PLAN.md line under the CAS
+discipline above, release the claim by deleting `.claims/<id>.claim`, and name the remaining work
+in the summary. The todo stays planned for a future run. An unattended run follows the same rule:
+never archive a todo with unmet Acceptance items just because execution reached the end.
+
+**`complete-todo.ps1` deliberately has no flag for this path** (settled 2026-08-25, todo 395). Its
+three jobs are archive, prune and release; the not-finished path wants only the third, and a flag
+that skips two of three would blur what the script guarantees. Deleting your own claim by hand is
+not a race - the mutex governs acquisition, not release.
+
 ## What belongs in the backlog
 
 Tasks Claude can execute in a future session (code, config, skill edits, analysis), including
