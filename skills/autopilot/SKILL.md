@@ -101,6 +101,8 @@ This folder is reserved for genuine blockers only - never for routine FYI notes.
 
 Park to the right channel above (do NOT guess) on: destructive/irreversible action not already authorized (force-push, history rewrite, hard reset dropping work, mass delete, DB migration, prod deploy); credential/secret or physical action needed; a choice with major hard-to-reverse blast radius that iterate-it cannot de-risk on available facts. Keep progress on everything not blocked; surface all parked items in the final summary.
 
+**A task whose fix WRITES to `hooks/` or `settings*.json` is a hard stop for any SUBAGENT dispatch.** `hooks/sensitive-file-guard.py` returns `ask` on those paths, and an `ask` inside a dispatched agent's tool call is a hard block with nobody to answer it: attended mode does not reach there, since it governs only the orchestrator asking the dev. Route such a task to the main thread with the dev present, or park it. Judge by the actual write target, not by whether the text mentions a hook - most todos naming one are fixed elsewhere. `/mega-todos` Step B and `/auto-do-todos` Step 4 both inherit this list.
+
 ## --sleep flag
 
 `/autopilot --sleep` adds one step to the end of a successful run: after step 6's completion oracle passes (stated success criteria met AND fast-check floor green), invoke `/sleep-when-done`'s sleep action as the absolute last thing the run does.
