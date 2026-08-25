@@ -65,10 +65,15 @@ hooks/__pycache__/**
 # reads it: grepping hooks/ for last-session-status, session_status and checkedAt found no producer.
 hooks/.claude/
 hooks/.claude/**
+.claude/todos/.claude/
+.claude/todos/.claude/**
 
-# commit-guard/pr-guard runtime markers - machine/session-local, never commit
+# Guard runtime markers - machine/session-local, never commit. All four glob families defined
+# in hooks/*.py are listed here; _hooklib.py:19 is the outbound one.
 hooks/.commit-marker*
 hooks/.pr-marker*
+hooks/.outbound-marker*
+hooks/.shortcut-marker*
 hooks/.session-markers/
 hooks/.ui-screenshot-reminder-session-*
 
