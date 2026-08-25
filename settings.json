@@ -125,7 +125,7 @@
       "Bash(ollama list *)",
       "Skill(claude-api)"
     ],
-    "defaultMode": "acceptEdits",
+    "defaultMode": "auto",
     "additionalDirectories": [
       "/Users/josipmuzic/.claude",
       "/Users/josipmuzic/projects/tycoon_price_visualizer/assets/scripts",
@@ -485,6 +485,7 @@
       }
     }
   },
+  "outputStyle": "Silent",
   "alwaysThinkingEnabled": true,
   "tui": "fullscreen",
   "voice": {
@@ -492,7 +493,6 @@
     "mode": "hold"
   },
   "theme": "dark",
-  "outputStyle": "Silent",
   "autoCompactEnabled": true,
   "remoteControlAtStartup": true,
   "agentPushNotifEnabled": true,
