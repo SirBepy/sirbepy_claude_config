@@ -17,7 +17,7 @@ argument-hint: "[--sleep]"
 
 ## Precedence
 
-For the duration of an `/autopilot` run, this contract **SUPERSEDES** the global "front-load all questions before starting" rule and any invoked skill's `AskUserQuestion` step. Everything else stays in force unchanged: follow CLAUDE.md, `/commit` only (never raw `git commit`), auto-commit on qualifying turns (global default, all repos), push/deploy per project policy, and every Hard Stop below.
+For the duration of an `/autopilot` run, this contract **SUPERSEDES** the global "front-load all questions before starting" rule and any invoked skill's `AskUserQuestion` step. Everything else stays in force unchanged: follow CLAUDE.md, `/commit` only (never raw `git commit`), auto-commit on qualifying turns (global default, all repos), never push or deploy on the run's own initiative (a push needs the dev's explicit ask in the current session), and every Hard Stop below.
 
 ## Delegation doctrine (shared, not restated here)
 
@@ -90,16 +90,16 @@ This folder is reserved for genuine blockers only - never for routine FYI notes.
 
 ## Order of operations
 
-1. **Restate the task + its success criteria in one line (the completion oracle), then proceed** - do not wait for confirmation. If the prompt is too vague to derive testable criteria, do NOT invent criteria and self-grade against them. Instead: (a) pick the narrowest defensible interpretation, (b) log it as `ASSUMED SCOPE: <X> - revisit`, (c) set the oracle = that scope's fast-check floor green + no regressions, (d) flag the assumption prominently in the final summary. End this first response with the oracle line immediately followed by `<cc-autopilot:on>` on its own line, nothing after.
+1. **Restate the task + its success criteria in one line (the completion oracle), then proceed** - do not wait for confirmation. If the prompt is too vague to derive testable criteria, do NOT invent criteria and self-grade against them. Instead: (a) pick the narrowest defensible interpretation, (b) log it as `ASSUMED SCOPE: <X> - revisit`, (c) set the oracle = that scope's fast-check floor green + no regressions, (d) flag the assumption prominently in the final summary. **The oracle may only restate criteria the request already contained. It may never add an ACTION the request did not ask for, and meeting a criterion the run wrote for itself is not authorisation to take that action** - "ship it" in an oracle the run composed is not the dev saying ship it. End this first response with the oracle line immediately followed by `<cc-autopilot:on>` on its own line, nothing after.
 2. **Check remaining context first, every chunk including a single-chunk run** (see "Context self-regulation" above for thresholds and actions). Then, for a big task, produce a short plan / task list (delegate or do briefly in main), then execute chunk-by-chunk via subagents, running `/commit` between chunks.
 3. Real judgment call -> bounded iterate-it (within the 3/run cap) -> log. Trivia -> decide.
 4. Verify against the fast-check floor. **Runaway guard:** every loop is 3-strike. If the SAME verification fails 3x consecutively, OR a single chunk makes zero forward progress across 3 consecutive subagent dispatches, stop that loop, park the failure, and continue other unblocked work. There is no infinite retry.
-5. `/commit` (and push/deploy) per project rules.
+5. `/commit` between chunks. Never push, deploy, or otherwise send work off the machine unless the invocation itself asked for it (the dev said push, or named a `/commit push*` mode). If a run believes a push is wanted, it says so in the final summary ("ready to push, N commits") and stops there.
 6. **Completion oracle:** done = stated success criteria met AND fast-check floor green. Never self-vibe done. End with a written summary immediately followed by `<cc-autopilot:off>` on its own line, nothing after.
 
 ## Hard stops (autopilot does NOT override these)
 
-Park to the right channel above (do NOT guess) on: destructive/irreversible action not already authorized (force-push, history rewrite, hard reset dropping work, mass delete, DB migration, prod deploy); credential/secret or physical action needed; a choice with major hard-to-reverse blast radius that iterate-it cannot de-risk on available facts. Keep progress on everything not blocked; surface all parked items in the final summary.
+Park to the right channel above (do NOT guess) on: destructive/irreversible action not already authorized (force-push, history rewrite, hard reset dropping work, mass delete, DB migration, prod deploy, plain `git push` unless the current invocation explicitly asked for it); credential/secret or physical action needed; a choice with major hard-to-reverse blast radius that iterate-it cannot de-risk on available facts. Keep progress on everything not blocked; surface all parked items in the final summary.
 
 **A task whose fix WRITES to `hooks/` or `settings*.json` is a hard stop for any SUBAGENT dispatch.** `hooks/sensitive-file-guard.py` returns `ask` on those paths, and an `ask` inside a dispatched agent's tool call is a hard block with nobody to answer it: attended mode does not reach there, since it governs only the orchestrator asking the dev. Route such a task to the main thread with the dev present, or park it. Judge by the actual write target, not by whether the text mentions a hook - most todos naming one are fixed elsewhere. `/mega-todos` Step B and `/auto-do-todos` Step 4 both inherit this list.
 
