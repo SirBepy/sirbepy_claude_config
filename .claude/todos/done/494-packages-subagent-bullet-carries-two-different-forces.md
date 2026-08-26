@@ -57,3 +57,4 @@ nothing else in it.
 
 Do not use this as an opening to re-litigate the tagging half of 429. That closed on evidence and
 carries its own re-open trigger, which this is not.
+- Done 2026-08-26: the bullet is now two, absolute first ('A subagent is required for research on anything load-bearing or crypto/network') then the preference ('Otherwise prefer one; a single obvious package can be an inline web search'). Neither is tagged, per 429's recorded decision. Token cost held flat the hard way: the first split measured 6559 against the 6558 ceiling, so four characters were cut ('for the research' to 'for research') rather than raising CEILING_TOKENS, and CLAUDE.md measures 6558 with zero headroom exactly as before. refs/claude-md-rule-force-audit.md finding 2 now records the fix so the audit stops reporting a resolved problem.

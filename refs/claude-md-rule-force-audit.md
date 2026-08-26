@@ -29,13 +29,18 @@ force they never had, which is the specific damage 429's Notes warn about:
 
 These define a boundary. They instruct nobody.
 
-**2. One bullet carries two different forces in a single sentence.** Packages:
+**2. One bullet carried two different forces in a single sentence. FIXED 2026-08-26 (todo 494).**
+Packages, as it read at audit time:
 
 > Prefer a subagent for the research; required for anything load-bearing or crypto/network.
 
 `Prefer` is a default. `required` is absolute. A single tag on this bullet would have to pick one
-and would silently demote or promote the other half. **This is the only real tagging casualty in
-the file, and it is an argument for splitting the bullet, not for tagging it.**
+and would silently demote or promote the other half. **This was the only real tagging casualty in
+the file, and it was an argument for splitting the bullet, not for tagging it.**
+
+It is now two bullets, the absolute one first, and neither is tagged. The split came out one token
+over the ceiling and was tightened by four characters rather than raising `CEILING_TOKENS`, so
+`CLAUDE.md` still measures 6558 against a 6558 ceiling.
 
 **3. Exactly one genuine AVOID exists in 81 bullets.** Subagent model tier:
 

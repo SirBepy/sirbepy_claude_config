@@ -44,7 +44,8 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 
 - Before suggesting OR adding any package/tool/program: a mandatory, automatic safety check - typosquat (real name?), malicious forks, known malware reports, and the ecosystem advisory DB (RustSec / `npm audit` / OSV); confirm the version you'll pin is past any known fix.
 - The advisory-DB check must run against the ACTUAL RESOLVED dependency tree, not just a registry lookup of the top-level package name: install for real (or resolve into a scratch lockfile), then run `npm audit --json` / `cargo audit` / equivalent post-resolution. A transitive dependency's CVE (filed against the sub-dependency's own name, e.g. a vulnerable package two levels down) will never surface from a pre-install, name-keyed lookup alone.
-- Prefer a subagent for the research; required for anything load-bearing or crypto/network. A quick inline web search is acceptable for a single obvious package.
+- A subagent is required for research on anything load-bearing or crypto/network.
+- Otherwise prefer one; a single obvious package can be an inline web search.
 - Asking gate: personal projects (those importing `full-auto.md`) auto-add once the check passes; otherwise ask before installing. If the check is inconclusive, finds no patched version, or the package looks risky - stop and ask regardless.
 
 ## Process Hygiene
