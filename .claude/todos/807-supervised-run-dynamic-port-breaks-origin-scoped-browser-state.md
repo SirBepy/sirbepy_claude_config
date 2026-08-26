@@ -51,3 +51,9 @@ and someone has to reason backward from "localStorage is origin-scoped" to "the 
 
 Full incident, fix, and the pinned port in use: `Honeymoon.md`'s "The deck, 2026-08-23" section in
 the ObsidianVault repo (not this repo - cross-referenced for context only).
+
+- Renumbered from `410` to `807` on 2026-08-26. Two different todos were filed as `410` in the same
+  55-todo bulk commit `95d47fd`, so neither had seniority; this one moved because the other is
+  referenced by filename from `782` and moving it would have broken that link. Nothing else in the
+  repo referenced this file. An unqualified "do todo 410" was ambiguous while the collision stood,
+  which is what `claim-todo.ps1`'s and `complete-todo.ps1`'s `-Slug` disambiguator exists for.
