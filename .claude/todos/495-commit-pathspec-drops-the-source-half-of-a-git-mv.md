@@ -75,3 +75,17 @@ a shared index and that reasoning is unchanged.
   because nothing had landed on top yet. Worth naming as the recovery in the skill, since the
   obvious alternative (a follow-up "delete the old copies" commit) leaves a broken intermediate
   commit where the tree carries both copies.
+
+- **Reproduced again 2026-08-25, seven times in one run, via `complete-todo.ps1` rather than a
+  literal `git mv`.** That script MOVES a todo from `.claude/todos/<id>-*.md` into `done/`. Each
+  archive commit named only the `done/` path in its pathspec, so git kept tracking all seven source
+  paths as live files that no longer exist on disk. `git status` showed them as ` D` and nothing in
+  `/commit` step 8 flagged it: the working-tree diff check inspects the paths IN the pathspec, and
+  the dropped path is by definition not in it. Cleaned up in `eac71d7`.
+
+  Two things this adds to the todo above. First, the trigger is not just `git mv` - **any script
+  that relocates a file** produces it, and `complete-todo.ps1` is one every backlog run calls
+  repeatedly, which is what turned one mistake into seven. Second, the detection is trivial and
+  belongs in step 8: after committing, `git status --porcelain <dir>` showing ` D` for a path the
+  commit was supposed to move IS the symptom. Worth pairing the fix with a note in
+  `close/ai-todos-format.md` that archiving a todo is a two-path commit.
