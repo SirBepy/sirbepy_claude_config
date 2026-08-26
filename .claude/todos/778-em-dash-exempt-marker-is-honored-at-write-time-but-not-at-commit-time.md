@@ -76,3 +76,25 @@ fix against real content instead of a synthetic fixture.
   and `refs/delegation-doctrine.md` both gained prose quoting the prefilter rules and neither needed
   an exemption, which is mild support for restricting the marker to `.claude/todos/` as this todo
   already recommends.
+
+### PARTIAL, 2026-08-26 - items 1 to 3 done, item 4 parked
+
+**Done:** `skills/commit/em-dash.sh` honours the marker. It builds an exempt-path set in bash before
+the awk pass and sets a per-file `skip` flag off `+++ b/<path>`, so the test is per FILE as item 1
+asked, not per line. Item 3 resolved as the todo recommended: scoped to `.claude/todos/` only, so
+the commit-time exemption matches the write-time guard's scope exactly rather than opening a
+repo-wide escape hatch. Item 2: the marker string is hardcoded with a comment pointing at
+`hooks/todos-em-dash-guard.py:37`, since sharing one literal between Python and bash was not worth
+the indirection. Both `--range` and working-tree modes are covered.
+
+Verified in all four directions, which matters because only proving the exemption works is half a
+test: a marked file under `.claude/todos/` is exempt; an UNMARKED file under `.claude/todos/` is
+still flagged; a MARKED file outside `.claude/todos/` is still flagged; and an unmarked file
+anywhere is still flagged. Identical results in range mode. The real proof: `prefilter-gate.sh` now
+exits 0 on `491` and `506`, and still exits 1 on an unrelated file carrying a bare em dash.
+
+**Item 4 is PARKED and is the only thing left.** It adds a case to `hooks/test_todos_em_dash_guard.py`
+so `ci/run_all.py` covers the exemption path. That writes under `hooks/`, where
+`hooks/sensitive-file-guard.py` returns `ask`, which is an unanswerable block in an unattended run.
+It needs the main thread with the dev present. Until it lands, the exemption has NO mechanical test:
+`ci/run_all.py` passing says nothing about it, and the four fixtures above were manual.

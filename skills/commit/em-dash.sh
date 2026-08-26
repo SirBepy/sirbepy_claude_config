@@ -11,23 +11,40 @@ set -uo pipefail
 
 # Raw bytes, never the literal character, so this file never trips its own check.
 ED=$(printf '\xe2\x80\x94')
+repo=""
+
+# A todo whose SUBJECT is an em dash has to quote one, so it carries the marker defined at
+# hooks/todos-em-dash-guard.py:37. Honoured here too, or such a file stays writable but
+# permanently uncommittable (todo 778). Scoped to .claude/todos/, exactly as that guard is.
+EXEMPT_MARKER='<!-- em-dash-exempt -->'
+exempt_list() {
+  local f p
+  for f in "$@"; do
+    case "$f" in *".claude/todos/"*) ;; *) continue ;; esac
+    case "$f" in /*|?:[/\\]*) p="$f" ;; *) p="${repo:+$repo/}$f" ;; esac
+    [ -f "$p" ] && grep -qF -- "$EXEMPT_MARKER" "$p" 2>/dev/null && printf '%s\n' "$f"
+  done
+}
 
 AWK='
-/^\+\+\+ b\// { f=substr($0,7); next }
+BEGIN { n=split(EXEMPT, e, "\n"); for (i=1; i<=n; i++) if (e[i] != "") ex[e[i]]=1 }
+/^\+\+\+ b\// { f=substr($0,7); skip=(f in ex); next }
 /^@@/ { match($0, /\+[0-9]+/); ln=substr($0, RSTART+1, RLENGTH-1)+0; next }
-/^\+/ && !/^\+\+\+/ { l=substr($0,2); if (index(l, ED) > 0) printf "%s:%d\n", f, ln; ln++; next }
+/^\+/ && !/^\+\+\+/ { l=substr($0,2); if (!skip && index(l, ED) > 0) printf "%s:%d\n", f, ln; ln++; next }
 /^-/ { next }
 { ln++ }
 '
 
 if [ "${1:-}" = "--range" ]; then
   diff_out=$(git diff "$2" 2>&1) || { printf 'ERROR: git diff --range %s failed: %s\n' "$2" "$diff_out"; exit 1; }
-  printf '%s\n' "$diff_out" | awk -v ED="$ED" "$AWK" | sort
+  changed=(); while IFS= read -r n; do [ -n "$n" ] && changed+=("$n"); done < <(git diff --name-only "$2" 2>/dev/null)
+  exempt=$(exempt_list ${changed+"${changed[@]}"})
+  printf '%s\n' "$diff_out" | awk -v ED="$ED" -v EXEMPT="$exempt" "$AWK" | sort
 else
   # --repo <path>: forwarded by prefilter-gate.sh when the first path argument resolves to a
   # repo other than cwd (todo 447); absent, git_c is a passthrough and behaviour is unchanged.
-  repo=""
   if [ "${1:-}" = "--repo" ]; then repo="$2"; shift 2; fi
+  exempt=$(exempt_list "$@")
   git_c() { if [ -n "$repo" ]; then git -C "$repo" "$@"; else git "$@"; fi; }
   {
     git_c diff HEAD -- "$@"
@@ -41,5 +58,5 @@ else
         printf '%s\n' "$out"
       fi
     done
-  } | awk -v ED="$ED" "$AWK" | sort
+  } | awk -v ED="$ED" -v EXEMPT="$exempt" "$AWK" | sort
 fi
