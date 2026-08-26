@@ -112,7 +112,7 @@ described - worth saying on the card, since it makes the fix smaller than the se
   In that run it correctly cleared several file-level matches as line-disjoint and correctly flagged
   four genuine ones, which is the signal-to-noise todo 368 was aiming for.
 
-### PARTIAL, 2026-08-26 - the script has landed, the wiring has NOT
+### RESOLVED 2026-08-26. The section below records how, including a blocker that cleared mid-run.
 
 **Done and committed:** `skills/commit/overlap-check.sh` exists and is verified. Contract is
 `overlap-check.sh [-C|--repo <repo>] <file>...`, exit 0 clean, 1 real hunk-level hit
@@ -138,11 +138,23 @@ flags, so the gate blocked it too. The documented escape hatch, partial staging 
 that the index holds only your hunks, and the index held todos `491` and `506` staged by another
 session (see `778`). Both routes closed at once, so this was parked rather than forced.
 
-**On retry:** check `git diff -- skills/commit/SKILL.md` first. If the fold hunk is gone (the peer
-committed it), a plain pathspec commit works. If the index is also clean, partial staging works.
-Either is a few minutes of work; nothing about the script needs revisiting.
+**How it cleared, same session:** rather than wait, the run fixed the SECOND blocker at its root.
+Todo `778`'s script half taught `em-dash.sh` the exempt marker, which made `491` and `506`
+committable after three sessions of being stuck, which emptied the index, which reopened the
+partial-staging route. The wiring then landed via `git apply --cached --recount` on a
+single-hunk extract (`git diff | awk '/^@@/ { n++; if (n==2) exit } { print }'`), verified to
+contain none of the peer's text, with the peer's hunk left unstaged and untouched in the working
+tree. Worth remembering as a pattern: a blocker made of two independent halves can sometimes be
+dissolved by fixing the cheaper half rather than by waiting for either.
+
+**Gate caveat on that commit, stated rather than glossed:** `prefilter-gate.sh` reads the WORKING
+TREE, so it flags the peer's em dash at `SKILL.md:138` and cannot return 0 here no matter how clean
+the staged hunk is. The staged content was checked directly instead: `comment-noise.sh` skips `.md`
+entirely by its own carve-out, the extracted hunk greps clean for U+2014, and it adds no credential
+shaped text. If a future change makes the prefilters able to read `--cached`, this case is why.
 
 **Explicitly NOT done, and not silently invented:** none of `498` (it needs a frequency measurement
 first, by its own text), and neither of this todo's folded-in questions - what marks a session
 "unattended" outside a runner skill, and the third silent-failure path - both of which its own text
 says need the dev's call.
+- Done 2026-08-26: skills/commit/overlap-check.sh owns the algorithm and step 8's bullet now calls it, keeping only the decision policy. The sha-width trap is designed out rather than patched: git log --format=%H and git blame --porcelain both yield 40-char hashes, so there is no 7-versus-8 comparison and no caret to strip. Cross-validated against a hand-computed result from the same session, both independently flagging 0292e46 and clearing e61d305 as line-disjoint, and it caught real overlaps in four subsequent commits this run. Not taken, deliberately and not silently: any of 498 (needs its own frequency measurement first) and this todo's two folded-in questions about what marks a session unattended, both of which need the dev's call.
