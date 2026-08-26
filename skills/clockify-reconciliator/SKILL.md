@@ -127,9 +127,11 @@ from a zero-commit day): if the dev recalls unlogged work on a day that already 
 
 ### 6. Read commits
 
-For each repo in config: `git -C <repo> log --author="<user_id or name>" --since=... --until=... --pretty=format:...`, using the window resolved in step 3. Capture sha, ISO timestamp, subject, body, branch (best-effort via `git branch --contains`).
+For each repo in config: `git -C <repo> log --all --author="<user_id or name>" --since=... --until=... --pretty=format:...`, using the window resolved in step 3. Capture sha, ISO timestamp, subject, body, branch (best-effort via `git branch --contains`).
 
-Then run one more pass per repo covering the first 4 hours after the window's END: `--since="<end>" --until="<end> + 4h"`. For a single-day lookback that is `<day+1> 00:00:00` to `<day+1> 04:00:00`; for a multi-day range it is the same 4 hours past the range's final midnight. Flag hits as "late-night spillover from <last day in window>" and split them across the boundary by each commit's real wall-clock minutes on its own calendar day. Never drop them, never fold the whole session onto one side.
+**`--all` is required, not optional.** Without it `git log` walks only the checked-out branch's ancestry, so a commit on any branch nobody currently has out is invisible - that produced a real dev-caught miss on 2026-08-22 in revaire-mobile, where a day with three commits across two unchecked-out branches reported as zero. `git worktree list` does NOT substitute: it shows only branches checked out right now, and branches with real work routinely sit unchecked-out between sessions. `--all` also walks remote-tracking refs, which is a bonus here (it catches work pushed from another machine) and costs nothing, since `--author` still scopes results to the dev and `git log` dedupes a commit reachable from several refs.
+
+Then run one more pass per repo covering the first 4 hours after the window's END, same command and same `--all`, only the dates differing: `--since="<end>" --until="<end> + 4h"`. For a single-day lookback that is `<day+1> 00:00:00` to `<day+1> 04:00:00`; for a multi-day range it is the same 4 hours past the range's final midnight. Flag hits as "late-night spillover from <last day in window>" and split them across the boundary by each commit's real wall-clock minutes on its own calendar day. Never drop them, never fold the whole session onto one side.
 
 ### 6a. Gap detection (mandatory in every mode, including plain Reconciliation)
 

@@ -50,3 +50,4 @@ Related, found in the same session, filed separately since it's a different
 kind of gap: [[486-clockify-reconciliator-weekly-target-scope-ambiguous]] (a
 stated hour target's scope - Mon-Fri vs whole week - needs confirming before
 building toward it).
+- Done 2026-08-26: step 6's git log takes --all, and the spillover pass says it inherits the same flags. Proven on a scratch repo with a branch checked out once and then left: without --all the sweep saw 1 of 3 commits, with --all it saw all 3, and a single-branch control repo returns the same count either way. Note added covering why git worktree list does not substitute, plus the detail the todo understated: --all also walks remote-tracking refs, which is a bonus (work pushed from another machine) and costs nothing since --author still scopes the result and git log dedupes a commit reachable from several refs. Only one git log call site existed in the file, not two.
