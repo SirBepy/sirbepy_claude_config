@@ -290,18 +290,18 @@ exactly. Do not improvise around it and do not skip a step because the change lo
 
 2. Run `git status` and `git diff` scoped to YOUR files only.
 
-3. Run all THREE prefilters against exactly the paths you are about to commit, replacing <FILES>.
+3. Run the prefilter gate against exactly the paths you are about to commit, replacing <FILES>.
 
-   Run them via Bash, never pasted inline: a bare `$0` in a skill's own body gets rewritten by
-   skill-argument substitution, which is exactly why these live in scripts on disk. The paths below
-   are absolute on purpose - your repo root is NOT `C:\Users\tecno\.claude`, so a repo-relative path
-   would silently fail to resolve here.
+   Run it via Bash, never pasted inline: a bare `$0` in a skill's own body gets rewritten by
+   skill-argument substitution, which is exactly why these live in scripts on disk. The path below
+   is absolute on purpose - your repo root is NOT `C:\Users\tecno\.claude`, so a repo-relative path
+   would silently fail to resolve here. Use the gate, never the three wrapped scripts directly - it
+   resolves each FILES path's own repo independently, so a submodule path is read correctly instead
+   of silently no-op'ing against the parent's index (todo 412):
 
-   bash "C:/Users/tecno/.claude/skills/commit/comment-noise.sh" <FILES>
-   bash "C:/Users/tecno/.claude/skills/commit/em-dash.sh" <FILES>
-   bash "C:/Users/tecno/.claude/skills/commit/secret-scan.sh" <FILES>
+   bash "C:/Users/tecno/.claude/skills/commit/prefilter-gate.sh" <FILES>
 
-   They do NOT all get the same treatment:
+   Exit 1's labeled sections do NOT all get the same treatment:
 
    - comment-noise: if it prints anything, TRIM those blocks to the cap (2 lines typical, 4 hard per
      block) before committing. Do not ask, just trim. EXCEPTION: a hit on a file whose flagged lines
@@ -309,9 +309,14 @@ exactly. Do not improvise around it and do not skip a step because the change lo
      file>`) is expected on a pure code move and must NOT be trimmed - the cap protects newly
      authored comments only, never carried-over documentation. Trim everything else.
    - em-dash: fix the flagged added lines now, same do-not-ask treatment as comment-noise.
+   - comment-tense: rewrite the flagged comment to state what the code IS, not what changed about
+     it, same do-not-ask treatment. The gate runs this one too, so you can see its section here.
    - secret-scan: a hit STOPS YOU. Never auto-fix it and never commit around it - a hardcoded
      credential needs a human decision. Leave your work uncommitted and report the hit, naming the
      file, in your report-back.
+
+   Exit 2 is NOT a finding - it means the gate could not run (bad path, no repo found). It prints one
+   plain `ERROR:` line. Fix the invocation and rerun; never treat it as a prefilter hit.
 
 4. `git add` any UNTRACKED file you created, by name. Tracked files need no add.
 

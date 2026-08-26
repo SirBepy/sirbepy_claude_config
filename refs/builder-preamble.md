@@ -48,9 +48,11 @@ names - a green project CI does not check any of this:
 
 The script path is absolute because your repo root is usually not `C:\Users\tecno\.claude` and a
 repo-relative one silently fails to resolve; the file arguments themselves can be relative or
-absolute, the gate resolves the target repo from the first one. Exit 0 is clean. Exit 2 means the
-gate could not run (bad path, no repo found) - fix the invocation and rerun, it is not a finding.
-Exit 1 means a prefilter flagged something, and the three do NOT get the same treatment:
+absolute, the gate resolves each one's own repo independently (a submodule path resolves to the
+submodule's root, not the parent's), so a mix of parent-repo and submodule paths in one call is
+fine (todo 412). Exit 0 is clean. Exit 2 means the gate could not run (bad path, no repo found) -
+fix the invocation and rerun, it is not a finding. Exit 1 means a prefilter flagged something, and
+the scripts do NOT get the same treatment:
 comment-noise = trim those blocks to the cap now (2 lines typical, 4 hard per block), do not ask,
 EXCEPT a block that moved verbatim from another file in this same change (confirm via `git show
 HEAD:<old-file>`), which is expected on a pure move and must NOT be trimmed; em-dash = fix the
