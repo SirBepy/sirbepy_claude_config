@@ -15,6 +15,9 @@ AWK='
 /^\+/ && !/^\+\+\+/ {
   # Markdown/mdx "#" is a heading, never a comment - the cap is a code rule (todo 340).
   if (f ~ /\.(md|mdx)$/) next
+  # Generated output has no author to act on a flagged block (todo 456); matched by filename
+  # suffix only, never by directory, so a hand-written file under generated/ still gets checked.
+  if (f ~ /\.(freezed\.dart|g\.dart|pb(enum|json|server)?\.dart|pb\.go)$/ || f ~ /_pb2\.pyi?$/ || f ~ /\.generated\.[^.\/]+$/) next
   l=substr($0,2); add[f]++
   if (l ~ /^[[:space:]]*(\/\/|\/\*|\*|#[^[!]|#$|--|<!--)/) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
   next

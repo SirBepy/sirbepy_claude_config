@@ -72,7 +72,11 @@ gotcha, or measurement the code can't show; if not, don't write it.
    by eye if one shows up. The `#` branch deliberately excludes `#[` and `#!`
    so Rust attributes and shebangs count as code, not comments.
    `.md`/`.mdx` files are skipped entirely - a `#` there is a heading, never
-   a comment, and the cap is a code rule (todo 340).
+   a comment, and the cap is a code rule (todo 340). Generated output is
+   skipped by filename suffix too (`.freezed.dart`, `.g.dart`, `.pb.go`,
+   `.pb(enum|json|server).dart`, `_pb2.py(i)`, `.generated.*`) since no
+   author can act on a flagged block there - never by directory name, so a
+   hand-written file under a `generated/` folder still gets checked (todo 456).
 2. **Judge only the flagged files.** Read those diffs and list the specific
    offending blocks (`file:line`, first line, line count). A 5+ line block that
    genuinely documents one hard constraint can survive - say so and why. Do not
