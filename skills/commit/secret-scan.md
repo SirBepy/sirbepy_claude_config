@@ -39,6 +39,14 @@ all) are excluded from that generic rule only. Whole-file exclusions:
    No output = clean. Any output = a real hit, stop and fix it now; there is
    no judge-the-flagged-files step like comment-noise has, because the fix
    is not a style call.
+
+   A named path invisible to git (gitignored, or missing entirely) still
+   gets scanned: it produces no `git diff HEAD` and no `ls-files --others`
+   entry, so without this it would silently pass as "clean" while never
+   having been read (todo 460). It is scanned via `git diff --no-index`
+   against `/dev/null`, the same call the untracked-file branch already
+   uses, so a caller who explicitly names a gitignored path still gets it
+   audited instead of a dead end.
 2. Tightness is a deliberate trade-off: the generic rule only catches a
    quoted-literal assignment, not an unquoted YAML value or a bare
    high-entropy string. It is a last-line net for known credential shapes,
