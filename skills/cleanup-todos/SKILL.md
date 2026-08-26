@@ -194,13 +194,28 @@ shallow-tier todos keep aging in the nag like any other unattended todo, instead
 "fresh" on every run they overflow into the shallow tier.
 
 **Diff gate - required before writing to the real backlog.** Copy `.claude/todos/` to a scratch
-temp dir, run `update-markers.ps1` there with the real DataFile, then diff every touched file's
+temp dir, run `~/.claude/skills/cleanup-todos/update-markers.ps1` there with the real DataFile
+(absolute path: this skill runs against any repo's backlog, and the script lives beside this file,
+not in the target repo, so a bare name resolves nowhere), then diff every touched file's
 FULL content against the original - no filtering by the marker pattern, which is exactly what hid
-the 2026-08-12 corruption (it excluded the one line class that broke). The only permitted
-difference per file is one marker line added or replaced, above that file's first `# ` heading.
-Any other change - a marker-shaped line altered below the heading, prose touched, a different file
-changed - is a FAILURE: stop, report the offending file and diff, do not run against the real
-backlog. Only once the gate passes does the run repeat against the real `.claude/todos/`.
+the 2026-08-12 corruption (it excluded the one line class that broke). Two permitted differences
+per file, and nothing else: one marker line added or replaced above that file's first `# ` heading,
+and the DELETION of a marker line that sat between the title and the first `## ` heading. That
+second one is the relocation the script now does deliberately, so a bare deletion below the title is
+expected here, not corruption. Prose touched, a marker line *altered* rather than deleted below the
+title, or a different file changed is a FAILURE: stop, report the offending file and diff, do not
+run against the real backlog.
+
+Then check the **resulting state**, not just the diff, since the diff constrains only what moved.
+For every touched file, count `<!-- cleanup: last-checked` lines **in the header region only** -
+from the top of the file to its first `## ` heading. That count must be exactly one, and it must sit
+above the first `# ` line. Scope the count to the header: a todo that quotes the marker format in
+its own prose carries a second copy inside a `##` section on purpose, and a whole-file `grep -c`
+returning 2 there is correct, not a failure (that is the todo-99 case the anchoring exists for).
+Two markers in the header region is a FAILURE even when the diff looked like a clean single-line
+replace - that is exactly what let the 2026-08-20 run report `written=50 skipped=0` while leaving 17
+files with two markers each (todo 449). Only once both the diff gate and this count check pass does
+the run repeat against the real `.claude/todos/`.
 
 ## Step 6 - Report
 
