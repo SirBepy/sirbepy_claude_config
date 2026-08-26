@@ -111,3 +111,38 @@ described - worth saying on the card, since it makes the fix smaller than the se
 - Worth noting for whoever picks this up: the check DID earn its keep once the comparison was fixed.
   In that run it correctly cleared several file-level matches as line-disjoint and correctly flagged
   four genuine ones, which is the signal-to-noise todo 368 was aiming for.
+
+### PARTIAL, 2026-08-26 - the script has landed, the wiring has NOT
+
+**Done and committed:** `skills/commit/overlap-check.sh` exists and is verified. Contract is
+`overlap-check.sh [-C|--repo <repo>] <file>...`, exit 0 clean, 1 real hunk-level hit
+(`<file>:<range> <sha> <subject>`), 2 could-not-run, matching `prefilter-gate.sh`'s three-outcome
+shape. It sidesteps the sha-width trap entirely rather than papering over it: `git log --format=%H`
+and `git blame --porcelain` both yield 40-char hashes, so there is no 7-versus-8 comparison and no
+`^` boundary marker to strip. Cross-validated against a hand-computed result from the same session:
+both independently found `0292e46` as a real hit on `skills/commit/SKILL.md` while correctly
+clearing `e61d305` on the same file as line-disjoint. Exit 2 confirmed for no-args and bad-repo; an
+untracked path and a deleted path in one call do not crash it.
+
+**Still to do, one edit:** `skills/commit/SKILL.md` step 8's unpushed-overlap bullet must be
+replaced by a call to the script, keeping ONLY the decision policy (interactive asks, unattended
+proceeds and records) and dropping the `@@` parsing and `git blame -L` instructions. The replacement
+text was written and is correct, but could not be committed.
+
+**Why it was blocked, which matters for whoever retries:** `skills/commit/SKILL.md` simultaneously
+carried a second, unrelated uncommitted hunk from a concurrent session (a `/commit fold` pushed-check
+rewrite around `:135-147`). A pathspec commit takes the whole working-tree file, so committing would
+have swept in that peer's in-progress work, and it contains an em dash that `em-dash.sh` correctly
+flags, so the gate blocked it too. The documented escape hatch, partial staging via
+`git apply --cached` per `skills/commit/edge-cases.md`, was ALSO unavailable: its own precondition is
+that the index holds only your hunks, and the index held todos `491` and `506` staged by another
+session (see `778`). Both routes closed at once, so this was parked rather than forced.
+
+**On retry:** check `git diff -- skills/commit/SKILL.md` first. If the fold hunk is gone (the peer
+committed it), a plain pathspec commit works. If the index is also clean, partial staging works.
+Either is a few minutes of work; nothing about the script needs revisiting.
+
+**Explicitly NOT done, and not silently invented:** none of `498` (it needs a frequency measurement
+first, by its own text), and neither of this todo's folded-in questions - what marks a session
+"unattended" outside a runner skill, and the third silent-failure path - both of which its own text
+says need the dev's call.
