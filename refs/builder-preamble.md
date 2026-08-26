@@ -40,6 +40,23 @@ Windows, `pgrep`/`ps` on Unix); a bare claim like "it's already cleaned up" or "
 does not satisfy this. Never run an unbounded `find` or `grep -r` from `/`, `C:/`, or `$HOME` -
 scope to the narrowest known path instead (repo root, pub cache, node_modules).
 
+Before reporting, run the commit prefilters over your own changed files. This is part of your
+verify floor, not a step after it, and it is separate from whatever build/test/lint the task
+names - a green project CI does not check any of this:
+
+    bash "C:/Users/tecno/.claude/skills/commit/prefilter-gate.sh" <the files you changed>
+
+The script path is absolute because your repo root is usually not `C:\Users\tecno\.claude` and a
+repo-relative one silently fails to resolve; the file arguments themselves can be relative or
+absolute, the gate resolves the target repo from the first one. Exit 0 is clean. Exit 2 means the
+gate could not run (bad path, no repo found) - fix the invocation and rerun, it is not a finding.
+Exit 1 means a prefilter flagged something, and the three do NOT get the same treatment:
+comment-noise = trim those blocks to the cap now (2 lines typical, 4 hard per block), do not ask,
+EXCEPT a block that moved verbatim from another file in this same change (confirm via `git show
+HEAD:<old-file>`), which is expected on a pure move and must NOT be trimmed; em-dash = fix the
+flagged added lines now, same do-not-ask treatment; secret-scan = STOP, never auto-fix it and never
+work around it, leave your work as it stands and report the hit naming the file.
+
 Your final message is your entire return value. ALL commands, including the verify floor
 (build/test/lint/typecheck), run synchronously in the same tool call: `run_in_background` is
 FORBIDDEN in builder subagents, a long build is waited out, not backgrounded. Ending the turn while
@@ -69,6 +86,13 @@ anywhere in the prompt. This is an explicit marker the orchestrator sets, not so
 from the dispatch's content: `hooks/dispatch-preamble-guard.py` checks for that exact string, it
 never guesses whether a dispatch is read-only. Never add the marker to a dispatch that does capture
 screenshots.
+
+The marker exempts the screenshot-id requirement and nothing else. The prefilter paragraph stays in
+the block unconditionally, read-only dispatches included: one that changed no files gets an empty
+diff and the gate is a no-op, so making it a placeholder only adds a per-dispatch judgment call,
+which is the mechanism this file exists to remove. It is also deliberately NOT a fourth marker in
+`hooks/dispatch-preamble-guard.py`: the existing three are cheap literal checks, and a fourth raises
+the rejection surface for every dispatch in every repo to catch what the pasted block already says.
 
 ## What the guard actually enforces
 

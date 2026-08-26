@@ -62,19 +62,16 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
 
 - Its verify floor: the project's fast checks (typecheck, unit, lint, build) with the instruction
   to run them and report the actual output, not a claim of success.
-- The comment-noise prefilter as part of that verify floor: run the command from
-  `~/.claude/skills/commit/comment-noise.md` scoped to its own diff (`git diff HEAD -- <files it
-  changed>`), trim until it prints nothing, and paste the clean output in the report. Requires a
-  bash-capable shell for `awk` - the Bash tool on Windows dispatches, not PowerShell.
-- The em-dash prefilter, same verify floor, same shell requirement: run
-  `~/.claude/skills/commit/em-dash.sh` scoped to its own diff, same invocation and exit-code
-  convention as comment-noise.sh above. A flag means fix that added line now, never a louder
-  restatement of the no-em-dash rule - the rule was already stated verbatim in every dispatch of
-  the run that broke it three times regardless (todo 290).
-- The secret-scan prefilter, same verify floor and shell requirement: run
-  `~/.claude/skills/commit/secret-scan.sh` scoped to its own diff. Unlike the other two, a hit is
-  never auto-fixed - the builder stops and reports it. A dispatch prompt itself must never carry a
-  credential either; name the env var the builder should read instead.
+- The three commit prefilters (comment-noise, em-dash, secret-scan) as part of that verify floor,
+  scoped to the builder's own diff, with the per-script treatment split: trim, fix, or STOP on a
+  secret. Verbatim text and the exact `prefilter-gate.sh` invocation live in
+  `refs/builder-preamble.md`'s static block, not restated here so the two never drift apart - that
+  drift is what let a builder ship three em dashes past a green CI on 2026-08-25, because the
+  requirement lived only in this prose while the block every dispatch actually pastes said nothing
+  (todo 791). They need a bash-capable shell for `awk`: the Bash tool on Windows dispatches, not
+  PowerShell. A flag is a fix, never a louder restatement of the rule - the no-em-dash rule was
+  stated verbatim in every dispatch of the run that broke it three times regardless (todo 290). A
+  dispatch prompt must never carry a credential either; name the env var the builder should read.
 - The out-of-scope-findings channel: a subagent NEVER writes into `.claude/todos/`, even a
   well-formed, confident finding. It reports an "Out-of-scope findings" section instead - what it
   found and why it sits outside this dispatch's lane - and the orchestrator files it as a proper
