@@ -62,3 +62,17 @@ was only ever taught to one of them.
 
 Both affected files are already staged with markers in place, so whoever picks this up can verify the
 fix against real content instead of a synthetic fixture.
+
+- 2026-08-26, still open, and the cost is now measurable rather than theoretical: `491` and `506`
+  have been staged-and-uncommittable across at least three sessions, and each new session's handoff
+  has to carry an explicit "leave these two staged, do not commit them" instruction. That standing
+  exception is the recurring cost, not the two files themselves.
+- **Heads-up for an unattended run:** Approach items 1 to 3 land in `skills/commit/em-dash.sh` and
+  are safe to delegate, but item 4 writes to `hooks/test_todos_em_dash_guard.py`, where
+  `hooks/sensitive-file-guard.py` returns `ask` and a subagent has nobody to answer it. Do items 1
+  to 3 delegated or inline, then either do item 4 in the main thread with the dev present or park it
+  explicitly - do not let a builder discover the block mid-dispatch.
+- Approach item 3's scope question got a second data point on 2026-08-26: `refs/builder-preamble.md`
+  and `refs/delegation-doctrine.md` both gained prose quoting the prefilter rules and neither needed
+  an exemption, which is mild support for restricting the marker to `.claude/todos/` as this todo
+  already recommends.
