@@ -75,3 +75,4 @@ Two things make this worth fixing rather than filing as user error:
   the SKILL.md text never says. Sharpens item 4's fix: the example invocation needs the actual
   resolvable path (or a `$CLAUDE_SKILL_DIR`-style variable), not just "show the repo-relative form" -
   there IS no repo-relative form, the script isn't in the target repo's tree.
+- Done 2026-08-26: prefilter-gate.sh takes -C/--repo and otherwise resolves the repo from the first path argument; the four wrapped scripts honour --repo via a git_c helper. Exit 2 is now 'could not run' with one plain ERROR line, distinct from exit 1 'flagged'. Verified from a foreign cwd: clean cross-repo run exits 0 (was 8 fatal lines + exit 1), a planted comment-noise breach exits 1 with its labelled section, a path in no repo and a bad --repo both exit 2. Same-repo hot path forwards no --repo flag at all and is unchanged. SKILL.md step 5a documents exit 2; step 8's chained form got the same absolute-path fix.

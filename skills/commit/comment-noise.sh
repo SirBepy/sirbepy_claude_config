@@ -27,12 +27,17 @@ if [ "${1:-}" = "--range" ]; then
   diff_out=$(git diff "$2" 2>&1) || { printf 'ERROR: git diff --range %s failed: %s\n' "$2" "$diff_out"; exit 1; }
   printf '%s\n' "$diff_out" | awk "$AWK" | sort
 else
+  # --repo <path>: forwarded by prefilter-gate.sh when the first path argument resolves to a
+  # repo other than cwd (todo 447); absent, git_c is a passthrough and behaviour is unchanged.
+  repo=""
+  if [ "${1:-}" = "--repo" ]; then repo="$2"; shift 2; fi
+  git_c() { if [ -n "$repo" ]; then git -C "$repo" "$@"; else git "$@"; fi; }
   {
-    git diff HEAD -- "$@"
+    git_c diff HEAD -- "$@"
     # -z/NUL-separated: git status quotes space-containing names, which broke the downstream
     # git diff --no-index call; ls-files -z sidesteps quoting entirely.
-    git ls-files --others --exclude-standard -z -- "$@" | while IFS= read -r -d '' f; do
-      out=$(git diff --no-index -- /dev/null "$f" 2>&1); rc=$?
+    git_c ls-files --others --exclude-standard -z -- "$@" | while IFS= read -r -d '' f; do
+      out=$(git_c diff --no-index -- /dev/null "$f" 2>&1); rc=$?
       if [ "$rc" -gt 1 ]; then
         printf 'ERROR: could not inspect untracked file %s (git diff --no-index exit %d): %s\n' "$f" "$rc" "$out"
       else
