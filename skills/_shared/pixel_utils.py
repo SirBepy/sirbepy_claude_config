@@ -1,14 +1,8 @@
 """Shared pixel-sampling helpers for design_diff.py and figma_pixel_diff.py:
-box-average sampling over a numpy RGB array, plus hex formatting. Extracted
-2026-08-25 (todo 401) from near-identical copies that differed only in input
-shape (in-memory array vs PNG path) and a getpixel() shortcut at radius 0.
+box-average sampling over a numpy RGB array, plus hex formatting.
 
-Matches design_diff's original numpy-slice semantics uniformly at every
-radius, including 0. That shortcut used PIL's getpixel(), which wraps
-negative coordinates Python-list style and raises IndexError out of bounds -
-genuinely different edge-case behaviour with no test coverage on either
-side; see todo 401's report for the measured before/after diff. Every
-in-bounds caller (the entire real usage of both scripts) is unaffected.
+Numpy-slice semantics apply at every radius including 0, so negative and
+out-of-bounds coordinates differ from PIL getpixel() and are untested here.
 """
 
 

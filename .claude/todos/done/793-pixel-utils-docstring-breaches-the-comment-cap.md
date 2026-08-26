@@ -60,3 +60,4 @@ commit message and in `done/401-*.md`.
 finding - which is why `/code-check` classed it judgment and filed it rather than auto-applying it.
 Cross-reference `399`; if 399 ships docstring coverage in `comment-noise.sh`, this file is a ready
 made fixture for it.
+- Done 2026-08-26: module docstring cut 11 lines to 4 (two 2-line blocks). Negative/out-of-bounds warning kept, extraction narrative dropped. Both CLIs return #1e1414 for --at 1,1 on an 8x8 scratch PNG; py_compile and prefilter-gate.sh clean.
