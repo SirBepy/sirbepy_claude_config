@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-27, complexity=EASY, worth=7, reconfirm-count=1, content-hash=719a4cf3 -->
 <!-- duplicate-checked -->
 # `figma-tiles` cannot read Dev Mode annotations, and its depth rule hides them
 

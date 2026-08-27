@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-27, complexity=EASY, worth=3, reconfirm-count=1, content-hash=386688a6 -->
 <!-- duplicate-checked -->
 # Two `Write(...)` entries in settings.json are dead, and the harness says so out loud
 

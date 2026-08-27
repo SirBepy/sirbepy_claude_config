@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-27, complexity=HARD, worth=6, reconfirm-count=1, content-hash=fb136fdb -->
 <!-- duplicate-checked -->
 # permissions has an allow list, no Read denylist, and no way to grant a skill family
 

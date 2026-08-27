@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-27, complexity=HARD, worth=8, reconfirm-count=1, content-hash=95fe2636 -->
 <!-- duplicate-checked -->
 # The /supervised-run rule is prose, so a raw dev server in Bash is unblocked
 

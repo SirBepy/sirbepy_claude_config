@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-27, complexity=EASY, worth=8, reconfirm-count=1, content-hash=633e95ff -->
 # Builder preamble must require proof that teeth-mutations were restored
 
 **Type:** skill-improvement

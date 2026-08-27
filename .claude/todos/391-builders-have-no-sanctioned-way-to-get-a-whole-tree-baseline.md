@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-27, complexity=EASY, worth=8, reconfirm-count=1, content-hash=aacfef3b -->
 # A builder needing a whole-tree "before" measurement has no sanctioned mechanism, so it reaches for `git stash`
 
 **Type:** skill-improvement

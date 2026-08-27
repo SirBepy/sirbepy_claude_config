@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-27, complexity=HARD, worth=6, reconfirm-count=1, content-hash=00c04501 -->
 <!-- duplicate-checked -->
 # Cloning a third-party .claude tree silently makes its skills model-invocable
 

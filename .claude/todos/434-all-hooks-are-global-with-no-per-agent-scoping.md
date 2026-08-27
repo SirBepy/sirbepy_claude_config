@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-27, complexity=HARD, worth=5, reconfirm-count=1, content-hash=df792654 -->
 <!-- duplicate-checked -->
 # Every hook is global, so a guard meant for subagents also fires on the main thread
 

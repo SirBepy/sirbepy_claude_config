@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-27, complexity=EASY, worth=6, reconfirm-count=1, content-hash=8e918ea8 -->
 # Settle whether Conductor's card parser reads raw assistant text or only send_message payloads
 
 **Type:** task

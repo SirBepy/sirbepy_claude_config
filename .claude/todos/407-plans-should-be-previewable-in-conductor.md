@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-27, complexity=EASY, worth=6, reconfirm-count=1, content-hash=f4d21b82 -->
 # Plans should be readable in Conductor's preview panel, not only as files on disk
 
 **Type:** skill-improvement

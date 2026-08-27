@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-27, complexity=HARD, worth=8, reconfirm-count=1, content-hash=81ddb0bb -->
 <!-- duplicate-checked -->
 # `list_peers` has no enforcement before the first edit, only social pressure
 

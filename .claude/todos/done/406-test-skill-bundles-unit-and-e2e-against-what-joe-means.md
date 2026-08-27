@@ -35,3 +35,7 @@ Joe sees the change on a screen.
 Invoking `/test` on a Flutter repo with an emulator attached results in the app
 being installed and driven, or in one question that settles which he meant, and
 never in an unattended automated-only run reported as the answer to "e2e".
+
+## Notes
+
+- Dropped via /cleanup-todos 2026-08-27: premise dead. /test no longer routes Flutter e2e to Patrol - skills/test/SKILL.md:28 is `fvm flutter test` (unit only), /e2e was split out 2026-08-19 (skills/e2e/SKILL.md:13 "/test stays fast-checks-only, this owns everything that drives a real UI"), and Patrol appears 0 times anywhere under skills/flutter-e2e/. That is exactly the fix this todo proposed, already shipped. Origin ai, archived without a confirm gate per the skill origin rule.

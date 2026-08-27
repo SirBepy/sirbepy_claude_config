@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-27, complexity=EASY, worth=6, reconfirm-count=1, content-hash=cd7be509 -->
 <!-- duplicate-checked -->
 # /create-pr scales the body to the diff but has no anti-pattern list
 

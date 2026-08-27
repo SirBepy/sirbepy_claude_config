@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-27, complexity=HARD, worth=5, reconfirm-count=1, content-hash=40b606ea -->
 <!-- duplicate-checked -->
 # Nothing stops loosening a lint or compiler config instead of fixing the code
 
