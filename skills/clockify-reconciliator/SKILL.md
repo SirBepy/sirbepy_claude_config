@@ -40,6 +40,8 @@ repos:
   - /abs/path/to/repo-1
   - /abs/path/to/repo-2
 ticket_regex: (sc-\d+)   # optional, default (sc-\d+)|(#\d+)
+weekly_target_hours: 30  # optional - drives the target bar in step 9a. Omit and no target renders.
+meeting_keywords: [standup, sync, planning, retro, grooming, "1:1", call]  # optional, this is the default list
 hubstaff_org_id: <id>       # optional - enables HubStaff comparison step
 hubstaff_user_id: <id>      # required if hubstaff_org_id is set - interpolated into the HubStaff URLs/filters
 ```
@@ -98,7 +100,21 @@ Authenticate with the key resolved in step 1 (`api_key_env` or `CLOCKIFY_API_KEY
 Call `GET /workspaces/{ws}/user/{user}/time-entries?start=...&end=...&page-size=200` — do NOT pass `hydrated=true`, it bloats each entry with full user/project objects. Only fields needed: `id`, `description`, `timeInterval`, `projectId`, `billable`, `tagIds`. Bucket:
 
 - In-project (matches `clockify_project_id`)
-- Other-project (for the warning)
+- Other-project - keep ALL of them, not just the description-less ones. Step 8's warning only needs
+  the empty ones, but step 9a draws every one of them as dimmed context so a day never renders
+  emptier than it actually was. This only reaches projects in the SAME workspace behind the SAME
+  key: a project on another Clockify account (e.g. Fibo, `CLOCKIFY_API_KEY_PERSONAL`) is invisible
+  to this run by construction, and the visual must not imply otherwise.
+
+Classify each in-project entry into the four states step 9a renders. `meeting` wins over the others:
+
+- `meeting` - description case-insensitively contains any `meeting_keywords` entry (default list in
+  the config template). Record WHICH keyword matched; step 9a surfaces it so a false positive is
+  visible rather than silent. Meetings are ordinary hours on the project and count toward
+  `weekly_target_hours` like any other (Joe, 2026-08-27: count all the hours of a project).
+- `edit` - existing entry with an empty description that this run would fill.
+- `new` - a block this run would create (step 6a's gaps, Reconstruction's rebuilt days).
+- `old` - existing entry with a description, untouched.
 
 **Integrity check:** confirm every returned `timeInterval.start` actually falls inside the requested
 window. A first fetch after a date-window change can return an unrelated past window's entries (stale
@@ -173,11 +189,70 @@ List description-less entries in OTHER projects in the same window. Dev handles 
 
 ### 9. Present plan
 
-Show a table: date, start-end, duration, proposed split, proposed description(s). Use AskUserQuestion:
+Show a table: date, start-end, duration, proposed split, proposed description(s). Precede it with
+the day-summary table and, on a Conductor host, the week calendar from step 9a. Use AskUserQuestion:
 
 - Apply all
 - Apply some (pick which by index)
 - Cancel
+
+### 9a. Visual output (proposal here, refreshed again in step 13)
+
+Build, in this order:
+
+1. **Day-summary table** (always, every host): `Day | Existing | New | Total` hours, one row per day
+   in the window. Show this above the per-block breakdown table from step 9 - the dev sees the
+   headline numbers before the detail.
+2. **The week calendar** (Claude Conductor sessions only, best-effort). One self-contained HTML
+   document, pushed with the `show_preview` MCP tool: `{ slug: "clockify-week", html, title }`. The
+   card renders inline in the chat, and re-pushing the same slug replaces it in place, so the step 9
+   proposal and the step 13 final state are ONE card, not two. If the tool is unavailable (a plain
+   terminal session, or an app build predating it), fall back to `POST
+   http://127.0.0.1:27182/hooks/preview` with the same slug; connection refused means skip silently,
+   the tables are the deliverable there and no error is surfaced to the dev.
+3. In step 13, rebuild the same HTML with whatever was actually applied (dropped or edited rows
+   reflected) and re-push it under the same slug.
+
+**The layout is a vertical week calendar, days as columns and time running downward.** Joe rejected
+the horizontal one-bar-per-day shape on sight (2026-08-27); do not reintroduce it. The vertical form
+is not only a preference - a column is wide enough to carry each block's description inline, which
+is what removes the need to read a separate table to know what a block is.
+
+Structure, top to bottom:
+
+- **Headline**: total counted hours in the window, `of <weekly_target_hours>h target`, and a pill
+  reading `Xh Ym to go`, or `over` in amber past the target. Omit the whole row when the config
+  sets no target.
+- **Target bar** - horizontal, and deliberately so: it is one quantity filling toward a ceiling, not
+  a timeline. Stacked segments in `old, edit, new, meeting` order, each sized as its share of the
+  target, with the shortfall drawn as a hatched remainder. **This bar is also the legend** - print
+  each state's name and hour total beneath it. That is what makes "how many hours is what" a glance
+  rather than a second table.
+- **The grid**: a 46px hour gutter plus one `1fr` column per day. Column header carries the day,
+  date, that day's counted total, and `+Xh other` when other-project time exists.
+  - 56px per hour, and this number is load-bearing: at 34px a 15-minute standup was 8px tall,
+    shorter than one line of type, so its label had to overlay the block beneath it.
+  - Crop to `floor(earliest start)`..`ceil(latest end)` rather than drawing 24 rows nobody worked
+    in, and say so in a footer line (`Showing 09:00 to 00:00 - the empty night hours are cropped`).
+  - Hour rules every hour, brighter every third, so a glance lands on 12:00 without counting.
+- **Blocks**, absolutely positioned by start and duration, each carrying its time range, duration
+  and description inline. Under ~26px tall, drop the description and keep the time range only.
+  Colour AND pattern both differ per state (the `dataviz` skill's rule - colour alone is not a
+  distinction): `new` bright teal, `edit` blue, `old` muted green, `meeting` diagonally striped
+  purple. Proposed blocks (`new`, `edit`) additionally get a bright left edge, so they stay
+  identifiable in a sliver too thin to show fill colour.
+- **Other-project blocks get their own narrow dashed lane** down the right edge of the column - a
+  separate lane, not the main one, so they can never collide with this project's blocks and read as
+  background rather than content. No text, no duration label, never counted in any total.
+- **Hover card** on every block: exact start-end, exact MINUTES (not only the rounded duration),
+  what Clockify holds right now (`(no description)` or `(no entry on this block)` when empty), and
+  what this run would write. On a meeting, also name the keyword that matched - a false positive
+  from `meeting_keywords` has to be visible, since keyword matching is the weakest link in the whole
+  classification.
+
+Two honesty rules the visual must not break: never draw a project the run cannot actually see (a
+different workspace or API key), and never let a rounded duration hide the real minutes - that is
+what the hover card's minute count is for.
 
 ### 10. Apply
 
@@ -200,6 +275,9 @@ If gated in, read `skills/clockify-reconciliator/hubstaff.md` and follow its "St
 
 - Mode used (Reconciliation / Reconstruction / Audit)
 - Entries written (count + per-day summary)
+- Visual output (step 9a): day-summary table + the week calendar re-pushed under the same slug, or
+  "skipped - not a Conductor host" if neither the `show_preview` tool nor the hook endpoint was
+  reachable
 - Gap-detection findings (step 6a): unlogged days/blocks surfaced, applied or still pending approval
 - HubStaff comparison results (step 11), or "HubStaff comparison skipped - hubstaff_org_id not configured" if absent
 - HubStaff weekly screenshot path(s) (step 12), or skipped reason (auth failed preflight / org not configured)
@@ -220,6 +298,10 @@ If gated in, read `skills/clockify-reconciliator/hubstaff.md` and follow its "St
   toward a weekly target the dev explicitly stated, sized from real evidence, on a day with ZERO
   existing entries only. A stated weekly target is a ceiling to fill toward, never a license to invent
   hours beyond real evidence.
+- `weekly_target_hours` in the config does NOT widen that exception. It exists so step 9a can draw a
+  target bar; it is a standing display number, not a standing instruction to fill toward it. Case (b)
+  above still requires the dev to ask for the fill in this run. A run that quietly manufactured hours
+  because a config file said 30 would be exactly the invented-hours failure the rule above bans.
 - Max 80 chars per description.
 - Descriptions read like a person summarizing their day, not a concatenated commit log. Never
   include AI-workflow verbs (brainstorm, implement, code-check, commit, test, run Patrol) as content -

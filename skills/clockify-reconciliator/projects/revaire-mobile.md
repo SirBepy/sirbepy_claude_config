@@ -5,6 +5,7 @@ user_id: 5ec2471f9ac855505e473d77
 repos:
   - C:/Users/tecno/Desktop/Projects/revaire-mobile
   - C:/Users/tecno/Desktop/Projects/revaire-server
+weekly_target_hours: 30
 # ticket_regex intentionally unset: revaire-mobile commit convention already
 # embeds the Linear id inline e.g. "Fix: ... (REV-3534)", so the auto-suffix
 # would double it. If a future window has bare tickets, use (REV-\d+).
