@@ -74,3 +74,4 @@ Two things to carry in rather than rediscover:
 
 - Weekly limit resets 3am Europe/Warsaw, so 2026-08-28 or later.
 - Related: `[[820-commit-overlap-check-needs-an-explicit-timeout]]`, hit during the same run.
+- Dropped via /cleanup-todos 2026-08-29: this run satisfied it. All 135 remaining backlog files now carry a real 'last-checked 2026-08-29' marker with a complexity and worth verdict behind it, and the backlog-wide dedupe step ran (2 pairs found, both salvaged then merged). Confirmed by dev 2026-08-29.
