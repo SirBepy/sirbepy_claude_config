@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=3, reconfirm-count=1, content-hash=eadc5677 -->
 <!-- duplicate-checked -->
 # claim-todo.ps1 and complete-todo.ps1 duplicate the prefix-less-stem fallback
 

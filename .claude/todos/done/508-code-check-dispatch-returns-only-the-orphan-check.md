@@ -65,3 +65,7 @@ problem is purely that a caller has to notice.
   message, verified on a real multi-file review, not a toy prompt.
 - A dispatch that genuinely finds nothing says so explicitly rather than emitting only hygiene
   output, so "no findings" and "findings lost" are distinguishable.
+
+## Notes
+
+- Dropped via /cleanup-todos 2026-08-29: already fixed. refs/builder-preamble.md now places the orphan-check and prefilter paragraphs BEFORE the 'Your final message is your entire return value' closer (commits 2cefa3d 2026-08-22 and b74996c 2026-08-26), which is option 2 from this todo's own Approach.

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=7, reconfirm-count=1, content-hash=36a1ef48 -->
 <!-- duplicate-checked -->
 # CLAUDE.md's `pnpm --workspace-concurrency=5` rule errors out on `pnpm install`
 

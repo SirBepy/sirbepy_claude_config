@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=4, reconfirm-count=1, content-hash=f89fa247 -->
 <!-- duplicate-checked -->
 # /respawn requires a `respawn` MCP tool that this Conductor build does not expose, so the skill cannot run at all
 

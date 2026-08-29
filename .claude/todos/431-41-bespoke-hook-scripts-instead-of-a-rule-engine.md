@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-27, complexity=HARD, worth=3, reconfirm-count=1, content-hash=a0db9ccc -->
+<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=3, reconfirm-count=2, content-hash=a0db9ccc -->
 <!-- duplicate-checked -->
 # 41 bespoke hook scripts where a declarative rule engine would do
 

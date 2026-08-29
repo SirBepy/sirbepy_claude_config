@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=7, reconfirm-count=1, content-hash=0a7b4929 -->
 <!-- duplicate-checked -->
 # Todo id 780 is used by two different files, so claiming it by id is ambiguous
 

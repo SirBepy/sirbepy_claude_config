@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=7, reconfirm-count=2, content-hash=35acab71 -->
 <!-- duplicate-checked -->
 # Nothing checks that a dispatch's task list covers every item in the todo it came from
 

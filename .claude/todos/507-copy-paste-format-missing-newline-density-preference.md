@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=6, reconfirm-count=1, content-hash=187bf40c -->
 <!-- duplicate-checked -->
 # copy-paste-format.md doesn't say Joe wants drafted messages broken into short lines, not dense paragraphs
 

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=5, reconfirm-count=1, content-hash=20a71a92 -->
 <!-- duplicate-checked -->
 <!-- 392/409 cover skills MISSING the three markers. This is different: the markers were present
      and correct, but the ~80-line block had to be retyped into every dispatch by hand. 391 is

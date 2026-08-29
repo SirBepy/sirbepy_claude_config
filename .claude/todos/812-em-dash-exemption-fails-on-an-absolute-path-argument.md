@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=7, reconfirm-count=2, content-hash=a823792f -->
 <!-- duplicate-checked -->
 # em-dash.sh's exempt marker is ignored when the file is passed as an absolute path
 

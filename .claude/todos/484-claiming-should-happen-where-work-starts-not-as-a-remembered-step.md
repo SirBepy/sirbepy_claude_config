@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=7, reconfirm-count=1, content-hash=c99b377f -->
 <!-- duplicate-checked -->
 <!-- Todo 328 is DONE - it shipped the non-blocking warning. Its own Notes scoped the fix below
      OUT as "a much bigger change". This is that deferred follow-up, with fresh evidence that the

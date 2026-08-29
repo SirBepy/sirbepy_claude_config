@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=5, reconfirm-count=1, content-hash=f76d9c19 -->
 <!-- duplicate-checked -->
 # code-style loads on a remembered instruction, and the harness mechanism that would replace it cannot fire on file creation
 

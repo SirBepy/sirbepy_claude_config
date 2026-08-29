@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-27, complexity=HARD, worth=9, reconfirm-count=1, content-hash=af3e9308 -->
+<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=8, reconfirm-count=2, content-hash=af3e9308 -->
 <!-- duplicate-checked -->
 # Four "read once per session" files went unread, and skipping one of them caused the unasked-for push
 

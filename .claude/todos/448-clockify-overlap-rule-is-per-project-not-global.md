@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-27, complexity=EASY, worth=8, reconfirm-count=1, content-hash=52ba2907 -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=8, reconfirm-count=2, content-hash=52ba2907 -->
 <!-- duplicate-checked -->
 # Clockify overlap ban is global but should be per-project, and the override keeps getting re-asked
 

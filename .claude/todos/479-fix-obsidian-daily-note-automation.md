@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=7, reconfirm-count=1, content-hash=e227f1cd -->
 # Fix the Obsidian daily-note automation (screenpipe pipe), then use it more
 
 **Type:** task

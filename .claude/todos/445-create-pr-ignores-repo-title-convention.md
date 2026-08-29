@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-27, complexity=HARD, worth=8, reconfirm-count=1, content-hash=d66836c5 -->
+<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=8, reconfirm-count=2, content-hash=d66836c5 -->
 <!-- duplicate-checked -->
 # /create-pr titles PRs in its own style instead of the repo's
 

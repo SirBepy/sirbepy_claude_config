@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=8, reconfirm-count=1, content-hash=7abc9b02 -->
 <!-- duplicate-checked -->
 # code-check's `uncommitted` scope silently misses untracked new files
 

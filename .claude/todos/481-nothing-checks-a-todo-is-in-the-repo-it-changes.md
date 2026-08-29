@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=9, reconfirm-count=1, content-hash=58ada033 -->
 <!-- duplicate-checked -->
 # Nothing checks a todo is filed in the repo it changes, and a whole autopilot run acted on the wrong ones
 

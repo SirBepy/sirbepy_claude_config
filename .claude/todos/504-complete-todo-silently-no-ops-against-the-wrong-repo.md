@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=7, reconfirm-count=1, content-hash=2441a387 -->
 <!-- duplicate-checked -->
 <!-- Read done/98 and done/277 in full: same ROOT CAUSE, different script and a different failure
      mode (silent no-op with exit 0, not a wrong-directory execution). Filed as the third

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=4, reconfirm-count=1, content-hash=29816930 -->
 <!-- duplicate-checked -->
 # The em-dash-exempt marker is honored at write time but not at commit time
 

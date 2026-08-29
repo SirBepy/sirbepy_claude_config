@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=6, reconfirm-count=1, content-hash=1e1397cc -->
 <!-- duplicate-checked -->
 <!-- Grepped ~/.claude/.claude/todos/ (backlog + done/) for "screenshot-helper", "evaluate",
      "--plan". Nothing covers it. -->

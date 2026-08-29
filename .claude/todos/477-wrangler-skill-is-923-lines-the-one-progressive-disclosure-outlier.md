@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=5, reconfirm-count=1, content-hash=5579d4f9 -->
 <!-- duplicate-checked -->
 # skills/wrangler/SKILL.md is 923 lines, 2.5x the next largest skill
 

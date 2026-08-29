@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=6, reconfirm-count=1, content-hash=225d795e -->
 <!-- duplicate-checked -->
 # comment-noise.sh and em-dash.sh still report clean on a file git cannot see
 

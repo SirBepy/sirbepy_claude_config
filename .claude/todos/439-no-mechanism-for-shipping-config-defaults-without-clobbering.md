@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-27, complexity=HARD, worth=4, reconfirm-count=1, content-hash=79260454 -->
+<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=3, reconfirm-count=2, content-hash=79260454 -->
 <!-- duplicate-checked -->
 # No mechanism for updating a config default without overwriting local edits
 

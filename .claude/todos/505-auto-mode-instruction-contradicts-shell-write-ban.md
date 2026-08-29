@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=8, reconfirm-count=1, content-hash=d405b51e -->
 <!-- duplicate-checked -->
 <!-- Searched backlog + done/ for "auto mode", "shell write", "heredoc", "Set-Content", "BOM".
      Nothing covers the contradiction between the auto-mode preamble and the global write ban. -->

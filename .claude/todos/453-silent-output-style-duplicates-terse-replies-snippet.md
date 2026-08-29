@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-27, complexity=EASY, worth=5, reconfirm-count=1, content-hash=b65f9491 -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=5, reconfirm-count=2, content-hash=b65f9491 -->
 <!-- duplicate-checked -->
 # Silent output style and terse-replies.md now say the same thing in two places
 

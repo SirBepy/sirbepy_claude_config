@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-27, complexity=HARD, worth=5, reconfirm-count=1, content-hash=047933f0 -->
+<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=5, reconfirm-count=2, content-hash=047933f0 -->
 # Let a pure-relay turn end without forcing a visible chat reply
 
 **Type:** skill-improvement

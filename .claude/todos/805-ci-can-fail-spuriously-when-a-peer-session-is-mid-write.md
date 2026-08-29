@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=6, reconfirm-count=1, content-hash=ab781c22 -->
 <!-- duplicate-checked -->
 # ci/run_all.py can report FAIL because a concurrent session was mid-write, with no way to tell
 

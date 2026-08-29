@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=4, reconfirm-count=1, content-hash=233ab586 -->
 <!-- duplicate-checked -->
 # `/commit`'s secret scan fires on self-evidently fake placeholder values
 

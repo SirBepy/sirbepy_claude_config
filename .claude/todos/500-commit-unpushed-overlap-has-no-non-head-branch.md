@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=6, reconfirm-count=1, content-hash=70ffd043 -->
 <!-- duplicate-checked -->
 # `/commit`'s unpushed-overlap check has no branch for a non-HEAD overlap
 

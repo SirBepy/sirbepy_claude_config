@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-27, complexity=EASY, worth=6, reconfirm-count=1, content-hash=32148d0a -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=6, reconfirm-count=2, content-hash=32148d0a -->
 <!-- duplicate-checked -->
 # Nothing stops a subagent writing into .claude/todos/, and one did
 

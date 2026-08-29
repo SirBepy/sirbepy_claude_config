@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=7, reconfirm-count=1, content-hash=8e91a176 -->
 <!-- duplicate-checked -->
 # figma_pixel_diff's --at flag silently drops all but the last point
 

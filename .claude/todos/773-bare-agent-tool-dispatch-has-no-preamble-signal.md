@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=6, reconfirm-count=1, content-hash=6fda3393 -->
 <!-- duplicate-checked -->
 # A bare Agent-tool dispatch with no skill in the loop has zero signal about the preamble guard
 
@@ -25,6 +26,15 @@ This is a different root cause than todos 392/409/373, which are all about a spe
 tool-description (what the harness hands back for `ToolSearch`/the tool list) says nothing about
 `dispatch-preamble-guard.py` at all, so a session with no prior memory of the doctrine has no way to
 know the requirement exists until the first dispatch bounces.
+
+**Reconfirmed 2026-08-27 (zng-app):** same failure, worse repro - a batch of 6 parallel `Agent`
+dispatches (ad-hoc ticket-audit subagents, no skill in the loop) were ALL rejected simultaneously
+by the guard on the first attempt, since none of the 6 prompts carried the preamble. Same
+resolution as before: read `refs/builder-preamble.md` after the rejection, repaste into all 6,
+redispatch clean. Two independent hits now, both first-dispatch-of-session, both an ad-hoc
+`Agent` call with no skill involved - option 3's "only bites the first dispatch" holds so far in
+both cases, but the batch-of-6 shape shows the cost scales with fan-out width, not just a flat
+one-time tax.
 
 ## Approach
 

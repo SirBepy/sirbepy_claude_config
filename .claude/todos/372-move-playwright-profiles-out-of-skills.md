@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-27, complexity=HARD, worth=6, reconfirm-count=2, content-hash=6ded35f0 -->
+<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=6, reconfirm-count=3, content-hash=6ded35f0 -->
 # Move the Clockify Playwright browser profile out of skills/ into per-machine storage
 
 **Type:** task

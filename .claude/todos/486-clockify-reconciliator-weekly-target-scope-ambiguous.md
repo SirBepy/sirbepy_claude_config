@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=6, reconfirm-count=1, content-hash=f75ece05 -->
 <!-- duplicate-checked -->
 # clockify-reconciliator doesn't confirm what a stated hour target covers
 

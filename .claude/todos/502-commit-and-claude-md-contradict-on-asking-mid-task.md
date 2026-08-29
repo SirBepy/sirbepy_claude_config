@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=7, reconfirm-count=1, content-hash=9b2b5790 -->
 <!-- duplicate-checked -->
 # /commit step 8 orders a mid-task question that CLAUDE.md forbids
 
@@ -76,3 +77,14 @@ case than the gate currently covers.
 
 Related: [[474-commit-step-8s-overlap-check-should-be-a-script]] is the mechanical half of the same
 step, and whoever scripts that check will be reading this paragraph anyway.
+
+**Third occurrence, 2026-08-25, `zng-admin`:** two same-session commits (`6d2ba8a` then `0a6dbca`,
+both this session's own, sc-55166 follow-up work) hit a real hunk-level overlap on
+`mask_input_editor.dart`/`biller_masks_section.dart`/`mask_extension.dart` - a follow-up feature
+built directly on the just-committed base, not a fix. `list_peers` confirmed zero other sessions in
+the repo. Proceeded as two separate commits (matches this todo's `commit-style.md` "one purpose per
+commit" reasoning - the two were a distinct base-feature-vs-enhancement split, not a correction),
+disclosed the deviation in the dev-facing report rather than asking beforehand. One more data point
+for the "Carve-out in `/commit`" candidate shape above: the peer-check (already run at step 7a for
+an unrelated reason) is a cheap, mechanical signal for "is anyone else touching this repo" that a
+same-session-sha carve-out could piggyback on, rather than needing a new check.

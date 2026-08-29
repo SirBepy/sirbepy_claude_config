@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=8, reconfirm-count=1, content-hash=46592725 -->
 <!-- duplicate-checked -->
 # `/commit`'s pathspec form silently drops the source half of a `git mv`, and step 8's diff check cannot see it
 

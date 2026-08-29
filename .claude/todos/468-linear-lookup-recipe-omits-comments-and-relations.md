@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-27, complexity=EASY, worth=8, reconfirm-count=1, content-hash=62bfce2f -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=8, reconfirm-count=2, content-hash=62bfce2f -->
 <!-- duplicate-checked -->
 # /linear's lookup-by-ID recipe omits comments and relations, the two fields the rule says to always fetch
 

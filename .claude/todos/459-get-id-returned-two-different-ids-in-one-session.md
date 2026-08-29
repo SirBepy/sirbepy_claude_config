@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=8, reconfirm-count=2, content-hash=a49b179b -->
 <!-- duplicate-checked -->
 # rename-session.ps1 -GetId returned two different ids inside one session
 
@@ -40,6 +41,24 @@ matching path is falling back to the walk under some condition.
 
 Relevant context: this machine runs several concurrent Conductor sessions in the same repo, and this
 session had two live peers, so `sessions/*.json` held multiple entries with the same `cwd`.
+
+## Recurrence 2026-08-27, with a identifiable cause this time
+
+zng-app session `56dd6326-c91a-49fd-8857-74917d59ccaf`. Same signature, and here the mechanism is
+not ambiguous: the session was started in the CLI on 2026-08-26, then **resumed the next day by the
+Conductor app** (`entrypoint` flips from `cli` to `sdk-cli` in the transcript, ~13 hours later).
+The host respawns the process, so the pid and start-ticks change by construction.
+
+- Screenshots were written on 08-26 to `.for_bepy/screenshots/48360-639233675804062390/` (2 PNGs,
+  still there).
+- `/close` Phase 0 on 08-27 resolved **`14432-134322965285327444`**. That folder does not exist.
+
+So the id is not merely racy under concurrency - it is **guaranteed** to change for any session the
+host respawns, which is the normal lifecycle in Conductor, not an edge case. A per-session cached
+id (Approach step 3) keyed on `sessionId` rather than pid would survive this; a pid-derived one
+cannot. Note the two ticks values also use different epochs/widths (`134322965285327444` vs
+`639233675804062390`), worth checking as a second, separate inconsistency in how the suffix is
+produced.
 
 ## Approach
 

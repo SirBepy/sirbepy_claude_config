@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=7, reconfirm-count=1, content-hash=72cea2fd -->
 <!-- duplicate-checked -->
 # The shell-write guard blocks `git show <sha>:<path> > file`, which extracts a blob rather than authoring content
 
