@@ -19,7 +19,11 @@ AWK='
   # suffix only, never by directory, so a hand-written file under generated/ still gets checked.
   if (f ~ /\.(freezed\.dart|g\.dart|pb(enum|json|server)?\.dart|pb\.go)$/ || f ~ /_pb2\.pyi?$/ || f ~ /\.generated\.[^.\/]+$/) next
   l=substr($0,2); add[f]++
-  if (l ~ /^[[:space:]]*(\/\/|\/\*|\*|#[^[!]|#$|--|<!--)/) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
+  # Bare "*" only counts as a comment continuation/close (" * text", " */") - a Rust/C deref
+  # like "*state.foo = x;" has an identifier right after the star, never space/EOL/slash (779).
+  # "--" is gated off for stylesheet extensions, where it is a custom-property leader
+  # ("--bg: #0d0f14;"), not a comment; SQL/Lua/Haskell keep the unrestricted match (779/848).
+  if (l ~ /^[[:space:]]*(\/\/|\/\*|\*([[:space:]]|$|\/)|#[^[!]|#$|<!--)/ || (f !~ /\.(css|scss|less|sass)$/ && l ~ /^[[:space:]]*--/)) { c[f]++; run++; if (run>max[f]) max[f]=run } else run=0
   next
 }
 { run=0 }
