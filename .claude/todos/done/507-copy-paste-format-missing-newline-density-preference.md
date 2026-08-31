@@ -40,3 +40,4 @@ Claude's own prose replies to Joe (those already follow the terse-replies snippe
 Filed from zng-admin (a project session) per CLAUDE.md's rule that global `~/.claude` findings go
 in this repo's own backlog, never the surfacing project's. This session did not edit `~/.claude`
 itself, only filed this todo.
+- Done via /mega-todos batch 4, commit a41ee81: copy-paste-format.md Message length now says a drafted teammate-facing message goes in short lines or short paragraphs separated by blank lines, not one dense paragraph, scoped explicitly to copyable content rather than Claude own replies.

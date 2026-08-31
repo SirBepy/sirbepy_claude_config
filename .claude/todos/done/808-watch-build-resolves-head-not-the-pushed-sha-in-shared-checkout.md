@@ -53,3 +53,4 @@ false `failure` verdict from misreading a `skipped` run; this one is a false `no
 watching the wrong sha entirely. Also related to `797` (positional refs in shared checkouts) and
 `805` (CI flaking on a peer's mid-write) as the same family of "this repo now has concurrent
 sessions and several tools still assume single-session," but none of the three overlap in scope.
+- Done via /mega-todos batch 4, commit 5458526: build-watch.md now has a step 1 that captures the pushed sha with git rev-parse HEAD as the very next call after push succeeds, and the launch command passes -Sha explicitly. Rationale names both risks, hand-typed mistyping and shared-checkout drift. watch-build.ps1 self-heal untouched.

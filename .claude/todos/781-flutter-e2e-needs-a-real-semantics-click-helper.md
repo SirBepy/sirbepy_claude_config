@@ -74,3 +74,15 @@ functions. It needs to:
 Relocated from todo 185 in `c:\Users\tecno\Desktop\Projects\zng-app` via /cleanup-todos 2026-08-25:
 it targets a global skill file, not the project, and per root CLAUDE.md a finding about the global
 `~/.claude` tree belongs in this backlog.
+
+- **Advanced but NOT finished, 2026-08-31, `/mega-todos` batch 4, commit `6dae9c4`.** The doc half is
+  done: `skills/flutter-e2e/SKILL.md` gained a "Check for the project's own harness FIRST" section
+  placed before every code-writing instruction in both Mode A and Mode B. zng-app's `e2e/lib/` is
+  named as the worked example with the exports verified against the real files on disk, and
+  `<flutter-view>` is named as the mount-readiness signal with the `flt-glass-pane` shadow-root trap
+  called out.
+- **Unmet: the last acceptance item is behavioural, not textual.** "A cold session in zng-app reuses
+  `e2e/lib/` instead of writing a fifth copy" can only close on a real trial run in that repo. A doc
+  edit cannot prove it.
+- Next run: the cheapest close is to note the outcome the next time a `/flutter-e2e` run actually
+  happens in zng-app, rather than staging an artificial trial.

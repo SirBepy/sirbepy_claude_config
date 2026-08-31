@@ -60,3 +60,7 @@ render-to-page workaround.
 - A plan with `{"type":"evaluate","js":"(function(){return {a:1};})()"}` prints `evaluate: {"a":1}`.
 - An evaluate returning nothing prints nothing (no `evaluate: undefined` noise).
 - A `/mockup` run can assert a computed style without screenshotting a `<pre>`.
+
+## Notes
+
+- Done via /mega-todos batch 4, commit 1a6b423: screenshot-helper.cjs captures page.evaluate return values and prints them prefixed evaluate: when not undefined, and mockup SKILL.md drops the render-to-pre-and-OCR workaround.

@@ -55,3 +55,4 @@ Worked around manually this session by resolving the file list via `git status -
 instead of the documented command before dispatching the review subagent. That workaround is not
 itself a fix - the documented default is still wrong for the next session that follows it as
 written.
+- Done via /mega-todos batch 4, commit cb9a54e: code-check uncommitted scope and the No-args default now union git diff HEAD with git ls-files --others --exclude-standard. Demonstrated on a real scratch repo: the old command returned empty where the union returned the untracked file.

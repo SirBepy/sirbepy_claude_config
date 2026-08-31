@@ -78,3 +78,16 @@ structural: on a bare `git push` there is no pointer to forget. Prior build-watc
 Do not fix this by deleting the poll-loop habit from prose. The reason it happened is that the
 reusable mechanism was not discoverable from where the session actually was, which is a wiring
 problem, not a discipline problem.
+
+- **Advanced but NOT finished, 2026-08-31, `/mega-todos` batch 4, commit `9105801`.** The trigger
+  sentences in `skills/commit/build-watch.md` now name a bare or direct `git push` alongside the
+  three `/commit` flows, so the doc no longer implies the watcher is reachable only from
+  `/commit push`. The detect step (gh installed, GitHub remote, `.github/workflows/` present) stays
+  the real gate, and the `per_page=1` Reporting discipline section was left alone.
+- **Unmet: the real end-to-end demonstration.** Acceptance wants an actual push to a repo with a
+  workflow, bypassing `/commit push`, with the watcher's real `BUILD_RESULT` output pasted. Pushing
+  was not authorised in the session that did this work, so it was not attempted.
+- **The CLAUDE.md pointer half was deliberately skipped**, and this todo predicted why: `CLAUDE.md`
+  sits at 6556 of a 6558-token ceiling, so there is no room for a one-line pointer without cutting
+  something else. Revisit only if the ceiling moves.
+- Next run: authorise a push, do the live run, paste the marker output, archive.

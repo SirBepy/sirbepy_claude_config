@@ -96,7 +96,7 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 - **Claim rule (non-negotiable): before EXECUTING any todo, claim it via `.claude/todos/.claims/<id>.claim` per the contract - every path, including ad-hoc "do todo 07". Release on completion or abort.**
 - Items needing Joe's physical action (browser login, cloud console, credentials, hardware) have no persistent home - try it yourself first (if the project has any test setup, write and run the test rather than handing off), and only if genuinely blocked, surface it directly in the response instead of writing a file.
 - **A todo belongs in the backlog of the repo it changes.** A finding about the global `~/.claude` tree (a skill, a global rule, a hook, `CLAUDE.md` itself) goes in the `~/.claude` repo's own backlog at `C:\Users\tecno\.claude\.claude\todos\`, NEVER in the surfacing project's `.claude/todos/`. Write it there and move on; do not queue it locally "for later". The path is repo-relative like every other project's, so the Conductor app can see it - there is no `~/.claude/todos/` shortcut, see `close/ai-todos-format.md`.
-- **Never do global `~/.claude` work from inside a project session unless Joe says so in that session.** Spotting the problem, filing the todo in `~/.claude/todos/`, and answering a direct question about it are fine. Editing skills, hooks, or global `CLAUDE.md` from a project repo is not.
+- **Never do global `~/.claude` work from inside a project session unless Joe says so in that session.** Spotting the problem, filing it in `~/.claude`'s own backlog, and answering a direct question about it are fine. Editing skills, hooks, or global `CLAUDE.md` from a project repo is not.
 
 ## .for_bepy Folder
 

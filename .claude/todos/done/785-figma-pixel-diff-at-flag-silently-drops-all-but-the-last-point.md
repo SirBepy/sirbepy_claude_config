@@ -56,3 +56,4 @@ Also noted by 401's builder, and deliberately NOT filed as its own todo since it
 same fix: neither `sample_box` nor either caller validates coordinates against image bounds, so a
 typo like `--at 9999,9999` produces a raw traceback rather than a clear message. Worth folding in
 here if anyone touches this argparse code.
+- Done via /mega-todos batch 4, commit d09a7ce: figma_pixel_diff --at is now action=append, matching design_diff.py, so repeated --at samples every point instead of keeping only the last. Confirmed non-breaking against the only existing caller.

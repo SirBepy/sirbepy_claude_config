@@ -58,3 +58,4 @@ code blocks, and was pushed successfully through the hook endpoint.
 - Size limit is real: the endpoint rejects above ~2MB. A directory of specs plus inlined images
   could exceed it, so the markdown branch should not inline images by default.
 - Related: this is the same panel `/mockup` and the `<cc-preview:SLUG>` chat wrapper target.
+- Done via /mega-todos batch 4, commit 71412ce: /preview renders one or more markdown files or a directory into a single navigable self-contained page with sidebar and anchor nav, pushed through the same POST slug mechanism the HTML path already used. Styling centralised in the new script, images not inlined by default given the endpoint cap.

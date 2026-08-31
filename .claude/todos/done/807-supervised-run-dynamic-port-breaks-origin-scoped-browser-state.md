@@ -58,3 +58,4 @@ the ObsidianVault repo (not this repo - cross-referenced for context only).
   referenced by filename from `782` and moving it would have broken that link. Nothing else in the
   repo referenced this file. An unqualified "do todo 410" was ambiguous while the collision stood,
   which is what `claim-todo.ps1`'s and `complete-todo.ps1`'s `-Slug` disambiguator exists for.
+- Done via /mega-todos batch 4, commit 1bf7254: the supervised-run Port table now flags that an app persisting state in localStorage, sessionStorage or IndexedDB needs a pinned port across restarts, since the port is part of the storage origin key, and documents the wrap-the-entry-command workaround. Extending sv.ps1 with a -Port param was flagged back as optional scope, which Acceptance did not require.

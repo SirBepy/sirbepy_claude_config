@@ -67,3 +67,4 @@ for the assigned-tickets and issues-in-project recipes, which should stay cheap.
 
 The helper itself is fine; this is purely a missing recipe. `Invoke-Linear` handled every one of
 the hand-written queries without a change.
+- Done via /mega-todos batch 4, commit af0e753: the lookup-by-ID recipe now selects comments, relations and inverseRelations alongside the scalar fields, with inverseRelations called out by name as the field carrying blocked-by. The shallow scalar recipe survives as the list/table variant and keeps priorityLabel.
