@@ -43,6 +43,30 @@ close, for exactly the window in which the file is being written.
 `492`'s own test cases cover "a `*-.reserved` marker counts as taken" but not "the reserver's own
 marker does not block its own write", which is why this got through green.
 
+## The mechanism, and why a test is protecting it
+
+Confirmed by an independent `/code-check` reviewer on 2026-08-31 and verified again by hand. Two
+separate things are wrong, and the second one will fight whoever fixes the first.
+
+**1. The exclusion cannot fire for a reservation marker.** `hooks/todo-duplicate-guard.py:181` reads:
+
+```python
+if f.parent == todos_dir and f.name.lower() == target_name:
+    continue
+```
+
+`f.name` for a marker is `850-.reserved`. `target_name` is `850-<slug>.md`. Those strings can never
+be equal, so the in-place-rewrite carve-out never applies to a marker, and every reservation the
+caller just made is treated as a foreign collision.
+
+**2. `hooks/test_todo_duplicate_guard.py:193-196` encodes the bug as the expected behaviour.** The
+case creates `260-.reserved`, writes `260-another-fresh-topic-someone-reserved.md`, and asserts
+**exit 2**, labelled "id already claimed by a `*-.reserved` marker blocks". That is precisely the
+sanctioned reserve-then-write sequence. Anyone who fixes the guard will see that test go red and may
+reasonably conclude they broke something and revert.
+
+So the fix is two files, not one, and the test change is not optional.
+
 ## Approach
 
 1. Reproduce it first, the same way above. It is a two-command reproduction, do not skip it.
@@ -52,9 +76,14 @@ marker does not block its own write", which is why this got through green.
 3. Consider whether the guard should also delete the marker on a successful write, so the caller
    cannot forget step 3. Probably not: the hook is advisory and a PreToolUse hook deleting files is a
    surprising side effect. Decide explicitly and record the reasoning either way.
-4. Add the missing test case to `hooks/test_todo_duplicate_guard.py`: reserving `<id>` then writing
-   `<id>-<slug>.md` passes, while reserving `<id>` then writing `<other-id>-<slug>.md` where
-   `<other-id>` has its own marker still blocks.
+4. **Invert the existing test case at `hooks/test_todo_duplicate_guard.py`:193-196** so it asserts
+   exit 0 for reserve-then-write, and keep a separate case asserting exit 2 for a write whose id
+   collides with a DIFFERENT id's marker. Do not merely add a new case beside the old one; the old
+   one currently states the opposite and both cannot pass.
+5. The invariant to lean on: `reserve-todo-id.ps1` uses an atomic no-overwrite rename, so at most one
+   reservation marker can exist per id at any moment. Any marker sharing `target_id` is therefore
+   provably the caller's own reservation, never a genuine second claimant. That is what makes the
+   carve-out safe rather than a hole.
 
 ## Acceptance
 
