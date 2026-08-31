@@ -76,3 +76,18 @@ scratch tree, reproduce, fix and verify there, then install and re-run `python c
 Do not "fix" this by removing the two backslash cases from the test. They cover a real bug class on
 the only platform this config actually runs on: `.claude/todos/` path matching with a doubled
 `.claude` segment. Skipping them off-platform is fine, deleting them is not.
+
+- **Advanced but NOT finished, 2026-08-31, `/mega-todos` batch 3, commit `1a7005c`.** Option 1 landed:
+  the two Windows-only backslash cases in `hooks/test_todo_duplicate_guard.py` now skip on POSIX via a
+  platform check and print as SKIPPED rather than being silently dropped, and the comment above the
+  `portability-probe` job in `.github/workflows/ci.yml` no longer states the question as open. The
+  cases still execute and pass on Windows.
+- **Unmet: the linked green ubuntu-latest CI run.** That needs a push, and pushing was not authorised
+  in the session that did this work. Nothing else blocks it.
+- Correction to this todo's own text: it says `ci/run_all.py` should discover exactly 11 suites. That
+  number is now stale. The count was 16 when batch 3 started and is **21** after todo `501` added five
+  new guard suites in the same batch. Use the observed number, not 11.
+- The builder also saw `ci/run_all.py` exit 1 mid-run on `test_status_marker_guard.py`. That was a
+  transient: todo `501` was writing that exact file concurrently. The orchestrator's barrier run
+  immediately afterwards was green at 21/21, so there is nothing to chase there.
+- Next run: push, link the green ubuntu run, archive.

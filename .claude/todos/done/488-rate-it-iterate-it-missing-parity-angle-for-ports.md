@@ -29,7 +29,7 @@ cover everything the code it's replacing covered." The gap was caught by the hum
 plain side-by-side diff read, not by any review round.
 
 See zng-app's `project_sentry_noise_filter_web_gap.md` memory and commit `e96525e` for the full
-before/after. The existing angle rotation is `skeptic → steelman → alternative-lens → shippability →
+before/after. The existing angle rotation is `skeptic â†’ steelman â†’ alternative-lens â†’ shippability â†’
 misdiagnosis` (see `~/.claude-personal/skills/iterate-it/SKILL.md` and `rate-it/SKILL.md`'s flaw-hunt
 rules) - none of the five is scoped to "compare against the thing being replaced."
 
@@ -54,3 +54,4 @@ code or explicitly, deliberately dropped with a stated reason - not silently los
 Low-frequency but high-cost when it hits: a review process specifically designed to catch this class
 of thing (multiple rounds, adversarial angles, live testing) still missed a real coverage regression
 because nothing in it was pointed at the comparison. Worth the one-line addition.
+- Done via /mega-todos batch 3, commit 34fe173: rate-it Flaw hunt now carries a standing parity check for ports and replacements, read the old implementation's full behavior and confirm every branch is preserved or deliberately dropped with a reason. Kept as a standing instruction rather than a sixth rotation angle.

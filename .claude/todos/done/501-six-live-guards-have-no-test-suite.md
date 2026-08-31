@@ -69,3 +69,4 @@ Do not edit a guard while it is policing this session. Copy to scratch, test the
 Related: [[382-shortcut-mutation-guard-has-no-test-file]] is the same finding for a seventh guard
 and is already done. [[402-oldest-fresh-marker-import-reads-as-dead-in-three-guards]] is the same
 aliasing/re-export confusion in the other direction.
+- Done via /mega-todos batch 3, commit a983916: five new hook self-test suites (commit-guard, pr-guard, package-manager-guard, schedulewakeup-guard, status-marker-guard) plus a strip_quotes alias-pin case added to the existing test_flutter_workdir_guard.py. ci/run_all.py now reports 21 hook suites, up from 16. The strip_quotes deletion demonstration proved MORE destructive than the todo predicted: dev-backend-guard.py imports the same symbol and fires on every Bash and PowerShell call, so the deletion hard-blocked all shell access before python could start. File restored and proven restored.

@@ -102,3 +102,4 @@ Worth a look at whether the remaining alternatives have the same blind spot now 
 Surfaced from a project session (`claude_usage_in_taskbar`), filed here because the target is the
 global `~/.claude` tree. Not executed there, per global CLAUDE.md's rule about doing global work
 from a project session.
+- Done via /mega-todos batch 3, commit aa4b27c: the awk classifier no longer counts a Rust or C deref line as a comment (bare * now needs a following space, EOL or slash) and no longer counts CSS custom properties (-- gated off for .css/.scss/.less/.sass). Extension-gating was chosen over the space-requirement alternative so SQL, Lua and Haskell keep their no-space -- comments. All four behaviours demonstrated in an isolated test repo. ALSO SATISFIES todo 848, filed independently by a concurrent session for the CSS half.

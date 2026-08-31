@@ -215,7 +215,6 @@ its once-per-session sentinel is a single boolean, not per-file state.
 - [ ] 440 [P] - config-protection guard. Gated on 427's signal.
 - [ ] 441 [P] - `/supervised-run` enforcement
 - [ ] 439 [P] - config-default deep-merge. Gated on 415.
-- [ ] 443 [P] - `/create-pr` body anti-patterns
 - [ ] 428 [P] - repo README, CONTRIBUTING, generated skills index
 - [ ] 432 [P] - local statusline, kill the per-launch npx fetch
 - [ ] 435 [P] - voice profile. **Blocked on Joe supplying real writing samples.**

@@ -106,3 +106,4 @@ global `~/.claude` tree belongs to `~/.claude`'s own backlog.
 The immediate instance was recovered by re-running with an explicit
 `-RepoRoot "C:\Users\tecno\Desktop\Projects\hubbub-game-music-guesser"`, which archived the todo
 correctly. No data was lost.
+- Done via /mega-todos batch 3, commit 0f8a590: complete-todo.ps1 prints its resolved repo root in every message, and the already-completed branch is now a warning stating nothing was moved instead of an info line that read as success. Pattern-level decision recorded in the builder report.

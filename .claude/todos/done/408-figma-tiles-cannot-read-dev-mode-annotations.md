@@ -55,3 +55,4 @@ deep reads are cheap; per-page deep reads are not.
 - Annotation labels arrive as Quill HTML (`<p>`, `<li value="1" data-list="bullet">`, inline styles),
   not plain text or markdown. Rendering them raw is unreadable.
 - The same annotation repeats across sibling frames; dedupe on the label text, not the node id.
+- Done via /mega-todos batch 3, commit 5417385: new skills/figma-tiles/scripts/figma_annotations.py does a batched per-frame depth-10 annotation fetch (batch 5, 6s gap), flattens Quill HTML to markdown and dedupes by label text, reading frame ids from sweep's manifest. SKILL.md documents it and the depth guidance now separates cheap per-frame reads from the per-page ban.

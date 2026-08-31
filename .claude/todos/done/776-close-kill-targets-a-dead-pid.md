@@ -75,3 +75,7 @@ script no-ops. Consider having `-Close` fall back to it, or having `/close` use 
 - `-GetId` returns a pid that is alive, in a session that has survived a prior kill attempt.
 - `-Close` either closes the terminal or reports a clear failure; it never prints a scheduled kill
   for a pid that does not exist.
+
+## Notes
+
+- Done via /mega-todos batch 3, commit 4987253: rename-session.ps1 re-resolves and verifies pid liveness before -GetId returns and before -Close schedules a kill, so -Close fails loudly instead of printing a false success against a dead pid. -GetId's return shape for a healthy session is unchanged, verified against the live session.

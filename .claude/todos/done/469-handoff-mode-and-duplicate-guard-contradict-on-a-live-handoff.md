@@ -64,3 +64,7 @@ is removed so the lane shows one baton. Ambiguous today; the file should just sa
 - The PLAN.md question for a superseded handoff has a stated answer.
 - A cold session given "a live handoff exists for this branch, /handoff was invoked" reaches the
   right action from the file alone, with no adjudication.
+
+## Notes
+
+- Done via /mega-todos batch 3, commit fc86943: the Content-duplicate guard now has a fourth outcome exempting handoffs from fold-in, Handoff mode carries the reciprocal cross-reference and the duplicate-checked marker note, and the superseded-handoff PLAN.md question is settled explicitly.

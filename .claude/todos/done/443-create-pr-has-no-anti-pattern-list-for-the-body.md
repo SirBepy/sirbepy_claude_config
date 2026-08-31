@@ -82,3 +82,4 @@ skim the whole section.
 
 Do not turn this into a PR template. The value is in what gets left out, and a template invites
 filling every heading.
+- Done via /mega-todos batch 3, commit a6f4915: drafting-rules.md gained the PR body anti-pattern list (no file enumeration, no restating commit messages, no tests-pass line) and the manual-only validation-checklist rule, reconciled against the existing diff-scaled word budget.

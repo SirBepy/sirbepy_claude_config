@@ -1,0 +1,73 @@
+<!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- duplicate-checked -->
+<!-- Grepped .claude/todos/ and done/ for reserve-todo-id / id uniqueness / duplicate guard: done/492 is the parent that introduced this, no live match. -->
+# The new id guard rejects the very reservation it tells you to make
+
+**Type:** skill-improvement
+**Origin:** ai
+
+## Goal
+
+Make `hooks/todo-duplicate-guard.py`'s new id-uniqueness check ignore the `<id>-.reserved` marker
+for the id currently being written, so the documented reserve-then-write flow stops being blocked by
+the guard that recommends it.
+
+## Context
+
+Reproduced 2026-08-31, minutes after todo `492` shipped the check, by the `/mega-todos` orchestrator
+that had just archived `492`.
+
+The contract in `skills/close/ai-todos-format.md` is: call `reserve-todo-id.ps1`, which atomically
+writes `.claude/todos/<id>-.reserved` to hold the id, then write the real
+`.claude/todos/<id>-<slug>.md`, then delete the marker. `492` correctly made a `*-.reserved` marker
+count as a taken id, so two concurrent sessions cannot both land on max+1.
+
+It does not exclude the marker for the id being written. So the exact sequence the contract
+prescribes fails on step 2:
+
+```
+> reserve-todo-id.ps1 -RepoRoot C:\Users\tecno\.claude
+Reserved todo id 850 -> .claude\todos\850-.reserved
+> Write .claude/todos/850-hooklib-strip-quotes-deletion-blocks-every-shell-call.md
+[todo-duplicate-guard] Id 850 is already claimed by 850-.reserved. Ids must be unique across
+.claude/todos/, done/, and *-.reserved markers - run `skills/close/reserve-todo-id.ps1 ...`
+to reserve a free one instead of picking by hand.
+```
+
+The advice in the denial is what produced the collision, so following it loops.
+
+The workaround, which is what unblocked this session, is to delete the marker BEFORE writing the real
+file. That is strictly worse than the contract: it reopens the max+1 race the reservation exists to
+close, for exactly the window in which the file is being written.
+
+`492`'s own test cases cover "a `*-.reserved` marker counts as taken" but not "the reserver's own
+marker does not block its own write", which is why this got through green.
+
+## Approach
+
+1. Reproduce it first, the same way above. It is a two-command reproduction, do not skip it.
+2. In the id-uniqueness check, when the colliding entry is a `<id>-.reserved` marker AND the path
+   being written is `<same id>-<slug>.md` in the same backlog directory, allow the write. A marker
+   for a DIFFERENT id, and a real `.md` file for the same id, both still block.
+3. Consider whether the guard should also delete the marker on a successful write, so the caller
+   cannot forget step 3. Probably not: the hook is advisory and a PreToolUse hook deleting files is a
+   surprising side effect. Decide explicitly and record the reasoning either way.
+4. Add the missing test case to `hooks/test_todo_duplicate_guard.py`: reserving `<id>` then writing
+   `<id>-<slug>.md` passes, while reserving `<id>` then writing `<other-id>-<slug>.md` where
+   `<other-id>` has its own marker still blocks.
+
+## Acceptance
+
+- [ ] The reserve-then-write flow from `ai-todos-format.md` completes without a denial
+- [ ] A genuine id collision (real `.md`, or another id's marker) still blocks
+- [ ] An in-place rewrite of an existing todo still passes, no regression on `492`'s cases
+- [ ] The new case is in `hooks/test_todo_duplicate_guard.py` and `python ci/run_all.py` exits 0
+- [ ] The delete-on-write question from step 3 has a recorded answer
+
+## Notes
+
+- Worth 8: it fires on the single most common backlog write path, the denial message actively
+  misleads by recommending the thing that caused it, and the only workaround reopens the race
+  `reserve-todo-id.ps1` exists to close. Cheap to fix.
+- Parent: `done/492-todo-duplicate-guard-checks-content-but-not-id-uniqueness.md`. The check itself is
+  correct and worth keeping; this is a missing carve-out, not a reason to revert it.

@@ -47,3 +47,8 @@ Widen the gate in `skills/create-pr/SKILL.md` step 1. Options, cheapest first:
 
 Prefer 1 plus 3: cheap detection, and an explicit ask when detection is
 ambiguous. Do NOT just add revaire-mobile as a special case; the gap is generic.
+
+
+## Notes
+
+- Done via /mega-todos batch 3, commit b7f93ae: /create-pr resolves the real default branch via gh rather than hardcoding main, and asks when no base was passed and the repo has more than one long-lived branch. No GIT_FLOW.md dependency, no revaire-mobile special case.

@@ -52,3 +52,7 @@ not become a second place they live.
 - A file breaching only the block cap prints the target block length and no `cut N`.
 - A file breaching both prints both.
 - `python ci/run_all.py` green.
+
+## Notes
+
+- Done via /mega-todos batch 3, commit 23d364c: comment-noise.sh prints cut N and a longest-block target alongside the breach. Convergence demonstrated, not just computed: trimming by exactly the printed figure produced a clean re-run.

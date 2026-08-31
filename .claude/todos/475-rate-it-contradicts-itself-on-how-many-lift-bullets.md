@@ -90,3 +90,18 @@ append the outcome to `heal-log.md` marking the entry applied and verified or ap
 
 Two edits, one file, one section, one commit. Do not split them into two commits: a revert of one
 without the other leaves line 107 self-inconsistent again.
+
+- **Advanced but NOT finished, 2026-08-31, `/mega-todos` batch 3, commit `03939bc`.** Both edits
+  landed in one commit as required. The cap contradiction is resolved and verified: `grep -n 'bullets'`
+  now shows "up to 3 bullets" and "Cap at 3 bullets" agreeing, and the eval's cap expectation passed
+  3/3.
+- **The ordering half did not verify.** `python tools/skill_eval.py --skill rate-it --label
+  heal-ordering --parent v0-baseline-f5x3 --only 5 --repeat 3` ran cleanly but returned **15/18
+  (83.3%), verdict incomparable** against the `v0-baseline-f5x3` comparator's 18/18. The ordering
+  expectation specifically passed only 2 of 3 reps: one rep still produced descending order. So
+  moving the ordering sentence to the point of use did NOT reliably change the behaviour.
+- Next run: this is a real signal, not eval noise, since the cap expectation in the same run passed
+  3/3. Either the ordering instruction needs to be stated more forcefully at the point of use, or the
+  canonical line further down is what the model actually follows and the move-to-point-of-use theory
+  is wrong. Re-run with more reps before changing anything, then decide. Do not archive this on the
+  cap fix alone; the ordering item is the half that was failing in practice.

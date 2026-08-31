@@ -14,7 +14,7 @@ so skipping `reserve-todo-id.ps1` fails loudly instead of producing two files wi
 ## Context
 
 Happened 2026-08-22, in this backlog. A session filed two todos by hand-picking ids from a
-`ls | tail` of the directory. That listing is ALPHABETICAL, so `479-…` sorted last among the 4xx
+`ls | tail` of the directory. That listing is ALPHABETICAL, so `479-â€¦` sorted last among the 4xx
 files while ids up to 490 already existed. Result: `481-skill-name-hook-fires-on-relayed-peer-text.md`
 was written alongside the pre-existing `481-nothing-checks-a-todo-is-in-the-repo-it-changes.md`.
 Two files, one id. Caught only because `mv`-ing a sibling into `done/` made the collision visible in
@@ -42,7 +42,7 @@ requiring a disambiguator, and "do todo 481" stops meaning anything.
 2. Add an id-uniqueness check on the same hook: parse the numeric prefix of the file being written,
    scan `.claude/todos/*.md`, `done/*.md` and `*-.reserved` in the destination repo, and block on a
    match that is not the same file being edited in place. In-place rewrites must stay allowed -
-   this session legitimately rewrote `684-…` and `481-…` and neither should have been blocked.
+   this session legitimately rewrote `684-â€¦` and `481-â€¦` and neither should have been blocked.
 3. Make the failure message name the colliding file and tell the writer to run
    `reserve-todo-id.ps1 -RepoRoot <root>`, so the fix is one command rather than a hunt.
 4. Add test cases to `hooks/test_todo_duplicate_guard.py`: new file with a free id passes; new file
@@ -59,9 +59,10 @@ requiring a disambiguator, and "do todo 481" stops meaning anything.
 ## Notes
 
 Cleanup owed from the incident: `481-skill-name-hook-fires-on-relayed-peer-text.md` was renamed to
-`491-…` by hand once spotted, so this backlog is currently consistent. Verify that before assuming
+`491-â€¦` by hand once spotted, so this backlog is currently consistent. Verify that before assuming
 otherwise.
 
 Related, same root: nothing enforces the reserve step at the point of writing, only at the point of
 reading the doc. Fixing the guard is the cheap half; if a stronger fix is wanted later, the writer
 skills could call `reserve-todo-id.ps1` themselves rather than instructing the model to.
+- Done via /mega-todos batch 3, commit 2266f40: todo-duplicate-guard now denies a colliding numeric id, scanning the backlog, done/ and reserved markers, while still allowing an in-place rewrite. Not hypothetical: two files shared id 780 in this backlog earlier the same day.
