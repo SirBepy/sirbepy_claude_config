@@ -82,9 +82,17 @@ For a single-day lookback (`today`, `yesterday`, or an explicit single `YYYY-MM-
 - **Reconstruction**: the window has zero or sparse existing entries and the dev's ask implies
   building the period from scratch (e.g. "I haven't logged anything this week", "rebuild my week", a
   stated hour target to fill toward). This is the dev's primary way of running this skill as of
-  2026-08-21 - no confirmation gate. Go straight to reading `skills/clockify-reconciliator/modes.md`'s
-  "Reconstruction mode" section for the full procedure; the step 9 apply/some/cancel gate is still the
-  approval checkpoint before anything is written.
+  2026-08-21 - no confirmation gate to enter Reconstruction mode itself. If the trigger includes a
+  stated hour target, confirm its scope via AskUserQuestion before building anything toward it -
+  before reading `modes.md`'s procedure, before any proposal table exists: does the target include
+  already-existing entries in the window, or is it additional-only; and does the target's window match
+  the reconciliation window exactly (does "this week" include today, or stop at yesterday). Skipping
+  this is what produced the 2026-08-22 overshoot-then-redo (dev meant existing-inclusive plus a
+  Saturday reserve; the run built additional-only Mon-Fri and had to be redone after presenting).
+  `modes.md`'s Reconstruction section carries the standing hard rule this backs. Once scope is
+  confirmed (or no target was stated), go straight to reading
+  `skills/clockify-reconciliator/modes.md`'s "Reconstruction mode" section for the full procedure; the
+  step 9 apply/some/cancel gate is still the approval checkpoint before anything is written.
 - **Audit**: the dev explicitly asks to check/fix a period that already has entries (e.g. "check the
   whole month", "audit July"). Requires one AskUserQuestion confirming the override of the "never
   touch existing / never create in gaps" defaults, scoped to this session only, then read
@@ -213,7 +221,10 @@ Build, in this order:
 
 1. **Day-summary table** (always, every host): `Day | Existing | New | Total` hours, one row per day
    in the window. Show this above the per-block breakdown table from step 9 - the dev sees the
-   headline numbers before the detail.
+   headline numbers before the detail. **Re-sum every total in this row from the actual block
+   durations at presentation time, never carry over an earlier estimate** - a stale subtotal reaching
+   the dev is the same failure whether it's the target math or one day's arithmetic (2026-08-22: 8h
+   stated vs 10.5h actual for a single day).
 2. **The week calendar** (Claude Conductor sessions only, best-effort). One self-contained HTML
    document, pushed with the `show_preview` MCP tool: `{ slug: "clockify-week", html, title }`. The
    card renders inline in the chat, and re-pushing the same slug replaces it in place, so the step 9

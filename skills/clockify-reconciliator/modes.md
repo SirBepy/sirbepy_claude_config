@@ -26,7 +26,9 @@ Reconciliation mode stays `PUT`/description-only, never creates).
 
 **Hard rule:** never invent hours not backed by a real commit/PR or an explicitly named real activity
 - a weekly target the dev states is a ceiling to fill toward from real evidence, never a target that
-justifies inventing unbacked hours (see SKILL.md's Rules section).
+justifies inventing unbacked hours (see SKILL.md's Rules section). SKILL.md's step 3a confirms the
+target's scope (existing-inclusive vs additional-only, exact window) before this mode is ever reached
+- never re-derive that confirmation here or assume it from context.
 
 ## Audit mode
 
