@@ -1,6 +1,6 @@
 # disk-doctor — Windows platform file
 
-Repeatable cleanup scan for Joe's PC (win32, Windows 11). You **advise**, never delete. Joe runs the delete commands. You may run the read-only **scan** commands yourself; you never run `Remove-Item` / `Clear-RecycleBin` / `cleanmgr` / `docker prune`.
+Repeatable cleanup scan for Joe's PC (win32, Windows 11). You may run the read-only **scan** commands yourself. You may also run a delete/uninstall command (`Remove-Item`, `Clear-RecycleBin`, `cleanmgr`, `docker prune`, an uninstaller, etc.) yourself, but ONLY per the delete-confirmation gate in `gate.md` (in this skill folder) - never on a bare chat "yes"/"go ahead", and never a standing grant covering future items. NEVER-TOUCH items below are never offered as delete options, no approval overrides that.
 
 ## Sizing helper (robocopy, not Get-ChildItem -Recurse)
 
@@ -135,7 +135,7 @@ Hard cap: 3 dirs max regardless of how many exceed the threshold.
 - Prefer the **native/owner cleanup** over raw deletes: `docker system prune` for Docker, `cleanmgr`/Storage Sense for Windows Update leftovers / Windows.old / Delivery Optimization, `npm cache clean --force` / `pnpm store prune` for package caches. Never raw-`Remove-Item` inside `C:\Windows\*`.
 - Flag slow-to-restore items - confirm live project targets before swinging (e.g. node_modules in an active repo).
 - Never suggest anything in NEVER-TOUCH below.
-- Offer to write commands; Joe runs them. You never run the delete.
+- To actually run a delete/uninstall, go through the delete-confirmation gate in `gate.md` first - one `ask_user_question` per item, approved before that item's command runs. Joe may still run any command himself instead, at any time.
 - Delete/uninstall commands report success only after independent verification, never on the command's own exit code.
 - After uninstalling an app, check `%APPDATA%\<App>`, `%LOCALAPPDATA%\<App>`, and `C:\ProgramData\<App>` for leftover data before considering the uninstall complete - uninstallers don't clear these by design.
 
@@ -147,6 +147,7 @@ At END of scan, propose any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SC
 
 ## NEVER-TOUCH (Joe's machine)
 
+- `D:\` (whole drive) - out of scope for routine scans; never scan or size anything under D: unless Joe explicitly asks for it in that session (2026-08-29: an unprompted D: scan surfaced unwanted findings).
 - `~/.claude/` - config, skills, memory.
 - `~/.ssh/` + any `*.jks` / `*.pem` / `*.key` keystores - signing & SSH keys.
 - `~/fvm` (~13G) - active Flutter toolchains, not junk.
