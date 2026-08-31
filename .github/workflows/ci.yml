@@ -21,8 +21,9 @@ jobs:
           python-version: '3.14'
       - run: python ci/run_all.py
 
-  # Answers "are the hook tests portable?" empirically without ever blocking a
-  # merge. The 13 suites were only ever run on Windows before 2026-08-20.
+  # Answered "are the hook tests portable?" empirically (todo 454): yes, once
+  # the two Windows-only backslash-path cases in test_todo_duplicate_guard.py
+  # skip on POSIX. Kept running here as a standing rot-detection signal.
   portability-probe:
     runs-on: ubuntu-latest
     continue-on-error: true

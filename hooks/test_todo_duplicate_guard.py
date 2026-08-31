@@ -5,6 +5,7 @@ Exits 0 on all-pass, 1 on any failure, printing a PASS/FAIL line per case.
 """
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -16,21 +17,27 @@ _HOOKS_DIR = Path(__file__).resolve().parent
 _GUARD_PATH = _HOOKS_DIR / "todo-duplicate-guard.py"
 guard = _testlib.load_module("todo_duplicate_guard", _GUARD_PATH)
 
-# (file_path, expect_dir_or_None, label)
+# (file_path, expect_dir_or_None, label, windows_only)
+# The two windows_only cases assert on backslash paths that are only
+# path-like on Windows; on POSIX a backslash is a literal filename byte,
+# so they are skipped there rather than failed (todo 454).
 PATH_CASES = [
-    (r"C:\Users\tecno\.claude\.claude\todos\363-x.md", True, "real double-.claude absolute path"),
-    (".claude/todos/363-x.md", True, "relative forward-slash path"),
-    (".claude\\todos\\363-x.md", True, "relative backslash path"),
-    (r"C:\Users\tecno\.claude\.claude\todos\done\307-x.md", False, "done/ subfolder is not a new-write target"),
-    (r"C:\Users\tecno\.claude\.claude\todos\.claims\363-x.claim", False, ".claims/ subfolder excluded"),
-    (r"C:\Users\tecno\.claude\.claude\todos\PLAN.md", False, "filename without digit prefix"),
-    (r"C:\Users\tecno\.claude\skills\close\ai-todos-format.md", False, "unrelated skill file"),
-    ("", False, "empty path"),
+    (r"C:\Users\tecno\.claude\.claude\todos\363-x.md", True, "real double-.claude absolute path", True),
+    (".claude/todos/363-x.md", True, "relative forward-slash path", False),
+    (".claude\\todos\\363-x.md", True, "relative backslash path", True),
+    (r"C:\Users\tecno\.claude\.claude\todos\done\307-x.md", False, "done/ subfolder is not a new-write target", False),
+    (r"C:\Users\tecno\.claude\.claude\todos\.claims\363-x.claim", False, ".claims/ subfolder excluded", False),
+    (r"C:\Users\tecno\.claude\.claude\todos\PLAN.md", False, "filename without digit prefix", False),
+    (r"C:\Users\tecno\.claude\skills\close\ai-todos-format.md", False, "unrelated skill file", False),
+    ("", False, "empty path", False),
 ]
 
 
 def check_path(case) -> bool:
-    file_path, expect_match, label = case
+    file_path, expect_match, label, windows_only = case
+    if windows_only and os.name != "nt":
+        print(f"[SKIP] path: {label}: {file_path!r} (Windows-only backslash path)")
+        return True
     got = guard.todos_target_dir(file_path)
     ok = (got is not None) == expect_match
     print(f"[{'PASS' if ok else 'FAIL'}] path: {label}: {file_path!r} -> {got}")
