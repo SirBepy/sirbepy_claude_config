@@ -1,7 +1,7 @@
 ---
 name: preview
-description: Triggers on /preview only. Pushes a static HTML mockup into Claude Conductor's in-app preview panel via its localhost hook endpoint, replacing the localhost-server + browser-tab flow for static HTML previews.
-argument-hint: "<file.html | inline html> [--slug <name>] [--title <text>]"
+description: Triggers on /preview only. Pushes a static HTML mockup, or one or more markdown files/a directory rendered into a single navigable page, into Claude Conductor's in-app preview panel via its localhost hook endpoint, replacing the localhost-server + browser-tab flow for static HTML and markdown previews.
+argument-hint: "<file.html | file.md... | dir | inline html> [--slug <name>] [--title <text>]"
 ---
 
 # /preview
@@ -10,14 +10,15 @@ argument-hint: "<file.html | inline html> [--slug <name>] [--title <text>]"
 
 ## When to use
 
-Manual trigger only, `/preview <file-or-html>`. For a STATIC HTML mockup (no build step, no framework) that the dev just wants to look at. Not a replacement for `/supervised-run` when the preview needs a real dev server (Vite, Flutter web, etc.) - this is for the plain-HTML case `/mockup`'s standalone-file branch and ad-hoc scratch HTML already produce.
+Manual trigger only, `/preview <file-or-html>`. For a STATIC HTML mockup (no build step, no framework) that the dev just wants to look at, OR for one or more markdown files (a plan, a spec, a directory of both) that the dev wants to read as a rendered page instead of opening in an editor. Not a replacement for `/supervised-run` when the preview needs a real dev server (Vite, Flutter web, etc.) - this is for the plain-HTML case `/mockup`'s standalone-file branch and ad-hoc scratch HTML already produce.
 
 ## Input
 
 - **File path** (typical): an existing `.html` file, e.g. one just written to `.for_bepy/mockups/`.
+- **Markdown path(s) or a directory**: one or more `.md` files, or a directory containing them (e.g. a plan plus its specs). Render first (see the markdown branch in Steps), then push the result exactly like an HTML file.
 - **Inline HTML**: raw markup passed directly as the argument, for a quick one-off with no file.
-- `--slug <name>` (optional): stable id for the entry. Default: derive from the filename (lowercase, non-alphanumeric -> `-`), e.g. `mockup-ring-preview.html` -> `mockup-ring-preview`. Inline HTML with no slug given gets a short generated one - ask the dev for a slug if they'll likely iterate on it (see below).
-- `--title <text>` (optional): default is the filename, or a short label for inline HTML.
+- `--slug <name>` (optional): stable id for the entry. Default: derive from the filename (lowercase, non-alphanumeric -> `-`), e.g. `mockup-ring-preview.html` -> `mockup-ring-preview`. Inline HTML with no slug given gets a short generated one - ask the dev for a slug if they'll likely iterate on it (see below). For markdown input, default slug derives the same way from the first path (file stem, or directory name).
+- `--title <text>` (optional): default is the filename, or a short label for inline HTML. For markdown input, default is the first path's stem/directory name.
 
 ## The iterate-in-place convention (the whole point)
 
@@ -25,9 +26,21 @@ Manual trigger only, `/preview <file-or-html>`. For a STATIC HTML mockup (no bui
 
 Because the default slug is derived deterministically from the filename, just re-running `/preview <same-file>` after an edit already does the right thing with no flags needed.
 
+## Markdown branch
+
+When the input is one or more `.md` paths, or a directory of them, render first, then fall through to the same HTML steps below - there is no second delivery path.
+
+1. Run the renderer to produce one self-contained HTML file: a sidebar listing each input document plus an anchor nav of that document's own headings, tables/code blocks/nested lists/links rendered, styling centralised in the script (never per-session).
+   ```powershell
+   python "C:\Users\tecno\.claude\skills\preview\render_markdown.py" <path.md> [<path2.md> ...] [--title "<text>"] [--out "<out.html>"]
+   ```
+   It prints the HTML file's path on success. Directories are expanded to their `.md` files automatically (recursive, sorted). Images are never inlined - the hook endpoint's ~2MB cap (step 4 below) makes that the wrong default, so a plan referencing local images keeps plain `<img>` links, not base64 data.
+2. Re-running on the same input set produces the same default `--out` path and the same default slug (derived from the first path), so it refreshes the existing panel entry per the iterate-in-place convention below, not a new one.
+3. Take the printed HTML path and continue at step 1 of the HTML steps below exactly as if it were a hand-written mockup file - same POST, same slug/title flags, same response handling.
+
 ## Steps
 
-1. Read the HTML (from the file, or use the inline text given).
+1. Read the HTML (from the file, or use the inline text given - for markdown input this is the file the markdown branch just produced).
 2. POST it to Conductor's hook endpoint, including `session_id` from the `$CLAUDE_CODE_SESSION_ID` env var (always set inside a Conductor-hosted terminal session). This is required, not optional - the panel scopes previews to the chat that pushed them (Joe, 2026-07-20: previews must only show up in the chat that pushed them, not globally). Omitting `session_id` means the push will never be visible in any chat's panel.
 
    `POST http://127.0.0.1:27182/hooks/preview`
