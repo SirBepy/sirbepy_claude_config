@@ -21,6 +21,8 @@ Override: set CLAUDE_PR_HOOK_BYPASS=1 to bypass if /create-pr is broken.
 
 import os
 import shlex
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -39,17 +41,22 @@ MARKER_GLOB = ".pr-marker*"
 OVERRIDE_ENV = "CLAUDE_PR_HOOK_BYPASS"
 MUTATING_ACTIONS = {"create", "edit"}
 
+# Every GitHub account the dev pushes under; gh-account-switch.sh picks one per
+# repo remote, so an edit can arrive authenticated as any of them.
+OWNER_LOGINS = {"josipmuzic", "JosipMuzicZirtue", "JosipMuzicFibo", "SirBepy"}
+
 # Flags that consume a separate following token as their value, e.g.
 # `gh --repo owner/name pr create ...`.
 VALUE_FLAGS = {"-R", "--repo", "--hostname"}
 
 
-def gh_pr_action(command: str) -> str | None:
-    """Return the `gh pr <action>` word if `command` invokes one, else None.
+def gh_pr_action(command: str) -> tuple[str, str | None] | None:
+    """Return `(action, target)` if `command` invokes `gh pr <action>`, else None.
 
     Token-based: walks past global flags (skipping their values for flags
     like -R) to find "pr", then past pr's own flags to find the action word,
-    so quoted text or paths containing "pr create" never match.
+    so quoted text or paths containing "pr create" never match. `target` is
+    the positional after the action (PR number/URL/branch), None if absent.
     """
     try:
         tokens = shlex.split(command, posix=True)
@@ -71,22 +78,72 @@ def gh_pr_action(command: str) -> str | None:
             while k < len(tokens) and tokens[k].startswith("-"):
                 k += 1
             if k < len(tokens):
-                return tokens[k]
+                target = tokens[k + 1] if k + 1 < len(tokens) and not tokens[k + 1].startswith("-") else None
+                return tokens[k], target
     return None
+
+
+def cd_target(command: str) -> str | None:
+    """Return the path from a leading `cd <path>` in `command`, if any."""
+    try:
+        tokens = shlex.split(command, posix=True)
+    except ValueError:
+        return None
+    for i, tok in enumerate(tokens):
+        if tok == "cd" and i + 1 < len(tokens) and not tokens[i + 1].startswith("-"):
+            return tokens[i + 1]
+    return None
+
+
+def pr_is_owned(target: str | None, cwd: str | None, command: str) -> bool:
+    """True when the PR `target` names was opened by one of OWNER_LOGINS.
+
+    Editing the dev's own PR (retitle, add a Fixes line, fix a sentence a
+    reviewer flagged) is not what /create-pr's body gate exists to police.
+    Anything unprovable - lookup fails, no auth, someone else's PR - is False,
+    so the marker requirement still applies.
+    """
+    # gh ships as a shim CreateProcess won't find on PATH alone, and the payload
+    # does not always carry cwd, so resolve both rather than assuming either.
+    gh = shutil.which("gh") or shutil.which("gh.exe")
+    if not gh:
+        return False
+    args = [gh, "pr", "view", "--json", "author", "--jq", ".author.login"]
+    if target:
+        args.insert(3, target)
+    for candidate in (cwd, cd_target(command), os.getcwd()):
+        if not candidate or not os.path.isdir(candidate):
+            continue
+        try:
+            out = subprocess.run(
+                args, cwd=candidate, capture_output=True, text=True, timeout=20
+            )
+        except Exception:
+            continue
+        if out.returncode == 0 and out.stdout.strip() in OWNER_LOGINS:
+            return True
+    return False
 
 
 def main() -> None:
     payload = read_payload()
     command = (payload.get("tool_input") or {}).get("command", "") or ""
 
-    action = gh_pr_action(command)
+    parsed = gh_pr_action(command)
+    action, target = parsed if parsed else (None, None)
     if action not in MUTATING_ACTIONS:
         sys.exit(0)
 
     if os.environ.get(OVERRIDE_ENV):
         sys.exit(0)
 
+    # Marker check first: it is a local mtime read, while pr_is_owned() spends up
+    # to 20s per candidate cwd on a `gh pr view`. A /create-pr edit already has a
+    # marker, so the common path must never pay that.
     if consume_fresh_marker(MARKER_DIR, MARKER_GLOB, FRESHNESS_SECONDS):
+        sys.exit(0)
+
+    if action == "edit" and pr_is_owned(target, payload.get("cwd"), command):
         sys.exit(0)
 
     deny(
