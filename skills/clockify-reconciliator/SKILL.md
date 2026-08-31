@@ -123,6 +123,15 @@ window. A first fetch after a date-window change can return an unrelated past wi
 response, HTTP 200). If any entry is outside the window, re-fetch once before trusting the result -
 never build a plan, or report "nothing to reconcile", off a stale response.
 
+- The time-entries LIST endpoint's `end` query param is exclusive: an entry whose
+  `timeInterval.end` equals the query's `end` is silently dropped from the response, a normal 200
+  with no error (not reproduced against other Clockify endpoints, so this is scoped to the list
+  fetch only). Whenever a fetch is verifying a specific entry rather than reading a bounded window,
+  pad `end` past the window actually needed (next midnight, or the following day) instead of the
+  exact boundary time. If a verification fetch still appears to be missing a just-created or
+  just-edited entry, fetch that id directly (`GET .../time-entries/{id}`) before concluding
+  anything is wrong.
+
 ### 4a. Memory check
 
 Before identifying targets, read `feedback_clockify_*.md` memory files for the resolved project and
