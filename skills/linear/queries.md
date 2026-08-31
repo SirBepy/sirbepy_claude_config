@@ -4,9 +4,37 @@ Ready-made GraphQL recipes for the `/linear` skill. Paste the `Invoke-Linear` he
 
 ## Primitives
 
-### Look up ticket by ID (e.g. MOB-123)
+### Look up ticket by ID (e.g. MOB-123) - full context
 
-Linear accepts team-prefixed IDs like `MOB-123` directly in `issue(id:)`. Pass the id as a variable:
+Linear accepts team-prefixed IDs like `MOB-123` directly in `issue(id:)`. A description can be years
+stale while the live decision sits in a comment or a relation, so this recipe fetches everything in
+one query: `description`, `priorityLabel`, `state`, `assignee`, `creator`, `project`, `labels`,
+`parent`, `children`, `attachments`, `comments`, `relations` and `inverseRelations`.
+
+**`inverseRelations` is the field most likely to be dropped from a hand-written query, and it's the
+one that carries "blocked by"** - don't skip it.
+
+```powershell
+(Invoke-Linear -Query 'query($id:String!){ issue(id:$id){
+    identifier title description url priorityLabel
+    state{name} assignee{name} creator{name} project{name}
+    labels{nodes{name}}
+    parent{identifier title}
+    children{nodes{identifier title state{name}}}
+    attachments{nodes{title url}}
+    comments{nodes{createdAt user{name} body}}
+    relations{nodes{type relatedIssue{identifier title state{name} assignee{name}}}}
+    inverseRelations{nodes{type issue{identifier title state{name} assignee{name}}}}
+} }' -Variables @{ id = "MOB-123" }).issue
+```
+
+A description alone is not an answer - read `comments` newest-first before reporting what a ticket
+says; the live decision is often in the most recent comment, not the description.
+
+### Look up ticket by ID - shallow (list/table variant)
+
+Same shape as the assigned-tickets and issues-in-project recipes below - scalar fields only, no
+comments or relations. Use this for a cheap lookup when full context isn't needed.
 
 ```powershell
 (Invoke-Linear -Query 'query($id:String!){ issue(id:$id){ identifier title description state{name} assignee{name} priorityLabel labels{nodes{name}} url } }' `
