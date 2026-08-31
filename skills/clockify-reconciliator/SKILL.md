@@ -44,6 +44,8 @@ weekly_target_hours: 30  # optional - drives the target bar in step 9a. Omit and
 meeting_keywords: [standup, sync, planning, retro, grooming, "1:1", call]  # optional, this is the default list
 hubstaff_org_id: <id>       # optional - enables HubStaff comparison step
 hubstaff_user_id: <id>      # required if hubstaff_org_id is set - interpolated into the HubStaff URLs/filters
+hubstaff_project_label: <label>  # optional - HubStaff project name for hs_addtime.cjs's --project-label
+hubstaff_reason_label: <label>   # optional - HubStaff reason for hs_addtime.cjs's --reason-label, default "Forgot to start/stop timer"
 ```
 
 ## Steps
