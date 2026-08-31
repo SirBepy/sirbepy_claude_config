@@ -44,6 +44,7 @@ Keep responses tight enough to read in one pass without scrolling:
 - No closing summaries that restate what was just said.
 
 If the task genuinely requires a long response (a full file, a long command), that is fine - strip all prose padding around it.
+- A drafted teammate-facing message (the kind placed in a blockquote for Joe to copy and paste, e.g. a Slack message) should read as short lines or short paragraphs separated by blank lines, not one dense paragraph, even when it already fits the 2-4 sentence cap above. Scoped only to that copyable message content - it does not govern Claude's own prose replies to Joe, which `snippets/terse-replies.md` already covers.
 
 ## Windows path escaping gotcha
 
