@@ -38,6 +38,7 @@ tokens. Never hardcode a token in a script or commit one.
      --png <node.png> --at 120,48 --radius 2
    ```
    `--radius` averages a small square instead of one pixel, useful on anti-aliased edges.
+   Repeat `--at` for multiple points (`--at 120,48 --at 4,1`); each becomes its own result.
 
 3. **Crop a region** to inspect closely or hand to another tool:
    ```

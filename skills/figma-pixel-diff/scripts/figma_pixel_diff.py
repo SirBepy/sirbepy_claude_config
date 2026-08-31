@@ -134,7 +134,7 @@ def main():
 
     s = sub.add_parser("sample", help="Sample pixel color(s) in a PNG")
     s.add_argument("--png", required=True)
-    s.add_argument("--at", nargs="+", required=True, help='One or more "x,y" points')
+    s.add_argument("--at", action="append", required=True, help='"x,y" point, repeatable')
     s.add_argument("--radius", type=int, default=0, help="Average over a square of this radius")
     s.set_defaults(func=cmd_sample)
 
