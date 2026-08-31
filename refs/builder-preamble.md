@@ -13,6 +13,12 @@ Never run `git stash`, `git reset`, or `git checkout` on paths you don't own - o
 uncommitted work shares this tree. To compare against clean state, use `git show HEAD:<file>`.
 Stage changed files by name, never `git add -A`.
 
+Taking a baseline (pnpm audit, test counts, bundle size, a test proven RED against the pre-edit
+file): take it FIRST, before you edit anything - default, costs nothing, needs no git surgery. Only
+if you're already mid-edit and genuinely need a clean tree, use `git worktree add` to a scratch
+path instead - never a stash or reset on the shared tree. A baseline is taken before you edit,
+never recovered by rewinding a shared tree.
+
 Clean up only the exact files you created, by exact name, never by glob or wildcard: never touch
 `hooks/.commit-marker-*` (the guard consumes those itself) or `hooks/.session-markers/` (a live
 session's commit depends on it).
