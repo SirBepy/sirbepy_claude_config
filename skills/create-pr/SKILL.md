@@ -36,7 +36,23 @@ per the global subagent-model rule; never inherit.
 
 1. **Preconditions (main agent, cheap - single-line outputs only).**
    - Refuse if on `main`/`master` - PRs come off a feature branch.
-   - Base = first positional arg, else `main`.
+   - **Base branch.** If a positional arg was passed, use it - done. Otherwise
+     never hardcode `main`: detect the repo's real default branch via
+     `gh repo view --json defaultBranchRef --jq .defaultBranchRef.name`
+     (verified working in PowerShell for a simple, space-free `--jq`
+     expression like this one; if a future edit grows the expression and hits
+     PowerShell's word-splitting on quoted `--jq` args - `gh` dying with
+     "accepts 1 arg(s)" - pipe to `ConvertFrom-Json` and read
+     `.defaultBranchRef.name` off the object instead). Then check the remote
+     for other long-lived candidates (`git branch -r` filtered to `main`,
+     `master`, `develop`, `dev`, `trunk`, `release`, `staging`, excluding
+     whichever one `gh` just returned). If more than one candidate branch
+     exists, the right base is ambiguous - do not silently default to the
+     detected branch either: ask the dev via `AskUserQuestion`, listing the
+     detected default plus each other candidate as options. This check runs
+     unconditionally, regardless of whether any doc file exists and regardless
+     of which repo this is - it must never depend on a root `GIT_FLOW.md`
+     being present and must never special-case a repo by name.
    - Require `gh` (`gh --version`) and a GitHub remote (`gh repo view`). If
      either is missing, say so and stop.
    - Check whether a PR already exists for this branch (`gh pr view`) - just
