@@ -79,4 +79,6 @@ python skills/figma-tiles/scripts/figma_tiles.py comments --file-key <url-or-key
 ## After tiles exist
 
 Fan subagents out over the tile files for screen-by-screen review, one subagent per tile or small
-batch - do not paste every tile inline into one context window.
+batch - do not paste every tile inline into one context window. Paste the canonical preamble from
+`refs/builder-preamble.md` into each dispatch prompt (it's read-only, so the `READ-ONLY DISPATCH`
+opt-out applies) - `hooks/dispatch-preamble-guard.py` rejects a prompt missing its markers.

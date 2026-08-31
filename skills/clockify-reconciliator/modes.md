@@ -53,4 +53,6 @@ pass told to look for systemic issues (overlaps, cross-day inconsistency, "does 
 reverse-engineered") rather than re-litigate individual entries already checked. Give every subagent
 the live API key/workspace/project ids inline and tell it explicitly whether it has write access or is
 report-only - each one re-pulls data itself rather than trusting a prior agent's summary. Follow the
-global sonnet-by-default / opus-only-for-final-solo-verify model rule.
+global sonnet-by-default / opus-only-for-final-solo-verify model rule. Paste the canonical preamble
+from `refs/builder-preamble.md` into every subagent's dispatch prompt - `hooks/dispatch-preamble-guard.py`
+rejects a prompt missing its markers.

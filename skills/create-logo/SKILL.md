@@ -56,7 +56,7 @@ Across the set, vary density, symmetry vs intentional asymmetry, and visual weig
 - Wordmark text: system fonts with generic fallback (`Helvetica, Arial, sans-serif`) or converted to paths
 - Each concept gets a 1-line rationale tying the form to the product concept
 
-**Generation:** write the SVGs inline (they are small). Fan out subagents only for a big batch request (5+ new directions at once), and then per global rules: `model: 'sonnet'`, full conventions + brief in every prompt, no commits.
+**Generation:** write the SVGs inline (they are small). Fan out subagents only for a big batch request (5+ new directions at once), and then per global rules: `model: 'sonnet'`, full conventions + brief in every prompt, no commits. Paste the canonical preamble from `refs/builder-preamble.md` into the dispatch prompt - `hooks/dispatch-preamble-guard.py` rejects a prompt missing its markers.
 
 **Raster assist:** when a concept needs pictorial elements SVG hand-authoring does badly (hands, mascots, faces, organic or painterly forms), use the `generate` skill (Cloudflare FLUX by default, Pollinations only as a last resort) to produce raster concepts or trace references instead of drawing blind.
 

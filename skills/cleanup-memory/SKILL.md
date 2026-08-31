@@ -78,7 +78,10 @@ rotates through each run. After a file's deep pass, touch it (e.g. a trivial no-
 the back of the queue next run.
 
 **Deep pass (up to 60):** dispatch exactly ONE subagent (`model: 'sonnet'`), full text of each
-memory in one prompt. For each memory, it verifies:
+memory in one prompt. Paste the canonical preamble from `refs/builder-preamble.md` into the
+dispatch prompt (it's read-only, so the `READ-ONLY DISPATCH` opt-out applies) -
+`hooks/dispatch-preamble-guard.py` rejects a prompt missing its markers. For each memory, it
+verifies:
 
 - Every concrete claim that names a file path, function, command, or flag: does it still exist
   in the current codebase (grep/glob check)? Same discipline as this file's own "Before
@@ -126,7 +129,10 @@ No further per-item prompting after this reply, regardless of branch taken.
 
 ## Step 5.5 - Second opinion (only if chosen)
 
-Dispatch 2 subagents (`model: 'sonnet'`), the full apply set in each prompt:
+Dispatch 2 subagents (`model: 'sonnet'`), the full apply set in each prompt. Paste the canonical
+preamble from `refs/builder-preamble.md` into each dispatch prompt (it's read-only, so the
+`READ-ONLY DISPATCH` opt-out applies) - `hooks/dispatch-preamble-guard.py` rejects a prompt missing
+its markers:
 
 - **Refuter**, pointed at the destructive items only (archives, drops): default to "do not act"
   on any item it's not confident about.
