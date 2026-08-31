@@ -23,6 +23,21 @@ guard = _testlib.load_module(
 )
 
 
+# --- pin the aliased _hooklib import (todo 501 incident: a mechanical dead-
+# symbol scan almost deleted strip_quotes since it is imported under an alias) ---
+
+alias_ok = (
+    guard._lib_strip_quotes('"foo"') == "foo"
+    and guard._lib_strip_quotes("'bar'") == "bar"
+    and guard._lib_strip_quotes("baz") == "baz"
+)
+alias_fails = []
+if not _testlib.report(
+    alias_ok, "strip_quotes as _lib_strip_quotes from _hooklib is imported and works"
+):
+    alias_fails.append("strip_quotes alias")
+
+
 def run_main(tool_name: str, command: str) -> int:
     guard.read_payload = lambda: {"tool_name": tool_name, "tool_input": {"command": command}}
     try:
@@ -60,7 +75,7 @@ def check(case) -> bool:
 
 saved_bypass = os.environ.pop(guard.OVERRIDE_ENV, None)
 try:
-    fails = _testlib.run_cases(CASES, check)
+    fails = alias_fails + _testlib.run_cases(CASES, check)
 finally:
     if saved_bypass is not None:
         os.environ[guard.OVERRIDE_ENV] = saved_bypass
