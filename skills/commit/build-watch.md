@@ -11,22 +11,23 @@ After a successful `git push` in `push`, `pushbump`, or `pushnbump`, watch the G
 
 Steps:
 
-1. **Clear the loop-breaker marker for a fresh manual push.** If this push was initiated directly by the user (not a re-push from a prior auto-fix), delete `<git-dir>/commit-buildwatch-autofixed` if it exists. (`<git-dir>` = `git -C <path> rev-parse --git-dir`.) This gives each manual push its own one-shot auto-fix budget.
-2. **Detect CI.** Only watch if ALL hold: `gh` is installed (`gh --version` succeeds), the repo has a GitHub remote (`gh repo view` succeeds), and `.github/workflows/` exists with at least one workflow file. If any fail, skip the watch silently - no message, no script launch.
-3. **Launch the watcher in the background.** Get the branch (`git -C <path> rev-parse --abbrev-ref HEAD`), then run, in the background, WITHOUT a `-Sha` argument - the script resolves HEAD itself via `-RepoPath`, so there's no hand-typed sha to get wrong:
+1. **Capture the pushed sha immediately.** The very next tool call after `git push` succeeds - before this doc's own marker-clearing step or anything else can let a peer's uncommitted-but-committed work land on top - run `git -C <path> rev-parse HEAD` and save the result. In a shared checkout HEAD can move between the push completing and the watcher launching (a peer commits, unpushed, right after), so this captured value, not a later `rev-parse`, is what step 4 passes to `-Sha`.
+2. **Clear the loop-breaker marker for a fresh manual push.** If this push was initiated directly by the user (not a re-push from a prior auto-fix), delete `<git-dir>/commit-buildwatch-autofixed` if it exists. (`<git-dir>` = `git -C <path> rev-parse --git-dir`.) This gives each manual push its own one-shot auto-fix budget.
+3. **Detect CI.** Only watch if ALL hold: `gh` is installed (`gh --version` succeeds), the repo has a GitHub remote (`gh repo view` succeeds), and `.github/workflows/` exists with at least one workflow file. If any fail, skip the watch silently - no message, no script launch.
+4. **Launch the watcher in the background.** Get the branch (`git -C <path> rev-parse --abbrev-ref HEAD`), then run, in the background, WITH the sha captured in step 1 passed explicitly - passing it programmatically here avoids both risks a `-Sha` argument otherwise carries: a human mistyping a hand-typed sha, and (the one that bit this repo) a shared checkout drifting between push and launch:
 
-   `& "C:\Users\tecno\.claude\skills\commit\watch-build.ps1" -Branch <branch> -RepoPath <path>`
+   `& "C:\Users\tecno\.claude\skills\commit\watch-build.ps1" -Branch <branch> -RepoPath <path> -Sha <sha>`
 
    Use a literal path (never `$env:`-built) so it doesn't trigger a permission prompt.
 
    **"In the background" means the PowerShell tool's own `run_in_background: true` parameter, and
    nothing else.** Never `Start-Process`, `Start-Job`, `nohup`, or a trailing `&`: those detach the
-   process from the harness's background-task tracking, so step 4's "you'll be re-invoked with its
+   process from the harness's background-task tracking, so step 5's "you'll be re-invoked with its
    stdout" never fires and the watcher runs to completion with nobody reading the result. A 2026-08-10
    `windows_taskbar_widgets` push launched it via `Start-Process -WindowStyle Hidden` and the result
    was silently lost; the stray process had to be found with `Get-CimInstance` and killed. The call
    is a single PowerShell tool call carrying the line above, with `run_in_background` set to true.
-4. **Announce and move on.** Tell the user: "Pushed. Watching the CI build in the background - I'll ping you when it lands. Say 'drop it' to ignore." Do NOT block or poll; you'll be re-invoked when the watcher exits.
+5. **Announce and move on.** Tell the user: "Pushed. Watching the CI build in the background - I'll ping you when it lands. Say 'drop it' to ignore." Do NOT block or poll; you'll be re-invoked when the watcher exits.
 
 When the watcher finishes you are re-invoked with its stdout. Parse the `BUILD_RESULT` marker:
 
