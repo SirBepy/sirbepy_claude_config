@@ -240,7 +240,7 @@ Ask `[UX]` whether to set up web hosting via GitHub Pages. Flutter web compiles 
 
 ## Step 7 - Play Store upload (optional, ask first)
 
-Ask `[TOOLING]` whether to wire Play now. **Wiring it is safe even with no Play account** - the steps are gated on a secret that does not exist yet, so they no-op until the dev sets it. Prefer wiring it dormant over leaving it undone. If yes, read `references/play-store.md` for the manual prerequisites checklist, the service-account secret, and the workflow steps to append to Step 4's job.
+Ask `[TOOLING]` whether to wire Play now. **Wiring it is safe even with no Play account** - the steps are gated on a secret that does not exist yet, so they no-op until the dev sets it. Prefer wiring it dormant over leaving it undone. If yes, read `references/play-store.md` for the manual prerequisites checklist, the service-account secret, and the workflow steps to append to Step 4's job. Say up front that an **organisation** Play account cannot finish signup without a website verified in Search Console - that one blocks for days, so the dev should start it before anything else.
 
 ## Apple / TestFlight
 
