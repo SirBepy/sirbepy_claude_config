@@ -57,3 +57,4 @@ Add a bullet to SKILL.md step 4 (Integrity check), near the existing stale-respo
 Not reproduced against other Clockify endpoints (only the time-entries list fetch was exercised
 this session) - scope the fix to that endpoint unless a future session finds the same behavior
 elsewhere.
+- Done via /mega-todos batch 2, commit 95f151b: step 4's Integrity check now documents that the time-entries LIST endpoint's end param is exclusive, with the pad-past-boundary and fetch-by-id mitigations. Scoped to the list endpoint only, since that is all that was reproduced.

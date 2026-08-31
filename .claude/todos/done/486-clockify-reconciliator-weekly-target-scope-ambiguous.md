@@ -53,3 +53,4 @@ plan that has to be redone.
 ## Notes
 
 Related, filed separately: [[485-clockify-reconciliator-commit-sweep-misses-other-branches]].
+- Done via /mega-todos batch 2, commit 82aff5c: step 3a now confirms a stated hour target's scope (existing-inclusive vs additional-only, and whether the window matches) BEFORE any proposal table is built, and step 9a requires re-summing totals from actual block durations at presentation time. modes.md cross-references step 3a rather than duplicating the rule.

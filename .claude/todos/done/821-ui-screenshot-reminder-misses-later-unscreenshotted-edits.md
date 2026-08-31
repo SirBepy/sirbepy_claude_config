@@ -60,3 +60,4 @@ grace window rather than a hard compare if it proves annoying in practice.
 
 Filed from a zng-app session per CLAUDE.md's rule that findings about the global `~/.claude` tree
 belong in this backlog, not the surfacing project's. Not executed there - only filed.
+- Done via /mega-todos batch 2, commit 7ce205a: the once-per-session one-shot marker is replaced by a stateless compare, the hook fires whenever the newest UI-ish changed file is newer than the newest screenshot, so a screenshot followed by further unshot UI edits fires again. .dart added to UI_EXTENSIONS, which the incident needed. Three integration cases added. The builder committed this then hit the session limit before reporting, so acceptance was verified from the tree by the orchestrator rather than from a builder report.

@@ -74,3 +74,4 @@ with the same contract should not have two different answers to "what does empty
   `prefilter-gate.sh` flags on non-empty output OR non-zero exit, which is why the contract still
   works. Verified against the unmodified `secret-scan.sh` on 2026-08-26. Do not "fix" that as a
   drive-by; it is load-bearing for every caller.
+- Done via /mega-todos batch 2, commit b040fd3: secret-scan.sh's invisible-path classification loop is ported into both comment-noise.sh and em-dash.sh, feeding the same awk pipeline so invisible paths pass THROUGH each script's carve-outs rather than around them. Builder reproduced the blind spot first on both scripts and verified byte-identical output against the pre-fix baseline for five command shapes. No shared helper introduced, matching the repo's existing 3x duplication of the same loop.

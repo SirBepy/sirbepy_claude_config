@@ -46,3 +46,4 @@ share only the skill's name; none concerns the config template's field list.
 
 - `hs_addtime.cjs` has still never been run against a live HubStaff account. The dev validates the
   first real run; do not trigger one to test this.
+- Done via /mega-todos batch 2, commit f6e429c: hubstaff_project_label and hubstaff_reason_label added as optional fields to the project-config template, verified against hubstaff.md:164-168 and hs_addtime.cjs:13-17 without editing either.

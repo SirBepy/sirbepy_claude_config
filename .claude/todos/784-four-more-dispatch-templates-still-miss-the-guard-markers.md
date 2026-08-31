@@ -58,3 +58,21 @@ The three markers, from `hooks/dispatch-preamble-guard.py`:
 
 `392`'s own list of six rejected false positives is in `done/392-*.md` - read it before re-deriving
 which files are templates.
+
+- **Four of four done, 2026-08-31, `/mega-todos` batch 2, commit `a819606`.** All four named files
+  now point at `refs/builder-preamble.md` in `skills/rate-it/panel.md`'s style:
+  `skills/cleanup-memory/SKILL.md` (both templates), `skills/figma-tiles/SKILL.md`,
+  `skills/create-logo/SKILL.md` (confirmed a genuine template, not a false positive), and
+  `skills/clockify-reconciliator/modes.md`. The builder finished the edits but hit the session limit
+  before running the gate and committing, so the main thread ran the prefilter gate and committed at
+  the barrier.
+- **NOT archived, because the repo-wide sweep item is unmet.** The sweep the orchestrator ran on the
+  builder's behalf found **two remaining unmarked dispatch templates**:
+  `skills/iterate-it/SKILL.md` and `skills/shortcut-done-audit/SKILL.md`. Neither was in this todo's
+  original list of four, and neither appears in `392`'s rejected-false-positive list, so both look
+  like genuine misses rather than prose.
+- Next run: confirm those two are real templates, add the same pointer, re-run the sweep, then
+  archive. The sweep command used was a grep over `skills/` and `refs/` for dispatch language
+  (`dispatch (exactly )?ONE subagent`, `fan (subagents )?out`, `dispatch N subagents`,
+  `one subagent per`) filtered to files lacking any of `builder-preamble`, `READ-ONLY DISPATCH`,
+  `Stage your changes but do NOT commit`, `Leave all changes unstaged`.

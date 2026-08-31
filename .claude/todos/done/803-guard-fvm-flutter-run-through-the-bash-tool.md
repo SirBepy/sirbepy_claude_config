@@ -75,3 +75,4 @@ done/380 consolidated the duplicated marker constants.
   served bundle's API host before a run (see the same memory, section 5). An equivalent freshness
   assertion, for example refusing to serve a `build/web` older than the newest `lib/**/*.dart`
   mtime, would have caught the 2026-08-26 stale-bundle pass independently of any hook.
+- Done via /mega-todos batch 2, commit 4a907d1: flutter-workdir-guard.py now branches on tool_name and denies fvm/flutter/dart invoked through the Bash tool, citing the false-green failure mode. PowerShell passes through untouched. New hooks/test_flutter_workdir_guard.py covers all four required cases plus bare flutter and bare dart; ci/run_all.py now discovers 16 hook suites. The builder committed this then hit the session limit before reporting, so acceptance was verified from the tree by the orchestrator rather than from a builder report.

@@ -60,3 +60,4 @@ guard fire again, and concludes the bypass is broken.
 Do not add the inline form as a supported path by reading the variable out of the command string.
 That would let the model bypass its own guard by typing a prefix, which is exactly the property that
 makes the current behaviour correct. The bug is the wording, not the mechanism.
+- Done via /mega-todos batch 2, commit 27c4f6c: commit-guard.py, pr-guard.py and dev-backend-guard.py all now name where CLAUDE_*_BYPASS must be set (settings.json env block, or exported before launching claude) and state that an inline command prefix does not reach the hook. Matches todo 419's wording. No inline-prefix support added.
