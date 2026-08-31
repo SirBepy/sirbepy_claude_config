@@ -60,12 +60,14 @@ Determine what to review based on args:
 
 | Arg | What to run |
 |-----|-------------|
-| `uncommitted` | `git diff HEAD --name-only --diff-filter=ACM` |
+| `uncommitted` | `git diff HEAD --name-only --diff-filter=ACM` union `git ls-files --others --exclude-standard` |
 | `unpushed` | `git log @{u}..HEAD --name-only --diff-filter=ACM --format=` |
 | `shas:` prefix, one or more hashes (`shas:abc1234`, `shas:abc1234 def5678`) | union of `git diff-tree --no-commit-id --name-only -r <hash>` per hash - each commit's own change, not a range diff. Used by `/close` Phase 2 to scope to one session's own commits. The prefix is what makes a ONE-sha list unambiguous; without it a lone sha falls through to the range row below and diffs sha-to-working-tree, which is empty right after a commit. |
 | Looks like a file path | treat as single-file list |
 | Looks like a bare hash or range (`abc1234`, `HEAD~3..HEAD`) | `git diff <arg> --name-only` |
-| No args | default to `uncommitted`: `git diff HEAD --name-only --diff-filter=ACM` |
+| No args | default to `uncommitted`: `git diff HEAD --name-only --diff-filter=ACM` union `git ls-files --others --exclude-standard` |
+
+"Uncommitted" means everything `git status` would show as dirty, not everything `git diff` alone can see: `--diff-filter` only matches paths already in the index, so a brand-new untracked file needs the `git ls-files --others --exclude-standard` half of the union or it never enters scope.
 
 ## Step 0 - Skill description budget
 
