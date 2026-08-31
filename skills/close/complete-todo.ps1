@@ -23,7 +23,9 @@
   collision case in this project). Combined with Id to pick one file unambiguously.
 
 .PARAMETER RepoRoot
-  Project root containing .claude/todos/. Defaults to the current directory.
+  Project root containing .claude/todos/. Defaults to `git rev-parse --show-toplevel` when the
+  cwd is inside a git repo, else the current directory. Every message this script prints is
+  prefixed with the resolved root so a wrong-cwd run cannot read as a normal success.
 
 .PARAMETER Note
   Optional completion note. Appended as a "- <text>" bullet under the todo file's ## Notes
@@ -43,15 +45,29 @@ param(
 
     [string]$Slug,
 
-    [string]$RepoRoot = (Get-Location).Path,
+    [string]$RepoRoot,
 
     [string]$Note
 )
 
 $ErrorActionPreference = 'Stop'
 
-function Write-Info($msg) { Write-Host $msg }
-function Write-Fail($msg) { Write-Error $msg }
+# Cwd is not the repo (issue 504): a call from a subdirectory, or from a sibling repo
+# entirely, silently resolved against the wrong backlog before this default existed.
+# git's own toplevel is at least self-consistent within one repo; outside any git
+# repo, fall back to cwd as before.
+if (-not $RepoRoot) {
+    $gitRoot = $null
+    try {
+        $gitRoot = (git rev-parse --show-toplevel 2>$null)
+        if ($LASTEXITCODE -ne 0) { $gitRoot = $null }
+    }
+    catch { $gitRoot = $null }
+    $RepoRoot = if ($gitRoot) { ($gitRoot -replace '/', '\') } else { (Get-Location).Path }
+}
+
+function Write-Info($msg) { Write-Host "[$RepoRoot] $msg" }
+function Write-Fail($msg) { Write-Error "[$RepoRoot] $msg" }
 
 # Inserts "- $Note" under an existing "## Notes" heading, or creates one right after
 # "## Acceptance" (naturally landing before any later "## Open questions" block) when
@@ -129,7 +145,7 @@ if (-not $backlogMatches -and $numericId -notmatch '^\d+$') {
     $backlogMatches = Get-ChildItem -Path $todosDir -Filter '*.md' -File -ErrorAction SilentlyContinue |
         Where-Object { $_.Name -match $stemPattern }
     if ($backlogMatches) {
-        Write-Warning "Todo '$Id' has no numeric prefix, which ai-todos-format.md treats as malformed. Archiving it anyway; future files should get an id from reserve-todo-id.ps1."
+        Write-Warning "[$RepoRoot] Todo '$Id' has no numeric prefix, which ai-todos-format.md treats as malformed. Archiving it anyway; future files should get an id from reserve-todo-id.ps1."
         $idPattern = $stemPattern
         $Slug = $null
         $slugPattern = $null
@@ -187,7 +203,7 @@ else {
         Write-Fail "Ambiguous id '$Id' in done\: $($doneMatches.Name -join ', '). Retry with -Slug <slug> or pass the full filename stem as -Id."
     }
     elseif ($doneMatches.Count -eq 1) {
-        Write-Info "Todo $numericId already completed (found in done\$($doneMatches[0].Name)) - skipping move."
+        Write-Warning "[$RepoRoot] Todo $numericId already completed (found in done\$($doneMatches[0].Name)) - NOTHING was moved and NO note was appended this run."
     }
     else {
         Write-Fail "No todo file matching id '$Id' found in $todosDir or $doneDir."
