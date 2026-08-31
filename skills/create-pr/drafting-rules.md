@@ -22,6 +22,41 @@ full when dispatched as that subagent.
    the one that names the dominant change. One line, no trailing period, says
    what changed - not how.
 
+### Anti-pattern list (for the subagent to apply when drafting the body)
+
+Each entry is checkable by rereading the drafted body before writing it:
+
+- **No file enumeration.** A "What's in this PR" list of touched files
+  restates `git diff --name-only`; the reviewer already sees it in the diff
+  view. Name a file only when pointing at *why*, never to prove *what*.
+- **No restated commit messages.** The body synthesizes the commits; it does
+  not copy their headlines back out as bullets.
+- **No "tests pass" / "CI is green" / "build is clean" line.** CI already
+  reports this; a line naming only an automated check is pure noise.
+- **No escaped inline code artifacts** - stray backtick-wrapped fragments
+  left over from copy-paste (`` ` reqwest ` ``) read as broken markdown. Use
+  real inline code (`reqwest`) or drop the backticks.
+
+### Validation checklist rule (for the subagent to apply when drafting `**Verify:**` / a checklist)
+
+The `**Verify:**` line (Auto-tier rubric above) and any checklist inside a
+`<details>` block are **manual, end-to-end steps only** - each item is
+something a human does against the running app that CI cannot already show
+(log in, click through a flow, read a rendered screen). Never list an
+automated check there; that's the "tests pass" anti-pattern above wearing a
+checkbox.
+
+If the change isn't user-observable (a refactor, an internal-only config
+change), the checklist is empty, not invented: write one line naming why
+instead of fabricating a step - "No manual check: internal refactor, no
+user-facing behavior changed."
+
+**Reconciling with the word budget:** SKILL.md's hard budget (tiny ≤60 words,
+small/medium ≤150) is a ceiling, never a floor. Trimming the anti-patterns
+above can legitimately land a body under that cap - that's the goal, not a
+gap to backfill with filler. On conflict, the anti-pattern list wins: never
+pad a trimmed body back up toward the target range with lower-value content.
+
 ### Comment-noise check (for the subagent to apply in step 2)
 
 See `skills/commit/comment-noise.md` for the cap definition and the mechanical
