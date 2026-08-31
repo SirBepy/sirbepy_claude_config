@@ -269,9 +269,14 @@ function runPlanOrScreenshot() {
           case 'refresh':
             await page.reload({ waitUntil: 'networkidle' });
             break;
-          case 'evaluate':
-            await page.evaluate(step.js);
+          case 'evaluate': {
+            const out = await page.evaluate(step.js);
+            if (out !== undefined) {
+              const prefix = step.label ? `evaluate[${step.label}]:` : 'evaluate:';
+              console.log(prefix, typeof out === 'string' ? out : JSON.stringify(out));
+            }
             break;
+          }
           default:
             console.error('Unknown step type:', step.type);
             process.exit(1);
