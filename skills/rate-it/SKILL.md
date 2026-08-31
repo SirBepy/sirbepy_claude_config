@@ -21,6 +21,12 @@ Before writing the score, internally check at least four:
 
 If you cannot answer at least 3 of these concretely, you do not understand the idea well enough to rate it - ask for context instead.
 
+**Standing check, not a fifth angle:** if the hypothesis under review deletes, replaces, or
+reimplements existing code, read the old implementation's full behavior (not just its signature)
+and confirm every branch or check it performed is either preserved in the new code or explicitly,
+deliberately dropped with a stated reason. This applies regardless of which rotating angle a panel
+sub was assigned - it does not join or dilute the five-angle rotation.
+
 ## Panel mode (opt-in)
 
 Solo by default - main agent rates alone. Pass an integer to spawn a panel of subagents synthesized to one verdict. Use when stakes are high (architecture, security, irreversible decisions). Each subagent burns ~15-20k tokens, so a panel of 3 costs roughly 5-6× a solo rating.
