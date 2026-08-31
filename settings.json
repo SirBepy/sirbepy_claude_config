@@ -352,6 +352,15 @@
             "statusMessage": "Checking for a destructive command"
           }
         ]
+      },
+      {
+        "matcher": "^(Bash|PowerShell)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\dev-backend-guard.py\""
+          }
+        ]
       }
     ],
     "SessionEnd": [
