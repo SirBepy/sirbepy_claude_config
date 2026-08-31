@@ -106,6 +106,9 @@ blind write:
 - Destination `done/` shows it DONE: the incoming copy is stale; drop it instead of filing it.
 - Destination `done/` shows it DECLINED: drop it, and carry the decline reason forward (into the
   report, or the superseding file's Notes) so the same subject does not get filed again.
+- **Handoffs are exempt from fold-in** - see Handoff mode below. A handoff matching a live handoff
+  is still written as a new file with a fresh id, referencing the prior handoff's id and stating
+  which of its facts are now superseded; it never edits, replaces, or deletes the old one.
 
 No `done/` hit does not mean no history: if the todo asks to enforce a rule, also check whether
 that rule was retired outright with no todo ever filed for it - `git log --oneline -- <the rule's
@@ -205,7 +208,16 @@ Then, always: prepend `- [ ] <id> - <short label>` to PLAN.md (create it with a 
 if missing) per this file's CAS edit discipline below. This is the one backlog-creation path that
 auto-plans; deferral-mode todos are NOT auto-planned - ordering the backlog is `/plan-todos`'s
 job. A handoff never edits, replaces, or deletes a prior handoff todo - each call writes a new
-file with a fresh id and a new PLAN.md line; old handoffs stay as history.
+file with a fresh id and a new PLAN.md line; old handoffs stay as history. This is the fourth
+outcome the Content-duplicate guard above names: a handoff matching a live handoff is exempt from
+fold-in, not blocked by it. Reference the prior handoff's id in the new file, state which of its
+facts are now superseded, and add `<!-- duplicate-checked -->` up front - the new file predictably
+shares enough vocabulary with the one it supersedes to trip `hooks/todo-duplicate-guard.py`.
+
+The superseded handoff's PLAN.md line stays, annotated `- superseded by <new id>`, never removed:
+deleting it would destroy the only signal that an older handoff existed, while annotating it costs
+nothing and stops a puller from actioning the stale entry blind. Same asymmetry the guard itself
+argues from - a stale entry left visible is recoverable noise, a deleted one is not.
 
 Confirm by printing the filename, a one-line summary, and "pinned to top of PLAN.md". Do not
 execute the todo - filing it is the whole job.
