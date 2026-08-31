@@ -99,8 +99,17 @@ For a dynamic port to take effect, template the port flag INTO the command with 
 | Next.js | `next dev -p {PORT}` |
 | Flutter web (auto-reload) | `flutter run -d web-server --web-port {PORT}` - after editing source, call `POST /procs/<id>/reload` (not `/restart`) to hot-restart via the daemon; the supervisor's live-reload proxy then refreshes every open tab on its own, no manual F5. Readiness: `[flutter] app started` / `[flutter] serving at http://localhost:<port>` - this target NEVER prints `Debug service listening` (that needs the Dart Debug Chrome extension), so a loop grepping for it hangs forever even after a healthy compile |
 | Flutter web (chrome) | `flutter run -d chrome --web-port {PORT}` - flutter owns its chrome; no supervisor proxy, no auto-refresh. Readiness: `Debug service listening on ws://` (or `A Dart VM Service`) - `app started` fires first but mid-DDC-compile, so wait for the debug-service line specifically |
-| Node server reading `process.env.PORT` | no `{PORT}` needed - the env var is set automatically |
-| Tool with no port flag you can find | send `"use_dynamic_port": false` and accept its built-in port |
+| Node server reading `process.env.PORT` | no `{PORT}` needed - the env var is set automatically. If the app persists state client-side (localStorage/sessionStorage/IndexedDB), see the pinned-port note below first |
+| Tool with no port flag you can find | send `"use_dynamic_port": false` and accept its built-in port - this is NOT the same as pinning a chosen port number, see below |
+
+**Pinned port for client-side persisted state:** localStorage/sessionStorage/IndexedDB are scoped
+per-origin (host+port), so the port is effectively part of the storage key. An app that persists
+state this way needs the SAME port on every restart, not the default dynamic one - restarting it
+under a new random port silently orphans the old data under an origin nothing points at anymore
+(looks exactly like data loss). `"use_dynamic_port": false` does not pin a port; it only accepts
+whatever port the app's own default is. There's no `{PORT}` flag to override a plain
+`process.env.PORT` reader, so wrap the entry command to set the env var before import instead:
+`node -e "process.env.PORT='<port>';import('./src/serve.mjs')"`.
 
 **Proxy port vs raw port (Flutter web auto-reload only):** the port you pass in `cmd` (`--web-port {PORT}`) is the RAW flutter port. The supervisor fronts it with a SEPARATE live-reload proxy on a DIFFERENT port - check `GET /procs/<id>/logs` for the line `[supervisor] live-reload proxy on 127.0.0.1:<proxyPort> -> flutter :<rawPort>` and point any browser/script at `<proxyPort>`, not `<rawPort>`. Hitting the raw port directly can cause DWDS/DDC reconnect stalls - a script or browser tab hangs indefinitely waiting for the app to finish mounting, no error, that looks like a slow cold compile but isn't fixed by waiting longer. Only switching to the proxy port fixes it reliably (restarting the process can appear to fix it once, then recur).
 
