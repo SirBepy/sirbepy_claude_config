@@ -59,3 +59,4 @@ gets whichever file the glob returns first. That can claim one file and archive 
 - Both collisions originated the same way: a bulk filing commit allocated ids without checking the
   backlog, or two sessions reserved concurrently. `95d47fd` filed 55 todos at once and contains
   both `410` files.
+- Done via /mega-todos 2026-08-31, main thread, commit 5531a16: renamed 780-eighteen-skills-declare-slash-only-but-are-model-invocable.md to 842. The other 780 file kept the id because todo 803 depends on it resolving. PLAN.md named neither, so no PLAN.md edit was needed. Verified after: no duplicate numeric prefixes remain anywhere in the backlog. Executed from the main thread rather than a builder, since the injected commit block bars builders from touching .claude/todos/.
