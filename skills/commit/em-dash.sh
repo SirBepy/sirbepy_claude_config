@@ -46,6 +46,17 @@ else
   if [ "${1:-}" = "--repo" ]; then repo="$2"; shift 2; fi
   exempt=$(exempt_list "$@")
   git_c() { if [ -n "$repo" ]; then git -C "$repo" "$@"; else git "$@"; fi; }
+
+  # A path git cannot see (gitignored, or missing) yields no diff below, which reads as
+  # "clean" though nothing was seen (todo 460). Scan it via --no-index like an untracked
+  # file instead, since the caller named it on purpose.
+  invisible=()
+  for a in "$@"; do
+    if git_c ls-files --error-unmatch -- "$a" >/dev/null 2>&1; then continue; fi
+    if [ -n "$(git_c ls-files --others --exclude-standard -- "$a")" ]; then continue; fi
+    invisible+=("$a")
+  done
+
   {
     git_c diff HEAD -- "$@"
     # -z/NUL-separated: git status quotes space-containing names, which broke the downstream
@@ -58,5 +69,15 @@ else
         printf '%s\n' "$out"
       fi
     done
+    if [ "${#invisible[@]}" -gt 0 ]; then
+      for f in "${invisible[@]}"; do
+        out=$(git_c diff --no-index -- /dev/null "$f" 2>&1); rc=$?
+        if [ "$rc" -gt 1 ]; then
+          printf 'ERROR: could not inspect invisible file %s (git diff --no-index exit %d): %s\n' "$f" "$rc" "$out"
+        else
+          printf '%s\n' "$out"
+        fi
+      done
+    fi
   } | awk -v ED="$ED" -v EXEMPT="$exempt" "$AWK" | sort
 fi
