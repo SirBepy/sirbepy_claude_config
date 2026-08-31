@@ -1,6 +1,6 @@
-"""PreToolUse hook (todo 363): advisory duplicate check when Claude Writes a
-new file directly under `.claude/todos/` (backlog root, never `done/` or
-`.claims/`).
+"""PreToolUse hook (todo 363, 492): advisory duplicate check when Claude
+Writes a new file directly under `.claude/todos/` (backlog root, never
+`done/` or `.claims/`).
 
 `ai-todos-format.md`'s Content-duplicate guard has always been prose - every
 writer (`/create-todo`, `/handoff`, `/close`, `/code-check`, autopilot) is
@@ -12,6 +12,10 @@ Deliberately advisory, not a hard block like shortcut-create-guard.py: two
 todos can legitimately share a word or two (see the GOTCHA this repo has hit
 before with guess-based hooks), so a plausible hit blocks with the candidate
 listed and an explicit override marker, never a silent or unresolvable stop.
+
+Id uniqueness (todo 492) is a separate, unconditional check: two files ever
+sharing a numeric prefix breaks every `-Id`-addressed tool downstream, so it
+is a hard block with no override marker, unlike the content heuristic above.
 """
 
 import re
@@ -37,6 +41,7 @@ COMMON_TOKEN_MIN_CORPUS = 8
 
 PATH_SEP_RE = re.compile(r"[\\/]+")
 FILENAME_RE = re.compile(r"^\d+-.*\.md$", re.IGNORECASE)
+ID_RE = re.compile(r"^0*(\d+)-")
 TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
 TOKEN_RE = re.compile(r"[A-Za-z0-9]+")
 
@@ -153,6 +158,33 @@ def find_hits(todos_dir: Path, target_name: str, tokens: list[str]) -> list[tupl
     return hits
 
 
+def extract_id(name: str) -> int | None:
+    """Numeric prefix of a backlog filename or `<id>-.reserved` marker, with
+    leading zeros normalized (so "007-x.md" and "7-y.md" are the same id).
+    """
+    m = ID_RE.match(name)
+    return int(m.group(1)) if m else None
+
+
+def find_id_collision(todos_dir: Path, target_name: str, target_id: int) -> Path | None:
+    """Path of a differently-named file or reservation marker that already
+    claims `target_id`, else None. A same-name match in `todos_dir` itself is
+    an in-place rewrite, not a collision - same precedent as `find_hits`.
+    """
+    candidates = [f for f in sorted(todos_dir.glob("*.md")) if FILENAME_RE.match(f.name)]
+    done_dir = todos_dir / "done"
+    if done_dir.is_dir():
+        candidates += [f for f in sorted(done_dir.glob("*.md")) if FILENAME_RE.match(f.name)]
+    candidates += sorted(todos_dir.glob("*-.reserved"))
+
+    for f in candidates:
+        if f.parent == todos_dir and f.name.lower() == target_name:
+            continue
+        if extract_id(f.name) == target_id:
+            return f
+    return None
+
+
 def main() -> None:
     payload = read_payload()
     if (payload.get("tool_name") or "") != "Write":
@@ -164,6 +196,19 @@ def main() -> None:
     if todos_dir is None:
         sys.exit(0)
 
+    target_name = Path(file_path).name
+    target_id = extract_id(target_name)
+    if target_id is not None:
+        collision = find_id_collision(todos_dir, target_name.lower(), target_id)
+        if collision is not None:
+            repo_root = todos_dir.parent.parent
+            deny(
+                f"[todo-duplicate-guard] Id {target_id} is already claimed by "
+                f"{collision.name}. Ids must be unique across .claude/todos/, done/, "
+                f"and *-.reserved markers - run `skills/close/reserve-todo-id.ps1 "
+                f"-RepoRoot {repo_root}` to reserve a free one instead of picking by hand."
+            )
+
     content = tool_input.get("content") or ""
     if OVERRIDE_MARKER in content:
         sys.exit(0)
@@ -172,7 +217,7 @@ def main() -> None:
     if len(tokens) < 2:
         sys.exit(0)
 
-    hits = find_hits(todos_dir, Path(file_path).name.lower(), tokens)
+    hits = find_hits(todos_dir, target_name.lower(), tokens)
     if not hits:
         sys.exit(0)
 

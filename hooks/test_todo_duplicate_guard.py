@@ -53,6 +53,24 @@ def check_tokens(case) -> bool:
     return ok
 
 
+# (name, expected_id_or_None, label)
+ID_CASES = [
+    ("492-todo-guard-checks-content.md", 492, "plain numeric prefix"),
+    ("007-leading-zeros.md", 7, "leading zeros normalize"),
+    ("260-.reserved", 260, "reserved marker suffix"),
+    ("PLAN.md", None, "no numeric prefix"),
+    ("not-a-number-x.md", None, "non-numeric prefix"),
+]
+
+
+def check_id(case) -> bool:
+    name, expected, label = case
+    got = guard.extract_id(name)
+    ok = got == expected
+    print(f"[{'PASS' if ok else 'FAIL'}] id: {label}: {name!r} -> {got}")
+    return ok
+
+
 # (tokens, matched, expect_hit, label)
 HIT_CASES = [
     (["split", "verify", "screen"], ["split", "verify"], True, "2 of 3 matched, ratio >= 0.6"),
@@ -103,6 +121,19 @@ def check_integration() -> list:
         new_distinct_path = todos_dir / "200-unrelated-audio-pipeline-crash.md"
         new_distinct_content = "# Unrelated audio pipeline crash on startup\n\nGoal: fix a crash.\n"
 
+        id_taken_path = todos_dir / "130-different-slug-entirely.md"
+        id_taken_content = "# Totally different topic about zzz widgets\n\nGoal: unrelated.\n"
+
+        id_free_path = todos_dir / "250-totally-fresh-topic-nobody-touched.md"
+        id_free_content = "# Totally fresh topic nobody touched yet\n\nGoal: something new.\n"
+
+        (todos_dir / "260-.reserved").write_text("session: test\npid: 1\n", encoding="utf-8")
+        id_reserved_path = todos_dir / "260-another-fresh-topic-someone-reserved.md"
+        id_reserved_content = "# Another fresh topic someone already reserved\n\nGoal: reserved.\n"
+
+        inplace_path = todos_dir / "130-split-v2-verify-screen.md"
+        inplace_content = "# Split v2 verify screen, it is too large\n\nGoal: extract the debit card form, updated.\n"
+
         cases = [
             (
                 {"tool_name": "Write", "tool_input": {"file_path": str(new_dup_path), "content": new_dup_content}},
@@ -141,6 +172,26 @@ def check_integration() -> list:
                 0,
                 "non-Write tool is out of scope",
             ),
+            (
+                {"tool_name": "Write", "tool_input": {"file_path": str(id_taken_path), "content": id_taken_content}},
+                2,
+                "new file reusing an id already claimed by a differently-named file blocks",
+            ),
+            (
+                {"tool_name": "Write", "tool_input": {"file_path": str(id_free_path), "content": id_free_content}},
+                0,
+                "new file with a free id passes",
+            ),
+            (
+                {"tool_name": "Write", "tool_input": {"file_path": str(id_reserved_path), "content": id_reserved_content}},
+                2,
+                "id already claimed by a *-.reserved marker blocks",
+            ),
+            (
+                {"tool_name": "Write", "tool_input": {"file_path": str(inplace_path), "content": inplace_content}},
+                0,
+                "in-place rewrite of an existing id passes",
+            ),
         ]
         for payload, expect_code, label in cases:
             proc = run_hook(payload)
@@ -157,6 +208,7 @@ def run() -> int:
         _testlib.run_cases(PATH_CASES, check_path)
         + _testlib.run_cases(TOKEN_CASES, check_tokens)
         + _testlib.run_cases(HIT_CASES, check_hit)
+        + _testlib.run_cases(ID_CASES, check_id)
         + check_integration()
     )
     return _testlib.summarize(fails)
