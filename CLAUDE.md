@@ -76,11 +76,11 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 
 ## Testing & verification floor
 
-- Before claiming done or handing to Joe: run every FAST check the project HAS (typecheck, unit, lint, build) - all must pass. No size exemption; a one-line edit gets the same floor as a rewrite. Never skip silently because something "looks small."
+- Before claiming done or handing to Joe: run every FAST check the project HAS (typecheck, unit, lint, build) - all must pass, no size exemption.
 - If a project has no tests, or the change is genuinely untestable by Claude (native UI, hardware, visual judgment), say so explicitly instead of skipping quietly.
-- Slow end-to-end suites (Playwright, etc.) are NOT part of this floor; projects opt in via `@import ~/.claude/snippets/test-e2e.md`.
-- When e2e looks genuinely worth running on a change, SAY so in one line of the summary and stop there - never ask, never run it unprompted. Joe declines if he disagrees.
-- `/test` means the normal (fast) tests, stack inferred from the repo, whatever `/test` itself defines. Browser/app-driven end-to-end runs are a separate command, `/e2e`; this floor and `/test` both stay fast-only.
+- An explicit "don't test" from Joe stands for the rest of the session, not one turn; a new task doesn't re-arm it. While in force, name what wasn't run; keep running cheap checks (typecheck, lint, analyze) unless named. Not a licence to skip on judgment alone - only an explicit dev instruction does.
+- Slow end-to-end suites (Playwright, etc.) are NOT part of this floor; opt in via `@import ~/.claude/snippets/test-e2e.md`. When worth running, say so in one summary line and stop - never run unprompted.
+- `/test` means the normal (fast) tests; end-to-end runs are the separate `/e2e` command. Both stay fast-only.
 
 ## UI & visual changes
 
