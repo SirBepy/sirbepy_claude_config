@@ -23,7 +23,25 @@ AWK='
   next
 }
 { run=0 }
-END { for (k in add) if (max[k]>=5 || (add[k]>=20 && c[k]*100/add[k]>=25)) printf "%s %d/%d (%d%%) longest %d\n", k, c[k], add[k], c[k]*100/add[k], max[k] }
+END {
+  for (k in add) {
+    ratio = (add[k]>=20 && c[k]*100/add[k]>=25)
+    block = (max[k]>=5)
+    if (!ratio && !block) continue
+    line = sprintf("%s %d/%d (%d%%) longest %d", k, c[k], add[k], c[k]*100/add[k], max[k])
+    # cut N solves c <= (add - c_now)/3, the post-trim ratio with c also shrinking the denominator.
+    if (ratio) {
+      cut = c[k] - int((add[k]-c[k])/3)
+      if (cut < 0) cut = 0
+      line = line sprintf(" -> cut %d comment lines", cut)
+    }
+    if (block) {
+      if (ratio) sep = ", "; else sep = " -> "
+      line = line sep "longest block to 4"
+    }
+    print line
+  }
+}
 '
 
 if [ "${1:-}" = "--range" ]; then
