@@ -124,25 +124,27 @@ Project-local scratch (never global; skip if there's no project): `screenshots/`
 
 ## Subagent-Driven vs Inline Execution
 
+Any `Agent`/`Task` dispatch needs the preamble too, even an ad-hoc one with no skill in the loop: before the first dispatch, include the staging line ("Stage your changes but do NOT commit" or "Leave all changes unstaged"), the `run_in_background` + `FORBIDDEN` line, and the `.for_bepy/screenshots/` id line (or literal `READ-ONLY DISPATCH`) - see `refs/builder-preamble.md`.
+
 Choose by task size when a plan is ready to execute:
 
-- **Inline** (default): small features, fewer than 4 tasks, fewer than 3 files, tightly sequential. Just do it.
-- **Subagent-driven**: large features with 5+ independent tasks across multiple files, where fresh context per task and review gates add real value.
-- **Context-weight axis** (independent of size): even a job under 4 tasks warrants an Explore subagent when answering means reading material you discard once you have the conclusion (large files, wide grep sweeps, multi-query or iterative web research). Need the verdict, not the raw bytes. Read-only investigation; subagent-written code still follows the rule above.
-  - **Web research specifically:** delegate any multi-query or iterative web search (research, comparisons, "how do people do X") to a subagent so raw result dumps never land in the main context; have it return the conclusion plus the source URLs. A single-fact lookup (one version check, one typosquat check) stays inline - the subagent round-trip isn't worth it there.
+- **Inline** (default): small features, under 4 tasks, under 3 files, tightly sequential. Just do it.
+- **Subagent-driven**: large features, 5+ independent tasks across multiple files, where fresh context per task and review gates add real value.
+- **Context-weight axis** (independent of size): even a job under 4 tasks warrants an Explore subagent when answering means reading material you discard once you have the conclusion (large files, wide grep sweeps, multi-query or iterative web research). Need the verdict, not the raw bytes. Read-only; written code still follows the rule above.
+  - **Web research specifically:** delegate any multi-query or iterative web search to a subagent so raw dumps stay out of context; have it return the conclusion plus source URLs. A single-fact lookup (one version check, one typosquat check) stays inline.
 
 ### Subagent model (cost control - MANDATORY)
 
-Every subagent dispatch passes `model: 'sonnet'` explicitly. Never default-inherit the session model - inheriting Opus/Fable multiplies cost by N on fan-outs for no gain.
+Every subagent dispatch passes `model: 'sonnet'` explicitly. Never default-inherit the session model - inheriting Opus/Fable multiplies cost by N on fan-outs.
 
-- **Sonnet is THE subagent model.** A well-written dispatch prompt (precise spec, file paths, constraints, report-back shape) is what determines subagent quality - and the orchestrator controls that, so sonnet doesn't get the chance to screw up open-ended judgment.
-- **No haiku**: its failure modes cost more than the pennies it saves over sonnet.
+- **Sonnet is THE subagent model.** A well-written dispatch prompt (precise spec, file paths, constraints, report-back shape) determines subagent quality; the orchestrator controls that, so sonnet doesn't get to screw up open-ended judgment.
+- **No haiku**: its failure modes cost more than the pennies saved.
 - **Above sonnet (opus/fable): almost never.** Solo dispatch only, never a fan-out. Escalate only when:
   - a sonnet agent failed the exact task twice, or Joe explicitly asks; or
-  - a sonnet report **smells wrong** - suspiciously clean, contradicts other evidence, zero findings on a big diff. Silent verifier misses never look like failures, so judgment is the trigger here; or
-  - it's the FINAL verify/judge pass on a **high-stakes diff** (security-touching, data-loss-capable, DB migrations): one solo top-tier verifier is allowed there by default.
-- Tune `effort` freely (low for mechanical chores, higher for review/verification angles) - it's the cheap knob; model tier is the expensive one.
+  - a sonnet report **smells wrong** - suspiciously clean, contradicts other evidence, zero findings on a big diff (silent misses never look like failures, so judgment is the trigger here); or
+  - it's the FINAL verify/judge pass on a **high-stakes diff** (security-touching, data-loss-capable, DB migrations): one solo top-tier verifier is allowed by default.
+- Tune `effort` freely (low for mechanical chores, higher for review/verification) - the cheap knob; model tier is the expensive one.
 
 ### Full-orchestrator mode
 
-The rules above govern ordinary dispatches. When a session runs as a pure ORCHESTRATOR (main agent never builds), the mechanics live in `~/.claude/refs/delegation-doctrine.md`: 90/10 rule, scout spec packs, builder-prompt requirements (including the comment-noise prefilter every builder runs on its own diff before reporting), orchestrator hygiene, report quality tells. That file defers to this section for model tier, so the two never conflict. Adopted by `/delegate` (dev present) and `/autopilot` (dev AFK), not by default.
+The rules above govern ordinary dispatches. A pure ORCHESTRATOR session (main agent never builds) follows `~/.claude/refs/delegation-doctrine.md` instead: 90/10 rule, scout spec packs, builder-prompt requirements, orchestrator hygiene, report quality tells. Defers to this section for model tier. Adopted by `/delegate` (dev present) and `/autopilot` (dev AFK), not by default.
