@@ -110,7 +110,7 @@ If panel mode and dissent exists: one line `Dissent: 1 rater scored X/10 - [reas
 If panel mode: the `Refuted:` / `Unverifiable:` lines and the `Verdict:` line defined in
 `panel.md`. Line 1 stays the numeric score in every mode - the verdict is an addition to the
 block, never a replacement for the number.
-Then a blank line and a `**How to raise the score:**` block: 2-4 bullets, each a concrete change with the score it would unlock (e.g. `→ 7/10`). Be specific - name the swap, constraint, or pivot. If already 10/10, say "Already maxed" instead.
+Then a blank line and a `**How to raise the score:**` block: up to 3 bullets, each a concrete change with the score it would unlock (e.g. `→ 7/10`). Order the bullets by that score, lowest first. Be specific - name the swap, constraint, or pivot. If already 10/10, say "Already maxed" instead.
 
 ## How-to-raise rules
 

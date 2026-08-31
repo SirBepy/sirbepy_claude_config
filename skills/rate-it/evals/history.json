@@ -696,6 +696,102 @@
         }
       ],
       "verdict": "baseline"
+    },
+    {
+      "label": "heal-ordering",
+      "parent": "v0-baseline-f5x3",
+      "recorded_at": "2026-08-31T17:49:27Z",
+      "skill_name": "rate-it",
+      "fixture_set_version": 5,
+      "fixture_set_hash": "995abc59e3d09324",
+      "skill_hash": "556a11c2343e9959",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\rate-it",
+      "fixture_ids": [
+        5
+      ],
+      "model": "sonnet",
+      "repeat": 3,
+      "summary": {
+        "passed": 15,
+        "failed": 3,
+        "unverifiable": 0,
+        "total": 18,
+        "pass_rate": 0.8333,
+        "errored_fixtures": []
+      },
+      "stability": [
+        {
+          "fixture": 5,
+          "n": 4,
+          "passed": 1,
+          "runs": 3,
+          "text": "If the response lists suggested improvements, every one of them names its own cost or tradeoff, such as time, added complexity, scope or lock-in, rather than presenting a free win. If it instead states that no improvement path exists, this expectation is satisfied."
+        },
+        {
+          "fixture": 5,
+          "n": 6,
+          "passed": 2,
+          "runs": 3,
+          "text": "If the response lists two or more suggested improvements, they are ordered from the lowest unlocked score to the highest. If it lists fewer than two, or states that no improvement path exists, this expectation is satisfied."
+        },
+        {
+          "fixture": 5,
+          "n": 1,
+          "passed": 3,
+          "runs": 3,
+          "text": "The response commits to exactly one numeric score out of 10, not a range."
+        },
+        {
+          "fixture": 5,
+          "n": 2,
+          "passed": 3,
+          "runs": 3,
+          "text": "The response either lists at most 3 suggested improvements, or states plainly that no improvement path exists."
+        },
+        {
+          "fixture": 5,
+          "n": 3,
+          "passed": 3,
+          "runs": 3,
+          "text": "If the response lists suggested improvements, every one of them names the score it would unlock. If it instead states that no improvement path exists, this expectation is satisfied."
+        },
+        {
+          "fixture": 5,
+          "n": 5,
+          "passed": 3,
+          "runs": 3,
+          "text": "If the response lists suggested improvements, every one of them is specific enough to act on, naming a concrete tool, threshold, constraint or change, rather than generic advice like 'add monitoring' or 'measure first'. If it instead states that no improvement path exists, this expectation is satisfied."
+        }
+      ],
+      "cost_usd": 0.69,
+      "run_dir": "C:\\tmp\\skill-eval\\rate-it\\heal-ordering",
+      "per_fixture": [
+        {
+          "id": 5,
+          "rep": 1,
+          "label": "lift-bullets-are-specific-and-costed",
+          "passed": 4,
+          "total": 6,
+          "error": null
+        },
+        {
+          "id": 5,
+          "rep": 2,
+          "label": "lift-bullets-are-specific-and-costed",
+          "passed": 5,
+          "total": 6,
+          "error": null
+        },
+        {
+          "id": 5,
+          "rep": 3,
+          "label": "lift-bullets-are-specific-and-costed",
+          "passed": 6,
+          "total": 6,
+          "error": null
+        }
+      ],
+      "verdict": "incomparable"
     }
   ]
 }
