@@ -19,6 +19,28 @@ Native Android app via adb (not Flutter web)? Use `android-drive` instead - a di
 
 `~/.claude/refs/flutter-web-playwright.md` - the canonical rules for semantics activation, atomic clicks, per-character typing, snapshot staleness, no-reload-mid-flow, release-vs-DWDS, and headless guidance. This file only states mode-specific flow; it does not restate driving mechanics.
 
+## Check for the project's own harness FIRST
+
+Before writing any Playwright helper code, in either mode: look for an existing `e2e/lib/` (or
+equivalent harness folder) in the target project and reuse it instead of hand-rolling a click/type
+helper again. zng-app already ships one at `e2e/lib/`: `semantics.js` exports `enableSemantics`,
+`rearmSemanticsIfEmpty`, `clickByText`, `hasText`, `clickByMouse`, `screenshot`,
+`findSemanticsNodeHandles`; `auth.js` exports `bootAuthedTo`, `bootUnauthedTo`, `gotoWithHangGuard`;
+`browser.js` exports `launch`. `require()` these rather than re-deriving the same matching logic.
+
+**Mount-readiness signal:** poll for the light-DOM `<flutter-view>` host, not `flt-glass-pane` -
+the glass pane lives in a shadow root, never reports visible to `querySelector`, and a
+`waitForSelector` on it times out at 120s in a way that reads as "the app is broken" rather than
+"wrong selector."
+
+If the project has no harness yet, fall back to hand-rolling, but carry these two rules:
+
+- **Match the trimmed semantics label for equality, never substring.** A parent `flt-semantics`
+  node aggregates the whole page's `textContent`, so a substring match can hit a full-page container
+  whose rect starts near y=0 and the click lands on empty space.
+- **Collect every match and click the lowest one on screen.** A page title and its CTA routinely
+  share a label (`Decline request`, `Add your account`, `Get Started`).
+
 ## Login preamble (dev-backed apps)
 
 For any app whose flow starts behind an email-OTP or similar login (e.g. zng-biller, zng-admin), pick one of two paths, don't default to driving the UI:
