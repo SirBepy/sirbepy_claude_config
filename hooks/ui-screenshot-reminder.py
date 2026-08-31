@@ -3,9 +3,12 @@ that touched UI-ish files. Global, per CLAUDE.md's "UI & visual changes"
 section - Joe wants this applied everywhere, not copied per-repo (2026-08-16,
 supersedes todo 326's original zng-app/zng-biller scope).
 
-Pattern lifted from zng-admin's (gitignored, per-repo) reference Stop hook:
-sentinel-gated to once per session, matching UI-ish paths in the session's
-changed files. Ported to Python here since every other global hook is.
+Todo 821 (2026-08-31): the original design fired at most once per session
+(a marker file suppressed every later call, session-wide, forever). Replaced
+with a stateless compare: fire whenever the newest UI-ish changed file is
+newer than the newest screenshot under .for_bepy/screenshots/, so a
+screenshot taken then followed by further unshot UI edits fires again
+instead of staying quiet for the rest of the session.
 
 Non-blocking by design: any internal error must exit 0 silently (see the
 bottom try/except), same as em-dash-guard. A missed reminder is fine; a
@@ -27,11 +30,10 @@ except Exception as e:
     sys.stderr.write(f"[ui-screenshot-reminder] FATAL: cannot import _hooklib ({e}); failing open.\n")
     sys.exit(0)
 
-MARKER_DIR = _HOOKS_DIR
-SESSION_MARKER_PREFIX = ".ui-screenshot-reminder-session-"
 GIT_TIMEOUT_SECONDS = 10
+SCREENSHOTS_DIRNAME = Path(".for_bepy") / "screenshots"
 
-UI_EXTENSIONS = {".tsx", ".jsx", ".vue", ".svelte", ".css", ".scss"}
+UI_EXTENSIONS = {".tsx", ".jsx", ".vue", ".svelte", ".css", ".scss", ".dart"}
 UI_DIR_SEGMENTS = {"ui", "components", "widgets", "screens", "pages"}
 
 REMINDER_TEXT = (
@@ -43,10 +45,6 @@ REMINDER_TEXT = (
     "output of ~/.claude/skills/close/rename-session.ps1 -GetId. Skip this "
     "only if the change is pure logic/backend/config with no visual surface."
 )
-
-
-def session_marker_path(session_id: str) -> Path:
-    return MARKER_DIR / f"{SESSION_MARKER_PREFIX}{session_id}"
 
 
 def is_ui_path(path: str) -> bool:
@@ -87,6 +85,36 @@ def changed_files(cwd: str) -> list[str]:
     return files
 
 
+def newest_mtime(paths: list[Path]) -> float | None:
+    """Newest mtime among `paths`, skipping any that no longer exist
+    (deleted/renamed since the git listing was taken). None if all missing.
+    """
+    newest: float | None = None
+    for p in paths:
+        try:
+            mtime = p.stat().st_mtime
+        except OSError:
+            continue
+        if newest is None or mtime > newest:
+            newest = mtime
+    return newest
+
+
+def newest_screenshot_mtime(cwd: str) -> float | None:
+    """Newest .png mtime anywhere under `cwd`/.for_bepy/screenshots/, across
+    every session subfolder - the hook has no reliable way to resolve its
+    own session's screenshot-folder id, so it scans the whole tree rather
+    than guessing one folder.
+    """
+    base = Path(cwd or ".") / SCREENSHOTS_DIRNAME
+    if not base.is_dir():
+        return None
+    try:
+        return newest_mtime(list(base.rglob("*.png")))
+    except OSError:
+        return None
+
+
 def main() -> None:
     payload = read_payload()
 
@@ -94,18 +122,16 @@ def main() -> None:
     if not session_id:
         sys.exit(0)
 
-    marker = session_marker_path(session_id)
-    if marker.exists():
+    cwd = payload.get("cwd") or "."
+    files = changed_files(cwd)
+    ui_files = [Path(cwd) / f for f in files if is_ui_path(f)]
+    ui_mtime = newest_mtime(ui_files)
+    if ui_mtime is None:
         sys.exit(0)
 
-    files = changed_files(payload.get("cwd") or ".")
-    if not any(is_ui_path(f) for f in files):
+    screenshot_mtime = newest_screenshot_mtime(cwd)
+    if screenshot_mtime is not None and screenshot_mtime >= ui_mtime:
         sys.exit(0)
-
-    try:
-        marker.write_text("", encoding="utf-8")
-    except OSError:
-        pass
 
     print(json.dumps({"decision": "block", "reason": REMINDER_TEXT}))
     sys.exit(0)
