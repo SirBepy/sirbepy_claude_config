@@ -50,11 +50,11 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 
 ## Process Hygiene
 
-- **Running servers - always via `/supervised-run`.** Always route long-lived servers through the `/supervised-run` skill; fall back to a plain shell run only if the supervisor is unreachable. Does NOT apply to one-off commands that exit (tests, builds, git, scripts).
+- **Running servers - always via `/supervised-run`.** Fall back to a plain shell run only if the supervisor is unreachable. Does NOT apply to one-off commands that exit (tests, builds, git, scripts).
 - **Never leave orphan child processes.** After running test/build/dev commands, check with `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -match 'vitest|turbo|tinypool' }` (Windows) or `pgrep node` (Unix). Kill orphans with `Stop-Process -Id <PID> -Force` before claiming done.
-- **Cap concurrency at 5** for all Node commands: turbo `--concurrency=5`, vitest `poolOptions.threads.maxThreads: 5` (or `pool: 'forks'` + `singleFork: true` for clean Windows exit), pnpm `--workspace-concurrency=5`. Never `pnpm dev --parallel` outside explicit dress-rehearsal.
+- **Cap concurrency at 5** for all Node commands: turbo `--concurrency=5`; vitest `maxWorkers: 5` (`maxWorkers: 1, isolate: false` for clean Windows exit - Vitest 4 replaced `poolOptions.threads.maxThreads`/`singleFork`); pnpm recursive/`run`/`exec` `--workspace-concurrency=5` (plain `pnpm install` takes no concurrency flag). Never `pnpm dev --parallel` outside explicit dress-rehearsal.
 - For long-running dev servers (vite, fastify), track the PID and ensure it terminates on session end / Ctrl-C / parent task completion.
-- Non-negotiable. Full doctrine (3-layer defense, subagent prompt requirements): `~/.claude/refs/process-hygiene.md`.
+- Non-negotiable. Full doctrine: `~/.claude/refs/process-hygiene.md`.
 
 ## Code Style
 
