@@ -62,3 +62,4 @@ Options, not mutually exclusive:
 Do not weaken `hooks/dispatch-preamble-guard.py` - same stance as todos 331/392: the guard is
 correct, the gap is upstream discoverability. This is scoped narrower than 392 (which sweeps skill
 templates) - this one is about the tool itself having no template to sweep.
+- Done via /mega-todos batch 1, commit fc4ec4b: CLAUDE.md Subagent-Driven vs Inline Execution now states any Agent/Task dispatch needs the canonical preamble markers and names all three precisely. Option 1 (amending the Agent tool description) was recorded as not implementable, the description is harness-owned.

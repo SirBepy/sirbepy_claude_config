@@ -61,3 +61,4 @@ Do not raise the tool default or wrap the call in a background job - the gate ha
 ## Notes
 
 - Surfaced during the same run as `[[818-finish-the-cleanup-todos-triage-for-76-unmarked-todos]]`.
+- Done via /mega-todos batch 1, commit 528ed99: /commit step 8 now requires an explicit timeout on overlap-check.sh whenever the pathspec exceeds roughly a dozen files, because the Bash default backgrounds it and a backgrounded gate is an unrun gate.

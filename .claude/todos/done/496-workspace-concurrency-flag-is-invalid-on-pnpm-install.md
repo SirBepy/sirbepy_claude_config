@@ -58,3 +58,4 @@ Verified the same day that a bare `corepack pnpm install` is what actually works
   and each trip wastes a turn.
 - Do NOT weaken the concurrency cap itself. The cap exists because of a real incident (90+ orphan
   vitest processes at 100% CPU); only the flag spelling is wrong.
+- Done via /mega-todos batch 1, commit d65a83e: CLAUDE.md:55 now scopes --workspace-concurrency to pnpm recursive/run/exec and states plain pnpm install takes no concurrency flag. Verified live against pnpm 10.33.4. Bonus finding folded in: Vitest 4 removed poolOptions.threads.maxThreads and singleFork, so the bullet now names maxWorkers/isolate instead.

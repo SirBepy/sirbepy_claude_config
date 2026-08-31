@@ -60,6 +60,23 @@ situation the check was written for.
 - Step 8's hit-handling text distinguishes HEAD from non-HEAD overlap and names an executable
   remedy for each.
 - `commit-style.md`'s never-share-a-commit rule links to the partial-staging section or states the
-  overlapping-file exception.
+  overlapping-file exception. **BLOCKED, see Notes: that file does not exist.**
 - Re-read the two files end to end afterwards: both rules are load-bearing on every commit, so an
   edit that contradicts a neighbouring clause is worse than the gap.
+
+## Notes
+
+- **Advanced but NOT finished, 2026-08-31, `/mega-todos` batch 1, commit `8658bd1`.** The primary fix
+  landed: `skills/commit/SKILL.md` step 8's unpushed-overlap hit handling now splits on whether the
+  blamed sha IS HEAD. Overlap including HEAD keeps the existing question card; overlap that is
+  entirely non-HEAD no longer offers `git reset --soft HEAD~1`, which was actively wrong there, and
+  points at `/commit fold <sha>` instead.
+- **The second acceptance item is undispatchable as written, and that is a defect in this todo, not
+  in the work.** It names a rule in `skills/commit/commit-style.md`. That file does not exist anywhere
+  in this repo: `find skills/commit -type f` lists no such file, and the quoted rule "Different
+  tickets never share a commit" appears verbatim nowhere repo-wide. Verified independently by the
+  Step C scout and by the orchestrator on 2026-08-31. The only `commit-style.md` `SKILL.md` references
+  is a PROJECT-level override at `.claude/commit-style.md` in OTHER repos, read at step 1.
+- Next run: either point that item at wherever the never-share-a-commit rule actually lives (if it
+  exists under another name), or drop the item and archive this todo on the primary fix alone. Do NOT
+  invent a file to satisfy it.

@@ -88,3 +88,4 @@ red/green case, not just the whole-tree measurement one.
 
 Filed from a `hubbub` session per global CLAUDE.md's rule that a finding about the global tree goes
 in the global backlog. No global files were edited from that session.
+- Done via /mega-todos batch 1, commit ccee012: refs/builder-preamble.md now carries a "Taking a baseline" clause naming git worktree as the sanctioned whole-tree mechanism, with the rule stated as "a baseline is taken before you edit, never recovered by rewinding a shared tree".

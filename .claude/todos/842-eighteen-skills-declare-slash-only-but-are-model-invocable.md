@@ -72,3 +72,10 @@ unflagged by the 2026-08-18 audit and reversing that silently would re-litigate 
 Todo `400`'s own Notes line cites this follow-up as "todo 779". That was wrong: 779 was taken by a
 concurrent session between the note being written and the id being reserved. This file is the
 follow-up 400 meant.
+
+- **Renumbered from id `780` to `842` on 2026-08-31** by todo `809`, executed from the main thread of
+  a `/mega-todos` run. Two files shared the prefix `780`, so claiming or completing "todo 780" by id
+  was ambiguous. This file was the one moved because a bare-`780` sweep across the whole backlog
+  found only `809` itself and `803` referring to the id, and `803`'s reference is unambiguously to
+  `780-guard-against-piping-cargo-test-output.md`, which keeps the id. `PLAN.md` named neither, so no
+  PLAN.md edit was needed.

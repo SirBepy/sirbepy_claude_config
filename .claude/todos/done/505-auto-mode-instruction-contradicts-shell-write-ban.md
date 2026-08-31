@@ -62,3 +62,7 @@ Option 1 is the smallest and does not depend on whether the preamble is editable
 - `shell-content-write-guard.py` still blocks `>`, `>>`, `tee`, `Set-Content`, `Out-File`.
 - Reading via `cat`/`sed`/`grep` and writing via a `python`/`node` heredoc that opens the file itself
   remain unaffected.
+
+## Notes
+
+- Done via /mega-todos batch 1, commit 6d7a220: CLAUDE.md Shell Commands now states the shell-write ban overrides any harness or auto-mode preamble instruction to write files via redirection, so precedence is written down rather than discovered when the hook rejects the call.

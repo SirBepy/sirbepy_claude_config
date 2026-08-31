@@ -53,3 +53,7 @@ reported a teeth-check, grep the changed non-test files for `if (true)`,
   paste block.
 - `refs/delegation-doctrine.md` "Quality tells" names the post-dispatch grep.
 - A dispatch prompt generated from the preamble visibly carries the clause.
+
+## Notes
+
+- Done via /mega-todos batch 1, commit 60884c4: refs/builder-preamble.md requires a builder that mutated a non-test file to restore it and paste git diff HEAD proving the mutation is absent, and refs/delegation-doctrine.md Quality tells now has the matching post-dispatch grep check.

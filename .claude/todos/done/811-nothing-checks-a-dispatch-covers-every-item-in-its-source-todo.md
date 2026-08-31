@@ -75,3 +75,4 @@ nothing diffs the rewrite against the source afterwards.
 - Related: `791` (a requirement in doctrine prose never reached builders, fixed by moving it into
   the pasted block). Same root cause, different requirement. Read its `done/` file first; the
   argument for item 4 is already made there.
+- Done via /mega-todos batch 1, commit bfec932: delegation-doctrine gained a "Todo-to-dispatch fidelity" paragraph in Dispatch discipline, Fan-out reconciliation now states it applies at two scales, the out-of-scope-findings bullet requires reporting source-todo omissions, and the equivalent sentence landed verbatim in builder-preamble.md.

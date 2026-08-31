@@ -90,3 +90,4 @@ a shared index and that reasoning is unchanged.
   belongs in step 8: after committing, `git status --porcelain <dir>` showing ` D` for a path the
   commit was supposed to move IS the symptom. Worth pairing the fix with a note in
   `close/ai-todos-format.md` that archiving a todo is a two-path commit.
+- Done via /mega-todos batch 1, commit ff6b7cb: /commit step 8 now checks git diff --cached --name-status against the commit pathspec and names the git mv two-paths rule plus the amend recovery. Uses a directory-relatedness heuristic so a shared-index repo with unrelated staged files warns rather than blocks. The optional ai-todos-format.md pairing note was dropped to avoid a lane collision and is filed as a follow-up todo.

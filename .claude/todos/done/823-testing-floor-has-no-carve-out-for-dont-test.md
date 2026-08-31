@@ -63,3 +63,4 @@ instruction from the dev, not Claude's own judgement that a change looks safe.
 
 Filed from a zng-app session per global CLAUDE.md's rule that findings about the `~/.claude` tree
 belong in this backlog, not the surfacing project's. Not executed there - only filed.
+- Done via /mega-todos batch 1, commit 294ca67: the Testing and verification floor now carries a standing carve-out, an explicit do-not-test instruction holds for the rest of the session and requires naming what was skipped, and is not a licence to skip on Claude judgement.

@@ -51,6 +51,24 @@ Note the finding itself was good and was kept. The channel was the problem, not 
 
 ## Acceptance
 
-- The doctrine's rejection note reflects the 2026-08-19 instance.
-- Either a guard exists with a test, or the doctrine states plainly why it cannot be enforced.
-- No new guess-based hook ships.
+- [x] The doctrine's rejection note reflects the 2026-08-19 instance.
+- [ ] Either a guard exists with a test, or the doctrine states plainly why it cannot be enforced.
+- [x] No new guess-based hook ships.
+
+## Notes
+
+- **Advanced but NOT finished, 2026-08-31, `/mega-todos` batch 1, commit `441e9d0`.** Deliverable (a)
+  landed: `refs/delegation-doctrine.md` now carries the 2026-08-19 evidence (a builder wrote
+  `.claude/todos/391-*` directly during a 33-agent run, bypassing the report-back channel, and got
+  lucky the id was free, unlike `done/291`'s `263-*` collision), so the old rejection reads as
+  tested-and-broken rather than theoretical.
+- **What remains is the second acceptance item, and it is genuinely open, not skipped.** The doctrine
+  now records that whether a PreToolUse hook can distinguish an orchestrator's backlog write from a
+  subagent's is UNRESOLVED, because no `is_subagent`-shaped field appears in the payloads
+  `hooks/_hooklib.py:30-35` parses. Settling it needs a deliberate nested-agent probe: dispatch an
+  agent, have it attempt a Write into the backlog, and capture what the hook actually receives. The
+  orchestrator withheld that probe from an unattended builder on purpose, since a nested dispatch
+  inside a 44-agent run is the wrong place to run an experiment.
+- Next run: do the probe FIRST. If the payload distinguishes them, ship the guard shaped like
+  `hooks/todo-duplicate-guard.py` plus a test. If it does not, change the doctrine's "unresolved" to
+  a settled "cannot be enforced at the hook layer" and close this out.
