@@ -171,6 +171,18 @@ id within the same run, proving the race is real, not hypothetical. A PreToolUse
 was considered and rejected here: it enforces mechanically, but the report-back channel keeps the
 same finding without needing a new harness capability.
 
+That rejection was tested, not just theorized, and it broke: on 2026-08-19, during a 33-agent
+`/mega-todos` run, a builder wrote `.claude/todos/391-builders-have-no-sanctioned-way-to-get-a-
+whole-tree-baseline.md` directly, bypassing the report-back channel even though its dispatch
+carried the "never write into `.claude/todos/` - report findings" line verbatim. It got lucky on
+the id: 391 was free, so no collision happened, unlike the original todo 291 incident where the
+same bypass produced a `263-...` collision with an already-taken id in the same run. Whether a
+mechanical guard could catch this instead of a prohibition is still unresolved: no payload read by
+`hooks/_hooklib.py`'s `read_payload` (hooks/_hooklib.py:30-35) carries an `is_subagent`-shaped
+field, so it is not yet known whether a PreToolUse hook can even distinguish an orchestrator's
+write into the backlog from a subagent's. Settling that needs a deliberate nested-agent probe,
+which has not been run; this paragraph records the open question, not an answer.
+
 Every dispatch instead asks for an "Out-of-scope findings" section in the report: what was found,
 and why it sits outside this dispatch's lane. The orchestrator turns each one into a properly
 allocated todo after the fan-out returns, per the reporting requirement named above.
