@@ -16,7 +16,10 @@ a separate workflow from /create-pr's body tiering/anti-bloat/preview gate
 that this todo targets, so blocking them would break that skill for no
 bypass-prevention benefit.
 
-Override: set CLAUDE_PR_HOOK_BYPASS=1 to bypass if /create-pr is broken.
+Override: set CLAUDE_PR_HOOK_BYPASS=1 in this session's environment
+(settings.json "env", or exported before launching claude) to bypass if
+/create-pr is broken - an inline prefix on the command itself does not reach
+this hook.
 """
 
 import os
@@ -39,6 +42,9 @@ except Exception as e:
 MARKER_DIR = _HOOKS_DIR
 MARKER_GLOB = ".pr-marker*"
 OVERRIDE_ENV = "CLAUDE_PR_HOOK_BYPASS"
+# Must be set in this session's environment (settings.json "env", or exported
+# before launching claude); an inline `VAR=1 <cmd>` prefix never reaches this
+# hook, since PreToolUse reads the command string before any shell parses it.
 MUTATING_ACTIONS = {"create", "edit"}
 
 # Every GitHub account the dev pushes under; gh-account-switch.sh picks one per
@@ -150,7 +156,10 @@ def main() -> None:
         f"[pr-guard] Raw `gh pr {action}` is blocked. Use the /create-pr "
         "skill instead - it writes the authorisation marker this hook "
         f"checks, after its tiering/anti-bloat rules and preview/approval "
-        f"gate. If /create-pr itself is broken, set {OVERRIDE_ENV}=1 to bypass."
+        f"gate. If /create-pr itself is broken, set {OVERRIDE_ENV}=1 in this "
+        f"session's environment (settings.json \"env\", or exported before "
+        f"launching claude) - an inline prefix on the command itself does not "
+        f"reach this hook."
     )
 
 

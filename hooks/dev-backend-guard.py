@@ -30,9 +30,11 @@ with a dev target. Everything else that merely mentions a dev host (curl
 probes, grepping the env file, reading config) only WARNS, because a blanket
 block would get this hook switched off and then it protects nothing.
 
-Override: set CLAUDE_DEV_BACKEND_BYPASS=1 when hitting dev is genuinely the
-task (verifying an already-deployed fix). If you do, use a real reachable
-phone number, never a generated one, and run no negative tests.
+Override: set CLAUDE_DEV_BACKEND_BYPASS=1 in this session's environment
+(settings.json "env", or exported before launching claude) when hitting dev
+is genuinely the task (verifying an already-deployed fix) - an inline prefix
+on the command itself does not reach this hook. If you do, use a real
+reachable phone number, never a generated one, and run no negative tests.
 """
 
 import os
@@ -54,6 +56,9 @@ except Exception as e:
     sys.exit(2)
 
 OVERRIDE_ENV = "CLAUDE_DEV_BACKEND_BYPASS"
+# Must be set in this session's environment (settings.json "env", or exported
+# before launching claude); an inline `VAR=1 <cmd>` prefix never reaches this
+# hook, since PreToolUse reads the command string before any shell parses it.
 
 APP_RUNNERS = {"flutter", "flutter.bat", "flutter.exe", "dart", "dart.exe", "dart.bat", "fvm", "fvm.exe"}
 DRIVING_SUBCOMMANDS = {"run", "build", "drive", "test"}
@@ -134,7 +139,9 @@ def block(reason: str) -> None:
         "dev but cannot on local, and negative tests log expected 403s that page people. Use local: "
         "it has the '000000' OTP bypass and a debit-card cheat endpoint that skips Fiserv, which "
         "covers essentially every verification task. If hitting dev is genuinely the point, set "
-        f"{OVERRIDE_ENV}=1, use a real reachable phone number, and run no negative tests."
+        f"{OVERRIDE_ENV}=1 in this session's environment (settings.json \"env\", or exported "
+        "before launching claude) - an inline prefix on the command itself does not reach this "
+        "hook. Use a real reachable phone number, and run no negative tests."
     )
 
 

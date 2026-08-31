@@ -20,7 +20,10 @@ Two marker styles are honoured:
 Fails open on any hook error so a bug here can never permanently wedge every
 commit in every repo.
 
-Override: set CLAUDE_COMMIT_HOOK_BYPASS=1 to bypass if /commit is broken.
+Override: set CLAUDE_COMMIT_HOOK_BYPASS=1 in this session's environment
+(settings.json "env", or exported before launching claude) to bypass if
+/commit is broken - an inline prefix on the command itself does not reach
+this hook.
 """
 
 import os
@@ -43,6 +46,9 @@ MARKER_GLOB = ".commit-marker*"
 SESSION_MARKER_DIR = _HOOKS_DIR / ".session-markers"
 LEGACY_SESSION_MARKER_PREFIX = ".commit-marker-session-"
 OVERRIDE_ENV = "CLAUDE_COMMIT_HOOK_BYPASS"
+# Must be set in this session's environment (settings.json "env", or exported
+# before launching claude); an inline `VAR=1 <cmd>` prefix never reaches this
+# hook, since PreToolUse reads the command string before any shell parses it.
 
 # Short flags that consume a separate following token as their value (so it
 # doesn't get mistaken for the subcommand), e.g. `git -C <path> commit ...`.
@@ -110,7 +116,9 @@ def main() -> None:
         "[commit-guard] Raw `git commit` is blocked; no part of this call ran, "
         "including any command chained before it. Use the /commit skill instead "
         f"- it writes the session marker this hook checks. If /commit itself is "
-        f"broken, set {OVERRIDE_ENV}=1 to bypass."
+        f"broken, set {OVERRIDE_ENV}=1 in this session's environment (settings.json "
+        f"\"env\", or exported before launching claude) - an inline prefix on the "
+        f"command itself does not reach this hook."
     )
     if ".commit-marker" in command or ".session-markers" in command:
         reason += (
