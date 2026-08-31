@@ -58,6 +58,18 @@ return a condensed SPEC PACK, not a narrative: exact contracts (signatures, type
 shapes), `file:line` pointers, and the specific gotchas a builder would otherwise trip on. The
 spec pack is what the builder prompt embeds, so the builder never has to re-derive the map.
 
+**Todo-to-dispatch fidelity.** When a dispatch is built from a todo file, enumerate that todo's
+Approach and Acceptance items before writing the prompt, then confirm each one appears in the
+dispatch prompt or is explicitly excluded in it with a stated reason. A paraphrase is fine; a
+silent drop is not (todo 465: a five-item Approach became a four-item TASK list, and the dropped
+item, an oracle constraint, was caught only because the builder happened to volunteer it in its
+out-of-scope-findings note, not because anything checked for it). This is the same set-difference
+failure as "Fan-out reconciliation" below, at the scale of one todo's own steps rather than a whole
+batch's ids - see that section for how the two scales relate. No hook enforces this: a dispatch
+prompt carries no machine-readable link back to the todo id it came from, so a string-match check
+cannot express "covers every item in a file it cannot identify" (todo 811). The enumeration above
+and the out-of-scope-findings channel below are the only guards.
+
 **Every builder prompt embeds, without exception:**
 
 - Its verify floor: the project's fast checks (typecheck, unit, lint, build) with the instruction
@@ -74,8 +86,11 @@ spec pack is what the builder prompt embeds, so the builder never has to re-deri
   dispatch prompt must never carry a credential either; name the env var the builder should read.
 - The out-of-scope-findings channel: a subagent NEVER writes into `.claude/todos/`, even a
   well-formed, confident finding. It reports an "Out-of-scope findings" section instead - what it
-  found and why it sits outside this dispatch's lane - and the orchestrator files it as a proper
-  todo after the fan-out returns (see "Out-of-scope findings" below).
+  found and why it sits outside this dispatch's lane, AND, when the dispatch was built from a
+  source todo, anything in that todo the dispatch prompt did not ask for. That second half is the
+  highest-value part of this channel: it is what caught the dropped item on todo 465, and naming it
+  explicitly makes the rescue deliberate instead of lucky (todo 811). The orchestrator files each
+  one as a proper todo after the fan-out returns (see "Out-of-scope findings" below).
 - The staging line, conditional on whether the repo shares a git index with concurrent sessions:
   default `Stage your changes but do NOT commit. The main agent will run /commit after your
   report-back.`; for a shared-index repo (e.g. zng-app, zng-biller) substitute `Leave all changes
@@ -168,6 +183,15 @@ item (todo 292, 2026-08-12: a 42-item batch grouped into 10 dispatches missed id
 by an after-the-fact count mismatch while writing the archive notes). This is a set difference,
 never a count comparison - counts match by coincidence when one item is duplicated and another is
 dropped.
+
+This applies at two scales, and both are the same failure shape. **Across dispatches:** a batch of
+todo ids gets partitioned into groups, and a group can be dropped whole - the id-union diff below is
+that check. **Within one dispatch:** a single source todo's own Approach and Acceptance items get
+paraphrased into one builder's task list, and an individual item can be dropped the same way (todo
+465, 811: see "Dispatch discipline" above for the per-item enumeration check that guards this
+scale). Keeping both under one heading is deliberate - treating them as unrelated lets a reader
+believe the id-level rule already covers the within-dispatch case, which is exactly the gap that let
+465 through.
 
 **Before dispatch:** write the union of ids assigned across every group and diff it against the
 source list. State the expected total in the dispatch plan, so post-run reconciliation has

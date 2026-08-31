@@ -69,6 +69,10 @@ If you mutated any non-test file to prove a test fails (an `if (true)`, an `if (
 `return`, or a commented-out guard), restore it before reporting and paste `git diff HEAD -- <that
 file>` in your report showing the mutation is absent. State explicitly that you checked.
 
+If this dispatch was built from a source todo file, your report's "Out-of-scope findings" section
+also names anything in that todo the dispatch prompt did not ask for, not just findings outside your
+lane - that is the channel that caught a dropped item on todo 465, and it only works if you use it.
+
 Your final message is your entire return value. ALL commands, including the verify floor
 (build/test/lint/typecheck), run synchronously in the same tool call: `run_in_background` is
 FORBIDDEN in builder subagents, a long build is waited out, not backgrounded. Ending the turn while
