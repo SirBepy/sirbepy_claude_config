@@ -21,6 +21,12 @@ mode this guards against, so it never counts).
 
 Override: set CLAUDE_WORKDIR_GUARD_BYPASS=1 to bypass if this hook itself
 misfires.
+
+Second, unrelated block (todo 803): `fvm`/`flutter`/`dart` invoked as the
+LEADING word of a Bash-tool command is denied outright, distinct from the
+pin logic above. `fvm` is missing from Bash's PATH on this machine, so
+`fvm flutter analyze` there prints "command not found" and exits 0 - a
+silently skipped check. PowerShell commands are untouched.
 """
 
 import os
@@ -42,6 +48,7 @@ except Exception as e:
 OVERRIDE_ENV = "CLAUDE_WORKDIR_GUARD_BYPASS"
 
 RUNNER_BASENAMES = {"flutter", "flutter.bat", "flutter.exe", "dart", "dart.exe", "dart.bat"}
+BASH_LEADING_BASENAMES = RUNNER_BASENAMES | {"fvm", "fvm.bat", "fvm.exe"}
 DESTRUCTIVE_FLAG = "--delete-conflicting-outputs"
 CD_WORDS = {"cd", "cd.", "chdir", "pushd", "sl", "set-location", "push-location"}
 DIR_FLAGS = {"-c", "--directory", "--working-directory", "-workingdirectory"}
@@ -133,11 +140,24 @@ def is_flutter_project(path: str) -> bool:
 
 def main() -> None:
     payload = read_payload()
+    tool_name = payload.get("tool_name")
     command = (payload.get("tool_input") or {}).get("command", "") or ""
     if not command.strip():
         allow()
     if os.environ.get(OVERRIDE_ENV):
         allow()
+
+    if tool_name == "Bash":
+        for segment in CHAIN_SPLIT_RE.split(command):
+            tokens = tokenize(segment)
+            if tokens and basename(tokens[0]) in BASH_LEADING_BASENAMES:
+                deny(
+                    "[flutter-workdir-guard] Blocked: fvm/flutter/dart invoked as the leading "
+                    "command through the Bash tool. fvm is missing from Bash's PATH here, so this "
+                    "exits 0 having run nothing, and a `| tail`/`| head`/`| grep` on top of it masks "
+                    "a real build failure as a false green. Re-run this command through the "
+                    f"PowerShell tool instead. Bypass: set {OVERRIDE_ENV}=1."
+                )
 
     segments = CHAIN_SPLIT_RE.split(command)
     prior_pin: str | None = None
