@@ -248,6 +248,12 @@ Response: a targeted re-check (cheap, scoped to the doubt) or, for a high-stakes
 higher-tier verifier per the global CLAUDE.md escalation triggers. Never accept a suspect report
 just because re-checking costs tokens.
 
+After any dispatch that reported a teeth-check (mutate production code, watch a test fail,
+restore), grep the changed non-test files for `if (true)`, `if (false)`, an early `return`, or a
+commented-out guard before accepting the report - the builder's own restore claim is not proof
+(see `refs/builder-preamble.md`'s matching clause and the revaire-mobile REV-5312 incident, todo
+411).
+
 ## Visual work
 
 A builder whose task was visual (UI, layout, styling, mockup match) is never accepted on a green

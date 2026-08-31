@@ -65,6 +65,10 @@ HEAD:<old-file>`), which is expected on a pure move and must NOT be trimmed; em-
 flagged added lines now, same do-not-ask treatment; secret-scan = STOP, never auto-fix it and never
 work around it, leave your work as it stands and report the hit naming the file.
 
+If you mutated any non-test file to prove a test fails (an `if (true)`, an `if (false)`, an early
+`return`, or a commented-out guard), restore it before reporting and paste `git diff HEAD -- <that
+file>` in your report showing the mutation is absent. State explicitly that you checked.
+
 Your final message is your entire return value. ALL commands, including the verify floor
 (build/test/lint/typecheck), run synchronously in the same tool call: `run_in_background` is
 FORBIDDEN in builder subagents, a long build is waited out, not backgrounded. Ending the turn while
