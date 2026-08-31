@@ -45,16 +45,21 @@ function Get-AncestorClaudePid {
 
 # Resolves this session's own record from sessions/*.json. sessionId match is authoritative;
 # the pid-walk match only runs when the env var is unset. Tags via _resolvedVia (todo 346).
+# -ExcludePids (todo 776) skips records already proven dead, so a stale sessions/*.json
+# entry sharing this sessionId does not win a second time when re-resolving.
 function Resolve-SessionRecord {
+    param(
+        [int[]]$ExcludePids = @()
+    )
     $sid = $env:CLAUDE_CODE_SESSION_ID
     if ($sid) {
         $match = Get-ChildItem -Path $sessionsDir -Filter '*.json' -File -ErrorAction SilentlyContinue |
             ForEach-Object {
                 try {
                     $d = Get-Content -Raw -Path $_.FullName | ConvertFrom-Json
-                    if ($d.sessionId -eq $sid) { $d }
+                    if ($d.sessionId -eq $sid -and $ExcludePids -notcontains [int]$d.pid) { $d }
                 } catch {}
-            } | Select-Object -First 1
+            } | Sort-Object -Property startedAt -Descending | Select-Object -First 1
         if ($match) {
             $match | Add-Member -NotePropertyName _resolvedVia -NotePropertyValue 'sessionId' -Force
             return $match
@@ -68,7 +73,7 @@ function Resolve-SessionRecord {
         ForEach-Object {
             try {
                 $d = Get-Content -Raw -Path $_.FullName | ConvertFrom-Json
-                if ($d.pid -and ([int]$d.pid -eq $claudePid)) { $d }
+                if ($d.pid -and ([int]$d.pid -eq $claudePid) -and $ExcludePids -notcontains [int]$d.pid) { $d }
             } catch {}
         } | Sort-Object -Property UpdatedAt -Descending | Select-Object -First 1
     if ($fallback) {
@@ -78,9 +83,25 @@ function Resolve-SessionRecord {
 }
 
 if ($GetId) {
-    $record = Resolve-SessionRecord
+    # Todo 776: a matched record can point at a pid that already exited. Verify liveness and
+    # re-resolve, excluding dead pids; a healthy session resolves alive on the first pass.
+    $deadPids = @()
+    $record = $null
+    for ($attempt = 0; $attempt -lt 8; $attempt++) {
+        $record = Resolve-SessionRecord -ExcludePids $deadPids
+        if (-not $record) { break }
+        if ($record._resolvedVia -eq 'pidwalk') { break }
+        if (Get-Process -Id ([int]$record.pid) -ErrorAction SilentlyContinue) { break }
+        $deadPids += [int]$record.pid
+        $record = $null
+    }
+
     if (-not $record) {
-        Write-Error "Could not resolve this session's own record (sessionId env var unset and pid-walk fallback failed)."
+        if ($deadPids.Count -gt 0) {
+            Write-Error "Could not resolve this session's own record to a live pid: every matching sessions/*.json entry points at an exited process (tried pid(s) $($deadPids -join ', '))."
+        } else {
+            Write-Error "Could not resolve this session's own record (sessionId env var unset and pid-walk fallback failed)."
+        }
         exit 1
     }
     if ($record._resolvedVia -eq 'pidwalk') {
@@ -149,6 +170,12 @@ if ($Close) {
         exit 0
     }
     $claudePid = [int]$record.pid
+    # Todo 776: a resolved pid can already be dead, which used to print a false "scheduled
+    # kill" success. Verify liveness first and fail loudly instead.
+    if (-not (Get-Process -Id $claudePid -ErrorAction SilentlyContinue)) {
+        Write-Error "Close requested but resolved pid $claudePid is already dead (stale sessions/*.json record). Nothing to kill; this terminal did not close. Consider mcp__cc_conductor__close_session, which closes by session id and needs no pid."
+        exit 1
+    }
     # Kill claude.exe directly. VS Code closes the terminal tab when its hosted process exits.
     $killCmd = "Start-Sleep -Milliseconds 800; try { Stop-Process -Id $claudePid -Force -ErrorAction Stop } catch {}"
     Start-Process -FilePath 'powershell.exe' `
