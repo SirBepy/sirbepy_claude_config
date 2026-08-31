@@ -135,9 +135,13 @@ Folds newly-staged-or-named fixes into an existing commit `<sha>` that is not ye
 **Preconditions, checked in this order, before anything is written:**
 
 1. Resolve `<sha>` to a full hash (`git rev-parse <sha>`). Unresolvable: stop, tell the dev.
-2. **Pushed check, unmissable.** `git rev-parse --abbrev-ref --symbolic-full-name @{u}` for the upstream.
-   - No upstream configured: nothing to push to yet, so `<sha>` cannot be "already pushed" - safe on this axis, continue.
-   - Upstream exists: `git branch -r --contains <sha>`. Any output means `<sha>` is reachable from a remote branch - **refuse**, name the sha, and tell the dev to make a normal follow-up `FIX:` commit instead (same fix-forward wording as auto-commit.md's "Fixes: `<short-sha>`" body line). Stop, do not touch history.
+2. **Pushed check, unmissable, and it must query the live remote, never local refs.** A pushed commit is never folded, and the dev is not asked to choose: refuse, name the sha, and tell them to make a normal follow-up commit instead (same fix-forward wording as auto-commit.md's "Fixes: `<short-sha>`" body line). Stop, do not touch history.
+
+   `@{u}` and `origin/*` are **not** evidence. A branch can be pushed with an explicit refspec and never get an upstream, and `origin/*` goes stale the moment a fetch fails (Revaire repos fetch as the wrong account and 404 silently), so both routinely report "unpushed" for a commit that is live on the remote and under review. Prove it against the remote itself:
+
+   - `git remote` empty: nothing to push to, genuinely safe, continue.
+   - Otherwise `git ls-remote <remote> 'refs/heads/*'` for the live tip shas. For each tip the local object store already has, `git merge-base --is-ancestor <sha> <tip>`; any success means pushed - refuse.
+   - A tip whose object is missing locally cannot be tested, so it cannot clear `<sha>` either. If any tip is untestable and none of the testable ones matched, **refuse anyway** and say the check was inconclusive. This mode rewrites published history when it is wrong, so an unprovable answer is treated as pushed.
 3. **Overlap check.** `git log --format=%H <sha>..HEAD` lists every commit on top of the target. For each, `git show --name-only --format= <commit>` and intersect with the file list this fold is about to touch. Any overlap: a clean pathspec split can't separate the hunks - **refuse this mode**, point the dev at "Splitting one file across commits" in `skills/commit/edge-cases.md` instead.
 4. Step 5a's `prefilter-gate.sh` runs against the fold's own file set, same as any other commit.
 5. Branch guard: record `git rev-parse --abbrev-ref HEAD` now, and re-check it immediately before the reset below - same rule as step 8's, stop if it moved. Same peer check (7a) too: announce the pathspec about to be rewritten before touching history.
