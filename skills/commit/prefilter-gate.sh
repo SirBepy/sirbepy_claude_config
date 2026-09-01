@@ -26,18 +26,41 @@ elif [ "${1:-}" != "--range" ] && [ $# -gt 0 ]; then
   cwd_repo=$(git rev-parse --show-toplevel 2>/dev/null)
   declare -A group_paths
   for a in "$@"; do
-    arg_repo=$(git -C "$(dirname -- "$a")" rev-parse --show-toplevel 2>/dev/null)
+    # A directory argument that IS a submodule root resolves via its own toplevel, not its
+    # parent's, or the whole submodule reads back as one gitlink entry (todo 801).
+    if [ -d "$a" ]; then
+      arg_repo=$(git -C "$a" rev-parse --show-toplevel 2>/dev/null)
+    else
+      arg_repo=$(git -C "$(dirname -- "$a")" rev-parse --show-toplevel 2>/dev/null)
+    fi
     if [ -z "$arg_repo" ]; then
       printf 'ERROR: could not find a git repository for %s\n' "$a"
       exit 2
     fi
     if [ "$arg_repo" = "$cwd_repo" ]; then
+      # A directory that is not a submodule root can still CONTAIN one further down (`vendor/`,
+      # or the repo root); reading it as a plain path would silently skip that submodule's diff.
+      # Refuse instead of guessing, and name what was skipped.
+      if [ -d "$a" ]; then
+        subs=$(git ls-files -s -- "$a" 2>/dev/null | grep '^160000' | cut -f2-)
+        if [ -n "$subs" ]; then
+          printf 'ERROR: %s contains submodule(s) a directory argument cannot resolve, pass their paths directly: %s\n' \
+            "$a" "$(printf '%s' "$subs" | tr '\n' ' ')"
+          exit 2
+        fi
+      fi
       rel="$a"
     else
       # `git -C <repo> diff` resolves pathspecs against the NEW cwd, not the caller's, so a
       # parent-relative path silently misses once forwarded - rebuild it relative to its own root.
-      prefix=$(git -C "$(dirname -- "$a")" rev-parse --show-prefix 2>/dev/null)
-      rel="${prefix}$(basename -- "$a")"
+      if [ -d "$a" ]; then
+        prefix=$(git -C "$a" rev-parse --show-prefix 2>/dev/null)
+        rel="${prefix%/}"
+        [ -z "$rel" ] && rel="."
+      else
+        prefix=$(git -C "$(dirname -- "$a")" rev-parse --show-prefix 2>/dev/null)
+        rel="${prefix}$(basename -- "$a")"
+      fi
     fi
     group_paths["$arg_repo"]+="$rel"$'\n'
   done
