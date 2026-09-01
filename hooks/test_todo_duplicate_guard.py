@@ -138,6 +138,16 @@ def check_integration() -> list:
         id_reserved_path = todos_dir / "260-another-fresh-topic-someone-reserved.md"
         id_reserved_content = "# Another fresh topic someone already reserved\n\nGoal: reserved.\n"
 
+        # A marker for 305 sits alongside a real done/ file for the same id (a
+        # collision the reservation script should have prevented but the hook
+        # still catches): the marker carve-out must not swallow this too.
+        (todos_dir / "305-.reserved").write_text("session: test\npid: 3\n", encoding="utf-8")
+        (done_dir / "305-old-done-thing.md").write_text(
+            "# Old done thing about zzz widgets\n\nDone, already shipped.\n", encoding="utf-8",
+        )
+        id_marker_plus_real_path = todos_dir / "305-new-thing-reusing-a-done-id.md"
+        id_marker_plus_real_content = "# New thing reusing a done id\n\nGoal: unrelated collision.\n"
+
         inplace_path = todos_dir / "130-split-v2-verify-screen.md"
         inplace_content = "# Split v2 verify screen, it is too large\n\nGoal: extract the debit card form, updated.\n"
 
@@ -191,8 +201,16 @@ def check_integration() -> list:
             ),
             (
                 {"tool_name": "Write", "tool_input": {"file_path": str(id_reserved_path), "content": id_reserved_content}},
+                0,
+                "reserve-then-write: writing the id's own *-.reserved marker passes",
+            ),
+            (
+                {
+                    "tool_name": "Write",
+                    "tool_input": {"file_path": str(id_marker_plus_real_path), "content": id_marker_plus_real_content},
+                },
                 2,
-                "id already claimed by a *-.reserved marker blocks",
+                "marker carve-out does not swallow a real collision for the same id",
             ),
             (
                 {"tool_name": "Write", "tool_input": {"file_path": str(inplace_path), "content": inplace_content}},

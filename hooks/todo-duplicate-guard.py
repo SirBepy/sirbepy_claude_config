@@ -16,6 +16,10 @@ listed and an explicit override marker, never a silent or unresolvable stop.
 Id uniqueness (todo 492) is a separate, unconditional check: two files ever
 sharing a numeric prefix breaks every `-Id`-addressed tool downstream, so it
 is a hard block with no override marker, unlike the content heuristic above.
+
+Todo 851: the check does not delete a matched `*-.reserved` marker on a
+passing write. A PreToolUse hook deleting files is a surprising side effect;
+step 3 of the reserve-then-write contract stays the caller's job.
 """
 
 import re
@@ -169,7 +173,12 @@ def extract_id(name: str) -> int | None:
 def find_id_collision(todos_dir: Path, target_name: str, target_id: int) -> Path | None:
     """Path of a differently-named file or reservation marker that already
     claims `target_id`, else None. A same-name match in `todos_dir` itself is
-    an in-place rewrite, not a collision - same precedent as `find_hits`.
+    an in-place rewrite, not a collision - same precedent as `find_hits`. A
+    `<target_id>-.reserved` marker in `todos_dir` is the caller's own
+    reservation, not a collision either: `reserve-todo-id.ps1`'s atomic
+    no-overwrite rename guarantees at most one marker per id ever exists, so
+    a marker sharing `target_id` can only be the write this same id was
+    reserved for.
     """
     candidates = [f for f in sorted(todos_dir.glob("*.md")) if FILENAME_RE.match(f.name)]
     done_dir = todos_dir / "done"
@@ -179,6 +188,8 @@ def find_id_collision(todos_dir: Path, target_name: str, target_id: int) -> Path
 
     for f in candidates:
         if f.parent == todos_dir and f.name.lower() == target_name:
+            continue
+        if f.parent == todos_dir and f.name.lower().endswith("-.reserved") and extract_id(f.name) == target_id:
             continue
         if extract_id(f.name) == target_id:
             return f
