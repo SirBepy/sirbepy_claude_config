@@ -76,6 +76,29 @@ CASES = [
         False,
         "shared invariant: arrow syntax inside a quoted-tag heredoc body",
     ),
+    # Todo 476's Acceptance list, pinned as cases rather than left to inspection.
+    (
+        "python - <<'PY'\n<strong>auth migration</strong> and Vec<String>\nPY",
+        False,
+        "476: html tags and generics inside a quoted-tag heredoc body",
+    ),
+    (
+        "python - <<'PY'\nDocs say: echo hi > file.txt\nPY",
+        False,
+        "476: a redirect quoted as documentation text inside a heredoc body",
+    ),
+    (
+        "python - <<'PY'\nconst i = byId >= 0 ? byId : -1\nPY",
+        False,
+        "476: >= inside a heredoc body (the preceded-by-only list misses this)",
+    ),
+    (
+        "python - <<'PY'\n```ts\nconst x = 1\n```\nPY",
+        False,
+        "476: a triple-backtick fence inside a heredoc body",
+    ),
+    ("ls 2>/dev/null", False, "476: 2>/dev/null stays allowed (todo 257)"),
+    ("Get-Command Set-Content", False, "476: naming a cmdlet is not using it (todo 289)"),
 ]
 
 
