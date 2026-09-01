@@ -60,13 +60,8 @@ checked first thing in main(), and named in every deny/ask reason. An inline
 `VAR=1 <cmd>` prefix does not work and cannot: PreToolUse sees the command
 string before any shell parses it, so the hook process never gets that var.
 Verified by a nested `claude -p` run on 2026-08-21.
-
-The MIDDLE "ask" JSON emitter is written locally, not in _hooklib, because
-another builder is adding _hooklib.ask() in parallel; collapse into that in
-a later pass.
 """
 
-import json
 import os
 import re
 import sys
@@ -77,7 +72,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny as _lib_deny
+    from _hooklib import read_payload, deny as _lib_deny, ask as _lib_ask
 except Exception as e:
     sys.stderr.write(f"[destructive-command-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -434,17 +429,6 @@ def deny(reason: str) -> None:
     _lib_deny(f"[destructive-command-guard] {reason}.{OVERRIDE_HINT}")
 
 
-def ask(reason: str) -> None:
-    print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "ask",
-            "permissionDecisionReason": f"[destructive-command-guard] {reason}.{OVERRIDE_HINT}",
-        }
-    }))
-    sys.exit(0)
-
-
 def main() -> None:
     if os.environ.get(OVERRIDE_ENV):
         sys.exit(0)
@@ -467,7 +451,7 @@ def main() -> None:
         if profile == "strict":
             deny(middle_hit)
         elif profile == "standard":
-            ask(middle_hit)
+            _lib_ask(f"[destructive-command-guard] {middle_hit}.{OVERRIDE_HINT}")
 
     sys.exit(0)
 
