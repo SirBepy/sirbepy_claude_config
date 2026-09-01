@@ -104,8 +104,21 @@ Remove from the AUTO queue, regardless of what triage said:
   rule excludes the entire backlog and the run has nothing to do, since every todo in that repo
   targets the global tree by definition. Invoking `/mega-todos` while in `~/.claude` is the dev
   saying so in that session, which is exactly what CLAUDE.md's rule asks for.
-- **`live-verify` / `verify ... live` todos.** They need the running app and the dev's eyes. A green
-  verify floor cannot see "this looks wrong" (delegation doctrine, Visual work). Park them.
+- **`live-verify` / `verify ... live` todos, but only the ones that actually need it.** A green
+  verify floor cannot see "this looks wrong" (delegation doctrine, Visual work), but most todos
+  titled that way just want a picture, not a running binary. Before excluding one, name which
+  concrete blocker applies - a title match alone is not a reason:
+  - real hardware (a phone, another OS)
+  - a real backend process or a real streamed turn
+  - an OS-level capture (crash log, process trace, cold boot)
+  - the dev's own taste, or his installed build specifically
+  If the project has a way to render a view without its real backend (a harness, a story, a preview
+  route), use it and queue the todo AUTO with a capture step instead of excluding it. First check
+  the project's spec directory for a name match too - grep it for the todo's feature name; if an
+  existing spec already answers the question, that is also not an exclusion, it is a done-without-
+  building. Measured 2026-08-22 in `claude_usage_in_taskbar`: 24 todos were dropped on title alone,
+  and a re-triage against the real harness found 8 fully reachable, 10 partially, and 4 already
+  answered by specs nobody had connected - only 6 were genuinely dev-only.
 - **Anything a Hard Stop covers:** credentials, destructive or irreversible ops, physical action.
 - **Todos whose fix is a UI/visual judgment call** with no approved mockup to match.
 - **Anything already claimed in `.claude/todos/.claims/`.** Another session is executing it right
@@ -113,7 +126,9 @@ Remove from the AUTO queue, regardless of what triage said:
   and drop newly-claimed todos from lanes that have not started yet - a claim appearing mid-run means
   a peer took it while we were building.
 
-Report the exclusion counts in the Step E summary. Never drop silently.
+Report every exclusion in the Step E summary with its own reason, e.g. "2 need a real device, 1
+needs a Mac, 3 need a real daemon turn" - never a bare count like "24 live-verify". A count is
+unfalsifiable; a reason per todo is reviewable, and a wrong one is visible. Never drop silently.
 
 ## Step C - Lane assignment
 
@@ -386,9 +401,10 @@ floor, e2e if runnable. Park every unresolved DEV fork into its todo's `## Open 
 Step D: file each as a properly allocated todo, `**Origin:** ai`, per `refs/delegation-doctrine.md`'s
 "Out-of-scope findings" section - never the builder itself.
 
-**Summary must report:** todos completed with shas, todos parked and why, exclusion counts by
-category from Step B, the lane map and actual achieved parallelism, every fork auto-decided and what
-it picked, barrier failures and how they were repaired, final ctx% used, and the verification result.
+**Summary must report:** todos completed with shas, todos parked and why, every Step B exclusion with
+its own reason (never a bare count), the lane map and actual achieved parallelism, every fork
+auto-decided and what it picked, barrier failures and how they were repaired, final ctx% used, and
+the verification result.
 End with `<cc-autopilot:off>`.
 
 ## Notes
