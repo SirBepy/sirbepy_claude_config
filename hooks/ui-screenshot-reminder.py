@@ -10,6 +10,17 @@ newer than the newest screenshot under .for_bepy/screenshots/, so a
 screenshot taken then followed by further unshot UI edits fires again
 instead of staying quiet for the rest of the session.
 
+Todo 487 (2026-09-01): "changed files" used to mean the whole working tree's
+`git diff`/untracked set, so any pre-existing dirty UI file (a peer session's
+edit, or leftover dirt from an earlier turn) fired the reminder on a turn
+that never touched it, including read-only turns. Attribution now comes from
+the transcript's own tool_use blocks since the last real user message (the
+same boundary em-dash-guard.py uses), so only files THIS turn's own
+Edit/Write/MultiEdit/NotebookEdit calls touched can trigger it. The repo used
+for the screenshot-freshness scan is resolved from the edited file's own git
+root, not payload["cwd"] (which follows the last Bash cwd and can drift to a
+different repo than the one actually edited).
+
 Non-blocking by design: any internal error must exit 0 silently (see the
 bottom try/except), same as em-dash-guard. A missed reminder is fine; a
 wedged Stop event is not.
@@ -66,23 +77,81 @@ def _run_git(cwd: str, args: list[str]) -> subprocess.CompletedProcess | None:
         return None
 
 
-def changed_files(cwd: str) -> list[str]:
-    """Tracked-dirty + untracked paths for `cwd`. Returns [] for a missing
-    git binary, a non-repo cwd, or any git failure - never raises.
-    """
-    cwd = cwd or "."
-    inside = _run_git(cwd, ["rev-parse", "--is-inside-work-tree"])
-    if inside is None or inside.returncode != 0:
-        return []
+EDIT_TOOL_SUFFIXES = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 
-    files: list[str] = []
-    tracked = _run_git(cwd, ["diff", "--name-only", "HEAD"])
-    if tracked is not None and tracked.returncode == 0:
-        files.extend(line.strip() for line in tracked.stdout.splitlines() if line.strip())
-    untracked = _run_git(cwd, ["ls-files", "--others", "--exclude-standard"])
-    if untracked is not None and untracked.returncode == 0:
-        files.extend(line.strip() for line in untracked.stdout.splitlines() if line.strip())
-    return files
+
+def is_tool_result_entry(entry: dict) -> bool:
+    """A tool_result is wrapped in a `type: user` entry in this transcript
+    format, distinguishable from a real human prompt only by content shape:
+    its `message.content` is a list of blocks carrying `type: tool_result`
+    (mirrors em-dash-guard.py's identical helper, todo 506)."""
+    if entry.get("type") != "user":
+        return False
+    content = (entry.get("message", {}) or {}).get("content")
+    if not isinstance(content, list):
+        return False
+    return any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content)
+
+
+def iter_turn_tool_uses(transcript_path: str):
+    """Yield (name, input) for tool_use blocks in assistant entries after the
+    most recent REAL user entry (not a tool_result), an approximation of
+    "this turn"."""
+    path = Path(transcript_path)
+    if not path.exists():
+        return
+    entries = []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                pass
+    last_user_idx = -1
+    for i, e in enumerate(entries):
+        if e.get("type") == "user" and not is_tool_result_entry(e):
+            last_user_idx = i
+    for e in entries[last_user_idx + 1:]:
+        if e.get("type") != "assistant":
+            continue
+        content = (e.get("message", {}) or {}).get("content", []) or []
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "tool_use":
+                yield block.get("name") or "", (block.get("input") or {})
+
+
+def turn_edited_paths(transcript_path: str) -> list[str]:
+    """File paths this turn's own Edit/Write/MultiEdit/NotebookEdit tool
+    calls touched, read from the transcript instead of `git status` - the
+    todo 487 fix: tree-wide dirt (a peer session's file, or a leftover dirty
+    file from an earlier turn) can no longer be attributed to this turn.
+    """
+    if not transcript_path:
+        return []
+    paths: list[str] = []
+    for name, tool_input in iter_turn_tool_uses(transcript_path):
+        suffix = name.rsplit("__", 1)[-1] if "__" in name else name
+        if suffix not in EDIT_TOOL_SUFFIXES:
+            continue
+        p = tool_input.get("file_path") or tool_input.get("notebook_path")
+        if isinstance(p, str) and p:
+            paths.append(p)
+    return paths
+
+
+def resolve_repo_root(path: Path) -> str | None:
+    """Git repo root containing `path`, so the screenshot-freshness scan
+    stays pinned to the repo the turn actually edited rather than
+    payload["cwd"] (which follows the last Bash cwd and can drift, todo 487).
+    None if `path` isn't inside a git repo or git fails.
+    """
+    proc = _run_git(str(path.parent), ["rev-parse", "--show-toplevel"])
+    if proc is None or proc.returncode != 0:
+        return None
+    return proc.stdout.strip() or None
 
 
 def newest_mtime(paths: list[Path]) -> float | None:
@@ -122,14 +191,15 @@ def main() -> None:
     if not session_id:
         sys.exit(0)
 
-    cwd = payload.get("cwd") or "."
-    files = changed_files(cwd)
-    ui_files = [Path(cwd) / f for f in files if is_ui_path(f)]
+    transcript_path = payload.get("transcript_path") or ""
+    edited = turn_edited_paths(transcript_path)
+    ui_files = [Path(p) for p in edited if is_ui_path(p)]
     ui_mtime = newest_mtime(ui_files)
     if ui_mtime is None:
         sys.exit(0)
 
-    screenshot_mtime = newest_screenshot_mtime(cwd)
+    repo_root = resolve_repo_root(ui_files[0]) or payload.get("cwd") or "."
+    screenshot_mtime = newest_screenshot_mtime(repo_root)
     if screenshot_mtime is not None and screenshot_mtime >= ui_mtime:
         sys.exit(0)
 
