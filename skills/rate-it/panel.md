@@ -34,6 +34,9 @@ rather than a real instruction:
 > READ-ONLY DISPATCH
 >
 > Stage your changes but do NOT commit. The main agent will run /commit after your report-back.
+> (In a repo sharing a git index with concurrent sessions, use "Leave all changes unstaged. The
+> main agent will run /commit by pathspec after your report-back." instead - either wording is
+> inert here since this dispatch writes nothing.)
 >
 > `run_in_background` is FORBIDDEN in this dispatch: run every command synchronously and finish
 > before ending your turn. (See `refs/builder-preamble.md` for the full canonical block this is
@@ -89,6 +92,9 @@ assigned flaws swapped in:
 > READ-ONLY DISPATCH
 >
 > Stage your changes but do NOT commit. The main agent will run /commit after your report-back.
+> (In a repo sharing a git index with concurrent sessions, use "Leave all changes unstaged. The
+> main agent will run /commit by pathspec after your report-back." instead - either wording is
+> inert here since this dispatch writes nothing.)
 >
 > `run_in_background` is FORBIDDEN in this dispatch: run every command synchronously and finish
 > before ending your turn. (See `refs/builder-preamble.md` for the full canonical block this is

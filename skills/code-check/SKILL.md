@@ -29,12 +29,16 @@ the code is correct. Passing the authoring rationale reintroduces exactly the bi
 exists to remove, and a reviewer told "this is fine, just check it" is no longer independent.
 
 Dispatch with `general-purpose` and `model: 'sonnet'` explicitly. The three preamble markers below
-are required by `hooks/dispatch-preamble-guard.py`, which rejects a dispatch missing any of them:
+are required by `hooks/dispatch-preamble-guard.py`, which requires *a* staging line and accepts
+either wording (see `refs/builder-preamble.md`'s placeholder table) - it does not mandate these
+exact three strings, only that each marker's family is present:
 
 ```
 READ-ONLY DISPATCH
 
 Stage your changes but do NOT commit. The main agent will run /commit after your report-back.
+(For a repo sharing a git index with concurrent sessions, e.g. zng-app/zng-biller, use instead:
+"Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.")
 
 `run_in_background` is FORBIDDEN in this dispatch: run every command synchronously and finish
 before ending your turn.
