@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=9, reconfirm-count=1, content-hash=6e0b4f2d -->
+<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=9, reconfirm-count=2, content-hash=6e0b4f2d -->
 <!-- duplicate-checked -->
 <!-- em-dash-exempt --> <!-- the Context block quotes the transcript string this guard must catch -->
 # em-dash-guard's tool_result entries (type "user") shift the scan boundary past the tool_use it needs to catch
@@ -77,3 +77,27 @@ in this repo's own backlog, never the surfacing project's. This session did not 
 itself, only filed this todo. Concretely, this session drafted two Slack-message-for-teammate
 messages with em dashes via `send_message` (turns at transcript lines 76 and 112) and BOTH shipped
 unblocked; the dev caught it by eye and corrected Claude directly ("i HATE em dashes").
+
+
+## Reproduced again 2026-08-31, in a different project and host
+
+`countoff` session `19d31e9b-f316-44b2-adc4-a37936f331ef`, transcript
+`C:\Users\tecno\.claude-personal\projects\C--Users-tecno-Desktop-Projects-countoff\19d31e9b-f316-44b2-adc4-a37936f331ef.jsonl`.
+
+Exactly the turn shape the Approach section says is untested: `send_message` (containing THREE
+em dashes, e.g. "...try it on the phone." and "...behind the transport — that's what buried...")
+-> its tool_result -> `report_turn_status` -> its tool_result -> final assistant text. The guard did
+not fire on the `send_message` call. It fired correctly moments later on the final assistant text,
+for a single em dash, and that block is the only reason the already-sent bubble got noticed and
+fixed via `update_message`.
+
+Two things this adds over the original report:
+
+- It is not zng-admin-specific or Slack-draft-specific. Different repo, different work (a UI commit
+  summary), same miss, which rules out anything about that project's setup.
+- It confirms the asymmetry is the damaging part, not just the miss: the channel Joe cannot see was
+  enforced, and the channel he actually reads was not. A reader of this todo might otherwise assume
+  the Stop hook offers partial cover; where it counts, it offers none.
+
+Second independent reconfirmation, so the reconfirm-count above goes to 2. Still open, still the
+same root cause at `hooks/em-dash-guard.py:103-107`; nothing here changes the Approach.

@@ -69,6 +69,9 @@ the Audit override for what is, for him, routine multi-project reconciliation.
   the em-dash rule).
 - Open, not decided: whether a meeting-time source is worth configuring at all, or whether step 2
   should stay a documented preference with no data behind it.
+- Reconfirmed 2026-08-31, zng-app: dev had to state the rule live again mid-session ("you can
+  overlap with revaire, that's fine, but you cant overlap entries with zng-app") before a HubStaff
+  bulk-sync/gap-detection pass would apply it - third occurrence of the same re-ask.
 - Related incident (2026-08-21/22, zirtue project, revaire session logging into the same workspace
   concurrently): the same missing project-id scoping caused a WORSE bug than the overlap question
   this todo was filed for. An ad-hoc Clockify fetch built later in the run (to sum a weekly total,

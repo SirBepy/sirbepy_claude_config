@@ -59,3 +59,16 @@ Add to `modes.md`'s Audit mode section:
 The false-positive itself was caught and corrected within the same session before any bad write
 happened - no bad data landed in Clockify. This todo is about tightening the process so the
 catch doesn't depend on a second look happening to occur.
+
+**Reconfirmed 2026-08-31, zng-app, plain Reconciliation mode (not Audit).** Same failure shape
+outside Audit mode too: step 6a's gap detection was done by eyeballing each day's min/max entry
+bound against commit local times, which produced a proposal (Wed 08/26, 22:35-23:55) that both (a)
+overlapped an existing same-project entry (23:35-00:00) and (b) duplicated work that entry's
+description already covered - the two commits it was "filling" were already logged. Caught only
+because the dev asked to add an explicit same-project overlap check; not caught proactively. A
+follow-up full per-commit-vs-per-entry coverage script (every commit's epoch ms checked against
+every entry's `[start,end]` in true UTC, not just day-boundary min/max) then ran cleanly and
+confirmed the ONLY real gaps were elsewhere (Fri + Sat, both zero-entry days). Suggests the
+threshold in Approach should read "any step 6a gap detection with existing same-day entries
+nearby", not just Audit mode or a size cutoff - a single day with a handful of entries was enough
+to produce this false positive.

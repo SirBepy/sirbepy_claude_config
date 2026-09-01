@@ -60,6 +60,22 @@ cannot. Note the two ticks values also use different epochs/widths (`13432296528
 `639233675804062390`), worth checking as a second, separate inconsistency in how the suffix is
 produced.
 
+## Recurrence 2026-08-31 - single uninterrupted session, no resume, no peers
+
+pomalo session `93dc9a67-8180-48e2-bda0-a84afa66afa2`. Tightens the 08-27 finding: this session
+was never resumed and `list_peers` returned empty, so neither concurrency nor a cross-day resume
+explains it.
+
+- Early call, to pick the screenshot folder: **`14776-134326453636888116`**. 29 PNGs plus two
+  `.mp4` screen recordings were written there and are still there.
+- `/close` Phase 0, same conversation: **`17048-134326571109686356`**. That folder does not exist.
+
+So Approach step 1's hypothesis (a newest-`startedAt` fallback picking a peer) is NOT the cause,
+at least not the only one - there was no peer to pick. Plain per-turn respawn by the Conductor
+host is sufficient on its own, which makes this reproduce in ordinary single-session use rather
+than only under concurrency or resume. That strengthens the case for Approach step 3 (cache the
+id on first call, keyed on `sessionId`) over any refinement of the pid lookup.
+
 ## Approach
 
 1. Read `~/.claude/skills/close/rename-session.ps1` and find every path that can produce an id.

@@ -97,9 +97,11 @@ what the model reads.
 2. Strip heredoc bodies before scanning: from `<<'TAG'` or `<<TAG` (or `<<-`) through the closing
    `TAG` line. A quoted-tag heredoc is never shell-interpreted, so nothing inside it can be a
    redirect and the whole body is safely out of scope.
-2a. Independent of step 2, and cheaper: exclude a `>` immediately preceded by `=`, `-`, `!` or `<`.
-   Those are the operators `=>`, `->`, `!>`, `<>`, never redirects. Fixes the Dart-arrow case
-   everywhere, including outside heredocs, and is a two-line change if step 2 stalls on scoping.
+2a. Independent of step 2, and cheaper: exclude a `>` immediately preceded by `=`, `-`, `!` or `<`,
+   AND a `>` immediately followed by `=`. Those are the operators `=>`, `->`, `!>`, `<>`, `>=`,
+   never redirects. The trailing-`=` half matters on its own: a preceded-by-only list still lets
+   `byId >= 0` through, which is the 2026-08-31 instance below. Fixes the Dart-arrow case
+   everywhere, including outside heredocs, and is a few lines if step 2 stalls on scoping.
 3. Measure before wiring, per the hook doctrine in `.claude/todos/PLAN.md`, and note that a corpus
    measurement only proves no PAST command tripped it: hand-probe the built thing too. Todo 466's
    durable harness is the intended tool, and `C:\tmp\p2-corpus\commands.jsonl` (62,270 real
@@ -114,6 +116,10 @@ what the model reads.
 - A heredoc body containing `<strong>auth migration</strong>` and `Vec<String>` passes
   (2026-08-26 quoted-content case, from 790).
 - A heredoc body containing the literal documentation text `echo hi > file.txt` passes (from 790).
+- A heredoc body containing `const i = byId >= 0 ? byId : -1` passes, and one containing a
+  triple-backtick fence passes (2026-08-31, claude_usage_in_taskbar, fifth instance - two
+  rejections in one session on scripted TS/markdown edits; `>=` is the case step 2a's
+  preceded-by-only list misses).
 - `2>/dev/null` and a cmdlet-naming command still pass (257 and 289 stay fixed).
 - A real content write (`echo x > f.txt`, `Set-Content`, `Out-File`, `>>`) is still blocked, proven
   by test cases, not by inspection.
