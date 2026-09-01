@@ -13,7 +13,8 @@ itself is still accurate and non-duplicate. Auto-apply is the default outcome, n
 the single question in Step 5 is the dev's one chance to redirect (apply / get a second opinion /
 say something else), not a per-item gate. Nothing is ever plain-deleted: every archive/drop moves
 the file to `<memory-dir>/archive/` (Step 6), recoverable by moving it back and re-adding its
-`MEMORY.md` line.
+`MEMORY.md` line. Step 6.5's index reorder is separate from that gate entirely: it moves index
+lines, never files, deletes nothing, and runs unconditionally.
 
 ## Step 1 - Locate and read
 
@@ -47,16 +48,21 @@ Read every file's frontmatter (`name`, `description`, `metadata.type`) and full 
 
 ## Step 2 - Index/file consistency (mechanical, read-only)
 
-Cross-check `MEMORY.md`'s entries against the files actually on disk. A file counts as reachable if
-`MEMORY.md` links it either way: a `(file.md)` link or a `[[wikilink]]` reference (memory files
-cross-reference each other via `[[name]]`, and a `(file.md)`-only sweep overcounts orphans - a
-reproduction on `claude_usage_in_taskbar` found 62 vs the real 58 for exactly this reason).
+Cross-check `MEMORY.md`'s entries against the files actually on disk using the **loaded-window
+definition**: reachable means a direct `(file.md)` link sits within MEMORY.md's own first 200
+lines - the window the harness actually loads into a session. A `[[wikilink]]` cross-reference
+between memory files does NOT count as reachable, and neither does a link past line 200: either
+one still fails to reach a session, which is the only thing this check is trying to answer.
+(Three readings were measured on the same 336-file corpus and gave 72 / 88 / 132 orphans; this
+step uses the 132 reading on purpose.)
 
-- A file reachable from neither form: `orphan-file`.
-- A `MEMORY.md` line whose linked file doesn't exist: `orphan-index-entry`.
+- A file with no direct link inside MEMORY.md's first 200 lines: `orphan-file`.
+- A `MEMORY.md` line (within the first 200) whose linked file doesn't exist: `orphan-index-entry`.
 
-Both are mechanical - no subagent needed, no judgment call. Report the counts of both
-(`orphan-file: N`, `orphan-index-entry: N`) even when zero - Step 7 carries these forward.
+Both are mechanical - no subagent needed, no judgment call - and both are deterministic: the same
+corpus produces the same two counts on every run. Report the counts of both (`orphan-file: N`,
+`orphan-index-entry: N`) even when zero, and name the definition used ("loaded-window,
+direct-link-only") - Step 7 carries all three forward.
 
 ## Step 3 - Dedupe (read-only)
 
@@ -125,7 +131,9 @@ Options:
 - **Something else** (free text) - exclusions ("nothing about X", "nothing modified this month"),
   `fix links only`, or `keep all`; apply whatever remains after honouring the reply literally.
 
-No further per-item prompting after this reply, regardless of branch taken.
+No further per-item prompting after this reply, regardless of branch taken. Step 6.5's reorder
+runs after this regardless of which option is picked, unless the free-text reply explicitly opts
+out of it.
 
 ## Step 5.5 - Second opinion (only if chosen)
 
@@ -182,6 +190,19 @@ partial apply pass as clean.
 
 Never touch `MEMORY.md` structure beyond the lines this run's apply set covers.
 
+## Step 6.5 - Reorder (non-destructive, runs regardless of the Step 5 answer)
+
+Re-sort MEMORY.md into the three blocks defined in `refs/memory-rubric.md`'s "Index ordering"
+section: Axioms, then Recent (mtime within 7 days), then Rest, each sorted by file mtime
+descending with filename-ascending tiebreak. This is a pure line move - the set of lines before
+and after must be identical when both are sorted as sets; verify that before writing. No entry is
+added, edited, or removed here, which is why this step is not part of the Step 5 apply set and
+does not wait on it.
+
+Compute the target order first and diff it against the current order. If they already match, make
+no edit and report "index already ordered, no-op" in Step 7 - this is what keeps a second run over
+an already-ordered index a true no-op.
+
 ## Step 7 - Post-apply summary
 
 Deliver as the turn's FINAL message, no tool call after it (same swallow risk as Step 5 - this
@@ -190,9 +211,10 @@ message is the report the dev is meant to read). Short and auditable, not a re-r
 - What moved: dedupe merges (loser -> keeper, folded-detail note), drops, re-indexed orphans,
   link fixes.
 - Any item excluded by Step 5.5, named with the reason.
-- Step 2's counts for both desync directions (`orphan-file`, `orphan-index-entry`), before and
-  after apply.
+- Step 2's counts for both desync directions (`orphan-file`, `orphan-index-entry`), the
+  definition used ("loaded-window, direct-link-only"), before and after apply.
 - Result of the mandatory final consistency check (clean, or what still mismatches).
+- Step 6.5's reorder result: what moved, or "no-op, already ordered".
 
 ## Non-goals (v1)
 

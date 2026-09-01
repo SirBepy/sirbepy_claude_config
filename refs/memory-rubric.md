@@ -61,6 +61,25 @@ sessions forever. Worth writing when the theory was plausible enough that someon
 Shape: what was tried, what disproved it, and the evidence. Type is `reference` for a fact about the
 system, `feedback` for a rule about how to work.
 
+## Index ordering (MEMORY.md only)
+
+MEMORY.md truncates at 200 lines; anything past that boundary is silently dropped. The vault has
+no such cap, so this section governs the native per-project index only.
+
+Keep the index in three ordered blocks, top to bottom:
+
+1. **Axioms** - entries meeting `skills/cleanup-memory/SKILL.md` Step 1.5's three-question test
+   (Claude defaults wrong without it, failure is silent, applies every session).
+2. **Recent** - file mtime within 7 days of today.
+3. **Rest** - everything else.
+
+Within a block: sort by file mtime descending (newest first); break ties by filename ascending.
+Deterministic on purpose - re-sorting an already-sorted index must be a no-op.
+
+Rule for every ADD/UPDATE that touches the index: insert or move the entry's line to the TAIL of
+its own block, never to the end of the whole file. This keeps fresh writes out of the truncation
+zone between `/cleanup-memory` runs, which perform the full canonical re-sort.
+
 ## Anti-patterns this rubric exists to prevent
 
 - **Bloat.** Volume degrades retrieval. More entries is not more memory.
