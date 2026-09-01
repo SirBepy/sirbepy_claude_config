@@ -25,6 +25,8 @@ SLACK = "xoxb-" + "111111111111-222222222222-abcdefghijklmnop"
 PEM = "-----BEGIN RSA " + "PRIVATE KEY-----"
 CONN = "postgres://admin:" + "realpassword123" + "@db.internal:5432/app"
 PLAIN_LITERAL = "hunter2" + "hunter2"
+FIREBASE_KEY = "AIza" + "SyCMxWyGRJScXgsl1qa_nNbUdIs5o86w83Y"
+FIREBASE_KEY_TOO_LONG = FIREBASE_KEY + "x"
 
 # (content, expect_hit, label). One positive + one negative per pattern row
 # in secret-patterns.txt, plus the negative cases the spec calls out by name.
@@ -50,6 +52,9 @@ CASES = [
     ('token: "<your-token-here>"', False, "generic_assignment: angle-bracket placeholder"),
     ('token = "${TOKEN}"', False, "generic_assignment: quoted env-ref value excluded"),
     ('console.log("LOCALSTORAGE_TOKEN:", await evalJs(() => x))', False, "generic_assignment: comma/paren spanning quotes"),
+    (f"apiKey: '{FIREBASE_KEY}'", False, "generic_assignment: firebase web api key allowed (todo 833)"),
+    (f"apiKey: '{FIREBASE_KEY_TOO_LONG}'", True, "generic_assignment: firebase-shaped value one char too long still trips"),
+    (f"apiKey: '{FIREBASE_KEY}'\naws_access_key_id = {AKIA}", True, "firebase key alongside a real AWS key in the same file: AWS key still trips"),
 ]
 
 

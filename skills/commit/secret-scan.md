@@ -22,6 +22,12 @@ Obvious placeholders (`xxx`, `changeme`, `your-...-here`, `placeholder`,
 all) are excluded from that generic rule only. Whole-file exclusions:
 `.env.example` and any `*.md`.
 
+A Firebase web API key (`aiza[a-z0-9_-]{35}`, todo 833) is also allowed: it
+identifies the project to Google's endpoints, ships in every client bundle by
+design, and carries no authorisation of its own, so it is not a credential.
+The allow row matches only the exact 39-char literal, so a longer or
+differently-shaped value assigned to `apiKey` still trips the scanner.
+
 1. **Mechanical prefilter**, `skills/commit/secret-scan.sh`, same two-mode
    shape as `em-dash.sh`:
 
