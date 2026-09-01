@@ -15,6 +15,7 @@ prose.
 """
 
 import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -49,11 +50,45 @@ def check_invocation(case) -> bool:
 
 fails = _testlib.run_cases(INVOCATION_CASES, check_invocation)
 
+# --- extract_commit_pathspec: `--` pathspec resolution, chain-operator aware ---
+
+PATHSPEC_CASES = [
+    ("git commit -m 'x' -- a.py b.py", ["a.py", "b.py"], "plain pathspec after --"),
+    ("git commit -m 'x'", None, "no -- separator means no resolvable pathspec"),
+    (
+        "bash gate.sh a.py ; git commit -m 'x' -- a.py",
+        ["a.py"],
+        "pathspec resolves from the commit's own -- , ignoring what precedes it",
+    ),
+    (
+        "bash gate.sh a.py && git commit -m 'x' -- a.py",
+        ["a.py"],
+        "same resolution for the && form",
+    ),
+    (
+        "git commit -m 'x' -- a.py && echo done",
+        ["a.py"],
+        "a chain operator after the pathspec stops the scan, not swallowed as a path",
+    ),
+]
+
+
+def check_pathspec(case) -> bool:
+    command, expected, label = case
+    tokens = guard._tokenize(command)
+    got = guard.extract_commit_pathspec(tokens)
+    ok = got == expected
+    print(f"{'PASS' if ok else 'FAIL'}: {label} (expected {expected}, got {got})")
+    return ok
+
+
+fails += _testlib.run_cases(PATHSPEC_CASES, check_pathspec)
+
 # --- main() end to end, temp marker dirs only ---
 
 
-def run_main(command: str, session_id: str = "") -> int:
-    guard.read_payload = lambda: {"tool_input": {"command": command}, "session_id": session_id}
+def run_main(command: str, session_id: str = "", cwd: str = "") -> int:
+    guard.read_payload = lambda: {"tool_input": {"command": command}, "session_id": session_id, "cwd": cwd}
     try:
         guard.main()
         return 0
@@ -147,5 +182,62 @@ with tempfile.TemporaryDirectory() as tmp:
         os.environ.pop(guard.OVERRIDE_ENV, None)
         if saved_bypass is not None:
             os.environ[guard.OVERRIDE_ENV] = saved_bypass
+
+# --- prefilter re-check: a real repo, a real gate run, todo 844 ---
+# A marker-authorized commit chaining the gate with `;` must still block on a
+# failing gate: the hook re-runs the gate itself, not the shell's exit status.
+
+with tempfile.TemporaryDirectory() as tmp:
+    repo = Path(tmp)
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
+    (repo / "README.md").write_text("x\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=repo, check=True)
+
+    # 5 consecutive "#" lines trips comment-noise's block cap (>=5), independent
+    # of the file's total size - see comment-noise.sh's `max[f]>=5` check.
+    (repo / "noisy.py").write_text(
+        "# c1\n# c2\n# c3\n# c4\n# c5\nprint('ok')\n", encoding="utf-8"
+    )
+    (repo / "clean.py").write_text("print('ok')\n", encoding="utf-8")
+
+    guard.MARKER_DIR = repo
+    guard.SESSION_MARKER_DIR = repo / ".session-markers"
+    guard.SESSION_MARKER_DIR.mkdir(parents=True)
+    guard.session_marker_path("sess-gate").touch()
+
+    label = "a `;`-chained commit is blocked when its own pathspec fails the gate"
+    got = run_main(
+        "bash prefilter-gate.sh noisy.py ; git commit -m 'x' -- noisy.py",
+        session_id="sess-gate",
+        cwd=str(repo),
+    )
+    if not _testlib.report(got == 2, f"{label} (got exit={got})"):
+        fails.append(label)
+
+    label = "a `;`-chained commit still lands when its own pathspec passes the gate"
+    got = run_main(
+        "bash prefilter-gate.sh clean.py ; git commit -m 'x' -- clean.py",
+        session_id="sess-gate",
+        cwd=str(repo),
+    )
+    if not _testlib.report(got == 0, f"{label} (got exit={got})"):
+        fails.append(label)
+
+    label = "the prescribed `&&` form still commits with no extra friction"
+    got = run_main(
+        "bash prefilter-gate.sh clean.py && git commit -m 'x' -- clean.py",
+        session_id="sess-gate",
+        cwd=str(repo),
+    )
+    if not _testlib.report(got == 0, f"{label} (got exit={got})"):
+        fails.append(label)
+
+    label = "a pathspec-less commit is not force-checked (fails open, unresolved)"
+    got = run_main("git commit -m 'x'", session_id="sess-gate", cwd=str(repo))
+    if not _testlib.report(got == 0, f"{label} (got exit={got})"):
+        fails.append(label)
 
 sys.exit(_testlib.summarize(fails, style="count"))
