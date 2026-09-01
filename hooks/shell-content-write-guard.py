@@ -40,7 +40,21 @@ MARKER_HINTS = (".commit-marker", ".pr-marker", ".session-markers")
 
 CONTENT_CMDLET_RE = re.compile(r"\b(Set-Content|Out-File|Add-Content)\b", re.IGNORECASE)
 TEE_RE = re.compile(r"\btee\b\s+(?:-a\s+)?(\S+)", re.IGNORECASE)
-REDIRECT_RE = re.compile(r"(?<![=\-])(\d)?(>{1,2})(&\d)?\s*(\S*)")
+# `=>`, `->`, `!>`, `<>` are operators, never redirects, regardless of shell dialect
+# (Dart/JS arrows, comparisons); `>=` is the trailing-side twin, so a lone `>` right
+# before `=` is excluded too (todo 476).
+REDIRECT_RE = re.compile(r"(?<![=\-!<])(\d)?(>{1,2})(?!=)(&\d)?\s*(\S*)")
+
+# A quoted-tag heredoc (`<<'TAG'`, `<<"TAG"`, `<<-'TAG'`) passes its body to the
+# command's stdin byte-for-byte, no shell interpretation, so it is stripped before
+# any other scan runs (todo 476). An unquoted `<<TAG` still expands `$vars`, so it
+# stays in scope for the other checks.
+HEREDOC_RE = re.compile(r"<<-?\s*(['\"])(\w+)\1[^\n]*\n.*?^[ \t]*\2[ \t]*$", re.MULTILINE | re.DOTALL)
+
+
+def strip_heredocs(command: str) -> str:
+    return HEREDOC_RE.sub("HEREDOC_BODY", command)
+
 
 NULL_TARGETS = {"$null", "/dev/null", "nul", "null", ""}
 
@@ -73,15 +87,27 @@ def deny(reason: str) -> None:
     )
 
 
+def _combined_quote_re(dquote_re: re.Pattern) -> re.Pattern:
+    return re.compile(
+        "|".join(p.pattern for p in (HERESTRING_RE, dquote_re, SQUOTE_RE)),
+        re.DOTALL,
+    )
+
+
 def mask_quoted(command: str, dquote_re: re.Pattern) -> str:
     """Replace quoted/here-string regions with a fixed no-symbol token so
     a `>` or `-` inside string content can never look like an operator,
     while a quoted redirect target still counts as a present token.
+
+    One combined alternation, scanned left to right in a single pass:
+    whichever quote character opens first consumes its own matching close
+    atomically, so a `"` living inside a single-quoted span (or vice versa)
+    can never pair across the other quote type's boundary. Three
+    independent sequential passes (todo 845) let an odd quote count inside
+    one span pair with a stray quote elsewhere in the command, masking a
+    real `>` in between.
     """
-    masked = HERESTRING_RE.sub("QSTR", command)
-    masked = dquote_re.sub("QSTR", masked)
-    masked = SQUOTE_RE.sub("QSTR", masked)
-    return masked
+    return _combined_quote_re(dquote_re).sub("QSTR", command)
 
 
 # Chars that legitimately precede a new command/statement. A cmdlet match is
@@ -125,6 +151,7 @@ def find_violation(command: str) -> str | None:
     if any(hint in lowered for hint in MARKER_HINTS):
         return None
 
+    command = strip_heredocs(command)
     masked_bash = mask_quoted(command, DQUOTE_RE_BASH)
     masked_pwsh = mask_quoted(command, DQUOTE_RE_PWSH)
 

@@ -34,6 +34,48 @@ CASES = [
     ('echo "foo\\" ; Set-Content evil.txt "bar"', True, "pwsh backslash-in-dquote bypass: real Set-Content after fake escape"),
     ('echo "he said ""Set-Content"" nicely"', False, "doubled-quote pwsh escape: mention only, not an invocation"),
     ('echo "say `"Out-File`" now"', False, "backtick-escaped quote: mention only, not an invocation"),
+    # todo 845: masking double-quotes globally before single-quotes let a `"`
+    # trapped inside one single-quoted span pair across the boundary with a
+    # stray `"` elsewhere, swallowing the real `>` in between.
+    (
+        'sed -e \'s|foo = "bar|baz|\' > out.txt && echo "done"',
+        True,
+        "todo 845 repro: odd dquote count inside squote swallows a later real redirect",
+    ),
+    (
+        'sed -e \'s|const AUQ_ANSWER_SENTINEL = "<auq-answer/>";|const AUQ_ANSWER_SENTINEL = "<auq-answer";|\' '
+        "-e 's|foldText: A|foldText: B|' e2e/a.spec.ts > e2e/zz-scratch.spec.ts && pnpm exec playwright test e2e/zz-scratch.spec.ts",
+        True,
+        "todo 845 call-1: balanced-but-nested dquotes inside squoted sed exprs, real redirect still catches",
+    ),
+    (
+        "rm -f e2e/zz-scratch.spec.ts && sed -e "
+        '\'s|const AUQ_ANSWER_SENTINEL = "<auq-answer/>";|const AUQ_ANSWER_SENTINEL = "<auq-answer";|\' '
+        "-e 's|foldText: A|foldText: B|' src.ts > e2e/zz-scratch.spec.ts && pnpm exec playwright test e2e/zz-scratch.spec.ts",
+        True,
+        "todo 845 call-2: same shape, differing quote parity in the preceding sed exprs",
+    ),
+    # SHARED INVARIANT with todo 476 (opposite direction, same hook): both must
+    # hold after either fix lands.
+    ("echo x > f.txt", True, "shared invariant: plain redirect still blocked"),
+    ("a >> append.txt", True, "shared invariant: append still blocked"),
+    ("echo hi; foo > later.txt", True, "shared invariant: redirect after ; still blocked"),
+    ("echo hi && foo > later2.txt", True, "shared invariant: redirect after && still blocked"),
+    ("const f = () => onChanged(true)", False, "shared invariant: => is an operator, not a redirect"),
+    ("const g = () -> onChanged(true)", False, "shared invariant: -> is an operator, not a redirect"),
+    ("a !> b", False, "shared invariant: !> is an operator, not a redirect"),
+    ("a <> b", False, "shared invariant: <> is an operator, not a redirect"),
+    ("byId >= 0", False, "shared invariant: >= is an operator, not a redirect"),
+    (
+        "python - <<'PY'\nh = [r for r in h if r['x'] > 0]\nPY",
+        False,
+        "shared invariant: > inside a quoted-tag heredoc body is not shell syntax",
+    ),
+    (
+        "python - <<'PY'\nonTap: () => onChanged(true)\nPY",
+        False,
+        "shared invariant: arrow syntax inside a quoted-tag heredoc body",
+    ),
 ]
 
 
