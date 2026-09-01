@@ -7,6 +7,11 @@ instead" tail is representable without duplicating the function.
 
 Callers import this via a loud try/except (see any guard's top few lines):
 a broken/missing _hooklib must block hard, not let every guard go quiet.
+
+dev-backend-guard.py's matcher (`^(Bash|PowerShell)$`) is broad: a broken
+symbol here blocks every Bash/PowerShell call in every session (todo 850).
+Locked out? Edit/Write tool calls bypass that matcher, so fix this file (or
+remove the guard's settings.json entry) without needing a shell.
 """
 
 import json
