@@ -58,6 +58,12 @@ per the global subagent-model rule; never inherit.
    - Check whether a PR already exists for this branch (`gh pr view`) - just
      note yes/no, don't fetch its body yet. Existing PR → the subagent will
      regenerate (edit mode) instead of drafting fresh.
+   - **Title-convention probe** (one `gh` call, cheap):
+     `gh pr list --state merged --limit 10 --json title --jq '.[].title'`.
+     Pass the raw titles to the step 2 subagent - they outrank
+     `drafting-rules.md`'s conventional-prefix table for this repo, which is
+     the fallback for a repo with no discernible pattern (fewer than 3
+     merged titles, or no shared structure among them), never the default.
    - **GIT_FLOW gate:** if `GIT_FLOW.md` exists at repo root, read it fully
      before asking anything, then batch every decision it implies for this PR
      (branch/base, reviewer, any deviation confirmation) into ONE
@@ -83,7 +89,8 @@ per the global subagent-model rule; never inherit.
    staging line, `run_in_background`/`FORBIDDEN` sentence, and screenshot-id
    marker.
    Give it: the branch name, the base branch, whether a PR already exists
-   (edit vs. create framing), and an instruction to read
+   (edit vs. create framing), the step 1 title-convention probe's raw title
+   list, and an instruction to read
    `C:\Users\tecno\.claude\skills\create-pr\drafting-rules.md` in full for the
    detailed rules (auto-tier thresholds, comment-noise check, visual scan,
    Slack-block format, image-hosting conventions) rather than re-explaining
@@ -109,7 +116,13 @@ per the global subagent-model rule; never inherit.
      auto-fixable - do not draft the PR body if it hits, report the hit and
      stop so the main agent can surface it to the dev.
    - **Auto-tier** (see the auto-tier rubric in `drafting-rules.md`) and
-     **title** (conventional prefix, one line).
+     **title**, one line: match the shape of the step 1 probe's titles
+     (case, punctuation, scope, and whether they carry a ticket id). If a
+     probed title's ticket id sits in a slot the branch name also encodes
+     (`rev-5312-...` -> `REV-5312`), reuse it. This overrides
+     `drafting-rules.md`'s conventional-prefix table (`FEAT:`/`FIX:`/etc.) -
+     that table applies only when the probe found fewer than 3 merged
+     titles or no shared structure among them.
    - **Visual scan** - inspect the changed-files list and decide what to
      *recommend*, per the "Visual scan rules" in `drafting-rules.md`, but do
      NOT capture or upload anything itself:
@@ -301,6 +314,11 @@ subagent applies when a screenshot needs embedding.
 - Edit mode (existing PR) regenerates the body the same way (subagent drafts,
   main agent gates); it never silently overwrites - it shows the new body and
   asks before `gh pr edit --body-file`.
+- **Title-only rename** (e.g. fixing a title after the fact) skips that whole
+  flow: run `gh pr edit <number> --title "<new title>"` directly.
+  `hooks/pr-guard.py`'s ownership check already lets an edit to the dev's own
+  PR through without a marker or `CLAUDE_PR_HOOK_BYPASS`, so a title fix
+  never forces a full body regeneration.
 - The drafting subagent never runs `git push` or `gh pr create`/`gh pr edit`
   itself - those are outward-facing, credential-triggering, and gated on live
   approval, so they stay with the main agent per the global rule that
