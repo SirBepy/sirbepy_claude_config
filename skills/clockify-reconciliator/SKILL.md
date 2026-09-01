@@ -116,6 +116,13 @@ Call `GET /workspaces/{ws}/user/{user}/time-entries?start=...&end=...&page-size=
   key: a project on another Clockify account (e.g. Fibo, `CLOCKIFY_API_KEY_PERSONAL`) is invisible
   to this run by construction, and the visual must not imply otherwise.
 
+**This is the one authoritative project split - every later fetch in this run reuses it, never
+re-derives its own filter.** A weekly-total sum, a HubStaff-mirroring list, or any ad-hoc
+verification re-fetch built mid-run must bucket against `clockify_project_id` the same way before
+summing/listing anything. Skipping this silently pulled in ~20 unrelated entries from another
+project and inflated a reported total by ~1h45m before a dev-requested audit caught it
+(2026-08-21/22).
+
 Classify each in-project entry into the four states step 9a renders. `meeting` wins over the others:
 
 - `meeting` - description case-insensitively contains any `meeting_keywords` entry (default list in
@@ -144,9 +151,23 @@ never build a plan, or report "nothing to reconcile", off a stale response.
 
 Before identifying targets, read `feedback_clockify_*.md` memory files for the resolved project and
 apply them: default every new/edited entry to `billable: false` (Cinnamon convention, not the actual
-billing signal); check same-day entries for time overlap before creating anything, shrink/shift the
-new block instead of double-counting; never add net-new hours to a day that already has entries except
-the two confirmed cases in "Rules" below.
+billing signal); never add net-new hours to a day that already has entries except the two confirmed
+cases in "Rules" below.
+
+**Overlap is scoped to `clockify_project_id`, not the whole day.** Two entries in the SAME project
+must never overlap - check same-project same-day entries before creating anything and shrink/shift
+the new block instead of double-counting. An entry in THIS project overlapping an entry bucketed as
+other-project (step 4) is allowed outright and needs no confirmation or Audit override - the dev
+bills separate projects for the same wall-clock hours by design ("overlap with other projects is
+fine", 2026-08-20, restated 2026-08-31 for a Revaire/zng-app week). Never ask before proceeding on a
+cross-project overlap alone.
+
+**Meeting-time is a soft preference, not a constraint.** Prefer not to place a new/gap block (step
+6a, step 7) over an entry this project already classifies `meeting` (step 4's keyword match), but
+placing one there anyway is allowed when the commit evidence points there - never block or ask over
+it. No external meeting/calendar source is configured today; this preference has nothing to act on
+beyond entries already visible in this project's own fetch and stays a documented no-op until one
+exists.
 
 ### 5. Identify targets
 
@@ -314,7 +335,8 @@ If gated in, read `skills/clockify-reconciliator/hubstaff.md` and follow its "St
   actual ban, not "never look at unlogged days" (step 6a surfaces commit-backed gaps for approval in
   every mode; Reconstruction and Audit extend what counts as backing, per their own sections).
 - Every new/edited entry defaults `billable: false` (step 4a) and must not overlap another same-day
-  entry - shift/shrink the new block instead of double-counting.
+  entry in the SAME `clockify_project_id` - shift/shrink the new block instead of double-counting.
+  Overlapping an entry in a different project is allowed, always, no override needed (step 4a).
 - Never add net-new hours to a day that already has entries, except: (a) a concrete commit trail backs
   the extra time and the day-total change is called out explicitly before applying, or (b) filling
   toward a weekly target the dev explicitly stated, sized from real evidence, on a day with ZERO
