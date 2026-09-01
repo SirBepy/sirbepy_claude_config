@@ -142,6 +142,68 @@ TRANSCRIPT_CASES = [
 ]
 
 
+def write_transcript_with_results(tmpdir: Path, tool_blocks: list, final_text: str) -> Path:
+    """Like write_transcript, but interleaves a `type: user` tool_result
+    entry after each tool_use, matching real transcript shape (todo 506) -
+    a tool_result is wrapped in role: user too, so a scan boundary that
+    anchors on "last type: user entry" lands on the LAST tool_result
+    instead of the real human prompt."""
+    entries = [
+        {"type": "user", "message": {"content": [{"type": "text", "text": "hi"}]}},
+    ]
+    for i, (name, tool_input) in enumerate(tool_blocks):
+        tool_use_id = f"toolu_{i}"
+        entries.append({
+            "type": "assistant",
+            "message": {"content": [{"type": "tool_use", "id": tool_use_id, "name": name, "input": tool_input}]},
+        })
+        entries.append({
+            "type": "user",
+            "message": {"content": [{"type": "tool_result", "tool_use_id": tool_use_id, "content": "ok"}]},
+        })
+    entries.append({
+        "type": "assistant",
+        "message": {"content": [{"type": "text", "text": final_text}]},
+    })
+    path = tmpdir / "transcript_with_results.jsonl"
+    with open(path, "w", encoding="utf-8") as f:
+        for e in entries:
+            f.write(json.dumps(e) + "\n")
+    return path
+
+
+def run_boundary_regression_case() -> list:
+    """Todo 506: send_message (em dash) -> its tool_result ->
+    report_turn_status -> its tool_result -> final text. The chat-tool call
+    sits BEFORE the last type:user entry (which is now a tool_result, not a
+    real prompt), so a boundary keyed on "last type: user" must not skip it."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmpdir = Path(tmp)
+        transcript = write_transcript_with_results(
+            tmpdir,
+            [
+                ("mcp__cc_conductor__send_message", {"text": f"FE ticket{ED} I've been implementing this."}),
+                ("mcp__cc_conductor__report_turn_status", {"status": "ok"}),
+            ],
+            "Draft sent above.",
+        )
+        payload = {
+            "last_assistant_message": "Draft sent above.",
+            "transcript_path": str(transcript),
+        }
+        proc = subprocess.run(
+            [sys.executable, str(_GUARD_PATH)],
+            input=json.dumps(payload),
+            capture_output=True,
+            text=True,
+        )
+        got_block = '"decision": "block"' in proc.stdout
+        label = "transcript: chat-tool call followed by a second tool call still blocks (todo 506)"
+        ok = got_block and proc.returncode == 0
+        print(f"[{'PASS' if ok else 'FAIL'}] {label} -> exit={proc.returncode} stdout={proc.stdout.strip()!r}")
+        return [] if ok else [label]
+
+
 def run_transcript_cases() -> list:
     with tempfile.TemporaryDirectory() as tmp:
         tmpdir = Path(tmp)
@@ -173,6 +235,7 @@ def run() -> int:
         + _testlib.run_cases(EXTRACT_FIELD_CASES, check_extract_field)
         + _testlib.run_cases(INTEGRATION_CASES, check_integration)
         + run_transcript_cases()
+        + run_boundary_regression_case()
     )
     return _testlib.summarize(fails)
 

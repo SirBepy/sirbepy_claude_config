@@ -84,9 +84,22 @@ def extract_field(tool_input: dict, path: str):
     return [v for v in values if isinstance(v, str)]
 
 
+def is_tool_result_entry(entry: dict) -> bool:
+    """A tool_result is wrapped in a `type: user` entry in this transcript
+    format, distinguishable from a real human prompt only by content shape:
+    its `message.content` is a list of blocks carrying `type: tool_result`."""
+    if entry.get("type") != "user":
+        return False
+    content = (entry.get("message", {}) or {}).get("content")
+    if not isinstance(content, list):
+        return False
+    return any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content)
+
+
 def iter_turn_tool_uses(transcript_path: str):
     """Yield (name, input) for tool_use blocks in assistant entries after the
-    most recent user entry, an approximation of "this turn"."""
+    most recent REAL user entry (not a tool_result), an approximation of
+    "this turn"."""
     path = Path(transcript_path)
     if not path.exists():
         return
@@ -102,7 +115,7 @@ def iter_turn_tool_uses(transcript_path: str):
                 pass
     last_user_idx = -1
     for i, e in enumerate(entries):
-        if e.get("type") == "user":
+        if e.get("type") == "user" and not is_tool_result_entry(e):
             last_user_idx = i
     for e in entries[last_user_idx + 1:]:
         if e.get("type") != "assistant":
