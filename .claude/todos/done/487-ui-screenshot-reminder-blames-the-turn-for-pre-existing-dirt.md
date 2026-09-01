@@ -76,3 +76,4 @@ dirty `lib/ui/loan_request_v2/*.dart` files. Same root cause, second repo.
   user frustration, since the only available response to a blocking hook is to
   argue with it. Second repo, second confirmation, and the blocking behaviour
   makes it worse than a noisy warning - raises priority.
+- Done via /mega-todos 2026-09-01 (abda5b3): the reminder now fires only on files the turn actually changed, with a regression case for pre-existing dirt.

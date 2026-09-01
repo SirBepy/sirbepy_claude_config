@@ -108,3 +108,4 @@ diagnostic spec via `sed`, which the global "never write file CONTENT through th
 shell" rule forbids outright. The guard is the enforcement for that rule, so a silent
 miss means the rule is only advisory in exactly the case where someone has already
 drifted from it.
+- Done via /mega-todos 2026-09-01 (0caf60f): mask_quoted now masks heredoc, double-quote and single-quote spans in one left-to-right pass, so an odd quote count can no longer swallow a real redirect. Also landed 476 shared-invariant items.

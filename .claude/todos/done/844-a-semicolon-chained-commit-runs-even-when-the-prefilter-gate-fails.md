@@ -66,3 +66,4 @@ Options 2 and 3 are recorded so they are not re-derived, not because they are re
   Route to the main thread with Joe present, per `/autopilot`'s Hard Stops list.
 - The offending commit was corrected in-session (comment trimmed to 4 lines, commit amended), so
   the repo is clean. This todo is about the hole, not that commit.
+- Done via /mega-todos 2026-09-01 (32fabed): the commit guard now rejects a commit chained after a gate with a semicolon, while the prescribed gate-and-commit form stays allowed.

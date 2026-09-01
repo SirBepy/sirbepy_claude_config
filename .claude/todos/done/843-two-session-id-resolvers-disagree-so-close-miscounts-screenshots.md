@@ -58,3 +58,4 @@ resolution strategies landing on two different processes, not clock skew.
 - Older stray folders exist under `.for_bepy/screenshots/` in that repo (7 of them). They are not
   evidence of this bug on their own - they are prior sessions - but they do mean "just pick the
   newest folder" is not a safe backstop without a time window.
+- Done via /mega-todos 2026-09-01 (3178ebe): both resolvers now go through rename-session.ps1 -GetId and its per-session cache from 231b555, so they agree by construction; verified in both call orders. POSIX rename-session.sh gap filed separately.

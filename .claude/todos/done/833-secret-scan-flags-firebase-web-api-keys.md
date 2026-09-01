@@ -63,3 +63,4 @@ needs the dev's say-so in the session that does it.
 
 The countoff commit that surfaced this was held pending his decision rather than being pushed past
 the gate, which is the behaviour the current rule intends.
+- Done via /mega-todos 2026-09-01 (3286408): public Firebase web API keys no longer trip the scanner, with tests proving AKIA, github_pat and sk- credentials still do.

@@ -85,3 +85,4 @@ correct when a team changes convention.
 - Related surface: `hooks/pr-guard.py` deliberately does not gate
   `gh pr comment` / `gh pr review`. A title-only edit arguably belongs in that
   same not-gated category; worth deciding when step 4 is built.
+- Done via /mega-todos 2026-09-01 (f1f14b4): create-pr probes the repo own merged-PR title convention before titling instead of assuming a prefix.

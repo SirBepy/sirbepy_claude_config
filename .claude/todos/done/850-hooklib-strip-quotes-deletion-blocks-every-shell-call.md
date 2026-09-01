@@ -74,3 +74,4 @@ warns you before you are locked out, and the recovery path is not written down a
   because the lockout happens before the test runner starts.
 - `status-marker-guard.py` and `schedulewakeup-guard.py` do NOT import `_hooklib` at all; confirmed by
   reading both in full on 2026-08-31.
+- Done via /mega-todos 2026-09-01 (e8010a0): ci/run_all.py gained a hook import smoke check that exec-loads all 18 _hooklib importers, and _hooklib now documents the shell-free recovery path. Proven on a scratch copy by breaking and restoring strip_quotes.

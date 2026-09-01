@@ -67,3 +67,4 @@ for no gain.
 
 - Blocks `[[818-finish-the-cleanup-todos-triage-for-76-unmarked-todos]]`. Running 818 before this is
   fixed will probably reproduce the same death.
+- Done via /mega-todos 2026-09-01 (c057a01): cleanup-todos step 4 fanout now carries the session budget guard from the delegation doctrine Liveness section.

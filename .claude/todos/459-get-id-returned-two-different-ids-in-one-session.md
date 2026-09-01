@@ -100,3 +100,25 @@ id on first call, keyed on `sessionId`) over any refinement of the pid lookup.
 - `/close` Phase 4's screenshot count matches what the session actually wrote.
 - Regression case: the exact shape above - three sessions sharing one `cwd`, `-GetId` early and at
   close.
+
+## Progress 2026-09-01 - advanced, NOT finished
+
+`/mega-todos` batch 1, commit `231b555`. `-GetId` now caches its resolved `<pid>-<procStart-ticks>`
+id in `sessions/.getid-cache/<sessionId>.txt` on first successful resolution, keyed on
+`CLAUDE_CODE_SESSION_ID`, and every later call in the same session returns that value verbatim
+instead of re-resolving. Verified with two separate PowerShell processes sharing one fabricated
+session id but different underlying records (the respawn shape): both printed the identical id.
+
+Still open, which is why this stays in the backlog:
+
+- Acceptance item 3 (`/close` Phase 4's screenshot count noticing a Phase-0-id mismatch instead of
+  reporting a confident zero). That logic lives in `skills/close/SKILL.md`, outside the builder's
+  owned paths, so it was not touched.
+- The literal three-sessions-sharing-one-cwd regression shape was never reproduced with three live
+  peer records. The fix is keyed purely on `sessionId` and so is peer-count-agnostic, but that is
+  reasoning, not a test.
+- The secondary finding from 2026-08-31 (the two observed ticks values use different epochs and
+  widths, `134322965285327444` against `639233675804062390`) is still uninvestigated.
+
+Only the `.ps1` half was fixed. The POSIX `rename-session.sh` has no equivalent cache; filed as
+todo 867.

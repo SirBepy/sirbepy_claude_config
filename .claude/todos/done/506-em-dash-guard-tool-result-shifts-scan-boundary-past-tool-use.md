@@ -20,7 +20,7 @@ Reproduced 2026-08-24 in zng-admin (session 7743f94c-4c39-4339-866d-a8e54d350f8a
 `C:\Users\tecno\.claude\projects\C--Users-tecno-Desktop-Projects-zng-admin\7743f94c-4c39-4339-866d-a8e54d350f8a.jsonl`:
 
 - Line 76: assistant calls `mcp__cc_conductor__send_message` with `text` containing a literal em
-  dash ("...FE ticket — I've been implementing...").
+  dash ("...FE ticket â€” I've been implementing...").
 - Line 77: the tool_result for that call arrives as a `{"type":"user", ...}` entry (tool_result
   blocks are wrapped in a `role: user` message in this transcript format - NOT a real human turn).
 - Line 79: assistant calls `report_turn_status`.
@@ -77,6 +77,7 @@ in this repo's own backlog, never the surfacing project's. This session did not 
 itself, only filed this todo. Concretely, this session drafted two Slack-message-for-teammate
 messages with em dashes via `send_message` (turns at transcript lines 76 and 112) and BOTH shipped
 unblocked; the dev caught it by eye and corrected Claude directly ("i HATE em dashes").
+- Done via /mega-todos 2026-09-01 (701d7c8): iter_turn_tool_uses now anchors the turn boundary on the last real human prompt, detected structurally by tool_result blocks, with a RED-then-GREEN regression test for the send_message then report_turn_status shape.
 
 
 ## Reproduced again 2026-08-31, in a different project and host
@@ -85,7 +86,7 @@ unblocked; the dev caught it by eye and corrected Claude directly ("i HATE em da
 `C:\Users\tecno\.claude-personal\projects\C--Users-tecno-Desktop-Projects-countoff\19d31e9b-f316-44b2-adc4-a37936f331ef.jsonl`.
 
 Exactly the turn shape the Approach section says is untested: `send_message` (containing THREE
-em dashes, e.g. "...try it on the phone." and "...behind the transport — that's what buried...")
+em dashes, e.g. "...try it on the phone." and "...behind the transport â€” that's what buried...")
 -> its tool_result -> `report_turn_status` -> its tool_result -> final assistant text. The guard did
 not fire on the `send_message` call. It fired correctly moments later on the final assistant text,
 for a single em dash, and that block is the only reason the already-sent bubble got noticed and

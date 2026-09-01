@@ -129,3 +129,4 @@ what the model reads.
 
 Workaround while this is open: write the script to a scratch file with the Write tool and run it by
 path. That is what unblocked the 2026-08-22 case.
+- Done via /mega-todos 2026-09-01: behaviour fixed by 0caf60f (arrow-operator exclusions incl. trailing =, plus quoted-tag heredoc stripping); the Acceptance list was then pinned as test cases in 6c5a933. All 12 acceptance cases probed green against the live guard.

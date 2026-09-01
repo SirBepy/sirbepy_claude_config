@@ -101,3 +101,4 @@ So the fix is two files, not one, and the test change is not optional.
   `reserve-todo-id.ps1` exists to close. Cheap to fix.
 - Parent: `done/492-todo-duplicate-guard-checks-content-but-not-id-uniqueness.md`. The check itself is
   correct and worth keeping; this is a missing carve-out, not a reason to revert it.
+- Done via /mega-todos 2026-09-01 (32a66cd): the id guard now accepts the reserved id it issued while still blocking a genuine two-todo collision, both directions covered by tests.
