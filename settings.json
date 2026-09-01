@@ -143,7 +143,7 @@
       "/Users/josipmuzic/projects/cinnamon/sampl-flutter/packages/tiktok_sdk_v2/.git"
     ]
   },
-  "model": "opus",
+  "model": "sonnet",
   "skillOverrides": {
     "apply-styleguide": "name-only",
     "favicon": "name-only",
@@ -359,6 +359,16 @@
           {
             "type": "command",
             "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\dev-backend-guard.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\list-peers-pre-edit-guard.py\"",
+            "statusMessage": "Checking for a peer session sharing this repo"
           }
         ]
       }
