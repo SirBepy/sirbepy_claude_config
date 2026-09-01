@@ -79,3 +79,8 @@ follow-up 400 meant.
   found only `809` itself and `803` referring to the id, and `803`'s reference is unambiguously to
   `780-guard-against-piping-cargo-test-output.md`, which keeps the id. `PLAN.md` named neither, so no
   PLAN.md edit was needed.
+
+**Scope correction, 2026-09-01 (`/cleanup-todos` deep pass).** Two of the original eighteen are
+already resolved: neither `skills/commit/SKILL.md` nor `skills/code-check/SKILL.md` still says
+"Triggers on /X only" in its description, confirmed by grepping the description lines. Fifteen
+remain, not eighteen. Re-derive the list before executing rather than trusting the title.

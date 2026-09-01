@@ -107,3 +107,7 @@ suite at all?" That is worth **one line added to `/e2e`**, not a skill. Do that 
 item 1 of this todo as closed.
 
 Items 2 (analytical Q&A) and 3 (MCP scoping) are untouched by this and still need their own verdicts.
+
+**Correction, 2026-09-01 (`/cleanup-todos` deep pass).** The paragraph above treats item 1 as
+closed, but it was never actually done: `skills/e2e/SKILL.md` contains no such line, verified by
+reading the file. Item 1 is still open along with items 2 and 3.

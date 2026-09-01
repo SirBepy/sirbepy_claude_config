@@ -92,3 +92,8 @@ The allowlist gitignore means a new top-level file is invisible unless explicitl
 that before assuming a committed README is tracked.
 
 Do not hand-write the skills index. A stale index is worse than none: it gets trusted.
+
+**Premise narrowed, 2026-09-01 (`/cleanup-todos` deep pass).** `README.md` already exists at 125
+lines and already carries a Structure section plus a skills table for the Universal skills. The
+real gap is smaller than the Context section implies: no CONTRIBUTING-equivalent, and no complete
+or generated skills index.
