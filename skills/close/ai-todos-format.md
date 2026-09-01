@@ -261,7 +261,23 @@ Pointers only - task content lives in the todo files, never copied here.
 
 Before ANY execution of a todo (picker, /batch-todos, autopilot, ad-hoc "do todo 07"): claim it.
 Reading/browsing todos needs no claim - only execution does. Creation needs no claim either
-(the filename race guard covers it).
+(the filename race guard covers it), and neither does archiving one when nothing was executed to
+reach that outcome: a dev-instructed archival ("archive 05 and 12") or a verdict-only close with no
+code written has no execution window a concurrent session could collide with - move it straight to
+`done/` via `complete-todo.ps1`, no claim needed. This is not a loophole for skipping real work: any
+todo where code is written, a file is edited, or a command is run to decide the outcome still claims
+first, no matter how it ends (settled 2026-09-01, todo 484, after `hubbub-game-split-opinions`
+showed two of four unclaimed completions were exactly this case, not a violation).
+
+**Claiming is a side effect of the call that starts the work, never a separate remembered step.**
+Every executor below (`/pickup`, `/batch-todos`, `/auto-do-todos`) claims in the same tool call that
+begins reading or acting on the todo(s) - chained (`claim-todo.ps1 -Id 07; Get-Content <path>`), not
+a preceding standalone call the model has to recall on its own. **Handling N todos in one pass costs
+one remembered claim call, the same as handling one:** claim every id in the batch up front, in a
+single `claim-todo.ps1` invocation, before starting work on any of them - see the batch form below.
+A claim that has to be remembered once per todo is exactly the case that gets skipped when several
+todos move together; collapsing N calls into one removes that failure mode without adding a fifth
+place that says "remember to claim".
 
 **Claim = one file per task:** `.claude/todos/.claims/<id>.claim`.
 
@@ -281,8 +297,16 @@ Scripted mechanism for the whole sequence above: `~/.claude/skills/close/claim-t
 [-Slug <slug>] [-RepoRoot <path>]`. Implements steps 1-4 verbatim, including the retry and the
 staleness rule below. When the id matches more than one backlog file (a known collision case -
 see below), pass `-Slug <slug>` or the full filename stem as `-Id`; the claim is then named
-`<id>-<slug>.claim` so the two files claim independently. Exits 0 on a fresh or reclaimed-stale
-claim, exits 1 (informational, not an error) when someone else already holds a non-stale claim.
+`<id>-<slug>.claim` so the two files claim independently.
+
+**Batch form:** `-Id` accepts a comma-separated list (`-Id 03,04,05`) and claims every one of them
+in this single call. `-Slug` only disambiguates a single id, so embed a colliding id's slug inline
+as its full stem within the list instead (`-Id 03,434-real-slug,05`). Each id in the batch is
+attempted independently - one bad or already-claimed id does not stop the rest from being claimed.
+Exit codes cover the whole batch: 0 when every id claimed clean (fresh or reclaimed-stale), 1
+(informational, not an error) when one or more ids lost to a live non-stale claim - those ids are
+skipped, the rest are still claimed - and 2 when at least one id hit a genuine error (bad id,
+ambiguity, filesystem failure).
 
 **Heartbeat:** while working, touch the claim file's mtime (PowerShell:
 `(Get-Item <file>).LastWriteTime = Get-Date`) at natural checkpoints - after finishing a step,

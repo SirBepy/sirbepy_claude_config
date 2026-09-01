@@ -102,16 +102,21 @@ Show the DO/SKIP/FLAG breakdown before proceeding to step 6.
 
 ## Step 6 - Execute EASY todos
 
-For each **DO**-verdict EASY todo in id order:
+**Claim the whole DO-verdict set in one call before executing any of them**, per the contract's
+batch-claim form: `claim-todo.ps1 -Id <id1>,<id2>,...` in id order. Handling N todos this way costs
+one remembered claim call, not N. Any id the batch reports as lost to a live session (exit 1, named
+in its per-id line) is dropped from this run with a note; ids that hit a genuine error (exit 2) are
+surfaced and dropped the same way.
 
-1. **Claim it** per the contract's claim protocol. If the claim is lost to a live session, skip with a note and continue.
-2. Read the full file. Announce which todo is starting (id + title).
-3. Execute the task fully. Touch the claim file's mtime after major steps (heartbeat).
-4. Run `~/.claude/skills/close/complete-todo.ps1 -Id <id> -Note "completed, commit <sha>"` to
+For each remaining **DO**-verdict EASY todo, in id order:
+
+1. Read the full file. Announce which todo is starting (id + title).
+2. Execute the task fully. Touch the claim file's mtime after major steps (heartbeat).
+3. Run `~/.claude/skills/close/complete-todo.ps1 -Id <id> -Note "completed, commit <sha>"` to
    append the Notes line, move the todo to `done/`, prune its PLAN.md line, and release the claim
    in one call. Fall back to doing those steps by hand per the contract if the helper is
    unavailable (non-Windows, or missing).
-5. `/commit` - invoke and read the skill in full only for this run's first commit; every commit
+4. `/commit` - invoke and read the skill in full only for this run's first commit; every commit
    after that follows `/commit`'s procedure directly (session marker already written, prefilters,
    pathspec form, branch/overlap checks all still apply) without re-invoking the skill file.
 

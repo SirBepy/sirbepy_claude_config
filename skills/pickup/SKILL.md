@@ -34,9 +34,10 @@ Read `.claude/todos/PLAN.md`, pruning vanished ids per the contract.
 
 ## Step 2 - Claim
 
-Claim the id per the contract's protocol (temp file + no-overwrite rename, Windows retry
-caveat, stale-claim reclaim rule). Lost the race to a live session: go back to Step 1 for the
-next line.
+Claim the id in the same tool call that starts Step 3's read, per the contract's "side effect of
+the call that starts the work" rule - e.g. `claim-todo.ps1 -Id <id>; Get-Content <path>` as one
+PowerShell invocation, never claim-todo.ps1 run alone as a preceding step. Lost the race to a live
+session: go back to Step 1 for the next line.
 
 ## Step 3 - Brief
 

@@ -210,22 +210,27 @@ Any fan-out covering more than one todo also follows the doctrine's "Fan-out rec
 section: diff the union of ids assigned across the fan-out against the AUTO queue before dispatch,
 then diff reported ids against it after return - a set difference, never a count.
 
+**Claim the whole AUTO queue in one call before grinding it**, per the contract's batch-claim form:
+`claim-todo.ps1 -Id <id1>,<id2>,...` for every id about to run in this pass (the initial queue, and
+again for whatever Step 7's re-triage adds later). Drop any id the batch reports lost to a live
+session or hitting a genuine error, and continue with what's left - this replaces a per-todo claim
+call with the one remembered call the contract requires.
+
 Per todo:
 
-1. Claim it per `close/ai-todos-format.md`.
-2. Execute per CLAUDE.md's "Subagent-Driven vs Inline Execution" size gate - most todos here are
+1. Execute per CLAUDE.md's "Subagent-Driven vs Inline Execution" size gate - most todos here are
    small enough for inline. Dispatch a subagent when that gate calls for one, OR independently when
    the todo's context weight warrants it (reading material - wide greps, large files - that gets
    discarded once you have the answer), even for a one-file edit. When a subagent does run, it
    follows the adopted contracts above. Heartbeat the claim at checkpoints.
-3. End it per `close/ai-todos-format.md`'s "Two endings" - only a genuinely Completed todo gets
+2. End it per `close/ai-todos-format.md`'s "Two endings" - only a genuinely Completed todo gets
    `~/.claude/skills/close/complete-todo.ps1 -Id <id> -Note "<what happened>"`, which in one call
    records the Notes line, archives it, prunes its PLAN.md line, and releases the claim. One that
    advanced but did not finish is NOT archived; follow the contract's other ending instead.
-4. `/commit` - invoke and read the skill in full only for this run's first commit; every commit
+3. `/commit` - invoke and read the skill in full only for this run's first commit; every commit
    after that follows `/commit`'s procedure directly (session marker already written, prefilters,
    pathspec form, branch/overlap checks all still apply) without re-invoking the skill file.
-5. Run `node ~/.claude/skills/context-left/context-left.mjs` and read pct used.
+4. Run `node ~/.claude/skills/context-left/context-left.mjs` and read pct used.
    - **>= 40% used (HARD_STOP_AT):** stop taking new todos immediately, even with queue left, and
      go to Step 8.
    - Otherwise: next todo.
