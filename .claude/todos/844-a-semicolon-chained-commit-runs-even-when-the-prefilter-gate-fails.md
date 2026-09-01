@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=8, reconfirm-count=1, content-hash=5593f38c -->
 <!-- duplicate-checked -->
 <!-- 471, 490, 802, 318 and 383 all read in full on 2026-08-31. None is about the gate's verdict
      being bypassable; they share vocabulary only. Reasoning in Context below. -->

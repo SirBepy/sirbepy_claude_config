@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=6, reconfirm-count=1, content-hash=b34bcdcd -->
 <!-- duplicate-checked -->
 # /commit's comment-cap gate rejects four times per session instead of preventing once
 

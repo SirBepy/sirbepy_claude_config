@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=8, reconfirm-count=1, content-hash=4699e78e -->
 # Two session-id resolvers disagree, so /close counts 0 screenshots
 
 **Type:** skill-improvement

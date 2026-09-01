@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=6, reconfirm-count=1, content-hash=7804502f -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=6, reconfirm-count=2, content-hash=7804502f -->
 <!-- duplicate-checked -->
 # Eighteen skills declare themselves slash-only in prose but are model-invocable in frontmatter
 

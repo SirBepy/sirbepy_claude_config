@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=5, reconfirm-count=1, content-hash=d6db0355 -->
 <!-- duplicate-checked -->
 <!-- Grepped .claude/todos/ and done/ for baseline / worktree / embed list: only done/391 (the parent), no live match. -->
 # delegation-doctrine's builder-prompt embed list never mentions the baseline mechanism

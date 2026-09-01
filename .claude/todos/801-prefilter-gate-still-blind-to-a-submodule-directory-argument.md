@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=7, reconfirm-count=1, content-hash=a902a5bd -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=7, reconfirm-count=2, content-hash=a902a5bd -->
 <!-- duplicate-checked -->
 # prefilter-gate.sh is still blind when handed a submodule DIRECTORY instead of a file
 

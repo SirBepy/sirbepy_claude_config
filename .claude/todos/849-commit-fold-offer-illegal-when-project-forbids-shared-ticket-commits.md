@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=6, reconfirm-count=1, content-hash=2eca5178 -->
 <!-- duplicate-checked -->
 <!-- Nearest neighbours checked: no existing todo covers overlap-check.sh's fold offer or its
      interaction with a project commit-style.md. 469 is about handoff mode vs the duplicate guard,

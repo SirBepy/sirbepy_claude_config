@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=6, reconfirm-count=1, content-hash=20cdd695 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=6, reconfirm-count=2, content-hash=20cdd695 -->
 <!-- duplicate-checked -->
 # /rate-it states two different caps for the How-to-raise block, 12 lines apart
 

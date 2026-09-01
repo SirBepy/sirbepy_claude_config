@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=5, reconfirm-count=1, content-hash=b88cdbcb -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=5, reconfirm-count=2, content-hash=b88cdbcb -->
 <!-- duplicate-checked -->
 # build-watch.md has no recovery path when a run is stuck `queued` and even the cancel API refuses it
 

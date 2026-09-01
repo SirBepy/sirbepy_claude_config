@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=6, reconfirm-count=2, content-hash=303aa837 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=6, reconfirm-count=3, content-hash=303aa837 -->
 <!-- duplicate-checked -->
 # The CI ubuntu portability probe will show a red X forever
 

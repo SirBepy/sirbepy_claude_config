@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=9, reconfirm-count=1, content-hash=59bfb60e -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=9, reconfirm-count=2, content-hash=59bfb60e -->
 <!-- duplicate-checked -->
 <!-- Distinct from done/375 (built the outbound gate) and done/420 (built sensitive-file-guard.py). This is the collision BETWEEN those two shipped features, only reachable now that both exist. -->
 # Outbound ground-check marker cannot be written in auto mode: sensitive-file-guard guards its own directory

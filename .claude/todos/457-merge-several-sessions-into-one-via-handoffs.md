@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=7, reconfirm-count=2, content-hash=ad7f0adf -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=7, reconfirm-count=3, content-hash=ad7f0adf -->
 <!-- duplicate-checked -->
 # Merge several concurrent sessions into one: many handoffs in, one pickup out
 

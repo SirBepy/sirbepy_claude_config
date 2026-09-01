@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=7, reconfirm-count=1, content-hash=74c89853 -->
 <!-- duplicate-checked -->
 <!-- Grepped .claude/todos/ and done/ for _hooklib / strip_quotes / shell-access canary: only done/501 (the parent), no live match. -->
 # Deleting one `_hooklib` symbol hard-blocks every shell call in every session

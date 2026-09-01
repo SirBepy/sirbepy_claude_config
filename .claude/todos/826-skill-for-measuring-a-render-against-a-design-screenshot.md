@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=6, reconfirm-count=2, content-hash=3e29e095 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=6, reconfirm-count=3, content-hash=3e29e095 -->
 <!-- duplicate-checked -->
 <!-- Grepped .claude/todos/ and done/ for pixel-diff / design screenshot / figma-pixel-diff: no todo hit. -->
 # Skill: measure a rendered screenshot against a design screenshot

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=5, reconfirm-count=1, content-hash=482b3238 -->
 <!-- duplicate-checked -->
 <!-- Grepped .claude/todos/ and done/ for prefilter helper / invisible path / secret-scan port: done/804 and done/460 are the parents, no live match. -->
 # The invisible-path scan block now exists three times across the commit prefilters

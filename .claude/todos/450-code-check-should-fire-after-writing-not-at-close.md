@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=5, reconfirm-count=2, content-hash=ffbd0b07 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=5, reconfirm-count=3, content-hash=ffbd0b07 -->
 <!-- duplicate-checked -->
 # /code-check should fire right after code is written, not only at /close
 

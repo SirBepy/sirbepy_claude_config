@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=7, reconfirm-count=2, content-hash=aab517ab -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=7, reconfirm-count=3, content-hash=aab517ab -->
 <!-- duplicate-checked -->
 # clockify-reconciliator Audit mode's gap-detection should be scripted, not manual, once entry/commit counts get large
 

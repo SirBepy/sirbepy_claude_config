@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=4, reconfirm-count=1, content-hash=854ef532 -->
 <!-- duplicate-checked -->
 <!-- Grepped .claude/todos/ and done/ for _testlib / run_main / guard test harness: done/501 and done/250 are the parents, no live match. -->
 # The monkeypatched run_main harness is repeated in four new guard suites

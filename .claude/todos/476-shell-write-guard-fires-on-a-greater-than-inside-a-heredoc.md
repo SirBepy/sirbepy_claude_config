@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=8, reconfirm-count=1, content-hash=d6fec62f -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=8, reconfirm-count=1, content-hash=938193bc -->
 <!-- duplicate-checked -->
 # The shell-write guard blocks a `>` that is a comparison operator inside a heredoc body
 

@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=7, reconfirm-count=2, content-hash=77e3e7c7 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=7, reconfirm-count=3, content-hash=77e3e7c7 -->
 <!-- duplicate-checked -->
 # clockify-reconciliator's step 6 git fetch goes stale when the dev is actively committing mid-run
 

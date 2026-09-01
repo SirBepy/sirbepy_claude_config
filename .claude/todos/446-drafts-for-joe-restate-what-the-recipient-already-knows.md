@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=8, reconfirm-count=2, content-hash=9793dae3 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=8, reconfirm-count=3, content-hash=9793dae3 -->
 <!-- duplicate-checked -->
 # Drafts for Joe to send restate what the recipient already knows
 

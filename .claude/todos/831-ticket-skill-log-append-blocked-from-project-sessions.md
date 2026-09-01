@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=7, reconfirm-count=2, content-hash=80af6135 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=7, reconfirm-count=3, content-hash=80af6135 -->
 <!-- duplicate-checked -->
 <!-- checked against 777-check-linked-design-before-implementing-ticket.md and
      105-commit-skill-step1-enforcement-gap.md (in done/): both unrelated, shared generic

@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=8, reconfirm-count=1, content-hash=2cd646f6 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=8, reconfirm-count=2, content-hash=2cd646f6 -->
 <!-- duplicate-checked -->
 <!-- Grepped this backlog and done/ for "live-verify", "EXCLUDE-LIVE", "live verify". The only hit
      is 480 (respawn skill), an unrelated mention. 405 and 413 are mega-todos todos about barriers

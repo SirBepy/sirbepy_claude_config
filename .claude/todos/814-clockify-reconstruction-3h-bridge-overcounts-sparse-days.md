@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=8, reconfirm-count=2, content-hash=d4a7d05d -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=8, reconfirm-count=3, content-hash=d4a7d05d -->
 <!-- duplicate-checked -->
 # clockify-reconciliator Reconstruction mode's 3h-gap bridging overcounts sparse-commit days
 

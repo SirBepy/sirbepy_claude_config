@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=7, reconfirm-count=2, content-hash=030486db -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=7, reconfirm-count=3, content-hash=030486db -->
 <!-- duplicate-checked -->
 <!-- Searched this backlog and done/ for "staging line", "unstaged", "preamble", "dispatch marker".
      784 / done-364 / done-373 / done-392 all cover templates MISSING a marker. None covers a

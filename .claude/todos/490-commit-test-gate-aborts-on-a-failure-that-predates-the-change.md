@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=7, reconfirm-count=1, content-hash=94c04c83 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=7, reconfirm-count=2, content-hash=94c04c83 -->
 <!-- duplicate-checked -->
 <!-- Grepped this backlog and done/ for "aborts the commit", "run-tests". The ancestor is
      done/383, which ADDED this gate; this is the follow-up gap that shipping it exposed.

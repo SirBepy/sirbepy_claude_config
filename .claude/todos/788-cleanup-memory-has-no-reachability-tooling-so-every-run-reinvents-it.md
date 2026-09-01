@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=7, reconfirm-count=1, content-hash=bc3b1b80 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=7, reconfirm-count=2, content-hash=bc3b1b80 -->
 <!-- duplicate-checked -->
 # /cleanup-memory has no reachability tooling, so every run reinvents it and gets a different answer
 

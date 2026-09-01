@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=6, reconfirm-count=1, content-hash=69741d6e -->
 <!-- duplicate-checked -->
 <!-- Grepped .claude/todos/ and done/ for two-path / git mv / complete-todo pathspec: only done/495 (the parent), no live match. -->
 # ai-todos-format never says archiving a todo is a two-path commit

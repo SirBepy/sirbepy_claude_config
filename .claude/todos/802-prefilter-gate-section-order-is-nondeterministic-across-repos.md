@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=3, reconfirm-count=1, content-hash=1e88f260 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=3, reconfirm-count=2, content-hash=1e88f260 -->
 <!-- duplicate-checked -->
 # prefilter-gate.sh's section order is nondeterministic once two repos are involved
 

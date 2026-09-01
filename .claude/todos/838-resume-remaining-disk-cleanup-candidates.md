@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=4, reconfirm-count=1, content-hash=798809a2 -->
 <!-- duplicate-checked -->
 # Resume the remaining disk-doctor cleanup candidates from the 2026-08-29 scan
 

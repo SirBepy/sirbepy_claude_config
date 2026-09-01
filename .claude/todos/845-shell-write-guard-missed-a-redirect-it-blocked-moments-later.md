@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/845.claim per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=8, reconfirm-count=1, content-hash=bc8ddee5 -->
 <!-- duplicate-checked -->
 # shell-content-write-guard missed a `>` redirect it blocked moments later
 

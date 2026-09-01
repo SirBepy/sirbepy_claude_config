@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=4, reconfirm-count=2, content-hash=6a4e3042 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=4, reconfirm-count=3, content-hash=6a4e3042 -->
 <!-- duplicate-checked -->
 # oldest_fresh_marker is imported but unused in three guards, and only the tests keep it alive
 

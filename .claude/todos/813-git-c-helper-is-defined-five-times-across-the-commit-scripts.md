@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=4, reconfirm-count=2, content-hash=8d7a1b81 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=4, reconfirm-count=3, content-hash=8d7a1b81 -->
 <!-- duplicate-checked -->
 # The git_c helper is defined verbatim in five separate scripts
 

@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=4, reconfirm-count=2, content-hash=bf69839b -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=4, reconfirm-count=3, content-hash=bf69839b -->
 <!-- duplicate-checked -->
 # Every guard is app-layer, so a buggy hook is a bypassed hook
 

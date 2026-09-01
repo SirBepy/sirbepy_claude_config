@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=4, reconfirm-count=2, content-hash=cf31994d -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=4, reconfirm-count=3, content-hash=cf31994d -->
 <!-- duplicate-checked -->
 # Adversarial review is a documented habit, but every reviewer is the same model
 

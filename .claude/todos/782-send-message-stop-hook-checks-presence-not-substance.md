@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=5, reconfirm-count=1, content-hash=af06eb8b -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=5, reconfirm-count=2, content-hash=af06eb8b -->
 <!-- duplicate-checked -->
 # send_message Stop hook checks that the tool was called, not that it carries the actual content
 

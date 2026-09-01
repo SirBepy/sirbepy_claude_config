@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=4, reconfirm-count=2, content-hash=bfd86f7a -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=4, reconfirm-count=3, content-hash=bfd86f7a -->
 <!-- duplicate-checked -->
 # Three smaller skill gaps: real-system verification, analytical Q&A, per-launch MCP scoping
 

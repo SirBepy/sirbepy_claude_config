@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=8, reconfirm-count=1, content-hash=5d3a1982 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=8, reconfirm-count=2, content-hash=5d3a1982 -->
 <!-- duplicate-checked -->
 <!-- 426/427/444/446 all name this hook, but only as an example of Stop-hook plumbing or as doctrine overlap. None touch its file-selection. -->
 # `ui-screenshot-reminder` fires on repo dirt the turn never touched

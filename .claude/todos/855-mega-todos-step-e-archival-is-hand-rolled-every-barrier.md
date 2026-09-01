@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=6, reconfirm-count=1, content-hash=16424bc2 -->
 <!-- duplicate-checked -->
 <!-- Grepped .claude/todos/ and done/ for archival helper / barrier pathspec / complete-todo loop: done/504 touches the script itself, nothing covers the batch-archival step. -->
 # /mega-todos Step E archival is hand-rolled at every barrier, and it broke twice

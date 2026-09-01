@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=5, reconfirm-count=1, content-hash=d94a57c6 -->
 <!-- duplicate-checked -->
 <!-- Grepped .claude/todos/ and done/ for arg parsing / chained command / slash argument: no match, live or done. -->
 # Only /close documents the slash-arg chaining convention, so other skills get misread

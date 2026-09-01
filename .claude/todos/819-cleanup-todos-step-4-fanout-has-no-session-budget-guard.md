@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=8, reconfirm-count=2, content-hash=04729a6f -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=8, reconfirm-count=3, content-hash=04729a6f -->
 <!-- duplicate-checked -->
 # /cleanup-todos Step 4 dispatches a 6-wide fan-out with no session-budget guard and no interrupted-fan-out recovery
 

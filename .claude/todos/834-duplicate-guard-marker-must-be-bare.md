@@ -1,5 +1,6 @@
 <!-- duplicate-checked -->
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=6, reconfirm-count=1, content-hash=27dc42d4 -->
 # todo-duplicate-guard: say the `<!-- duplicate-checked -->` marker must be bare
 
 **Type:** task

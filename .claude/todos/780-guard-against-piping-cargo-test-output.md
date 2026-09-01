@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=9, reconfirm-count=1, content-hash=6870f672 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=9, reconfirm-count=2, content-hash=6870f672 -->
 <!-- duplicate-checked -->
 <!-- Searched backlog + done/ for "cargo", "pipe", "tail", "hang". 779 is comment-noise.sh's regex.
      Nothing covers a shell-command guard for piped test output. -->

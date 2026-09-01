@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=7, reconfirm-count=1, content-hash=df9dcbfd -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=7, reconfirm-count=2, content-hash=df9dcbfd -->
 <!-- duplicate-checked -->
 # Nothing supports filing a todo into a DIFFERENT repo, so the repo-ownership rule is hand-executed every time
 

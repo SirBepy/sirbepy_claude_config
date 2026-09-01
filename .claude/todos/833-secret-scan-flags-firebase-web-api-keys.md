@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=8, reconfirm-count=1, content-hash=ca9d15bf -->
 <!-- duplicate-checked -->
 # secret-scan flags Firebase web API keys, which are public by design
 

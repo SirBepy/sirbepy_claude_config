@@ -1,4 +1,4 @@
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=7, reconfirm-count=2, content-hash=e3b0c442 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=7, reconfirm-count=3, content-hash=e3b0c442 -->
 # 817 - A skill that answers "where are you at right now?"
 
 **Origin:** Joe, 2026-08-27, mid-session in zng-app while running `/delegate` with many subagents in flight. His words: "add a skill that tells me where youre at in your progress, i basically wish i had it now."

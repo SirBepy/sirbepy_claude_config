@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=6, reconfirm-count=1, content-hash=caef90c3 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=6, reconfirm-count=2, content-hash=caef90c3 -->
 # 775 - Nothing stops `git stash` from swallowing a peer session's work
 
 **Type:** skill-improvement

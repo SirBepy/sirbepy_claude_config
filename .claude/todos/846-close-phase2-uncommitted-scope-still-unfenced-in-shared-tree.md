@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=7, reconfirm-count=1, content-hash=ac0ce4d1 -->
 <!-- duplicate-checked -->
 # `/close` Phase 2's `uncommitted` scope (zero-commit case) has no peer-attribution fence
 

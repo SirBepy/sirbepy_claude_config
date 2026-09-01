@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=9, reconfirm-count=2, content-hash=6e0b4f2d -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=9, reconfirm-count=3, content-hash=6e0b4f2d -->
 <!-- duplicate-checked -->
 <!-- em-dash-exempt --> <!-- the Context block quotes the transcript string this guard must catch -->
 # em-dash-guard's tool_result entries (type "user") shift the scan boundary past the tool_use it needs to catch

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=8, reconfirm-count=1, content-hash=b09a7261 -->
 <!-- duplicate-checked -->
 <!-- Grepped .claude/todos/ and done/ for reserve-todo-id / id uniqueness / duplicate guard: done/492 is the parent that introduced this, no live match. -->
 # The new id guard rejects the very reservation it tells you to make

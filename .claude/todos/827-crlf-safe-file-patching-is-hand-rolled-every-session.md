@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=7, reconfirm-count=2, content-hash=4da2395b -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=7, reconfirm-count=3, content-hash=4da2395b -->
 <!-- duplicate-checked -->
 <!-- Searched this backlog and done/ for "CRLF", "line ending", "patch", "sed", "heredoc".
      478 is about skill-eval mutate/restore, 505 is about the shell-write ban. Neither covers a

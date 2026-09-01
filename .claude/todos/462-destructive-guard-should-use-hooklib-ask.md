@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=EASY, worth=5, reconfirm-count=2, content-hash=de55cbd4 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=5, reconfirm-count=3, content-hash=de55cbd4 -->
 <!-- duplicate-checked -->
 # destructive-command-guard.py carries its own ask() instead of _hooklib's
 

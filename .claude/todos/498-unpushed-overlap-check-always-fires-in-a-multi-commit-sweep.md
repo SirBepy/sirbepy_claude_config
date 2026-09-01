@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=6, reconfirm-count=1, content-hash=1041ca4e -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=6, reconfirm-count=2, content-hash=1041ca4e -->
 <!-- duplicate-checked -->
 # /commit's unpushed-overlap check asks a question a phase sweep has already answered
 

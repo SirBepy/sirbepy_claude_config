@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-08-29, complexity=HARD, worth=8, reconfirm-count=1, content-hash=7d9e6f53 -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=7, reconfirm-count=2, content-hash=7d9e6f53 -->
 <!-- duplicate-checked -->
 <!-- em-dash-exempt --> <!-- the Context block quotes a peer's post_message body verbatim -->
 # `flagged-skill-mention`'s envelope guard misses daemon-relayed channel messages

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=7, reconfirm-count=1, content-hash=c09f8231 -->
 <!-- duplicate-checked -->
 # /commit fold: handle a file edited by multiple riding commits
 

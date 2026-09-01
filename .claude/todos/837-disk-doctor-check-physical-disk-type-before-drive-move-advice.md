@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=6, reconfirm-count=1, content-hash=03297047 -->
 <!-- duplicate-checked: grepped .claude/todos/ and done/ for MediaType/PhysicalDisk/HDD/SSD, no hits -->
 # disk-doctor should check physical disk type before recommending a cross-drive move
 

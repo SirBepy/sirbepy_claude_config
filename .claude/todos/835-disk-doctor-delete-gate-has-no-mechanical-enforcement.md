@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=7, reconfirm-count=1, content-hash=bc2fbb19 -->
 <!-- duplicate-checked -->
 <!-- Grepped .claude/todos/ and done/ for destructive-command-guard / disk-doctor / delete gate: 462 and 776 both name adjacent files but neither touches tier coverage. -->
 # disk-doctor's delete-confirmation gate is prose only, and nothing prompts under auto mode
