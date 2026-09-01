@@ -12,7 +12,8 @@ param(
 #
 # -GetId prints "<pid>-<procStart-ticks>" for the current session and exits - the canonical
 # screenshot-subfolder id other skills (/close Phase 0, /screenshot, /mockup) should call instead
-# of hand-rolling their own walk.
+# of hand-rolling their own walk. The result is cached per sessionId (todo 459) so a Conductor
+# respawn mid-session, which gives the same sessionId a new pid, cannot change the answer.
 # Todo 355 (2026-08-19): measured from an actual Task-tool subagent dispatch - its pid,
 # CLAUDE_CODE_SESSION_ID, and -GetId output were byte-identical to the orchestrator's, because
 # Task-tool subagents run inside the orchestrator's own claude.exe process, not a separate one,
@@ -23,10 +24,40 @@ $ErrorActionPreference = 'Stop'
 $claudeRoot  = Join-Path $env:USERPROFILE '.claude'
 $sessionsDir = Join-Path $claudeRoot 'sessions'
 $projectsDir = Join-Path $claudeRoot 'projects'
+$getIdCacheDir = Join-Path $sessionsDir '.getid-cache'
 
 if (-not (Test-Path $sessionsDir)) {
     Write-Error "Sessions dir not found: $sessionsDir"
     exit 1
+}
+
+# Todo 459: a Conductor respawn (resume, or plain host behaviour observed 2026-08-31 with no
+# resume at all) gives the SAME sessionId a NEW pid/procStart, so re-resolving mid-session
+# returns a different id than the one already used to name a screenshot folder. Cache the first
+# resolved id per sessionId so every later call in the same session is stable by construction.
+function Get-CachedGetId {
+    param([string]$SessionId)
+    if (-not $SessionId) { return $null }
+    $path = Join-Path $getIdCacheDir "$SessionId.txt"
+    if (Test-Path $path) {
+        $val = (Get-Content -Raw -Path $path -ErrorAction SilentlyContinue)
+        if ($val) { return $val.Trim() }
+    }
+    return $null
+}
+
+function Set-CachedGetId {
+    param([string]$SessionId, [string]$Id)
+    if (-not $SessionId) { return }
+    if (-not (Test-Path $getIdCacheDir)) {
+        New-Item -ItemType Directory -Path $getIdCacheDir -Force | Out-Null
+    }
+    $path = Join-Path $getIdCacheDir "$SessionId.txt"
+    # First writer wins: a concurrent call that resolved a moment earlier already set the
+    # canonical value, so a re-resolve here must not overwrite it.
+    if (-not (Test-Path $path)) {
+        try { Set-Content -Path $path -Value $Id -NoNewline -ErrorAction Stop } catch {}
+    }
 }
 
 # Fallback only, best-effort/unstable (todo 60) - used when CLAUDE_CODE_SESSION_ID is unset.
@@ -83,6 +114,13 @@ function Resolve-SessionRecord {
 }
 
 if ($GetId) {
+    $sessionEnvId = $env:CLAUDE_CODE_SESSION_ID
+    $cachedId = Get-CachedGetId -SessionId $sessionEnvId
+    if ($cachedId) {
+        Write-Output $cachedId
+        exit 0
+    }
+
     # Todo 776: a matched record can point at a pid that already exited. Verify liveness and
     # re-resolve, excluding dead pids; a healthy session resolves alive on the first pass.
     $deadPids = @()
@@ -114,7 +152,9 @@ if ($GetId) {
         # Older session json with no procStart - derive it from the already-known pid, no walk needed.
         $ticks = (Get-Process -Id ([int]$record.pid)).StartTime.Ticks
     }
-    Write-Output "$($record.pid)-$ticks"
+    $resolvedId = "$($record.pid)-$ticks"
+    Set-CachedGetId -SessionId $sessionEnvId -Id $resolvedId
+    Write-Output $resolvedId
     exit 0
 }
 
