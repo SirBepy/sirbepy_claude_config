@@ -151,6 +151,12 @@ def check_integration() -> list:
         inplace_path = todos_dir / "130-split-v2-verify-screen.md"
         inplace_content = "# Split v2 verify screen, it is too large\n\nGoal: extract the debit card form, updated.\n"
 
+        new_dup_reason_path = todos_dir / "135-v2-verify-screen-adds-a-fourth-debit-card-form.md"
+        new_dup_reason_content = (
+            "# v2 verify screen adds a fourth debit card form\n\nGoal: same as 130.\n\n"
+            '<!-- duplicate-checked: the "verify" hits are a different surface, not this one -->'
+        )
+
         cases = [
             (
                 {"tool_name": "Write", "tool_input": {"file_path": str(new_dup_path), "content": new_dup_content}},
@@ -172,6 +178,11 @@ def check_integration() -> list:
                 },
                 0,
                 "override marker in content bypasses a real hit",
+            ),
+            (
+                {"tool_name": "Write", "tool_input": {"file_path": str(new_dup_reason_path), "content": new_dup_reason_content}},
+                0,
+                "override marker with an inline reason after a colon also bypasses a real hit",
             ),
             (
                 {

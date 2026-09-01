@@ -37,6 +37,10 @@ except Exception as e:
     sys.exit(2)
 
 OVERRIDE_MARKER = "<!-- duplicate-checked -->"
+# Todo 834: matches the bare marker AND `<!-- duplicate-checked: reason -->`,
+# since inlining the reason next to the marker is the natural move and the
+# strict equality match gave no signal that FORM, not content, was rejected.
+OVERRIDE_MARKER_RE = re.compile(r"<!--\s*duplicate-checked\b[^\n>]*-->")
 
 # A token in more than this share of the backlog's titles+goals carries no signal.
 COMMON_TOKEN_RATIO = 0.25
@@ -221,7 +225,7 @@ def main() -> None:
             )
 
     content = tool_input.get("content") or ""
-    if OVERRIDE_MARKER in content:
+    if OVERRIDE_MARKER_RE.search(content):
         sys.exit(0)
 
     tokens = salient_tokens(extract_title(content))
@@ -238,7 +242,8 @@ def main() -> None:
         "Per ai-todos-format.md's Content-duplicate guard, read the hit(s) in full and "
         "resolve to fold-in / drop-as-stale / drop-as-declined instead of filing this. "
         f"If it is genuinely distinct and only shares vocabulary, add {OVERRIDE_MARKER} "
-        "anywhere in the new file's content to proceed."
+        "anywhere in the new file's content to proceed - a reason can go inside the same "
+        "comment, e.g. `<!-- duplicate-checked: the two hits are different surfaces -->`."
     )
 
 
