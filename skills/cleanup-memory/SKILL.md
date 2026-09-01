@@ -48,13 +48,20 @@ Read every file's frontmatter (`name`, `description`, `metadata.type`) and full 
 
 ## Step 2 - Index/file consistency (mechanical, read-only)
 
+Run `node ~/.claude/skills/cleanup-memory/reachability.mjs <memory-dir>` instead of reinventing
+this by hand - it is the canonical implementation of the cross-check below, and the reason it
+exists: the same corpus produced 93, then 107, then three more numbers by three more methods in
+one 2026-08-26 run before this script shipped. It also excludes any demotion-tier subfolder (see
+below) from every reading automatically.
+
 Cross-check `MEMORY.md`'s entries against the files actually on disk using the **loaded-window
 definition**: reachable means a direct `(file.md)` link sits within MEMORY.md's own first 200
 lines - the window the harness actually loads into a session. A `[[wikilink]]` cross-reference
 between memory files does NOT count as reachable, and neither does a link past line 200: either
 one still fails to reach a session, which is the only thing this check is trying to answer.
 (Three readings were measured on the same 336-file corpus and gave 72 / 88 / 132 orphans; this
-step uses the 132 reading on purpose.)
+step uses the 132 reading - the script's `loaded-window, direct-link-only` output - on purpose.
+The other two readings the script prints are context only, never the reported figure.)
 
 - A file with no direct link inside MEMORY.md's first 200 lines: `orphan-file`.
 - A `MEMORY.md` line (within the first 200) whose linked file doesn't exist: `orphan-index-entry`.
@@ -63,6 +70,11 @@ Both are mechanical - no subagent needed, no judgment call - and both are determ
 corpus produces the same two counts on every run. Report the counts of both (`orphan-file: N`,
 `orphan-index-entry: N`) even when zero, and name the definition used ("loaded-window,
 direct-link-only") - Step 7 carries all three forward.
+
+**Demotion tier:** a memory dir may have a subfolder (other than `archive/`) holding files that
+are deliberately unindexed - e.g. `claude_usage_in_taskbar`'s `memory/cold/README.md` documents
+one such tier. The script excludes every file under such a subfolder from all three readings and
+lists them separately; Step 6 must never bulk re-index them as if they were `orphan-file` hits.
 
 ## Step 3 - Dedupe (read-only)
 
