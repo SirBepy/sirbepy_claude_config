@@ -123,13 +123,14 @@ and stays ungated.
 
 ## Writing the marker, on a clean or soft verdict
 
-```powershell
-New-Item -ItemType File -Path "C:\Users\tecno\.claude\hooks\.outbound-marker-$([guid]::NewGuid().ToString('N'))" -Force | Out-Null
-```
+Call the helper, never a hand-built `New-Item`/`Set-Content` call - todo 800: a raw write into
+`hooks/` resolves as a hard deny in auto mode, with nobody to answer the resulting ask. The
+script owns the join and guid generation and refuses to write a malformed marker, mirroring
+`write-session-marker.ps1`'s shape (todo 365):
 
-`New-Item`, never `Set-Content`/`Out-File`/`Add-Content`: `shell-content-write-guard.py` blocks
-those three and its marker allowlist does not cover this name. The marker needs no content, so
-nothing is lost.
+```powershell
+& "C:\Users\tecno\.claude\hooks\write-outbound-marker.ps1"
+```
 
 The guards consume the oldest marker inside a **120 second** window, so write it immediately
 before the write call, not earlier in the flow.
