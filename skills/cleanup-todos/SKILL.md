@@ -78,6 +78,20 @@ numbers and instruct that subagent to cite `ai`-origin re-verification evidence 
 working tree) each citation came from. Carry the ahead/behind numbers into Step 6's report so a
 reader can see which universe the verdicts describe.
 
+**Fan-out liveness and session budget.** This dispatch is exactly the fan-out
+`refs/delegation-doctrine.md`'s "Liveness and session budget" section covers: a chunk can die
+silently, and a healthy context% on the orchestrator proves nothing about it (todo 819: a 6-wide
+run died on a session limit, the 4-wide retry died on the weekly limit ten minutes later, both with
+nothing recorded). Check real liveness per that section - `git status`/diff-stat and `TaskStop`'s
+running-agent list, never output-file mtime - before treating a quiet chunk as failed.
+
+**Interrupted fan-out.** When some chunks return and others die mid-flight, do NOT discard the
+chunks that did return: feed their CSV rows into Step 5 as usual. A dead chunk's todos need no
+special handling - they simply keep their pre-run marker, since an unmarked/unchanged todo already
+means "not checked" per the contract. Record which chunks (by id range) returned and which died;
+Step 6's report states that split by name so the run's real coverage is never inferred from the
+total todo count.
+
 **Deep pass:** dispatch one subagent per chunk (`model: 'sonnet'`, `effort: 'high'`), all chunks in
 a single parallel dispatch, each carrying the full text of its own todos. Paste the canonical
 preamble from `refs/builder-preamble.md` into every chunk's prompt (it's read-only, so the
@@ -228,6 +242,9 @@ Contents, in order:
 0. The Step 4 reference-point line: "Checked out `<N>` behind / `<M>` ahead of `origin/<trunk>`" (or
    "checkout matches `origin/<trunk>`" when behind is `0`) - state this even when zero, so the
    report always names which universe the verdicts describe.
+0a. If any Step 4 chunk died mid-flight (see "Interrupted fan-out" above): which chunks (id ranges)
+   returned and which did not, so coverage is explicit rather than inferred from the todo count.
+   Omit this line entirely when every chunk returned.
 1. Folder-location audit hits (or "No stray locations found.").
 2. Dedupe-pair count: "Dedupe pairs found: `<N>` (see confirm list below)." or "No duplicates
    found." if zero.
