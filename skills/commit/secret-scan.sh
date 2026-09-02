@@ -14,6 +14,8 @@
 set -uo pipefail
 
 script_dir=$(cd "$(dirname "$0")" && pwd)
+# shellcheck disable=SC1091
+. "$script_dir/_prefilter-lib.sh" || { printf 'ERROR: missing prefilter lib: %s/_prefilter-lib.sh\n' "$script_dir"; exit 1; }
 patfile="$script_dir/../../hooks/secret-patterns.txt"
 
 if [ ! -f "$patfile" ]; then
@@ -80,9 +82,8 @@ if [ "${1:-}" = "--range" ]; then
 else
   # --repo <path>: forwarded by prefilter-gate.sh when the first path argument resolves to a
   # repo other than cwd (todo 447); absent, git_c is a passthrough and behaviour is unchanged.
-  repo=""
-  if [ "${1:-}" = "--repo" ]; then repo="$2"; shift 2; fi
-  git_c() { if [ -n "$repo" ]; then git -C "$repo" "$@"; else git "$@"; fi; }
+  parse_repo_arg "$@"
+  set -- "${PREFILTER_ARGS[@]}"
 
   # A path git cannot see (gitignored, or missing) yields no diff below, which reads as
   # "clean" though nothing was seen (todo 460). Scan it via --no-index like an untracked

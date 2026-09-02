@@ -11,8 +11,9 @@ set -uo pipefail
 
 # Raw bytes, never the literal character, so this file never trips its own check.
 ED=$(printf '\xe2\x80\x94')
-repo=""
-git_c() { if [ -n "$repo" ]; then git -C "$repo" "$@"; else git "$@"; fi; }
+script_dir=$(cd "$(dirname "$0")" && pwd)
+# shellcheck disable=SC1091
+. "$script_dir/_prefilter-lib.sh" || { printf 'ERROR: missing prefilter lib: %s/_prefilter-lib.sh\n' "$script_dir"; exit 1; }
 
 # A todo whose SUBJECT is an em dash has to quote one, so it carries the marker defined at
 # hooks/todos-em-dash-guard.py:37. Honoured here too, or such a file stays writable but
@@ -50,7 +51,8 @@ if [ "${1:-}" = "--range" ]; then
 else
   # --repo <path>: forwarded by prefilter-gate.sh when the first path argument resolves to a
   # repo other than cwd (todo 447); absent, git_c is a passthrough and behaviour is unchanged.
-  if [ "${1:-}" = "--repo" ]; then repo="$2"; shift 2; fi
+  parse_repo_arg "$@"
+  set -- "${PREFILTER_ARGS[@]}"
   exempt=$(exempt_list "$@")
 
   # A path git cannot see (gitignored, or missing) yields no diff below, which reads as
