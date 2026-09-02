@@ -10,6 +10,11 @@ three guess-based hooks in one day over exactly that failure mode (see
 Screenshot-id check has an explicit opt-out: a prompt containing the literal
 line `READ-ONLY DISPATCH` is read-only by the orchestrator's own declaration,
 so it skips the screenshot marker. See refs/builder-preamble.md.
+
+Also checks the dispatch's own `model` input is present and non-empty (todo
+799), same pure-presence shape as the prompt-marker checks above. Exempts
+`subagent_type: "fork"`: a fork dispatch always inherits the parent model by
+design, so it has no `model` param to give.
 """
 
 import sys
@@ -44,6 +49,17 @@ def missing_markers(prompt: str) -> list[str]:
     return missing
 
 
+def model_missing(tool_input: dict) -> bool:
+    """True if `model` is absent/empty and this isn't a fork dispatch.
+
+    A `subagent_type: "fork"` dispatch always inherits the parent model by
+    design, so it legitimately has no `model` param - never flagged.
+    """
+    if tool_input.get("subagent_type") == "fork":
+        return False
+    return not (tool_input.get("model") or "").strip()
+
+
 def main() -> None:
     payload = read_payload()
     tool_name = payload.get("tool_name", "") or ""
@@ -54,6 +70,8 @@ def main() -> None:
     prompt = tool_input.get("prompt", "") or ""
 
     missing = missing_markers(prompt)
+    if model_missing(tool_input):
+        missing.append("model (must be passed explicitly, e.g. 'sonnet' - see CLAUDE.md's Subagent model section; exempt only for subagent_type: \"fork\")")
     if not missing:
         sys.exit(0)
 

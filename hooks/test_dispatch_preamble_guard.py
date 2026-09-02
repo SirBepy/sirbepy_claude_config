@@ -49,4 +49,26 @@ for name in ("Bash", "Read", "Edit", "PowerShell"):
     if not _testlib.report(name not in guard.DISPATCH_TOOLS, f"{name} passes through untouched"):
         fails.append(f"{name} untouched")
 
+# model presence: pure-presence check, exempting subagent_type "fork".
+MODEL_CASES = [
+    ({"model": "sonnet"}, False, "model present"),
+    ({}, True, "model absent"),
+    ({"model": ""}, True, "model empty string"),
+    ({"model": "  "}, True, "model whitespace-only"),
+    ({"subagent_type": "fork"}, False, "fork subagent_type exempt with no model"),
+    ({"subagent_type": "fork", "model": "sonnet"}, False, "fork subagent_type with model still fine"),
+    ({"subagent_type": "explore"}, True, "non-fork subagent_type still requires model"),
+]
+
+
+def check_model(case) -> bool:
+    tool_input, expect_missing, label = case
+    got = guard.model_missing(tool_input)
+    ok = got == expect_missing
+    print(f"{'PASS' if ok else 'FAIL'}: {label} (model_missing={got})")
+    return ok
+
+
+fails += [f"model: {label}" for (ti, expect, label) in MODEL_CASES if not check_model((ti, expect, label))]
+
 sys.exit(_testlib.summarize(fails, style="count"))
