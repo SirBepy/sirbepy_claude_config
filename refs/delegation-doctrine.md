@@ -100,6 +100,9 @@ and the out-of-scope-findings channel below are the only guards.
   when the dispatch provably touches zero git-tracked files (e.g. a gitignored scratch dir): the
   line is static boilerplate, not a judgment call, and omitting it on a case-by-case read is
   itself the failure mode - no exception, ever.
+- When the task's verification needs a before/after comparison, the dispatch itself supplies the
+  baseline value or states the ordering (measure first, then edit) - see the "Taking a baseline"
+  clause in `refs/builder-preamble.md` for the builder-facing mechanics.
 - The load-bearing global rules it needs, restated: PowerShell on Windows, the working directory.
   Subagents do not inherit session context.
 - Any load-bearing project memory already known to the orchestrator (a prior fix, workaround, or
