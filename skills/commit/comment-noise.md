@@ -42,6 +42,18 @@ gotcha, or measurement the code can't show; if not, don't write it.
 - If step 5a flags a block anyway: CUT it, never reword it. Rewording is what
   turns one flag into six rounds of re-running the prefilter.
 
+**Invisible-path scanning is a shared helper, not three copies (todo 853).** All three
+prefilters (`comment-noise.sh`, `secret-scan.sh`, `em-dash.sh`) classify a passed path as
+tracked / untracked-visible / invisible and scan the invisible ones via `--no-index`, so a
+gitignored file a caller names on purpose still gets read (todo 460/804). Todo 804 declined to
+extract this because no shared lib file existed yet and an array-returning helper crossing a
+shell boundary was a real quoting risk. Todo 813 then built `_prefilter-lib.sh` and proved
+dot-sourcing works for `git_c`, which removes the first half of that reasoning; the second half
+(the quoting risk) does not apply to this specific block either, because `scan_invisible_paths`
+is dot-sourced into the caller's own shell and takes `"$@"` directly, printing its result to
+stdout for the caller to pipe onward, so there is no array to marshal back across any boundary.
+Extracted into `_prefilter-lib.sh` on that basis.
+
 1. **Mechanical prefilter** (one command, no judgment, run it verbatim via
    Bash). Lives in `skills/commit/comment-noise.sh`, a real script rather than
    inline in this file - skill-argument substitution rewrites a bare `$0`
