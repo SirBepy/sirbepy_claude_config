@@ -29,11 +29,12 @@ guard = _testlib.load_module(
 fails = []
 
 
-def run_main(session_id: str = "s1", cwd: str = "", file_path: str = "foo.py"):
+def run_main(session_id: str = "s1", cwd: str = "", file_path: str = "foo.py", tool_input=None):
+    payload_input = {"file_path": file_path} if tool_input is None else tool_input
     guard.read_payload = lambda: {
         "session_id": session_id,
         "cwd": cwd,
-        "tool_input": {"file_path": file_path},
+        "tool_input": payload_input,
     }
     buf = io.StringIO()
     with redirect_stdout(buf):
@@ -183,6 +184,24 @@ with tempfile.TemporaryDirectory() as tmp:
         # A second edit in the same session+repo must not re-warn (marker short-circuits).
         code2, out2 = run_main(session_id="s1", cwd=str(repo), file_path="src/y.py")
         fails += [] if (code2 == 0 and out2 == "") else ["warning fires once per session, not per edit"]
+
+        # settings.json matches this guard on MultiEdit and NotebookEdit too, and those two carry a
+        # different tool_input shape: MultiEdit adds `edits`, NotebookEdit has no `file_path` at all.
+        code3, out3 = run_main(
+            session_id="s3",
+            cwd=str(repo),
+            tool_input={"file_path": "src/z.py", "edits": [{"old_string": "a", "new_string": "b"}]},
+        )
+        ok3 = code3 == 0 and "src/z.py" in out3 and "Bob" in out3
+        fails += [] if ok3 else ["a MultiEdit payload warns and names the file"]
+
+        code4, out4 = run_main(
+            session_id="s4",
+            cwd=str(repo),
+            tool_input={"notebook_path": "src/nb.ipynb", "new_source": "x"},
+        )
+        ok4 = code4 == 0 and "Bob" in out4 and "this file" in out4
+        fails += [] if ok4 else ["a NotebookEdit payload warns, falling back to the generic label"]
     finally:
         server.shutdown()
         thread.join(timeout=5)
