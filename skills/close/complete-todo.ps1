@@ -52,6 +52,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+. (Join-Path $PSScriptRoot '_shared.ps1')
+
 # Cwd is not the repo (issue 504): a call from a subdirectory, or from a sibling repo
 # entirely, silently resolved against the wrong backlog before this default existed.
 # git's own toplevel is at least self-consistent within one repo; outside any git
@@ -117,39 +119,19 @@ if (-not (Test-Path $todosDir)) {
     Write-Fail "No .claude\todos found under '$RepoRoot' (looked for '$todosDir')."
 }
 
-# $Id may be a bare numeric id ("434") or a full stem ("434-real-slug") passed
-# instead of -Slug; either way $numericId is what claim/PLAN lookups key on.
-if ($Id -match '^0*(\d+)-(.+)$') {
-    $numericId = $matches[1]
-    if (-not $Slug) { $Slug = $matches[2] }
-}
-else {
-    $numericId = $Id
-}
+# --- Step 1: move the backlog file to done/ (or detect it's already there) ---
 
-$idPattern = "^0*$([regex]::Escape($numericId))-.*\.md$"
+$resolved = Resolve-TodoFile -Dir $todosDir -RawId $Id -Slug $Slug
+$numericId = $resolved.NumericId
+$Slug = $resolved.Slug
+$idPattern = $resolved.Pattern
+$backlogMatches = $resolved.Matches
+
 $slugPattern = $null
 if ($Slug) { $slugPattern = "^0*$([regex]::Escape($numericId))-$([regex]::Escape($Slug))\.md$" }
 
-# --- Step 1: move the backlog file to done/ (or detect it's already there) ---
-
-$backlogMatches = Get-ChildItem -Path $todosDir -Filter '*.md' -File -ErrorAction SilentlyContinue |
-    Where-Object { $_.Name -match $idPattern }
-
-# A prefix-less filename carries no numeric id, so `<id>-<slug>.md` can never match it.
-# Fall back to the exact stem before giving up, in the backlog and in done/ alike -
-# ai-todos-format.md calls such a file malformed, but it must still be archivable by
-# script or it can only leave the backlog by hand.
-if (-not $backlogMatches -and $numericId -notmatch '^\d+$') {
-    $stemPattern = "^$([regex]::Escape($numericId))\.md$"
-    $backlogMatches = Get-ChildItem -Path $todosDir -Filter '*.md' -File -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -match $stemPattern }
-    if ($backlogMatches) {
-        Write-Warning "[$RepoRoot] Todo '$Id' has no numeric prefix, which ai-todos-format.md treats as malformed. Archiving it anyway; future files should get an id from reserve-todo-id.ps1."
-        $idPattern = $stemPattern
-        $Slug = $null
-        $slugPattern = $null
-    }
+if ($resolved.FellBack) {
+    Write-Warning "[$RepoRoot] Todo '$Id' has no numeric prefix, which ai-todos-format.md treats as malformed. Archiving it anyway; future files should get an id from reserve-todo-id.ps1."
 }
 
 # Apply the slug filter whenever one is known - not only when the id is

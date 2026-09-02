@@ -48,6 +48,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+. (Join-Path $PSScriptRoot '_shared.ps1')
+
 function Write-Info($msg) { Write-Host $msg }
 
 $todosDir  = Join-Path $RepoRoot '.claude\todos'
@@ -88,24 +90,14 @@ function Try-Rename {
 function Claim-One {
     param([string]$RawId, [string]$SlugParam)
 
-    $numericId = $RawId
-    $slugLocal = $SlugParam
-    if ($RawId -match '^0*(\d+)-(.+)$') {
-        $numericId = $matches[1]
-        if (-not $slugLocal) { $slugLocal = $matches[2] }
-    }
+    $resolved = Resolve-TodoFile -Dir $todosDir -RawId $RawId -Slug $SlugParam
+    $numericId = $resolved.NumericId
+    $slugLocal = $resolved.Slug
+    $idPattern = $resolved.Pattern
+    $backlogMatches = $resolved.Matches
 
-    $idPattern = "^0*$([regex]::Escape($numericId))-.*\.md$"
-    $allBacklog = Get-ChildItem -Path $todosDir -Filter '*.md' -File -ErrorAction SilentlyContinue
-    $backlogMatches = $allBacklog | Where-Object { $_.Name -match $idPattern }
-
-    if ($backlogMatches.Count -eq 0 -and $numericId -notmatch '^\d+$') {
-        $stemPattern = "^$([regex]::Escape($numericId))\.md$"
-        $backlogMatches = $allBacklog | Where-Object { $_.Name -match $stemPattern }
-        if ($backlogMatches.Count -gt 0) {
-            Write-Info "WARNING: todo '$RawId' has no numeric prefix, which ai-todos-format.md treats as malformed. Claiming it anyway; rename it via reserve-todo-id.ps1 so it can be referenced by id."
-            $slugLocal = $null
-        }
+    if ($resolved.FellBack) {
+        Write-Info "WARNING: todo '$RawId' has no numeric prefix, which ai-todos-format.md treats as malformed. Claiming it anyway; rename it via reserve-todo-id.ps1 so it can be referenced by id."
     }
 
     if ($backlogMatches.Count -eq 0) {
