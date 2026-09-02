@@ -60,3 +60,4 @@ mentally classified the command.
 The corresponding project memory was widened in the same session to stop saying "e2e"
 (`project_cargo_test_piped_hangs_on_spawned_daemon`). This todo is the enforcement half; the memory
 alone has now demonstrably failed once.
+- Shipped hooks/cargo-test-pipe-guard.py plus its self-test (ea3582a), wired into PreToolUse in 0783da9. Matches cargo test piped into tail/head/grep/Select-Object; cargo build and check deliberately not matched per step 2. Subcommand and filter lists are named module-level constants so 877 can widen them in one line. Step 4 note: cwd is exposed on find_violation so repo-scoping is CHEAP to add, but no scoping logic exists yet, do not assume it does. False positive found immediately after wiring and filed as 881: it also matches a cargo-test pipeline quoted inside a string argument.

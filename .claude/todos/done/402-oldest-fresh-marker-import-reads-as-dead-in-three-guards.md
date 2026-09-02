@@ -53,3 +53,7 @@ Whichever is chosen, make `linear-update-guard.py` consistent with the other thr
 - `cd hooks; foreach ($t in Get-ChildItem -Filter "test_*.py") { python $t.FullName }` still passes
   every file.
 - A grep for `oldest_fresh_marker` returns no hit that reads as accidental.
+
+## Notes
+
+- Committed on the main thread (083a6de) after its builder was killed by the account session limit with a complete diff already in the tree. Convention picked: the three test files import oldest_fresh_marker from _hooklib directly and the re-export is dropped from the three guards, which leaves linear-update-guard.py needing no change. Verified by 22/22 hook suites plus a grep proving no guard.oldest_fresh_marker reference survives.

@@ -213,7 +213,6 @@ its once-per-session sentinel is a single boolean, not per-file state.
 - [ ] 430 - cross-model delegation. Close it without building if the disagreement protocol has no answer.
 - [ ] 438 [P] - permissions deny list (noise half is the real win; namespacing is probably a no)
 - [ ] 440 [P] - config-protection guard. Gated on 427's signal.
-- [ ] 441 [P] - `/supervised-run` enforcement
 - [ ] 439 [P] - config-default deep-merge. Gated on 415.
 - [ ] 428 [P] - repo README, CONTRIBUTING, generated skills index
 - [ ] 432 [P] - local statusline, kill the per-launch npx fetch

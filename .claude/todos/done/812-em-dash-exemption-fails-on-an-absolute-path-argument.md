@@ -83,3 +83,4 @@ one argument form and declaring the feature done is the actual lesson here.
   `810` proposes the harness that would have caught it.
 - Parent: `778`, still open on its own item 4 (a CI case, which writes under `hooks/`). Deliberately
   filed separately rather than folded in, since `778` is parked on an unrelated blocker.
+- Fixed (773418d). exempt_list now normalizes to whatever form the diff header will actually carry. Deviation from the todo candidate worth knowing: the untracked branch is normalized via git ls-files --others --exclude-standard --full-name rather than left as-passed, because empirical testing showed a discovered-untracked file diff header comes from ls-files output and is always repo-relative, so the todo assumption held only for the separate gitignored fallback. git_c also moved to top level since exempt_list needed it and the --range branch never defined it. The POSIX-style /c/Users/... path shape is still unfixed and is filed as 884.

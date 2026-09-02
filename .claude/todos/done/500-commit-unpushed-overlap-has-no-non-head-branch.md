@@ -59,8 +59,9 @@ situation the check was written for.
 
 - Step 8's hit-handling text distinguishes HEAD from non-HEAD overlap and names an executable
   remedy for each.
-- `commit-style.md`'s never-share-a-commit rule links to the partial-staging section or states the
-  overlapping-file exception. **BLOCKED, see Notes: that file does not exist.**
+- ~~`commit-style.md`'s never-share-a-commit rule links to the partial-staging section or states the
+  overlapping-file exception.~~ **DROPPED 2026-09-02, premise false: no such rule exists in this
+  repo. See Notes.**
 - Re-read the two files end to end afterwards: both rules are load-bearing on every commit, so an
   edit that contradicts a neighbouring clause is worse than the gap.
 
@@ -80,3 +81,12 @@ situation the check was written for.
 - Next run: either point that item at wherever the never-share-a-commit rule actually lives (if it
   exists under another name), or drop the item and archive this todo on the primary fix alone. Do NOT
   invent a file to satisfy it.
+- **Resolved 2026-09-02, `/mega-todos` batch 3: item dropped, todo archived on the primary fix.**
+  A repo-wide grep for `never share a commit`, `Different tickets`, `One purpose per commit` and
+  `share one commit` over every `.md`/`.sh`/`.ps1` returns exactly two hits, neither of which is the
+  rule this item describes: `skills/commit/SKILL.md:174` and `skills/mega-todos/SKILL.md:356`, both
+  reading "One purpose per commit" - and SKILL.md:174 continues "Many files is fine if it's one
+  logical change", which explicitly PERMITS the case the item wanted an exception carved out for.
+  So there is nothing to link and no gap to close. The project-level `.claude/commit-style.md`
+  variant of this concern is tracked separately in todo 849.
+- Archived on the primary fix alone; the second acceptance item was DROPPED, not satisfied. A repo-wide grep for the never-share-a-commit rule it named returns only One purpose per commit in skills/commit/SKILL.md:174 and skills/mega-todos/SKILL.md:356, and SKILL.md:174 continues Many files is fine if it is one logical change, which explicitly permits the case the item wanted an exception carved out for. There was nothing to link and no gap to close. Evidence written into the todo body before archiving. The project-level .claude/commit-style.md variant of this concern stays tracked in 849.

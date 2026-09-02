@@ -74,3 +74,4 @@ are five places to put it and four chances to forget one.
   different sourcing mechanics, no shared solution.
 - `810` proposes the fixture harness that would make the acceptance above cheap to prove. Doing
   `810` first would make this one materially safer.
+- Extracted git_c and the --repo parse into the new skills/commit/_prefilter-lib.sh, dot-sourced by comment-noise.sh, comment-tense.sh, em-dash.sh and secret-scan.sh (796158e). FOUR OF FIVE, not five: overlap-check.sh keeps its own copy because its parsing genuinely differs (accepts -C as an alias, reads ${2:-} instead of $2). That deviation was authorized in the dispatch, not chosen unilaterally, and the remainder is filed as 885. Named _prefilter-lib.sh rather than _git-c.sh so 853 could add a second helper to the same file.

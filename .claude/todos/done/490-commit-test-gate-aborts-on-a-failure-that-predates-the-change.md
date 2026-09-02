@@ -72,3 +72,7 @@ unattended branch that proceeds and records. Mirror that shape.
 - A test file that fails at COLLECT time (reporting "no tests", zero failed assertions) is correctly
   treated as a failure, not as an unchanged count.
 - The unattended path is defined explicitly and does not route to `AskUserQuestion`.
+
+## Notes
+
+- Rewrote skills/commit/SKILL.md steps 6 and 6a (900059f). Implemented approach 1: the gate compares failing-test IDENTITY against a HEAD baseline rather than exit code, so a failure that predates the change no longer blocks, while a genuinely new failure still hard-aborts. Collect-time failures count as failures, which is what defeats a count-based check. The baseline runs in a disposable git worktree --detach rather than a stash, because a stash touches the shared working tree. Deliberate divergence from step 8: unattended runs still hard-abort on a NEW failure rather than proceed-and-record, since that is the exact case 383 added the gate for.

@@ -85,3 +85,4 @@ both outcomes end with it disabled.
 
 Do not add a `run_in_background` guard here as well. That ban is subagent-scoped and belongs with
 todo 434's per-agent hook work, not in a globally-wired server guard.
+- Shipped hooks/dev-server-guard.py plus its self-test (4e7a150), wired into PreToolUse in 0783da9. The crux resolved without changing /supervised-run at all: sv.ps1 POSTs to the supervisor daemon rather than exec-ing the dev command, so a supervised launch is distinguishable by command shape today. Escape condition is any sv.ps1 subcommand, not only ensure. deny, not ask. Probed live after wiring and correctly did NOT fire on grep -c "npm run dev" over a file. dart run, vite preview and next start left uncovered, filed as 883.

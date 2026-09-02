@@ -68,3 +68,4 @@ Decide it once, either way, and write the decision down so it stops being re-lit
   it, not the extraction itself.
 - None of the three scripts has a test file, which is why the acceptance leans on manual
   reproduction rather than a suite.
+- Extracted the invisible-path scan block into scan_invisible_paths in skills/commit/_prefilter-lib.sh, sourced by secret-scan.sh, comment-noise.sh and em-dash.sh (546a769). The decision went EXTRACT, against 804 prior deliberate decline, and the reasoning is now written into skills/commit/comment-noise.md so it stops being re-litigated: 813 had already built and proved the dot-sourcing mechanism in the same lane, removing half of 804 argument, and a stdout-based design sidesteps the array-marshaling quoting risk that was the other half. Scoped narrowly to the block the todo cited; the separately duplicated tracked-diff loop was left alone.

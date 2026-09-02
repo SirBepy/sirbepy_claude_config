@@ -52,3 +52,4 @@ So this is a known, deliberate remainder, not a discovered defect.
 
 - Low worth on its own, roughly a 5: it closes a real half-finished item, but the builder-facing half
   is the one that prevents the `git stash` reach, and that already shipped.
+- Added the baseline-responsibility line to refs/delegation-doctrine.md Every builder prompt embeds list (5910374), pointing at builder-preamble.md Taking a baseline clause rather than restating its mechanics.

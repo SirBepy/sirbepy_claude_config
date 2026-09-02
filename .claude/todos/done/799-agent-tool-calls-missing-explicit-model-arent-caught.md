@@ -48,3 +48,4 @@ of thing mechanically rather than relying on the dispatching session to remember
 
 Low urgency / low blast-radius (worst case is one subagent call costing more than it should), but
 cheap to fix given the existing hook already does the mechanically-similar check on the same tool.
+- Extended hooks/dispatch-preamble-guard.py rather than adding a new hook (b962738), so zero settings.json footprint. An Agent/Task dispatch with no explicit model is now denied, with subagent_type fork exempt since a fork always inherits the parent model. Pure presence check, no semantic judgment on the model value, matching the guard existing three marker checks.

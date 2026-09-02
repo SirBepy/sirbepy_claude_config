@@ -52,3 +52,4 @@ Known, deliberate remainder, not a discovered defect.
 - Worth roughly a 6: the enforcing half already shipped in `495`, so this is discoverability, but the
   2026-08-25 incident recurred seven times before anyone noticed, and the archival path is where the
   reader actually is when it bites.
+- Added the two-path note to skills/close/ai-todos-format.md (1b8407b), pointing at /commit Staged-pathspec coverage check by NAME rather than line number, since two other agents were editing skills/commit/SKILL.md in a parallel lane at the time.
