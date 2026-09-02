@@ -363,6 +363,26 @@
         ]
       },
       {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\cargo-test-pipe-guard.py\"",
+            "statusMessage": "Checking for cargo test piped through a line filter"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\dev-server-guard.py\"",
+            "statusMessage": "Checking for a raw long-lived dev-server launch"
+          }
+        ]
+      },
+      {
         "matcher": "Write|Edit|MultiEdit|NotebookEdit",
         "hooks": [
           {
