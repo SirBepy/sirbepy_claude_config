@@ -12,17 +12,24 @@ set -uo pipefail
 # Raw bytes, never the literal character, so this file never trips its own check.
 ED=$(printf '\xe2\x80\x94')
 repo=""
+git_c() { if [ -n "$repo" ]; then git -C "$repo" "$@"; else git "$@"; fi; }
 
 # A todo whose SUBJECT is an em dash has to quote one, so it carries the marker defined at
 # hooks/todos-em-dash-guard.py:37. Honoured here too, or such a file stays writable but
 # permanently uncommittable (todo 778). Scoped to .claude/todos/, exactly as that guard is.
 EXEMPT_MARKER='<!-- em-dash-exempt -->'
 exempt_list() {
-  local f p
+  local f p key
   for f in "$@"; do
     case "$f" in *".claude/todos/"*) ;; *) continue ;; esac
     case "$f" in /*|?:[/\\]*) p="$f" ;; *) p="${repo:+$repo/}$f" ;; esac
-    [ -f "$p" ] && grep -qF -- "$EXEMPT_MARKER" "$p" 2>/dev/null && printf '%s\n' "$f"
+    [ -f "$p" ] || continue
+    grep -qF -- "$EXEMPT_MARKER" "$p" 2>/dev/null || continue
+    # Diff headers are always repo-relative for a tracked or discovered-untracked file;
+    # only a gitignored file (invisible to ls-files) keeps the argument's own form.
+    key=$(git_c ls-files --full-name -- "$f" 2>/dev/null)
+    [ -z "$key" ] && key=$(git_c ls-files --others --exclude-standard --full-name -- "$f" 2>/dev/null)
+    printf '%s\n' "${key:-$f}"
   done
 }
 
@@ -45,7 +52,6 @@ else
   # repo other than cwd (todo 447); absent, git_c is a passthrough and behaviour is unchanged.
   if [ "${1:-}" = "--repo" ]; then repo="$2"; shift 2; fi
   exempt=$(exempt_list "$@")
-  git_c() { if [ -n "$repo" ]; then git -C "$repo" "$@"; else git "$@"; fi; }
 
   # A path git cannot see (gitignored, or missing) yields no diff below, which reads as
   # "clean" though nothing was seen (todo 460). Scan it via --no-index like an untracked
