@@ -200,8 +200,8 @@ with tempfile.TemporaryDirectory() as tmp:
             cwd=str(repo),
             tool_input={"notebook_path": "src/nb.ipynb", "new_source": "x"},
         )
-        ok4 = code4 == 0 and "Bob" in out4 and "this file" in out4
-        fails += [] if ok4 else ["a NotebookEdit payload warns, falling back to the generic label"]
+        ok4 = code4 == 0 and "Bob" in out4 and "src/nb.ipynb" in out4
+        fails += [] if ok4 else ["a NotebookEdit payload warns and names the notebook"]
     finally:
         server.shutdown()
         thread.join(timeout=5)

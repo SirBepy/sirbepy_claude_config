@@ -135,7 +135,10 @@ def main() -> None:
     if not peers:
         sys.exit(0)
 
-    file_path = (payload.get("tool_input") or {}).get("file_path") or "this file"
+    # NotebookEdit sends notebook_path, not file_path; same fallback the two sibling
+    # guards on this matcher use (sensitive-file-guard.py:58, secret-write-guard.py:130).
+    tool_input = payload.get("tool_input") or {}
+    file_path = tool_input.get("file_path") or tool_input.get("notebook_path") or "this file"
     names = ", ".join(peer_label(p) for p in peers)
     emit_warning(
         f"[list-peers-pre-edit-guard] {len(peers)} peer session(s) share this repo "
