@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 
 import _testlib
+from _hooklib import oldest_fresh_marker
 
 guard = _testlib.load_module(
     "guard", Path(__file__).resolve().parent / "linear-create-guard.py"
@@ -54,7 +55,7 @@ with tempfile.TemporaryDirectory() as tmp:
     fresh = tmpdir / ".outbound-marker-abc"
     fresh.touch()
     if not _testlib.report(
-        guard.oldest_fresh_marker(tmpdir, guard.MARKER_GLOB, guard.FRESHNESS_SECONDS) is not None,
+        oldest_fresh_marker(tmpdir, guard.MARKER_GLOB, guard.FRESHNESS_SECONDS) is not None,
         "fresh shared marker is found",
     ):
         fails.append("fresh shared marker is found")
@@ -63,7 +64,7 @@ with tempfile.TemporaryDirectory() as tmp:
     os.utime(fresh, (stale_time, stale_time))
     label = f"marker older than {guard.FRESHNESS_SECONDS}s is ignored"
     if not _testlib.report(
-        guard.oldest_fresh_marker(tmpdir, guard.MARKER_GLOB, guard.FRESHNESS_SECONDS) is None, label
+        oldest_fresh_marker(tmpdir, guard.MARKER_GLOB, guard.FRESHNESS_SECONDS) is None, label
     ):
         fails.append(label)
     fresh.unlink()
@@ -72,7 +73,7 @@ with tempfile.TemporaryDirectory() as tmp:
         (tmpdir / name).touch()
         label = f"{name} never satisfies the Linear guard"
         if not _testlib.report(
-            guard.oldest_fresh_marker(tmpdir, guard.MARKER_GLOB, guard.FRESHNESS_SECONDS) is None,
+            oldest_fresh_marker(tmpdir, guard.MARKER_GLOB, guard.FRESHNESS_SECONDS) is None,
             label,
         ):
             fails.append(label)

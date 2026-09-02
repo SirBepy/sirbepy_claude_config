@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 
 import _testlib
+from _hooklib import oldest_fresh_marker
 
 guard = _testlib.load_module(
     "guard", Path(__file__).resolve().parent / "shortcut-mutation-guard.py"
@@ -150,7 +151,7 @@ with tempfile.TemporaryDirectory() as tmp:
         fresh.touch()
         label = f"fresh {fresh.name} is found"
         if not _testlib.report(
-            guard.oldest_fresh_marker(tmpdir, glob, guard.FRESHNESS_SECONDS) is not None, label
+            oldest_fresh_marker(tmpdir, glob, guard.FRESHNESS_SECONDS) is not None, label
         ):
             fails.append(label)
 
@@ -158,7 +159,7 @@ with tempfile.TemporaryDirectory() as tmp:
         os.utime(fresh, (stale_time, stale_time))
         label = f"{fresh.name} older than {guard.FRESHNESS_SECONDS}s is ignored"
         if not _testlib.report(
-            guard.oldest_fresh_marker(tmpdir, glob, guard.FRESHNESS_SECONDS) is None, label
+            oldest_fresh_marker(tmpdir, glob, guard.FRESHNESS_SECONDS) is None, label
         ):
             fails.append(label)
         fresh.unlink()
@@ -167,7 +168,7 @@ with tempfile.TemporaryDirectory() as tmp:
     for glob in guard.MARKER_GLOBS:
         label = f"a commit marker never satisfies {glob}"
         if not _testlib.report(
-            guard.oldest_fresh_marker(tmpdir, glob, guard.FRESHNESS_SECONDS) is None, label
+            oldest_fresh_marker(tmpdir, glob, guard.FRESHNESS_SECONDS) is None, label
         ):
             fails.append(label)
 
