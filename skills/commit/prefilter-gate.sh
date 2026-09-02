@@ -25,6 +25,9 @@ elif [ "${1:-}" != "--range" ] && [ $# -gt 0 ]; then
   # (todo 412). Group every path by its own resolved repo instead.
   cwd_repo=$(git rev-parse --show-toplevel 2>/dev/null)
   declare -A group_paths
+  # "${!group_paths[@]}" is hash-bucket order, not insertion order, so a multi-repo report
+  # was not diffable run to run (todo 802). Track first-seen order in a plain array instead.
+  declare -a repo_order=()
   for a in "$@"; do
     # A directory argument that IS a submodule root resolves via its own toplevel, not its
     # parent's, or the whole submodule reads back as one gitlink entry (todo 801).
@@ -62,10 +65,23 @@ elif [ "${1:-}" != "--range" ] && [ $# -gt 0 ]; then
         rel="${prefix}$(basename -- "$a")"
       fi
     fi
+    if [ -z "${group_paths[$arg_repo]+_}" ]; then
+      repo_order+=("$arg_repo")
+    fi
     group_paths["$arg_repo"]+="$rel"$'\n'
   done
 
-  for repo_key in "${!group_paths[@]}"; do
+  # cwd's section is the byte-identical hot path readers expect at the top; everything else
+  # follows in the order its first path argument appeared.
+  ordered_keys=()
+  if [ -n "$cwd_repo" ] && [ -n "${group_paths[$cwd_repo]+_}" ]; then
+    ordered_keys+=("$cwd_repo")
+  fi
+  for repo_key in "${repo_order[@]}"; do
+    [ "$repo_key" = "$cwd_repo" ] || ordered_keys+=("$repo_key")
+  done
+
+  for repo_key in "${ordered_keys[@]}"; do
     readarray -t rels <<<"${group_paths[$repo_key]}"
     paths=()
     for r in "${rels[@]}"; do [ -n "$r" ] && paths+=("$r"); done
