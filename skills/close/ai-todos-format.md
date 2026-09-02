@@ -321,6 +321,11 @@ that is old but whose PID is alive is NOT stale - a long session is working; ski
 **Release:** delete `.claims/<id>.claim` when the todo completes or you abandon it. Completing
 also means: move the todo to `done/`, delete its PLAN.md line.
 
+Archiving is a two-path change (a delete in `.claude/todos/`, an add under `done/`): a commit
+pathspec naming only one half drops the other, the exact recurrence `done/495-commit-pathspec-drops-the-source-half-of-a-git-mv.md`
+traces - `/commit`'s "Staged-pathspec coverage check" bullet (step 8 of `skills/commit/SKILL.md`) is
+what catches it, so name both paths there rather than re-deriving the check here.
+
 Preferred mechanism for the completion sequence (append a Notes bullet + move to `done/` +
 release claim + prune PLAN.md line, all four): `~/.claude/skills/close/complete-todo.ps1 -Id <id>
 [-Slug <slug>] [-RepoRoot <path>] [-Note "<text>"]`. It finds `.claude/todos/<id>-*.md` (errors on
