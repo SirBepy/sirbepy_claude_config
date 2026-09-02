@@ -84,3 +84,4 @@ the Audit override for what is, for him, routine multi-project reconciliation.
   (and any inline follow-up query a session writes mid-run) that sums/lists Clockify entries -
   `clockify_project_id` filtering needs to be a hard, impossible-to-skip step of the fetch helper
   itself, not a convention each call site has to remember.
+- Done via mega-todos batch 2, 2026-09-01 (4df9983): the overlap ban is now scoped per project at the point of use, reusing the existing in-project vs other-project fetch split rather than adding a second mechanism. Third live re-ask by the dev is what forced this.

@@ -79,3 +79,4 @@ two, so it very likely does. Check that before deciding scope.
 - Related and already closed: `done/412-commit-prefilters-are-blind-to-submodule-changes.md` (file
   arguments, fixed), `done/447-prefilter-gate-has-no-repo-target-so-cross-repo-commits-break.md`
   (repo discovery, fixed).
+- Done via mega-todos batch 2, 2026-09-01 (0f3aae9): the prefilter gate resolves a submodule directory argument to its own repo instead of reading it back as one gitlink entry.

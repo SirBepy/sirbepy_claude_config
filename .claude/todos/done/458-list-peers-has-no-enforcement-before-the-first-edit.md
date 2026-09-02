@@ -59,3 +59,4 @@ skill's rules.
 - Related and already handled: the per-project memory
   `feedback_list_peers_before_every_commit_and_push` was updated 2026-08-20 with this incident, so
   the behavioural half is recorded even if this hook is never built.
+- Done via mega-todos batch 2, 2026-09-01 (8419219): a PreToolUse hook on Write and Edit queries the daemon list-peers endpoint and warns once per session and repo, naming any live peer. Wired as allow-with-reason rather than ask, because the Approach says warn not block and an ask hard-blocks unattended runs. Every failure mode fails open silently, covered by 8 tests.

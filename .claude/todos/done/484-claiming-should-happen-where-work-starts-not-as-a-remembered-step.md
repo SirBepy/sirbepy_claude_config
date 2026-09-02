@@ -74,3 +74,7 @@ Files: `~/.claude/skills/close/claim-todo.ps1`, `~/.claude/skills/close/ai-todos
 - A run that completes a todo unclaimed either cannot happen, or is a case `CLAUDE.md` explicitly
   says does not need a claim.
 - `ai-todos-format.md` and `CLAUDE.md` agree with whatever the scripts now do.
+
+## Notes
+
+- Done via mega-todos batch 2, 2026-09-01 (d222f2b): claiming is now a side effect of where work starts rather than a remembered step repeated across five files.

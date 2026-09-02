@@ -36,7 +36,7 @@ Three observed symptoms, all the same root cause:
    list. The classifier overrode an explicit allow rule.
 2. Same denial via the Bash tool.
 3. **The `Write` tool reported success and the file never landed on disk.** Confirmed after the fact:
-   only the unrelated 2026-08-24 `.outbound-marker-d8d1f58b…` was present. A silent no-op is the
+   only the unrelated 2026-08-24 `.outbound-marker-d8d1f58bâ€¦` was present. A silent no-op is the
    worst of the three, since nothing surfaces that the marker is missing until the create fails.
 
 **The tell that points at the fix:** `hooks/write-session-marker.ps1` succeeded in that same session,
@@ -83,3 +83,4 @@ resolve that path, so the blast radius is much larger than either option above.
   and it is not specific to markers.
 - Changelog 2.1.246 added an Auto mode tab to `/permissions` for viewing and editing classifier
   rules, which may offer a fourth route worth checking before building either option above.
+- Done via mega-todos batch 2, 2026-09-01 (0e81e55): the outbound marker goes through a new write-outbound-marker.ps1 helper mirroring write-session-marker.ps1, so ticket creation stops tripping the sensitive-file guard. sensitive-file-guard.py itself was deliberately not weakened.

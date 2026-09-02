@@ -58,3 +58,7 @@ have told a subagent to `git add` inside a checkout three other sessions were co
 - No skill hardcodes a staging line without naming the shared-checkout alternative.
 - `hooks/dispatch-preamble-guard.py` still passes a dispatch using either variant, verified by
   running its self-test.
+
+## Notes
+
+- Done via mega-todos batch 2, 2026-09-01 (4e177f9): code-check and rate-it panel templates now name both staging-line variants and say the guard accepts either wording. mega-todos was already compliant, close delegates dispatch composition to code-check, and builder-preamble already documented both.

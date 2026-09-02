@@ -51,3 +51,4 @@ JSON unread). A second copy is a second chance to drift into that bug.
 
 Do not also move `deny()`'s prefix handling or refactor anything else in the file while there. The
 whole change is one import and one deletion.
+- Done via mega-todos batch 2, 2026-09-01 (c00dd70): the destructive guard now uses the shared hooklib ask helper. Behaviour-preserving: guard tiers and CLAUDE_HOOK_PROFILE handling unchanged, proven by the untouched existing suite plus the hook import smoke check.

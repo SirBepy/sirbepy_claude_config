@@ -53,3 +53,7 @@ wrong-match edit into a loud failure.
 - A session can patch a CRLF Dart file with one command and no scratch script.
 - Passing an `old` string that appears twice exits non-zero and names it.
 - The file's line endings are byte-identical to before, verified on a CRLF and an LF file.
+
+## Notes
+
+- Done via mega-todos batch 2, 2026-09-01 (bca2bf9): patch-file.py plus its 7-case self-test now live in tools/, not scripts/. The builder finished the code but could not commit: scripts/ is git-ignored by the repo allowlist gitignore, so it is the convention for untracked machine-local tooling. The orchestrator relocated it to tools/, the tracked home with the skill_eval.py precedent, where ci/run_tool_tests.py auto-discovers the test (now 2/2 tool suites).

@@ -47,6 +47,10 @@ Read the hook first to see which form the matcher actually uses before picking.
 - Whichever branch is taken, a fresh session that puts its reason inside the marker comment either
   succeeds (a) or is told exactly why it failed (b) - never re-rejected with the same message.
 
+## Notes
+
+- Done via mega-todos batch 2, 2026-09-01 (bfe3df9): the duplicate guard accepts its bypass marker with a trailing comment, while a genuine content duplicate filed with no marker still blocks.
+
 ## Found by
 
 `/close` Phase 1 retrospective, 2026-08-29, from a project session in claude_usage_in_taskbar.

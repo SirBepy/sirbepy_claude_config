@@ -77,3 +77,7 @@ already resolves per-project commands rather than hardcoding them.
 - Step C (or triage) checks for an already-existing spec covering the todo before it is queued or
   dropped.
 - The rewritten step, read cold, would have put the 18 reachable todos above into the AUTO queue.
+
+## Notes
+
+- Done via mega-todos batch 2, 2026-09-01 (d29c36d): Step B now requires naming a concrete blocker and checking the project spec directory before excluding a live-verify todo, and Steps B and E report exclusions with a reason per todo instead of a bare count.

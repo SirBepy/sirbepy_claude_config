@@ -76,3 +76,4 @@ Filed by `/close` 2026-08-26. Sibling gap filed as `787` (`/cleanup-todos` Step 
 does not exist). Related: `786`, which covers index ORDERING (truncation drops newest-first) and
 carries the same orphan-definition point as its item (c) - if 786 item (c) is done first, this todo's
 step 2 is already satisfied and should be checked off rather than redone.
+- Done via mega-todos batch 2, 2026-09-01 (0ec272c): cleanup-memory ships reachability.mjs, which reports both directions of the index and file desync, run against the real memory dir read-only.

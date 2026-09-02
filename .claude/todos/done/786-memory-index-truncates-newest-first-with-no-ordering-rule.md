@@ -85,3 +85,4 @@ covers this:
 - `done/32-compact-the-memory-index.md` was dropped 2026-08-12 as low-worth routine housekeeping
   about a different project's index size. This todo is not a re-file of it: it is about ordering and
   measurement correctness, not about getting a byte count down.
+- Done via mega-todos batch 2, 2026-09-01 (ebd12cb): the memory index now has an explicit ordering rule with a tiebreak, so truncation drops the least useful entries instead of the newest.

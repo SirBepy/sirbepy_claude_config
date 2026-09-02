@@ -55,3 +55,4 @@ than hardening against a hypothetical.
 
 - There is no test file for any script under `skills/commit/`, so the fixture is the only check.
   That absence is `501`'s territory.
+- Done via mega-todos batch 2, 2026-09-01 (1fdf370): the gate now tracks first-seen repo order in a parallel array and prints the cwd section first, replacing hash-bucket iteration order. The order flip itself was never reproduced, as the todo predicted; the change landed anyway because it is one line of ordering and costs nothing. Exit codes verified unchanged.
