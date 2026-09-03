@@ -32,6 +32,15 @@ lost. This is not a one-off - every `/ticket` update run from any project repo (
 zng-admin, zng-biller, etc.) will hit the same classifier block, since the log file always lives
 under `~/.claude/skills/ticket/`.
 
+**Counter-evidence, 2026-09-01 (zng-app session, sc-54902 comment).** The Edit-tool append to
+`~/.claude/skills/ticket/log.md` **succeeded**, no classifier prompt, in a session running with
+auto mode active. So the block is NOT unconditional per project session, and the "will reliably
+hit the same block" claim above is too strong as written. Whoever picks this up should first
+reproduce the 2026-08-28 denial before designing around it - the trigger may be something narrower
+(a specific permission-mode state, or the classifier's read of that particular turn) rather than
+"Edit under `~/.claude/` from a project repo". Option 3's premise is also weakened: Edit itself
+worked here, so a script-via-Bash detour may be solving a problem that is not the real one.
+
 ## Approach
 
 Options to evaluate, not yet decided:

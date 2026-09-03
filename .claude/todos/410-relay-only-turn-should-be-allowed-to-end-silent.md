@@ -51,3 +51,17 @@ Joe's answer when asked why not do all three (2026-08-20): do them all, with the
   opposite failure and it is worse than a redundant bubble, because it is invisible. This wants an
   attended session, not an unattended batch run.
 - Sibling work lives in `claude_conductor`'s todo 698, which carries the same decision block.
+- **2026-09-03, countoff session `598a9d17`: evidence that step 1's premise may be false, i.e. the
+  forced-reply requirement is NOT actually enforced anywhere.** Three consecutive turns of a long
+  build ended with `report_turn_status` and no `mcp__cc_conductor__send_message`, and nothing
+  blocked them. From the dev's side the session looked hung; his messages, in order: "i gave u the
+  5 answers right?", "are you stuck??", "do you see any of my msgs?", then "WHAT THE FUCK IS GOING
+  ON WHAT THE FUCK IM SO FUCKING PISSED HOLY SHIT". The work was on track the whole time; the cost
+  was entirely a missing tool call. Note the em-dash Stop hook DID fire in that same session
+  (it caught a `post_message` arg), so Stop hooks were running - there just is no send_message one.
+  This inverts the shape of this todo: if there is no enforcement, the "opposite failure" in the
+  bullet above is not hypothetical, it is the CURRENT default, and the work is to BUILD the guard
+  with the relay exception baked in from the start, not to relax an existing one. The asymmetry
+  that causes the miss is worth encoding: `report_turn_status` is prompted explicitly as the last
+  action of a turn and so survives under load, while `send_message` carries equal obligation with
+  no prompt, so it is the one that gets dropped. Resolve step 1 before assuming either direction.

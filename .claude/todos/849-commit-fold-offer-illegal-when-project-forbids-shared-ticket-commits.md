@@ -54,3 +54,12 @@ Keep the question for the case the rule does not cover: same ticket, or no proje
 A dry-run of the zng-app scenario (two commits for two tickets both touching one shared registration
 file) proceeds without an `AskUserQuestion`, prints the overlap and the quoted rule that made the
 fold illegal, and still asks normally in a repo with no `.claude/commit-style.md`.
+
+## Notes
+
+- Recurred 3x on 2026-09-01 (zng-app, 6-ticket session): 55214's files hit the session's own HEAD
+  bfee1dc (different ticket, 55287) - the exact case above - plus two NON-HEAD hits on peer
+  sessions' unpushed commits (55205's files on 05e30de/sc-55203, 55291's test on cf53132/sc-54902),
+  where fold is doubly invalid (not HEAD, not this session's, different ticket). The fix should
+  cover the non-HEAD/other-session branch with the same skip-and-print treatment, not just the
+  HEAD-fold offer.
