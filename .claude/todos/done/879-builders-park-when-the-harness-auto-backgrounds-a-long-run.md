@@ -68,3 +68,4 @@ anything reads the ban as already satisfied.
   the problem is only what happens after it is exceeded.
 - Filed from a zng-app session per CLAUDE.md's rule that a finding about the global tree belongs in
   this repo's backlog, not the surfacing project's.
+- Completed in the mega-todos wave 1 run, commits 7788acc + aace76f: builder-preamble.md's long-command clause now leads with the harness-auto-backgrounded case and bans Monitor alongside run_in_background. The second acceptance item is answered in refs/delegation-doctrine.md's Quality tells section: a hook CANNOT catch a parked non-report, because the failure lives in a subagent's final message, which no PreToolUse matcher reaches and which the parent's Stop hook only sees after the dispatch already returned. It is an orchestrator judgment call, recorded as such.

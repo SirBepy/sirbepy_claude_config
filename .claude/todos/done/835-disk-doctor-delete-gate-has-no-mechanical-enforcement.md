@@ -67,3 +67,4 @@ Rated 4/10 during a `/rate-it-and-commit` pass on the change, which is what surf
   unnamed gap was the defect.
 - Related but distinct: `462` (destructive-command-guard should use `_hooklib`'s `ask`) touches the
   same file and would be cheap to land in the same pass.
+- Completed in the mega-todos wave 1 run, commits 16c2600 + aace76f: destructive-command-guard.py gained match_disk_doctor_delete covering the recycle-bin, cleanmgr, docker-prune, winget and choco uninstall, Uninstall-Package and a scoped msiexec check, measured against a freshly harvested 86,430-command corpus (9 genuine hits, 0 false positives). gate.md's enforcement-gap paragraph was rewritten by the orchestrator to match, since it sat outside the builder's lane. An ordinary scoped delete stays deliberately uncovered - a broader match would prompt on routine scratch cleanup under defaultMode auto.

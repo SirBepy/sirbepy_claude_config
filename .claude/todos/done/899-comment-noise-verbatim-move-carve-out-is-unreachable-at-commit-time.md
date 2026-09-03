@@ -74,3 +74,4 @@ all, only prose, so there is nothing for the hook to check even in principle.
   mode is proven, not hypothetical.
 - Sibling defect, same shape, different rule: `778`.
 - Ancestor: `done/258`, which fixed the doctrine and not the gate.
+- Completed in the mega-todos wave 1 run, commits ecee356 + aace76f: comment-noise.sh now builds a haystack of every HEAD line across every file the diff touches and excludes any flagged comment line byte-identical to a HEAD line under a different path, so a verbatim move never reaches the report. Covered by three new cases in test_commit_guard.py's real-repo block. The stale prose in mega-todos/SKILL.md and builder-preamble.md was updated by the orchestrator afterwards, since both sat outside the builder's lane. Todo 904 was folded in as the dedupe loser.
