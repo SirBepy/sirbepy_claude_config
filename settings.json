@@ -401,6 +401,16 @@
             "statusMessage": "Checking for a peer session sharing this repo"
           }
         ]
+      },
+      {
+        "matcher": "^([A-Za-z0-9_]+__)?(send_message|post_message|update_message|ask_user_question)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\em-dash-guard.py\"",
+            "statusMessage": "Checking for em dash before send"
+          }
+        ]
       }
     ],
     "SessionEnd": [

@@ -229,6 +229,30 @@ def run_transcript_cases() -> list:
         return _testlib.run_cases([(*c,) for c in TRANSCRIPT_CASES], check)
 
 
+# (tool_name, tool_input, expect_deny, label) - PreToolUse arm (todo 892):
+# the call itself is scanned before it reaches the host, via exit code 2.
+PRE_TOOL_USE_CASES = [
+    ("mcp__cc_conductor__send_message", {"text": f"bad{ED}text"}, True, "send_message denied pre-delivery"),
+    ("mcp__cc_conductor__send_message", {"text": "all clean"}, False, "clean send_message not denied"),
+    ("Write", {"file_path": "foo.py", "content": f"# comment{ED}here"}, False, "Write stays unscanned at PreToolUse too"),
+]
+
+
+def check_pre_tool_use(case) -> bool:
+    tool_name, tool_input, expect_deny, label = case
+    payload = {"hook_event_name": "PreToolUse", "tool_name": tool_name, "tool_input": tool_input}
+    proc = subprocess.run(
+        [sys.executable, str(_GUARD_PATH)],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+    )
+    got_deny = proc.returncode == 2
+    ok = got_deny == expect_deny
+    print(f"[{'PASS' if ok else 'FAIL'}] pretooluse: {label} -> exit={proc.returncode} stderr={proc.stderr.strip()!r}")
+    return ok
+
+
 def run() -> int:
     fails = (
         _testlib.run_cases(UNIT_CASES, check_unit)
@@ -236,6 +260,7 @@ def run() -> int:
         + _testlib.run_cases(INTEGRATION_CASES, check_integration)
         + run_transcript_cases()
         + run_boundary_regression_case()
+        + _testlib.run_cases(PRE_TOOL_USE_CASES, check_pre_tool_use)
     )
     return _testlib.summarize(fails)
 

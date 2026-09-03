@@ -1,7 +1,15 @@
-"""Stop hook (todo 307, extended by todo 350): block a turn whose final
-assistant message, OR whose text-bearing args on an allowlisted MCP chat
-tool call this turn, contain a literal em dash (U+2014). CLAUDE.md bans the
+"""Two hook events, one module (todo 307, extended by todo 350 and 892):
+block an em dash (U+2014) in Claude-authored chat prose. CLAUDE.md bans the
 character outright.
+
+Stop: scans the turn's final assistant message plus any allowlisted MCP
+chat tool call already run this turn - the retroactive half, since a chat
+tool call has already delivered by the time Stop fires.
+
+PreToolUse: scans a single allowlisted chat tool call's own `tool_input`
+before it reaches the host, denying so the message never sends (todo 892).
+Gated on `hook_event_name` so the two arms share one field allowlist and
+one character definition without one running twice.
 
 `last_assistant_message` only ever carries Claude's own composed text
 (tool_use/tool_result are separate content blocks), so an exact codepoint
@@ -26,7 +34,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload
+    from _hooklib import read_payload, deny
 except Exception as e:
     sys.stderr.write(f"[em-dash-guard] FATAL: cannot import _hooklib ({e}); failing open.\n")
     sys.exit(0)
@@ -56,13 +64,17 @@ def find_em_dash(text: str) -> int:
     return text.find(EM_DASH) if text else -1
 
 
-def build_reason(text: str, idx: int, source: str = "your reply") -> str:
+def build_reason(text: str, idx: int, source: str = "your reply", already_sent: bool = False) -> str:
     start = max(0, idx - 20)
     end = min(len(text), idx + 21)
     snippet = text[start:end].replace("\n", " ")
+    repair = (
+        " That message already reached its recipient; revise it with "
+        "mcp__cc_conductor__update_message (newest ordinal first)." if already_sent else ""
+    )
     return (
         "Em dash (U+2014) found in %s near: \"...%s...\". Global rule "
-        "bans it outright, rewrite using a comma, colon, or hyphen instead." % (source, snippet)
+        "bans it outright, rewrite using a comma, colon, or hyphen instead.%s" % (source, snippet, repair)
     )
 
 
@@ -126,35 +138,64 @@ def iter_turn_tool_uses(transcript_path: str):
                 yield block.get("name") or "", (block.get("input") or {})
 
 
+def tool_call_texts(name: str, tool_input: dict):
+    """Yield (source_label, text) for text-bearing args of one chat-content
+    tool call, per the CHAT_TOOL_TEXT_FIELDS allowlist. Shared by the Stop
+    arm's transcript scan and the PreToolUse arm's direct payload scan."""
+    suffix = name.rsplit("__", 1)[-1] if "__" in name else name
+    field_paths = CHAT_TOOL_TEXT_FIELDS.get(suffix)
+    if not field_paths:
+        return
+    for field_path in field_paths:
+        for value in extract_field(tool_input, field_path):
+            yield f"{name} ({field_path})", value
+
+
 def chat_tool_texts(transcript_path: str):
     """Yield (source_label, text) for text-bearing args of this turn's
-    allowlisted chat-content tool calls."""
+    allowlisted chat-content tool calls already run (Stop arm, retroactive)."""
     for name, tool_input in iter_turn_tool_uses(transcript_path):
-        suffix = name.rsplit("__", 1)[-1] if "__" in name else name
-        field_paths = CHAT_TOOL_TEXT_FIELDS.get(suffix)
-        if not field_paths:
-            continue
-        for field_path in field_paths:
-            for value in extract_field(tool_input, field_path):
-                yield f"{name} ({field_path})", value
+        yield from tool_call_texts(name, tool_input)
+
+
+def handle_pre_tool_use(payload: dict) -> None:
+    """Deny a single chat tool call before it reaches the host (todo 892)."""
+    tool_name = payload.get("tool_name") or ""
+    tool_input = payload.get("tool_input") or {}
+    for source, text in tool_call_texts(tool_name, tool_input):
+        idx = find_em_dash(text)
+        if idx != -1:
+            deny(build_reason(text, idx, source))
+    sys.exit(0)
+
+
+def handle_stop(payload: dict) -> None:
+    if payload.get("stop_hook_active") is True:
+        sys.exit(0)
+
+    # (source, text, already_sent) - transcript-scanned tool calls already
+    # delivered by the time Stop fires; last_assistant_message has too, but
+    # carries no update_message-revisable identity, so it stays unmarked.
+    sources = [("your reply", payload.get("last_assistant_message") or "", False)]
+    transcript_path = payload.get("transcript_path") or ""
+    if transcript_path:
+        sources.extend((s, t, True) for s, t in chat_tool_texts(transcript_path))
+
+    for source, text, already_sent in sources:
+        idx = find_em_dash(text)
+        if idx != -1:
+            reason = build_reason(text, idx, source, already_sent=already_sent)
+            print(json.dumps({"decision": "block", "reason": reason}))
+            sys.exit(0)
+    sys.exit(0)
 
 
 def main() -> None:
     payload = read_payload()
-    if payload.get("stop_hook_active") is True:
-        sys.exit(0)
-
-    sources = [("your reply", payload.get("last_assistant_message") or "")]
-    transcript_path = payload.get("transcript_path") or ""
-    if transcript_path:
-        sources.extend(chat_tool_texts(transcript_path))
-
-    for source, text in sources:
-        idx = find_em_dash(text)
-        if idx != -1:
-            print(json.dumps({"decision": "block", "reason": build_reason(text, idx, source)}))
-            sys.exit(0)
-    sys.exit(0)
+    if payload.get("hook_event_name") == "PreToolUse":
+        handle_pre_tool_use(payload)
+        return
+    handle_stop(payload)
 
 
 if __name__ == "__main__":
