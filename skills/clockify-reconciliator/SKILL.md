@@ -261,16 +261,29 @@ the horizontal one-bar-per-day shape on sight (2026-08-27); do not reintroduce i
 is not only a preference - a column is wide enough to carry each block's description inline, which
 is what removes the need to read a separate table to know what a block is.
 
+**Full-week gate, checked before either bullet below:** the target bar and its `to go this week`
+framing may only render when the window resolved in step 3 starts Monday 00:00 of its week and runs
+through that week's elapsed end (the default Monday-to-now window, a completed past Mon-Sun week, or
+an explicit range aligned the same way). `today`, `yesterday`, an explicit single-day range, or a
+`past-N-days`/`past-N-weeks` window that doesn't start on Monday all fail this gate - none of them
+saw the rest of the week, so a "remaining" figure computed from them is a guess dressed as a fact
+(2026-09-03: a `today`-only fetch reported "19h 40m to go this week" with Mon/Tue/Wed/Fri/Sat/Sun
+unchecked). A run that fails the gate renders the plain window total and the same-window
+old/edit/new/meeting breakdown instead, no target denominator, no remainder.
+
 Structure, top to bottom:
 
-- **Headline**: total counted hours in the window, `of <weekly_target_hours>h target`, and a pill
-  reading `Xh Ym to go`, or `over` in amber past the target. Omit the whole row when the config
-  sets no target.
-- **Target bar** - horizontal, and deliberately so: it is one quantity filling toward a ceiling, not
-  a timeline. Stacked segments in `old, edit, new, meeting` order, each sized as its share of the
-  target, with the shortfall drawn as a hatched remainder. **This bar is also the legend** - print
-  each state's name and hour total beneath it. That is what makes "how many hours is what" a glance
-  rather than a second table.
+- **Headline**: gate passed - total counted hours in the window, `of <weekly_target_hours>h
+  target`, and a pill reading `Xh Ym to go`, or `over` in amber past the target. Gate failed - total
+  counted hours in the window only, no target/remaining language. Omit the whole row either way when
+  the config sets no target.
+- **Target bar** - gate passed only, horizontal and deliberately so: it is one quantity filling
+  toward a ceiling, not a timeline. Stacked segments in `old, edit, new, meeting` order, each sized as
+  its share of the target, with the shortfall drawn as a hatched remainder. **This bar is also the
+  legend** - print each state's name and hour total beneath it. That is what makes "how many hours is
+  what" a glance rather than a second table. Gate failed - replace it with the same-window
+  old/edit/new/meeting hour breakdown, no ceiling, no hatched remainder; it still doubles as the
+  legend for the grid below.
 - **The grid**: a 46px hour gutter plus one `1fr` column per day. Column header carries the day,
   date, that day's counted total, and `+Xh other` when other-project time exists.
   - 56px per hour, and this number is load-bearing: at 34px a 15-minute standup was 8px tall,
