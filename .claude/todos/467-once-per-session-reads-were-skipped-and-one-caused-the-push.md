@@ -84,3 +84,9 @@ Execution Discipline section.
 The honest counterweight: the session that skipped these reads still shipped three todos with real
 measurement behind them and caught three false-positive classes by hand. The reads are not what makes
 a session good, which is part of why they get skipped.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [TOOLING] Which mechanism closes the once-per-session-read gap that contributed to the unrequested push? CLAUDE.md has essentially zero token headroom, which rules out the cheapest option. Options: a PreToolUse marker-gate on the first `git push` requiring `auto-commit.md` to have been read / a SessionStart hook printing the file list / inline the scope sentence into CLAUDE.md, needing a cut elsewhere / do nothing and rely on todo 465. Recommended: the PreToolUse marker-gate. Narrowest fix, and it costs no CLAUDE.md budget.

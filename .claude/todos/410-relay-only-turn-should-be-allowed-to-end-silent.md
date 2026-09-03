@@ -65,3 +65,9 @@ Joe's answer when asked why not do all three (2026-08-20): do them all, with the
   that causes the miss is worth encoding: `report_turn_status` is prompted explicitly as the last
   action of a turn and so survives under load, while `send_message` carries equal obligation with
   no prompt, so it is the one that gets dropped. Resolve step 1 before assuming either direction.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [ARCH] The 2026-09-03 countoff session proved there is NO enforcement of `send_message` at all, which inverts this todo: the relay exception is the current default, not an over-strict rule to relax. Build the guard from scratch with the exception baked in, or leave it unenforced? Options: build a Stop-hook guard requiring `send_message` unless the pure-relay exception applies / leave it unenforced and rely on the prompt / narrow it to long autonomous runs only. Recommended: build it. `report_turn_status` survives under load because it is prompted explicitly as the last action of a turn; `send_message` carries equal obligation with no prompt, which is exactly why it gets dropped.

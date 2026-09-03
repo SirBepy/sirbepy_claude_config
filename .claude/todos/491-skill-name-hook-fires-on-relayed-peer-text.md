@@ -177,3 +177,9 @@ again regardless of what any session is called.
 Worth keeping from the peer's report, and independent of the misdiagnosis: **nothing warns the
 sender.** Every `post_message` returned `ok: true` and looked normal from its side; it only learned
 its messages were injecting a skill into another session because that session told it.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [ARCH] The payload-dump instrumentation could not be run: the hook only fires on the main session's own UserPromptSubmit, which cannot happen while that session is blocked waiting on a subagent. The pre-authorized fallback, softening the injected wording, shipped in commit a0980f0. Options: accept the wording softening as the resolution and archive / instrument the live session yourself the next time a peer relay arrives, then gate on the real field / ask the Conductor side to stop relaying raw prompt text. Recommended: instrument the live session on the next relay. It is the only way to see the real stripped payload, and it costs one turn when it happens.

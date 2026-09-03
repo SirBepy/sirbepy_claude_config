@@ -71,3 +71,9 @@ where the existing scale-mismatch and keyevent-111 notes live.
   and in `pomalo/.claude/todos/18`.
 - `screenrecord --time-limit` self-terminates, so it does not need the orphan handling a
   long-lived process would.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [TOOLING] A record-motion action for `/android-drive` needs a real Android device attached to develop and verify against, which no agent in an unattended run has. Options: set a device up and let a future attended session build it / drop it as speculative / build it the first time it is genuinely needed. Recommended: build it the first time it is genuinely needed. It was hand-rolled four times so the recipe is known, but verifying it blind is not possible.

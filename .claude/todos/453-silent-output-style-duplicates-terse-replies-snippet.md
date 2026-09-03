@@ -76,3 +76,9 @@ Do not execute this from inside a project session. It edits global `~/.claude` c
 The failure mode is a tidy-looking merge that quietly drops the deliverable exemptions, which
 would compress commit messages and outbound drafts. That is the one part of `terse-replies.md`
 whose absence would not be obvious until it had already caused damage.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [TOOLING] `output-styles/silent.md` and `snippets/terse-replies.md` both carry near-identical chat-tone rules with no authority marker in either. Which one owns them going forward? Options: the style owns everything, delete the snippet and its import / the style is primary and the snippet keeps only what a style cannot express (deliverable exemptions, subagent scope) / keep both duplicated. Recommended: style primary with a reduced snippet, because a style does not reach subagents and dropping the snippet entirely would lose that coverage.

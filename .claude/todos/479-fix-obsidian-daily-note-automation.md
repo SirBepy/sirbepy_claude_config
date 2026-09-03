@@ -57,3 +57,9 @@ re-filed here 2026-08-22 on Joe's instruction: it is global tooling (screenpipe,
 vault, the clockify-reconciliator skill) with no zng-app content, so it belongs in this repo's
 backlog per the CLAUDE.md rule that a finding about the global tree goes in the ~/.claude repo.
 Content is otherwise unchanged.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [TOOLING] `C:\Users\tecno\.screenpipe` no longer exists on disk at all: the app, the 18GB capture database and the pipe script are all gone, not merely stale. That is a bigger question than this todo currently frames. Options: check for a relocated install first / reinstall fresh and restore the automation / abandon it and archive as won't-fix. Recommended: check for a relocation first. An 18GB capture database vanishing without you noticing is worth confirming before deciding reinstall versus abandon.

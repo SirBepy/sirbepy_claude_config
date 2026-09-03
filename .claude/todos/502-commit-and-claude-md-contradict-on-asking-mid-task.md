@@ -88,3 +88,9 @@ disclosed the deviation in the dev-facing report rather than asking beforehand. 
 for the "Carve-out in `/commit`" candidate shape above: the peer-check (already run at step 7a for
 an unrelated reason) is a cheap, mechanical signal for "is anyone else touching this repo" that a
 same-session-sha carve-out could piggyback on, rather than needing a new check.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [ARCH] `/commit` step 8 says to STOP and ask on an overlap; CLAUDE.md says never ask mid-task. This contradiction has already produced three real judgment-call deviations from the written rule. Options: add a carve-out in CLAUDE.md / add a carve-out in `/commit` for a same-session sha / make `/commit` report instead of ask, always. Recommended: the carve-out in `/commit`. It matches all three observed occurrences and costs nothing from CLAUDE.md's zero-headroom budget.

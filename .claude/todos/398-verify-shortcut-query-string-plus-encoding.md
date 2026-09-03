@@ -46,3 +46,9 @@ wrong story list feeds outbound work the dev sends as his own words.
 ## Notes
 
 - Do not hardcode a token anywhere. Read it from the environment as the existing recipes do.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [SEC] Settling whether the two Shortcut query-string encoding forms are equivalent needs a live read-only `search/stories` call each way against the zirtue-corp workspace, from what is currently a personal-repo session. Options: run the two calls from a zng session and record the winner / run them from here / leave the encoding fork documented as unverified. Recommended: run them from a zng session, where the account and workspace context are already correct.

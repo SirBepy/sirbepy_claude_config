@@ -87,3 +87,9 @@ Sketch, not settled:
   merging session dying) or lives only in the session's context.
 - Origin is `dev` - asked for directly on 2026-08-20, mid-session, while deciding how to wrap two
   chats at once.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [ARCH] When several handoff todos are merged into one brief, should the consumed ones be genuinely deleted (your original ask) or moved to `done/` per the existing contract? Options: hard delete as an explicit exception to the contract / move to `done/`, contract-compliant / delete only the PLAN.md line and archive the file. Recommended: move to `done/`. The contract already relies on that audit trail everywhere else, and a merged handoff is exactly what a later session wants to find.

@@ -67,3 +67,9 @@ front-loaded and CLAUDE.md fully permits it; the cost is purely the Conductor tu
 
 Do not resolve this by weakening step 5's report line. The defaults-disclosure is what made the
 2026-09-01 skip recoverable, and it is the part worth keeping under every candidate shape.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [TOOLING] When your invocation is already an explicit "file it" directive, should `/ticket` create still show the AskUserQuestion card? Options: always ask anyway / skip the card, apply defaults, and disclose them in the result line / ask only for fields that cannot be derived (priority, estimate). Recommended: skip and disclose. The todo's own Notes say disclosure is what made the skip recoverable the time you overrode it.

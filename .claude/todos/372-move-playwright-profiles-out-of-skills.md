@@ -62,3 +62,9 @@ it waits.
 - Related history: `done/85-clockify-skill-orphan-playwright-check.md` shows the profile once lived
   at `C:/tmp/playwright-profiles/hubstaff`, so this directory has already moved once. Whatever
   destination gets picked, put it somewhere a future audit will not read as spill again.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [ARCH] Where should the per-machine Playwright profile for Hubstaff live, now that it sits inside the skills tree? Options: `%LOCALAPPDATA%\claude-clockify\playwright-profiles\hubstaff` / `C:\tmp\playwright-profiles\hubstaff` (its pre-302 home) / leave it under `skills/`. Recommended: `%LOCALAPPDATA%`, because it matches the Windows per-machine-state convention and keeps machine state out of a git-tracked skills dir.

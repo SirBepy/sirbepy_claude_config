@@ -50,3 +50,9 @@ both defensively.
 ## Notes
 
 - This needs a live Conductor session, so it cannot be closed from a headless or subagent context.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [TOOLING] `skills/create-pr/SKILL.md` documents two contradictory branches for how Conductor parses preview-card markers, and resolving it needs one real `/create-pr` run inside Conductor to observe which is true. A subagent cannot observe that. Options: run `/create-pr` once in a Conductor session and let Claude delete the losing branch / delete the branch you believe is wrong now / leave both documented. Recommended: run it once. The observation is cheap and the file currently contradicts itself.

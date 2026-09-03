@@ -50,3 +50,9 @@ before any delete actually runs.
 
 - Not urgent/blocking - these are optional disk-space wins, not anything broken. Fine to fold into
   the next `/disk-doctor` invocation rather than proactively resurrecting this session.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [TOOLING] The remaining disk-cleanup candidates have to go through `/disk-doctor`'s gate, which is a decision only you can make since Claude never deletes. Options: run `/disk-doctor` now and work the list / leave it until disk pressure actually appears / drop the remaining candidates. Recommended: leave it until there is real disk pressure. The todo's own author marked it low-urgency and non-blocking.

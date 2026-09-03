@@ -78,3 +78,9 @@ policy is settled. Do not answer them independently and let them disagree.
 
 - Filed via `/create-todo` on Joe's direct request, 2026-08-19, during the `/mega-todos` wrap-up.
 - Supersedes nothing. `399` stays live and is now gated on this; see its Notes.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [TOOLING] Should the comment rule split by reader (AI vs human) and/or by repo org (client vs personal), or stay one flat cap? Options: split by org only / split by reader only / split by both / keep the flat cap and refine only the content test. Recommended: none of these yet. You asked for this to be a dedicated `/brainstorm` session on 2026-08-19 and that is still the right call. Todo 399 is deliberately gated on this answer and must not be built first.

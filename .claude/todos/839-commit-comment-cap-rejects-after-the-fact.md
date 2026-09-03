@@ -59,3 +59,9 @@ hook fires on the same trigger surface and may be extendable rather than duplica
   its own).
 - `comment-noise.md` stays the single place the cap numbers are defined - do not restate them in
   a hook.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [ARCH] The comment-noise cap is only enforced at commit time, so an agent learns about it after writing the code rather than while writing it. Which fix tier? Options: a PostToolUse hook mirroring the impeccable one / print the offending block and ratio inline in `prefilter-gate.sh` output / leave it as-is. Recommended: print the offending block. It closes the real cost, re-reading the file to find which block was flagged, without adding a second write-time gate to maintain.

@@ -99,3 +99,9 @@ so `ci/run_all.py` covers the exemption path. That writes under `hooks/`, where
 `hooks/sensitive-file-guard.py` returns `ask`, which is an unanswerable block in an unattended run.
 It needs the main thread with the dev present. Until it lands, the exemption has NO mechanical test:
 `ci/run_all.py` passing says nothing about it, and the four fixtures above were manual.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [TOOLING] Items 1 to 3 are shipped and verified. Item 4 is a roughly ten-line test for `skills/commit/em-dash.sh`'s exemption path, which writes under `hooks/` and so trips `sensitive-file-guard.py`'s ask, making it unrunnable in an unattended run. Options: do it now while you are in the loop / park it again for a future attended session / drop item 4 and archive the todo as effectively done. Recommended: do it now. It is small, and the guard's ask is the only thing that has ever blocked it.

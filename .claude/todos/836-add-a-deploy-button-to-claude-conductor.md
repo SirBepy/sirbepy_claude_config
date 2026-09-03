@@ -54,3 +54,9 @@ confirmation and watch logic, and the two surfaces would drift.
   it is slow. Budget for it.
 - Deferred from the 2026-08-29 session that built `/deploy` because the Rust build was more than
   that session had left; Joe chose "skill + Hubbub workflow" as that session's scope.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [UX] This todo is MISFILED: every file it targets lives in `claude_usage_in_taskbar`, which has its own active backlog. It is dev-origin, so relocating it needs your say-so. Separately, where should the deploy button live? Options: relocate to `claude_usage_in_taskbar`'s backlog and answer placement there / relocate and let that session decide placement / leave it filed here. Recommended: relocate. On placement, a toolbar icon beside the existing session actions matches the pattern already in that app.

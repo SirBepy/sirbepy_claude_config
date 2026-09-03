@@ -49,3 +49,9 @@ overlapped, so any brainstorm starts by asking what the vault does NOT already c
 ## Merged in (2026-08-11)
 
 Absorbed todos 206 during /cleanup-todos. Their full text is in `done/` - read them before implementing, they carry specifics this file does not.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [ARCH] This design was deliberately parked and nothing has been built past the park. It is still correctly parked. Options: revive it and build / leave it parked / archive it as won't-build. Recommended: leave it parked. It scores low on payoff only because it is waiting on you, not because it is a bad idea.

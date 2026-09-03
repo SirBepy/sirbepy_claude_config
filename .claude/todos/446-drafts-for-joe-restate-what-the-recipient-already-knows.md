@@ -91,3 +91,9 @@ SELECTION for a specific reader. A draft can pass 435 and still fail this one.
 - Joe has not approved building anything yet. The discussion gates all three items above.
 - If the discussion lands on the skill, check whether it should absorb the revaire-mobile
   `feedback_colleague_message_drafts` memory's form rules so the two do not drift.
+
+## Open questions
+
+Written by /mega-todos on 2026-09-04. The next run opens with these.
+
+- [ ] [ARCH] This todo's own text says DISCUSS FIRST and that you have not approved building anything. Has the Revaire-side discussion about recipient-aware draft content happened yet? Options: yes, proceed with the skill plus the optional Stop hook per its Approach / no, still pending, keep it filed / it landed on a different approach, rewrite the todo. Recommended: confirm before any build. The gate is the todo's own wording, not a cautious reading of it.
