@@ -176,9 +176,13 @@ Never include `custom_fields` in that PUT.
 
 ## Log
 
-Append every create and every update to `~/.claude/skills/ticket/log.md` (gitignored). It is the
-audit trail for the pinned defaults above: if a run contradicts a pinned value - a renamed epic, a
-new field - fix the pinned section in the same session.
+Append every create and every update to `~/.claude/skills/ticket/log.md` (gitignored) - best-effort,
+not guaranteed. A project-session permission classifier has blocked the Edit call before (hit
+2026-08-28, not reproducible on demand as of 2026-09-01); if it happens again, do not retry via a
+shell `cat >>` (separately banned by `hooks/shell-content-write-guard.py`) - name the missed entries
+in the session's own report instead of losing them silently. The log is the audit trail for the
+pinned defaults above: if a run contradicts a pinned value - a renamed epic, a new field - fix the
+pinned section in the same session regardless of whether the log append itself succeeded.
 
 ```
 ## sc-XXXXX - <title>
