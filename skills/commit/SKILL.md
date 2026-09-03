@@ -171,7 +171,8 @@ Folds newly-staged-or-named fixes into an existing commit `<sha>` that is not ye
 2. `git reset --soft <sha>~1` - moves HEAD to the target's parent; the index now holds everything from `<sha>..HEAD` plus this fold's own fix, together. Same deliberate, surfaced exception to the "never reset what you didn't stage" rule as step 8's own unpushed-overlap check - this is the dev's own prior work, named explicitly.
 3. Recommit oldest first by pathspec, never `git add -A`:
    - First commit = the original target's own file list plus the fold's fix files, using the **original** message from step 1, with `--date` and `GIT_AUTHOR_DATE`/`GIT_COMMITTER_DATE` set to the original timestamps.
-   - Each remaining original commit, in original order, recommitted with its own unchanged file list, original message, original timestamps.
+   - **Shared-file hazard:** a pathspec commit takes the file's CURRENT working-tree state, not that commit's own diff. Before recommitting, intersect every riding commit's `git show --name-only` list against every other's; any file in more than one means each earlier recommit will silently absorb later commits' hunks to that file unless restored first - a silent pass here is worse than an aborted fold. Before each intermediate recommit, `git checkout <original-sha> -- <shared-file>` to put the file back to that commit's own blob; before the final commit, restore the pre-fold tip's state the same way.
+   - Each remaining original commit, in original order, recommitted with its own unchanged file list (restored per the hazard above if shared), original message, original timestamps.
 4. **Verify via patch-diff, not full-tree-diff**, every commit except the folded one: `git show <original-sha>` must diff empty against `git show <new-sha>` for its replacement. A full-tree comparison would not catch a hunk silently landing in the wrong commit.
 5. Report the old-sha to new-sha remapping to the dev.
 
