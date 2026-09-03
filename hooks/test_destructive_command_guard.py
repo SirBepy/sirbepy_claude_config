@@ -145,6 +145,35 @@ MIDDLE_CASES = [
     ("Get-Disk", False, "unrelated disk cmdlet"),
     ("git clean --force -d", True, "git clean long-form --force"),
     ("git clean --dry-run -d", False, "git clean long-form dry run"),
+    # todo 835: disk-doctor's own delete/uninstall verbs (skills/disk-doctor/gate.md).
+    ("Clear-RecycleBin -Confirm:$false", True, "Clear-RecycleBin"),
+    ("cleanmgr /sagerun:1", True, "cleanmgr"),
+    ("docker system prune -a -f", True, "measured corpus case: docker system prune"),
+    ("docker volume prune -f", True, "docker volume prune"),
+    ("docker ps", False, "unrelated docker command"),
+    ("winget uninstall --id Some.App -e", True, "winget uninstall"),
+    ("winget install --id Some.App -e", False, "winget install is not an uninstall"),
+    ("choco uninstall somepkg -y", True, "choco uninstall"),
+    ("choco install somepkg -y", False, "choco install is not an uninstall"),
+    ("Uninstall-Package -Name Foo", True, "Uninstall-Package"),
+    ("Get-Package -Name Foo", False, "Get-Package is not an uninstall"),
+    (
+        "Start-Process msiexec.exe -ArgumentList '/X{F54455D0-646E-4D2D-9D7C-A0ABF3A49EB8}','/qn','/norestart' -Wait",
+        True,
+        "measured corpus case: msiexec /X uninstall via Start-Process",
+    ),
+    ("msiexec /i setup.msi /qn", False, "msiexec /i install is not an uninstall"),
+    (
+        'git commit -m "explain msiexec /X uninstall flags in docs"',
+        False,
+        "FP: commit message mentioning msiexec /X",
+    ),
+    ("Remove-Item C:\\tmp\\scratch-file.txt -Force", False, "ordinary scratch cleanup stays unprompted"),
+    (
+        "Remove-Item C:\\Users\\tecno\\Desktop\\Projects\\fibo\\.for_bepy\\screenshots\\x.png -Force",
+        False,
+        "measured corpus case: ordinary project cleanup stays unprompted",
+    ),
 ]
 
 # (command, expect_hit, label) - the pure pattern, independent of the

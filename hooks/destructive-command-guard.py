@@ -24,7 +24,21 @@ to disable the guard. git reset --hard (3 hits, all genuine resets); git
 clean -f* (1 hit, path-scoped); DELETE FROM with no WHERE in the SAME SQL
 statement, run through a real SQL client/ORM/inline-script driver (4 hits,
 all deliberate local-dev clears); bare diskpart (1 hit, compacting a Docker
-vhdx).
+vhdx); disk-doctor's own delete/uninstall verbs - Clear-RecycleBin, cleanmgr,
+docker system/image/container/volume/builder prune, winget/choco uninstall,
+Uninstall-Package, msiexec /X|/uninstall (todo 835, re-measured against a
+re-harvested 86,430-command corpus: 9 hits total, 1 docker prune and 8
+msiexec /X uninstalls via Start-Process, all genuine disk-doctor runs, 0 for
+every other verb in the list). A scoped Remove-Item stays OUT of this tier on
+purpose: the same corpus has 562 unique Remove-Item invocations, nearly all
+ordinary project cleanup (screenshot dirs, .claims files, .git/index.lock),
+so a target-based rule for it would ask on routine work far more than it
+would catch a real disk-doctor delete. Hand-probing after the measurement
+found one more false positive the corpus alone missed: a bare substring
+search for msiexec+/uninstall hit this file's OWN measurement script, which
+held both words as regex source text in a Python string, never invoked;
+match_msiexec_uninstall() now also requires the bare verb at command
+position or a co-occurring -ArgumentList flag.
 
 A dangerous verb only fires when it sits at the START of a command segment
 (split on ; && || |, after stripping a leading `sudo` and any `VAR=value`
@@ -249,6 +263,23 @@ MKFS_DD_RE = re.compile(r"^(mkfs(\.[a-z0-9]+)?\b|dd\s+[^\n]*\b(if|of)=/dev/[a-zA
 DISK_WIPE_WIN_RE = re.compile(r"^(Clear-Disk|Format-Volume|format\s+[A-Za-z]:)\b", re.IGNORECASE)
 CHMOD_777_RE = re.compile(r"^chmod\s+(?:-[a-zA-Z]+\s+)*(0?777|a\+rwx)\b")
 DISKPART_RE = re.compile(r"^diskpart\b", re.IGNORECASE)
+# disk-doctor's own delete/uninstall verbs (skills/disk-doctor/gate.md, todo 835):
+# each has no legitimate non-uninstall use, so the verb alone is the target -
+# unlike Remove-Item, which measured 562 unique ordinary-work hits and stays
+# out of this list on purpose (see module docstring).
+DISK_DOCTOR_VERB_RE = re.compile(
+    r"^(Clear-RecycleBin|cleanmgr|winget\s+uninstall|choco(?:latey)?\s+uninstall|Uninstall-Package)\b",
+    re.IGNORECASE,
+)
+DOCKER_PRUNE_RE = re.compile(r"^docker\s+(?:system|image|container|volume|builder)\s+prune\b", re.IGNORECASE)
+# msiexec is always wrapped (Start-Process ... -ArgumentList), so it can't
+# anchor at command position. A bare substring match was a false positive on
+# this file's own measurement script (msiexec+/uninstall as unrun regex text
+# in a Python string); require the bare verb or -ArgumentList alongside it.
+MSIEXEC_VERB_RE = re.compile(r"\bmsiexec(?:\.exe)?\b", re.IGNORECASE)
+MSIEXEC_BARE_ANCHOR_RE = re.compile(r"^msiexec(?:\.exe)?\b", re.IGNORECASE)
+MSIEXEC_ARGLIST_RE = re.compile(r"-ArgumentList\b", re.IGNORECASE)
+MSIEXEC_UNINSTALL_FLAG_RE = re.compile(r"/x\{|/uninstall\b", re.IGNORECASE)
 
 GIT_PUSH_ANCHOR_RE = re.compile(r"^git\s+(?:-[^\s]+\s+)*push\b")
 GIT_RESET_HARD_RE = re.compile(r"^git\s+(?:-[^\s]+\s+)*reset\b[^\n]*--hard\b")
@@ -437,6 +468,19 @@ def match_diskpart(command: str):
     return None
 
 
+def match_msiexec_uninstall(seg: str) -> bool:
+    if not MSIEXEC_VERB_RE.search(seg) or not MSIEXEC_UNINSTALL_FLAG_RE.search(seg):
+        return False
+    return bool(MSIEXEC_BARE_ANCHOR_RE.match(seg) or MSIEXEC_ARGLIST_RE.search(seg))
+
+
+def match_disk_doctor_delete(command: str):
+    for seg in verb_segments(command):
+        if DISK_DOCTOR_VERB_RE.match(seg) or DOCKER_PRUNE_RE.match(seg) or match_msiexec_uninstall(seg):
+            return "disk-doctor delete/uninstall verb; confirm this exact command per skills/disk-doctor/gate.md first"
+    return None
+
+
 def match_git_positional_ref(command: str):
     """Pure pattern hit, independent of shared-checkout status - the SHARED
     tier's caller (main()) is what gates this on is_main_checkout()/peer
@@ -551,6 +595,7 @@ MIDDLE_CHECKS = (
     match_git_clean_force,
     match_sql_delete_no_where,
     match_diskpart,
+    match_disk_doctor_delete,
 )
 
 
