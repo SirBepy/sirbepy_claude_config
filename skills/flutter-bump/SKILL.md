@@ -118,6 +118,15 @@ longer necessary and contradicts how this project is meant to be used.
 1. `fvm flutter analyze`
 2. `fvm flutter test`
 3. `fvm flutter build web`
+4. **zng-app only:** step 3's build carries no `--dart-define-from-file`, so it overwrites the
+   shared checkout's `build/web/main.dart.js` with a bundle that targets no API and breaks the
+   local e2e harness (`zng-app/e2e/lib/server.js:73`, `assertBundleTargetsConfiguredApi()` reads
+   that file from disk unconditionally). Rebuild it for real use: `fvm flutter build web --release
+   --dart-define-from-file=.env.local`, then `grep -c 'localhost:3009' build/web/main.dart.js` -
+   non-zero or the defines didn't take and the bundle is still broken. Note in the final report
+   that `build/web` was rebuilt with local defines. Do not fold this into step 3 itself: the
+   `.env.local` file is gitignored and repo-specific, so step 3 stays a portable compile gate that
+   works on any machine.
 
 **Gate PASS/FAIL on the command's own output text, never on `$LASTEXITCODE` /
 the process exit code.** Confirmed 2026-08-13: `fvm flutter test` returns
@@ -223,7 +232,8 @@ the final report whether this ran or was skipped (and why).
 For each of the 3 repos, report:
 
 - **zng-app**: bumped `<old>` → `<new>` (or "already on `<new>`"), then
-  analyze/test/build PASS or FAIL with an output tail for any FAIL.
+  analyze/test/build PASS or FAIL with an output tail for any FAIL, then
+  whether the local-defines rebuild (2d step 4) ran and its grep count.
 - **zng-admin**: fetch/pull result; if skipped, the reason; otherwise same
   bump + verify detail as above.
 - **zng-biller**: same as zng-admin.
