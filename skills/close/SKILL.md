@@ -136,7 +136,15 @@ makes it resolve empty - two symptoms of one root cause):
 - Recall every sha THIS session's own `/commit`/`git commit` calls produced earlier in this
   conversation (each reports its sha on success) - never re-derive from `git log` timestamps or
   `@{u}..HEAD`, both of which conflate concurrent sessions or go empty post-push.
-- Zero recalled: pass `uncommitted` (unchanged - covers working-tree-only changes).
+- Zero recalled: call `list_peers`. No other active session on this worktree: pass `uncommitted`
+  (unchanged - covers working-tree-only changes). One or more active: `uncommitted` has no sha to
+  filter by, so a peer's dirty files enter scope unattributed (2026-08-31,
+  claude_usage_in_taskbar - 5 own files plus 5 peer files, zero commits made). Pass the file list
+  THIS session itself edited or wrote this turn (already known from its own Edit/Write calls in
+  context, deduped) with a `files:` prefix instead, e.g. `files:a.ts b.ts` - same attribution
+  problem `shas:` already solves for the commit branch, applied where there's no sha to filter by.
+  If this session made zero edits at all, skip Phase 2 and print why rather than passing an empty
+  scope.
 - One or more recalled: pass the list as the scope arg with a `shas:` prefix, e.g.
   `shas:abc1234 def5678`. The prefix is required even for a single sha: a bare lone sha is read
   as a range and diffs sha-to-working-tree, which is empty right after a commit. `/code-check`
