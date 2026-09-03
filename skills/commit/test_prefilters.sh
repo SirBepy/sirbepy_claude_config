@@ -20,7 +20,8 @@ trap cleanup EXIT
 new_repo() {
   local d
   d=$(mktemp -d) || { echo "FAIL: mktemp -d"; exit 1; }
-  tmp_dirs+=("$d")
+  # Every caller runs this via `x=$(new_repo)`, a subshell whose own tmp_dirs append never
+  # reaches the parent's array - the caller must register $d itself, right after this returns.
   git -C "$d" init -q
   git -C "$d" config user.email "test@example.com"
   git -C "$d" config user.name "test"
@@ -57,7 +58,7 @@ check() {
 # A separate repo nested in the parent's working tree reproduces the gate's per-path
 # repo-grouping without needing a real `git submodule add`; the bug was root resolution, not
 # the gitlink record.
-parent=$(new_repo)
+parent=$(new_repo); tmp_dirs+=("$parent")
 mkdir -p "$parent/vendor/sub"
 git -C "$parent/vendor/sub" init -q
 git -C "$parent/vendor/sub" config user.email "test@example.com"
@@ -74,7 +75,7 @@ check "secret-scan.sh sees a planted credential inside a foreign repo root" \
   1 'config\.js:1: ghp_' '' "$out" "$rc"
 
 # --- secret-scan.sh: blind on a gitignored path (done/460) ---
-repo=$(new_repo)
+repo=$(new_repo); tmp_dirs+=("$repo")
 printf '*\n' > "$repo/.gitignore"
 fake_tok2="ghp_""zyxwvutsrqponmlkjihgfed"
 printf 'const tok = "%s";\n' "$fake_tok2" > "$repo/secrets.txt"
@@ -89,7 +90,7 @@ check "an unremarkable gitignored file still clears the gate" 0 '' '' "$out" "$r
 # --- comment-noise.sh: generated-file skip, filename suffix only (done/456) ---
 # comment-noise.sh's own exit code is sort's (always 0), so this checks stdout content only;
 # the gate integration is already covered by the secret-scan cases above.
-gen=$(new_repo)
+gen=$(new_repo); tmp_dirs+=("$gen")
 write_noisy() {
   local path=$1 i
   : > "$path"
@@ -115,7 +116,7 @@ else
 fi
 
 # --- em-dash.sh: exempt marker honored under .claude/todos/ only (done/778) ---
-ed=$(new_repo)
+ed=$(new_repo); tmp_dirs+=("$ed")
 mkdir -p "$ed/.claude/todos" "$ed/other"
 ED=$(printf '\xe2\x80\x94')
 printf '<!-- em-dash-exempt -->\nhas a %s dash\n' "$ED" > "$ed/.claude/todos/exempt.md"
@@ -136,7 +137,7 @@ else
 fi
 
 # --- overlap-check.sh: no upstream is clean, a real hunk overlap is a hit ---
-noup=$(new_repo)
+noup=$(new_repo); tmp_dirs+=("$noup")
 printf 'seed\nline2\n' > "$noup/file.txt"
 git -C "$noup" add file.txt
 git -C "$noup" commit -q -m "add file"
