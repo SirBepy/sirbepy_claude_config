@@ -303,7 +303,13 @@ exactly. Do not improvise around it and do not skip a step because the change lo
    agents do not steal each other's):
    Set-Content -Path "C:\Users\tecno\.claude\hooks\.commit-marker-$([guid]::NewGuid().ToString('N'))" -Value "x"
 
-2. Run `git status` and `git diff` scoped to YOUR files only.
+2. Run `git status`, then `git diff -- <FILES>` (the working-tree diff check from `/commit` step 8).
+   Account for every hunk shown. An unrecognised hunk - one you did not write this session - is a
+   STOP: drop that path from `<FILES>`, name it in your report-back, and continue with the rest of
+   your files. Drop, never stop-and-report-nothing - one shared file should not stall an otherwise
+   clean lane in a run this wide. Never assume a dirty file in `<FILES>` is dirty only because of
+   you - a pathspec commit takes a file's entire working-tree state, and `git status`'s one `M` line
+   cannot tell you whose lines are in it.
 
 3. Run the prefilter gate against exactly the paths you are about to commit, replacing <FILES>.
 
@@ -367,7 +373,11 @@ commit at each barrier instead, once per completed todo, in lane order:
 1. Write a fresh marker (block's step 1).
 2. `git add` any untracked file that todo's builder created, by name.
 3. Run the branch guard (step 5).
-4. `git commit -m "<PREFIX>: <title>" -- <FILES>` (step 6), naming that todo's files only.
+4. Run the working-tree diff check again, right now, against the same `<FILES>` (step 2, above) -
+   time has passed since the builder's own pass and another agent's commit may have landed in
+   between. An unrecognised hunk is the same STOP: drop that path from `<FILES>` and name it in the
+   barrier's own summary, then commit the rest.
+5. `git commit -m "<PREFIX>: <title>" -- <FILES>` (step 6), naming that todo's files only.
 
 Same HARD RULES apply, main thread substituted for builder throughout.
 
