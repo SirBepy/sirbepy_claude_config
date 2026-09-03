@@ -111,18 +111,29 @@ file specifies, then tell the dev the id, the URL, and which defaults were appli
 ### 1. Resolve the targets
 
 Accept one or more ids plus the changes. For "all tickets matching X", search first and confirm the
-resolved id list via `AskUserQuestion` before mutating anything. Never act on an inferred set.
+resolved id list via `AskUserQuestion` before mutating anything. Never act on an inferred set. A
+bulk state move ("move sc-54900, sc-54901, sc-54902 to Testing") is still this flow, not a
+hand-rolled REST loop outside it - resolve all three ids here, then run each through steps 2-5.
 
-### 2. Know which changes are claim-bearing
+### 2. Check the workflow before picking a state id
 
-This is the distinction the guards enforce, so it decides whether step 3 runs:
+Every ticket's `workflow_id` gates which `workflow_state_id` values are valid for it - not every
+ticket in a bulk move lives in the same workflow. GET each story first and read `workflow_id`
+before choosing the target state; a mismatch 422s with
+`{"message":"Workflow state and Team are not compatible."}` (hit on sc-54902, filed under UI
+Design, 2026-09-01). Platform workflow tables live in the quirks file, e.g. `shortcut.md`'s ENG
+and UI Design sections.
+
+### 3. Know which changes are claim-bearing
+
+This is the distinction the guards enforce, so it decides whether step 4 runs:
 
 - **Claim-bearing** - `name`, `description`, comments. These assert something about the world, so
   they get the ground check.
 - **Not claim-bearing** - state moves, self-assign. Frictionless on purpose. Do not widen this
   without asking the dev.
 
-### 3. Ground check, narrower than create's
+### 4. Ground check, narrower than create's
 
 Only for claim-bearing changes, and only **one** hard stop carries over: query 3 finding the claim
 absent at the tracked branch, which means the update is about to describe something untrue. "This
@@ -130,7 +141,7 @@ already exists" is not a reason to stop an update - the ticket exists precisely 
 live. Queries 1 and 2 are informational here; report them, never block on them. Full rules are in
 `refs/outbound-ground-check.md`'s own "Updates are a different question" section.
 
-### 4. Write, one ticket at a time
+### 5. Write, one ticket at a time
 
 Sequential, never parallel - it avoids rate-limit surprises and keeps the per-ticket report honest.
 The write mechanics differ sharply per platform and both have a destructive failure mode; the

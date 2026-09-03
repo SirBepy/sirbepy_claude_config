@@ -35,6 +35,11 @@ These never change. Hardcode them, do not re-derive.
 - Team / group_id: `ZNG ENG TEAM` (`6880fd7c-2327-429c-9483-f1490a6cfed3`)
 - Workflow: `ENG - Core Workflow` (`500018252`). Default state To Do (`500018254`); use In Progress
   (`500018255`) or Testing (`500018257`) when the work is already done, and say so in the report.
+- Workflow: `UI Design` (`500000012`) - some tickets (e.g. sc-54902) live here, not ENG. GET the
+  story and check `workflow_id` before picking a state (SKILL.md Update step 2); ENG state ids
+  4xx-error on a UI Design ticket. States (confirmed 2026-09-01): To Do (Backlog) `500000016`,
+  Doing `500000013`, Ready for Review `500000033`, Done `500000017`, Done - Ready for Dev
+  `500000034`, Won't Do `500004887`. No Testing equivalent - land on Ready for Review instead.
 - Story type: `feature` for new functionality, `bug` for defects, `chore` for cleanup/analytics/
   config. Infer it, do not ask.
 - 1 story point is roughly 4 hours.
