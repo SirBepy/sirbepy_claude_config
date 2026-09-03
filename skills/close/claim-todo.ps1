@@ -9,11 +9,12 @@
   treat an existing claim as stale (safe to steal) only when its mtime is older than 4
   hours AND the recorded pid is no longer alive on this machine.
 
-  Batch form: -Id accepts a comma-separated list ("03,04,05") and claims every one of
-  them in this single call. Handling N todos together this way costs one remembered
-  claim call, the same as handling one - see close/ai-todos-format.md's Claims section
-  for the incident (todo 484) this closes: a claim call that has to be remembered once
-  per todo gets skipped exactly when several todos move at once.
+  Batch form: -Id accepts a comma-separated list, either as separate PowerShell
+  arguments (-Id 03,04,05) or as one quoted string (-Id "03,04,05") - both bind and
+  claim every one of them in this single call. Handling N todos together this way costs
+  one remembered claim call, the same as handling one - see close/ai-todos-format.md's
+  Claims section for the incident (todo 484) this closes: a claim call that has to be
+  remembered once per todo gets skipped exactly when several todos move at once.
 
   Duplicate-id-safe: if an id matches more than one backlog file (a known collision
   case in this project), -Slug picks one and the claim is named "<id>-<slug>.claim" so
@@ -23,7 +24,8 @@
 .PARAMETER Id
   A numeric todo id (leading zeros optional), a full filename stem to disambiguate an id
   shared by two files (e.g. "434-real-slug"), or a comma-separated list of either for a
-  batch claim ("03,04,05" or "03,434-real-slug,05").
+  batch claim - as separate arguments (03,04,05) or one quoted string ("03,04,05" or
+  "03,434-real-slug,05"), both work.
 
 .PARAMETER Slug
   Optional disambiguator when a single id matches more than one backlog file. Not valid
@@ -36,10 +38,11 @@
   ~/.claude/skills/close/claim-todo.ps1 -Id 286
   ~/.claude/skills/close/claim-todo.ps1 -Id 434 -Slug chat-row-style-decide-and-delete-loser
   ~/.claude/skills/close/claim-todo.ps1 -Id 03,04,05
+  ~/.claude/skills/close/claim-todo.ps1 -Id "03,04,05"
 #>
 param(
     [Parameter(Mandatory = $true)]
-    [string]$Id,
+    [string[]]$Id,
 
     [string]$Slug,
 
@@ -60,7 +63,9 @@ if (-not (Test-Path $todosDir)) {
     exit 2
 }
 
-$rawIds = $Id -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
+# -Id is [string[]] so both unquoted array args (-Id 03,04,05) and one quoted
+# comma-string (-Id "03,04,05") bind; re-join then split covers both shapes.
+$rawIds = ($Id -join ',') -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
 if ($rawIds.Count -eq 0) {
     Write-Host "ERROR: -Id resolved to no ids." -ForegroundColor Red
     exit 2

@@ -16,7 +16,9 @@
 .PARAMETER Id
   The numeric todo id (leading zeros optional - "07" and "7" both match a file named
   "07-fix-auth-redirect.md"). Also accepts a full filename stem (e.g. "434-real-slug")
-  to disambiguate an id shared by two files without needing -Slug.
+  to disambiguate an id shared by two files without needing -Slug. Typed [string[]] to
+  match claim-todo.ps1's -Id, but this script completes one todo per call - an array is
+  joined back into a single id and is not a batch-complete form.
 
 .PARAMETER Slug
   Optional disambiguator when the id matches more than one backlog file (a known
@@ -41,7 +43,7 @@
 #>
 param(
     [Parameter(Mandatory = $true)]
-    [string]$Id,
+    [string[]]$Id,
 
     [string]$Slug,
 
@@ -51,6 +53,14 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+# Single-id operation; collapse to match claim-todo.ps1's [string[]] type without
+# adding batch-complete behaviour this script does not implement. Reassigning $Id
+# itself re-coerces back to string[] (its declared param type persists across
+# reassignment), so a differently-typed variable carries the joined value instead.
+$IdRaw = $Id -join ','
+Remove-Variable -Name Id
+$Id = $IdRaw
 
 . (Join-Path $PSScriptRoot '_shared.ps1')
 
