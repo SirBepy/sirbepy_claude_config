@@ -16,9 +16,20 @@ both bash and PowerShell quote-escape rules and blocks if either flags a
 hit; iex/Invoke-Expression is special-cased since it evaluates its masked-
 out string argument as real code. The /commit skill's own marker write is
 allowlisted explicitly. Fails open on error.
+
+`git show <ref>:<path> > <scratch>` writes git's own blob bytes, not
+shell-authored content, so the BOM rationale above never reaches it
+(todo 792). Corpus check against 62,270 unique commands harvested from
+this machine's transcripts (C:\\tmp\\p2-corpus, 2026-09-04): ~104 unique
+commands match a bare git-blob redirect, nearly all diffing a pre-refactor
+version into a scratch path outside the repo; zero were a disguised
+config/authored-content write. Carved out narrowly below: bare `git show`/
+`git cat-file` with no pipes or substitutions, redirecting `>` (never
+`>>`) to a path outside the current repo.
 """
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -76,6 +87,76 @@ def clean_target(raw: str) -> str:
     return TRAILING_SEP_RE.sub("", (raw or "").strip("\"'"))
 
 
+# Splits a command into statements the same way COMMAND_START_RE recognizes
+# a new command start, so the git-blob-read check only ever inspects the
+# statement immediately feeding the redirect, never an earlier one.
+STATEMENT_BOUNDARY_RE = re.compile(r"[|;&(){\n]")
+
+# Bare `git show`/`git cat-file -p|blob <ref>:<path>`, nothing else: no `$()`,
+# backtick, pipe, or extra redirect in the segment, so nothing but git's own
+# blob bytes can reach the target this statement feeds.
+GIT_BLOB_READ_RE = re.compile(
+    r"^\s*git\s+(?:show|cat-file\s+(?:-p|blob))\b[^|;&$`<>\n]*\s\S+:\S+\s*$"
+)
+
+GIT_TIMEOUT_SECONDS = 5
+
+
+def _statement_before(masked: str, idx: int) -> str:
+    bounds = [m.end() for m in STATEMENT_BOUNDARY_RE.finditer(masked[:idx])]
+    start = bounds[-1] if bounds else 0
+    return masked[start:idx]
+
+
+def _repo_root(cwd: str) -> Path | None:
+    if not cwd:
+        return None
+    try:
+        proc = subprocess.run(
+            ["git", "-C", cwd, "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, timeout=GIT_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return None
+    try:
+        return Path(proc.stdout.strip()).resolve()
+    except OSError:
+        return None
+
+
+def _target_outside_repo(target: str, cwd: str) -> bool:
+    """True only when `target` resolves outside the repo containing `cwd`.
+    An unresolvable repo root counts as "not proven outside" (fail closed):
+    the carve-out below only fires when this is True.
+    """
+    repo_root = _repo_root(cwd)
+    if repo_root is None:
+        return False
+    try:
+        target_path = Path(target)
+        if not target_path.is_absolute():
+            target_path = Path(cwd) / target_path
+        target_path = target_path.resolve()
+    except OSError:
+        return False
+    return target_path != repo_root and repo_root not in target_path.parents
+
+
+def is_git_blob_redirect(masked: str, idx: int, fd: str | None, op: str, target: str, cwd: str) -> bool:
+    """True when the `>` at `idx` is fed solely by a bare git blob read and
+    lands outside the current repo (todo 792). `fd` must be absent (no `2>`
+    stderr capture) and `op` a single `>` (never `>>`, which could blend
+    blob bytes into an existing file's content).
+    """
+    if fd or op != ">":
+        return False
+    if not GIT_BLOB_READ_RE.match(_statement_before(masked, idx)):
+        return False
+    return _target_outside_repo(target, cwd)
+
+
 def deny(reason: str) -> None:
     _lib_deny(
         "[shell-content-write-guard] " + reason,
@@ -125,7 +206,7 @@ def _has_iex(masked: str) -> bool:
     return any(is_command_position(masked, m.start()) for m in IEX_RE.finditer(masked))
 
 
-def _check_masked(masked: str) -> str | None:
+def _check_masked(masked: str, cwd: str) -> str | None:
     for m in CONTENT_CMDLET_RE.finditer(masked):
         if is_command_position(masked, m.start()):
             return f"PowerShell content-write cmdlet `{m.group(1)}` writes file content through the shell."
@@ -135,18 +216,20 @@ def _check_masked(masked: str) -> str | None:
         return "`tee` writes file content through the shell."
 
     for m in REDIRECT_RE.finditer(masked):
-        _fd, op, amp, target = m.groups()
+        fd, op, amp, target = m.groups()
         if amp:
             continue  # fd duplication like 2>&1, not a file write
         target_clean = clean_target(target)
         if target_clean.lower() in NULL_TARGETS:
+            continue
+        if is_git_blob_redirect(masked, m.start(), fd, op, target_clean, cwd):
             continue
         return f"`{op}` redirect writes file content to `{target_clean or '(quoted target)'}` through the shell."
 
     return None
 
 
-def find_violation(command: str) -> str | None:
+def find_violation(command: str, cwd: str = "") -> str | None:
     lowered = command.lower()
     if any(hint in lowered for hint in MARKER_HINTS):
         return None
@@ -166,7 +249,7 @@ def find_violation(command: str) -> str | None:
                 "Invoke-Expression, which evaluates it as live code."
             )
 
-    return _check_masked(masked_bash) or _check_masked(masked_pwsh)
+    return _check_masked(masked_bash, cwd) or _check_masked(masked_pwsh, cwd)
 
 
 def main() -> None:
@@ -175,7 +258,8 @@ def main() -> None:
     if not command.strip():
         sys.exit(0)
 
-    reason = find_violation(command)
+    cwd = payload.get("cwd") or ""
+    reason = find_violation(command, cwd)
     if reason:
         deny(reason)
     sys.exit(0)

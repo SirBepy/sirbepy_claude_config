@@ -4,7 +4,9 @@ Run directly: python hooks/test_shell_content_write_guard.py
 Exits 0 on all-pass, 1 on any failure, printing a PASS/FAIL line per case.
 """
 
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import _testlib
@@ -14,6 +16,7 @@ guard = _testlib.load_module(
 )
 
 # (command, expect_block, label). expect_block=False means it must PASS through.
+# cwd-independent: none of these hit the git-blob-redirect carve-out (empty cwd).
 CASES = [
     ("grep -nE 'Set-Content|Out-File' skills/android-drive/adb-drive.ps1", False, "todo 289 repro: single-quoted grep pattern"),
     ('grep -nE "Set-Content|Out-File" skills/foo.ps1', False, "todo 289 repro: double-quoted grep pattern"),
@@ -111,8 +114,52 @@ def check(case) -> bool:
     return ok
 
 
+def check_with_cwd(case) -> bool:
+    cmd, expect_block, cwd, label = case
+    result = guard.find_violation(cmd, cwd)
+    got_block = result is not None
+    ok = got_block == expect_block
+    print(f"[{'PASS' if ok else 'FAIL'}] {label}: {cmd!r} -> {'BLOCK' if got_block else 'PASS'} ({result})")
+    return ok
+
+
+def run_git_blob_redirect_cases(fails: list) -> None:
+    """todo 792: `git show`/`git cat-file` redirects reading a committed
+    blob verbatim into a path outside the repo bypass the guard; the same
+    read into a tracked path inside the repo (an in-place revert) does not.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp) / "repo"
+        repo.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+        (repo / "f.txt").write_text("hi", encoding="utf-8")
+        subprocess.run(["git", "add", "f.txt"], cwd=repo, check=True)
+        subprocess.run(
+            ["git", "-c", "user.email=t@t.com", "-c", "user.name=t", "commit", "-q", "-m", "x"],
+            cwd=repo, check=True,
+        )
+        outside = str(Path(tmp) / "scratch.txt")
+        cwd = str(repo)
+
+        cases = [
+            (f"git show HEAD:f.txt > {outside}", False, cwd, "792: blob read to a path outside the repo passes"),
+            ("git show HEAD:f.txt > f.txt", True, cwd, "792: same read, target inside the repo still blocks"),
+            (f"git cat-file -p HEAD:f.txt > {outside}", False, cwd, "792: cat-file blob read outside the repo passes"),
+            (f"git show HEAD:f.txt >> {outside}", True, cwd, "792: append still blocks even outside the repo"),
+            (f"git show $(evil) HEAD:f.txt > {outside}", True, cwd, "792: command substitution in the segment still blocks"),
+            (
+                f"git show HEAD:f.txt > {outside} && echo pwn > f.txt",
+                True,
+                cwd,
+                "792: a genuine write chained after a legit blob read still blocks",
+            ),
+        ]
+        fails.extend(_testlib.run_cases(cases, check_with_cwd))
+
+
 def run() -> int:
     fails = _testlib.run_cases(CASES, check)
+    run_git_blob_redirect_cases(fails)
     return _testlib.summarize(fails)
 
 
