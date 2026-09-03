@@ -139,7 +139,7 @@ Rules:
 ## Shared utilities
 
 - **One formatter per concept.** One `formatTokens`, one `formatTimeAgo`, one `formatBytes`. All in `src/shared/formatters.ts`. Never duplicate across views.
-- **Generic modal host in `src/shared/modal.ts`.** Every modal uses it; no bespoke modal implementations.
+- **Two modal shapes, and the choice is not free.** A **stepped flow** - several screens swapping content inside one persistent card, e.g. a new-session chain going project -> location -> model - uses the generic host in `src/shared/modal.ts` (`presentHostCard` / `modalCardSlot`), because the host is what keeps the card mounted across steps. A **one-shot dialog** that opens, takes one answer and closes (confirm, a picker, an edit form) may be a bespoke element; routing it through the host buys nothing. Either way it must go through the shared keystroke trap so no key leaks to the UI behind it - that guarantee is not optional and is not the host's to provide.
 - **Typed IPC wrapper in `src/shared/ipc.ts`.** Wraps `@tauri-apps/api`'s `invoke` with generated type aliases from `src/types/ipc.generated.ts`.
 
 ## Rust→TS type generation
