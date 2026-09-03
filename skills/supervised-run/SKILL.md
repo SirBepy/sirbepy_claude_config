@@ -91,7 +91,7 @@ readiness marker appears - a blank first page load isn't necessarily broken; giv
 
 ## Port table (do this in step 1)
 
-For a dynamic port to take effect, template the port flag INTO the command with the literal `{PORT}` placeholder. The supervisor substitutes it AND sets the `PORT` env var.
+For a dynamic port to take effect, template the port flag INTO the command with the literal `{PORT}` placeholder. The supervisor substitutes it AND sets the `PORT` env var - and it sets `PORT` in the child's environment even when `cmd` has no `{PORT}` placeholder at all. A server that reads `PORT` itself (`process.env.PORT`, `configService.get('PORT')`) binds that injected port regardless, silently overriding its own default: an entry reporting `status=running` with a live, healthy process and nothing listening on the port you expected means this happened (measured 2026-09-01, zng-api: expected 3009, `netstat` showed nothing, cost ~15 min). Pass `-NoDynamicPort` to `ensure` to stop the injection and let the app bind its own default.
 
 | Tool | `cmd` to send |
 | --- | --- |
