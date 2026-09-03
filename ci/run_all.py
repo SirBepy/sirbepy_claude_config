@@ -20,11 +20,12 @@ CHECKS = (
 )
 
 
-def run_check(label: str, script: Path, root: Path) -> bool:
+def run_check(label: str, script: Path, root: Path) -> tuple:
     print(f"\n=== {label} ({script.name}) ===", flush=True)
     if not script.is_file():
-        print(f"FAIL: {script} is missing")
-        return False
+        detail = f"FAIL: {script} is missing"
+        print(detail)
+        return False, detail
     result = subprocess.run(
         [sys.executable, str(script), "--root", str(root)],
         cwd=str(root),
@@ -34,16 +35,17 @@ def run_check(label: str, script: Path, root: Path) -> bool:
         errors="replace",
         timeout=600,
     )
-    for stream in (result.stdout, result.stderr):
-        if stream:
-            print(stream.rstrip(), flush=True)
+    output = "\n".join(s.rstrip() for s in (result.stdout, result.stderr) if s)
+    if output:
+        print(output, flush=True)
     if result.returncode != 0:
         print(f"FAIL: {label} exited {result.returncode}")
-        return False
-    return True
+        detail = output or f"(no output) exited {result.returncode}"
+        return False, detail
+    return True, output
 
 
-def check_hook_imports(root: Path) -> bool:
+def check_hook_imports(root: Path) -> tuple:
     """Exec-loads every `_hooklib` importer among hooks/*.py directly, so a
     broken symbol fails HERE, not when dev-backend-guard.py's broad
     `^(Bash|PowerShell)$` matcher fail-closes every shell call (todo 850).
@@ -56,6 +58,7 @@ def check_hook_imports(root: Path) -> bool:
         and "_hooklib" in p.read_text(encoding="utf-8")
     ]
     failed = []
+    errors = []
     for path in importers:
         spec = importlib.util.spec_from_file_location(path.stem, path)
         module = importlib.util.module_from_spec(spec)
@@ -63,12 +66,15 @@ def check_hook_imports(root: Path) -> bool:
             spec.loader.exec_module(module)
         except BaseException as e:
             failed.append(path.name)
-            print(f"FAIL: {path.name} raised on import: {e!r}")
+            line = f"FAIL: {path.name} raised on import: {e!r}"
+            errors.append(line)
+            print(line)
     if failed:
+        detail = "\n".join(errors)
         print(f"FAIL: {len(failed)} of {len(importers)} _hooklib importer(s) failed to import")
-        return False
+        return False, detail
     print(f"OK: all {len(importers)} _hooklib importers import cleanly")
-    return True
+    return True, ""
 
 
 def main() -> int:
@@ -79,14 +85,23 @@ def main() -> int:
     root = args.root.resolve()
 
     print(f"repo root: {root}")
-    failed = [label for label, name in CHECKS if not run_check(label, ci_dir / name, root)]
+    failed = []
+    for label, name in CHECKS:
+        ok, detail = run_check(label, ci_dir / name, root)
+        if not ok:
+            failed.append((label, detail))
     total = len(CHECKS) + 1
-    if not check_hook_imports(root):
-        failed.append("hook import smoke")
+    ok, detail = check_hook_imports(root)
+    if not ok:
+        failed.append(("hook import smoke", detail))
 
     print("\n" + "=" * 48)
     if failed:
-        print(f"FAIL: {len(failed)} of {total} checks failed: {', '.join(failed)}")
+        labels = ", ".join(label for label, _ in failed)
+        print(f"FAIL: {len(failed)} of {total} checks failed: {labels}")
+        for label, detail in failed:
+            print(f"\n--- {label}: what failed ---")
+            print(detail or "(no output captured)")
         return 1
     print(f"OK: all {total} checks passed")
     return 0

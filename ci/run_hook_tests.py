@@ -5,6 +5,11 @@ only the runner that makes CI invoke them instead of relying on a prose step
 in the /commit skill. Each suite is run in place (cwd = repo root, invoked as
 hooks/test_x.py) so hooks/_testlib.py's by-path import via sys.path[0] keeps
 working exactly as it does when a human runs `python hooks/test_x.py`.
+
+Discovery skips any test_*.py that git does not track (todo 805): a peer
+session's half-written untracked test file is not yet part of the committed
+contract this gate protects, so it must not be able to fail this gate. If git
+itself is unavailable, discovery falls back to every file on disk.
 """
 
 import argparse
@@ -16,12 +21,32 @@ TEST_GLOB = "test_*.py"
 TIMEOUT_SECONDS = 120
 
 
+def _tracked_hook_files(root: Path):
+    """Returns the set of `hooks/*` paths git has in its index, or None if
+    git could not be queried (non-repo checkout, git missing).
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "hooks"],
+            capture_output=True, text=True, timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    return {line.strip() for line in result.stdout.splitlines() if line.strip()}
+
+
 def discover(root: Path) -> list:
     hooks_dir = root / "hooks"
-    return sorted(
+    candidates = sorted(
         p for p in hooks_dir.glob(TEST_GLOB)
         if "__pycache__" not in p.parts
     )
+    tracked = _tracked_hook_files(root)
+    if tracked is None:
+        return candidates
+    return [p for p in candidates if p.relative_to(root).as_posix() in tracked]
 
 
 def run_one(root: Path, test_path: Path) -> tuple:
