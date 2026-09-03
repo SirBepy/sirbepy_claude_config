@@ -32,20 +32,14 @@ assumed - do not wait for `browser_wait_for`/`browser_take_screenshot` to appear
 
 ## Step 11 - HubStaff comparison (skip if `hubstaff_org_id` not set or `HUBSTAFF_REFRESH_TOKEN` missing)
 
-First exchange the refresh token for an access token - no client credentials needed:
-```
-POST https://account.hubstaff.com/access_tokens
-Body (form-encoded): grant_type=refresh_token&refresh_token=<HUBSTAFF_REFRESH_TOKEN>
-```
-The response includes a new `refresh_token` (token rotates on each exchange - the OLD value is now
-worthless the instant this call succeeds, it's single-use). Write it back with a backup-first sequence:
-
-1. Copy the CURRENT full content of `~/.claude/.env` to `~/.claude/.env.bak` (whole file, not just
-   the token line).
-2. Only after that write succeeds, replace the `HUBSTAFF_REFRESH_TOKEN=` line in `~/.claude/.env`.
-3. If either write fails (permission error, disk full, etc.): STOP, do not retry the exchange (the
-   old token is already invalidated so a retry fails the same way), and tell the dev the new token
-   value directly so it can be saved manually.
+First exchange the refresh token for an access token - no client credentials needed. Run
+`skills/clockify-reconciliator/scripts/hs_get_token.ps1` and capture its stdout as the bearer token,
+all in the same tool call (PowerShell state doesn't persist across separate calls in this harness):
+`$token = & skills/clockify-reconciliator/scripts/hs_get_token.ps1`. The script does the exchange,
+backs up `~/.claude/.env` to `.env.bak`, rewrites the rotated `refresh_token` in place, and prints
+only the `access_token` to stdout - it never prints or files the refresh token elsewhere. If the
+script errors (backup or write failed), it exits non-zero before touching `.env` further; do not
+retry the exchange, the old refresh token is already invalidated.
 
 **Always send a browser `User-Agent` header on `account.hubstaff.com` requests.** That host sits behind Cloudflare, which blocks default library agents (python-urllib, curl) with `403 error code: 1010`. This looks exactly like a revoked token and will send you on a long detour minting a replacement PAT that fails the same way. Use e.g. `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36`.
 
