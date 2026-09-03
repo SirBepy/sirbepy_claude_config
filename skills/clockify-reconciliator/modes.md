@@ -55,6 +55,16 @@ Gated in by step 3a. Runs a checklist over a period that already has entries, ch
 - **Total-duration sanity:** any single day over ~9-10h, or a duration wildly disproportionate to a
   trivial-sounding description, gets a second look.
 
+**Script the overlap/gap checks once past ~10 entries or ~30 commits** (i.e. anything past a single
+day) instead of reasoning through them by eye. A manual read produced a real false positive
+(2026-08-27 zng-app: a block's end time misread against a commit timestamp, caught only because a
+second look happened to occur, after it was already shown to the dev as confirmed alongside a real
+finding). Convert every entry's `[start, end)` and every commit's timestamp to epoch seconds once,
+then check coverage/overlap in a loop; a finding presented to the dev as confirmed must come from
+that script's output, not an earlier manual pass. Precompute interval epochs into arrays before the
+per-commit loop - a nested loop calling `date -d` per commit-times-interval pair timed out at
+93 x 23 = 2139 subshell spawns; precomputing cut that to 93 + 23 calls.
+
 **Multi-pass verification**, reusable pattern for a full-month audit: 2 independent `sonnet` agents
 padding-hunting from different angles/date ranges, then 1 `sonnet` agent explicitly tasked as
 devil's-advocate-for-longer (catches over-trimming), then 1 final high-reasoning **read-only** solo
