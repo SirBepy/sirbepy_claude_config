@@ -77,6 +77,58 @@ def check_hook_imports(root: Path) -> tuple:
     return True, ""
 
 
+def check_prefilter_suites(root: Path) -> tuple:
+    """Runs every skills/commit/test_*.sh fixture suite (secret-scan.sh, comment-noise.sh,
+    em-dash.sh, overlap-check.sh; todo 810). Tracked-only discovery, same as
+    run_hook_tests.py's todo-805 fix: a peer's half-written untracked test can't fail this gate.
+    """
+    print("\n=== prefilter self-tests (skills/commit/test_*.sh) ===", flush=True)
+    skill_dir = root / "skills" / "commit"
+    candidates = sorted(skill_dir.glob("test_*.sh")) if skill_dir.is_dir() else []
+    try:
+        tracked_result = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "skills/commit"],
+            capture_output=True, text=True, timeout=30,
+        )
+        tracked = {line.strip() for line in tracked_result.stdout.splitlines() if line.strip()} \
+            if tracked_result.returncode == 0 else None
+    except (OSError, subprocess.TimeoutExpired):
+        tracked = None
+    if tracked is not None:
+        candidates = [p for p in candidates if p.relative_to(root).as_posix() in tracked]
+
+    if not candidates:
+        print("FAIL: zero prefilter test suites discovered")
+        return False, "zero prefilter test suites discovered under skills/commit"
+
+    fails = []
+    details = []
+    for test_path in candidates:
+        rel = test_path.relative_to(root)
+        try:
+            # bash treats a Windows backslash as an escape char, not a separator, so the
+            # posix form is required here even though run_hook_tests.py's python subprocess
+            # accepts either.
+            proc = subprocess.run(
+                ["bash", rel.as_posix()], cwd=str(root), capture_output=True,
+                text=True, encoding="utf-8", errors="replace", timeout=120,
+            )
+            ok, out, err = proc.returncode == 0, proc.stdout, proc.stderr
+        except (OSError, subprocess.TimeoutExpired) as e:
+            ok, out, err = False, "", f"could not run {rel}: {e!r}"
+        print(f"{'PASS' if ok else 'FAIL'} {test_path.name}")
+        if not ok:
+            fails.append(test_path.name)
+            details.append(f"--- {test_path.name} ---\n{out}\n{err}")
+
+    if fails:
+        detail = "\n".join(details)
+        print(f"FAIL: {len(fails)} of {len(candidates)} prefilter test suites failed")
+        return False, detail
+    print(f"OK: {len(candidates)}/{len(candidates)} prefilter test suites passed")
+    return True, ""
+
+
 def main() -> int:
     ci_dir = Path(__file__).resolve().parent
     parser = argparse.ArgumentParser()
@@ -90,10 +142,13 @@ def main() -> int:
         ok, detail = run_check(label, ci_dir / name, root)
         if not ok:
             failed.append((label, detail))
-    total = len(CHECKS) + 1
+    total = len(CHECKS) + 2
     ok, detail = check_hook_imports(root)
     if not ok:
         failed.append(("hook import smoke", detail))
+    ok, detail = check_prefilter_suites(root)
+    if not ok:
+        failed.append(("prefilter self-tests", detail))
 
     print("\n" + "=" * 48)
     if failed:
