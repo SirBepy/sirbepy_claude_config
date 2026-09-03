@@ -51,8 +51,9 @@ REMINDER_TEXT = (
     "[ui-screenshot-reminder] This turn touched UI-ish files. Per CLAUDE.md's "
     "\"UI & visual changes\" rule: bring the app up via /supervised-run, give "
     "Joe the URL, and capture a screenshot through an isolated Claude-launched "
-    "browser via SendUserFile - never raw window automation against Joe's own "
-    "windows. Save it under .for_bepy/screenshots/<id>/, where <id> is the "
+    "browser via SendUserFile, or /preview's image branch if this session has "
+    "no SendUserFile - never raw window automation against Joe's own windows. "
+    "Save it under .for_bepy/screenshots/<id>/, where <id> is the "
     "output of ~/.claude/skills/close/rename-session.ps1 -GetId. Skip this "
     "only if the change is pure logic/backend/config with no visual surface."
 )
