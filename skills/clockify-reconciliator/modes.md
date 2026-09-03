@@ -18,11 +18,20 @@ in priority order:
    starting hypothesis, not ground truth - always ask the dev to confirm meeting content/duration from
    memory, and let the dev's memory win when it conflicts with the timestamp-derived guess.
 
-**Clustering defaults** (proven 2026-07-21, 46 entries): session break at a 3h commit gap; pad each
-session +20min lead-in and +20min trail-off; split sessions over 3h into ~2-2.25h sub-chunks with
-per-chunk commit-derived descriptions; carve named recurring non-commit activities (e.g. a daily
-09:45-10:00 standup) around sessions instead of double-booking them. Create via `POST` (plain
-Reconciliation mode stays `PUT`/description-only, never creates).
+**Clustering defaults** (proven 2026-07-21, 46 entries; tightened 2026-08-27 after a sparse zng-app
+day produced 4-6h of unbacked padding): session break at a 3h commit gap bridges commits into one
+loosely continuous session for boundary-grouping purposes only, never as license to invent hours. Pad
+each rendered chunk +20min lead-in and +20min trail-off around its own actual commit cluster, capped
+at last-commit + pad even when that leaves a gap before the next meeting or entry - never stretch a
+chunk's end to reach a scheduled carve-out. Split sessions over 3h into ~2-2.25h sub-chunks with
+per-chunk commit-derived descriptions. Never render a chunk in the leftover window between two
+carve-outs unless a commit actually falls inside it - a zero-commit gap between meetings is not
+evidence of work; leave real 1h+ commit-free stretches unlogged instead of solid-filled. This cap
+only bites when a chunk would otherwise stretch toward a distant boundary; a densely-packed session
+(like the original 46-entry set) has no such distant boundary to stretch to, so its rendered span is
+unchanged. Carve named recurring non-commit activities (e.g. a daily 09:45-10:00 standup) around
+sessions instead of double-booking them. Create via `POST` (plain Reconciliation mode stays
+`PUT`/description-only, never creates).
 
 **Hard rule:** never invent hours not backed by a real commit/PR or an explicitly named real activity
 - a weekly target the dev states is a ceiling to fill toward from real evidence, never a target that
