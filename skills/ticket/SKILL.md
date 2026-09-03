@@ -162,6 +162,14 @@ because there are a lot. Download and Read any image attached to a comment - a s
 the clearest statement of the actual bug. Also read current state, blocked/blocker relationships,
 and any linked branches, PRs or commits.
 
+A ticket split off a UX-typed one, or carrying its own `external_links` Figma/Miro URL, is not
+done being fetched yet: pull that design (this ticket's own link, or its UX ancestor's if it has
+none) and read it before any implementation starts, the same "ground against the real design, not
+its prose paraphrase" rule Create's step 1 already applies when drafting. Skip this for tickets with
+no design link and no UX ancestor. Caught live on sc-55166, split off UX ticket sc-54515: built
+entirely from the prose spec, never pulled the linked Figma, and the approved design turned out to
+be a different information architecture, caught only because the dev asked to see it.
+
 ### 2. Cross-reference the code
 
 In the current repo, plus any sibling repos the project's CLAUDE.md names as in-scope:
