@@ -121,3 +121,45 @@ def consume_fresh_marker(
     except OSError:
         pass
     return True
+
+
+def is_tool_result_entry(entry: dict) -> bool:
+    """A tool_result is wrapped in a `type: user` entry in this transcript
+    format, distinguishable from a real human prompt only by content shape:
+    its `message.content` is a list of blocks carrying `type: tool_result`."""
+    if entry.get("type") != "user":
+        return False
+    content = (entry.get("message", {}) or {}).get("content")
+    if not isinstance(content, list):
+        return False
+    return any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content)
+
+
+def iter_turn_tool_uses(transcript_path: str):
+    """Yield (name, input) for tool_use blocks in assistant entries after the
+    most recent REAL user entry (not a tool_result), an approximation of
+    "this turn"."""
+    path = Path(transcript_path)
+    if not path.exists():
+        return
+    entries = []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                pass
+    last_user_idx = -1
+    for i, e in enumerate(entries):
+        if e.get("type") == "user" and not is_tool_result_entry(e):
+            last_user_idx = i
+    for e in entries[last_user_idx + 1:]:
+        if e.get("type") != "assistant":
+            continue
+        content = (e.get("message", {}) or {}).get("content", []) or []
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "tool_use":
+                yield block.get("name") or "", (block.get("input") or {})
