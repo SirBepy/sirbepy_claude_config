@@ -206,4 +206,55 @@ with tempfile.TemporaryDirectory() as tmp:
         server.shutdown()
         thread.join(timeout=5)
 
+# --- git backstop (todo 895): HEAD moving stands in for a lied-about peer ---
+
+
+def commit(repo: Path, name: str) -> None:
+    (repo / name).write_text("x")
+    subprocess.run(["git", "add", name], cwd=repo, check=True)
+    subprocess.run(
+        ["git", "-c", "user.email=t@t.com", "-c", "user.name=T", "commit", "-q", "-m", name],
+        cwd=repo,
+        check=True,
+    )
+
+
+with tempfile.TemporaryDirectory() as tmp:
+    tmpdir = Path(tmp)
+    guard.MARKER_DIR = tmpdir / "markers"
+    repo = make_repo(tmpdir)
+    server, thread = start_fake_daemon(json.dumps({"peers": []}).encode())
+    guard.DAEMON_PORT = server.server_address[1]
+    try:
+        code, out = run_main(session_id="s5", cwd=str(repo), file_path="a.py")
+        fails += [] if (code == 0 and out == "") else ["first check with zero peers stays silent"]
+
+        commit(repo, "a.py")
+
+        code2, out2 = run_main(session_id="s5", cwd=str(repo), file_path="b.py")
+        ok2 = code2 == 0 and "HEAD moved" in out2 and "b.py" in out2
+        fails += [] if ok2 else ["HEAD moving since last check warns even when list_peers stays empty"]
+
+        # Marker now holds the moved-to sha, so a further check with no new move is silent again.
+        code3, out3 = run_main(session_id="s5", cwd=str(repo), file_path="c.py")
+        fails += [] if (code3 == 0 and out3 == "") else ["git backstop warns once per HEAD move, not repeatedly"]
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+
+with tempfile.TemporaryDirectory() as tmp:
+    tmpdir = Path(tmp)
+    guard.MARKER_DIR = tmpdir / "markers"
+    repo = make_repo(tmpdir)
+    commit(repo, "seed.py")
+    server, thread = start_fake_daemon(json.dumps({"peers": []}).encode())
+    guard.DAEMON_PORT = server.server_address[1]
+    try:
+        code, _ = run_main(session_id="s6", cwd=str(repo), file_path="a.py")
+        code2, out2 = run_main(session_id="s6", cwd=str(repo), file_path="b.py")
+        fails += [] if (code2 == 0 and out2 == "") else ["equal shas across checks stays silent"]
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+
 sys.exit(_testlib.summarize(fails))
