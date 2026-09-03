@@ -25,14 +25,20 @@ function Resolve-TodoFile {
     $matchesFound = $allFiles | Where-Object { $_.Name -match $idPattern }
 
     $fellBack = $false
-    if (@($matchesFound).Count -eq 0 -and $numericId -notmatch '^\d+$') {
+    if ($numericId -notmatch '^\d+$') {
+        # Prefix-less id: the returned Pattern always takes this stem shape, even
+        # when nothing matches in $Dir right now, so a caller reusing Pattern
+        # against a second directory (done\, once the file has been archived)
+        # still finds it instead of falling through to the digit-prefixed shape.
         $stemPattern = "^$([regex]::Escape($numericId))\.md$"
-        $stemMatches = $allFiles | Where-Object { $_.Name -match $stemPattern }
-        if (@($stemMatches).Count -gt 0) {
-            $matchesFound = $stemMatches
-            $pattern = $stemPattern
-            $slugLocal = $null
-            $fellBack = $true
+        $pattern = $stemPattern
+        if (@($matchesFound).Count -eq 0) {
+            $stemMatches = $allFiles | Where-Object { $_.Name -match $stemPattern }
+            if (@($stemMatches).Count -gt 0) {
+                $matchesFound = $stemMatches
+                $slugLocal = $null
+                $fellBack = $true
+            }
         }
     }
 
