@@ -39,34 +39,21 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload
+    from _hooklib import GIT_TIMEOUT_SECONDS, git_repo_root, read_payload
 except Exception as e:
     sys.stderr.write(f"[list-peers-pre-edit-guard] FATAL: cannot import _hooklib ({e}); failing open.\n")
     sys.exit(0)
 
 DAEMON_PORT = 27182
 REQUEST_TIMEOUT_SECONDS = 1.5
-GIT_TIMEOUT_SECONDS = 10
 # OS temp dir, not the repo: this is machine-local runtime state, never
 # something to gitignore or commit (mirrors the ban on reusing another
 # guard's hooks/.session-markers/).
 MARKER_DIR = Path(tempfile.gettempdir()) / "claude-list-peers-guard"
 
-
-def repo_root(cwd: str) -> str | None:
-    """Git toplevel containing `cwd`, or None outside a repo / on git failure."""
-    try:
-        proc = subprocess.run(
-            ["git", "-C", cwd, "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
-            timeout=GIT_TIMEOUT_SECONDS,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    if proc.returncode != 0:
-        return None
-    return proc.stdout.strip() or None
+# Kept as a module-level name (not just the bare import) so this guard's
+# own test suite can call `guard.repo_root(...)` unmodified (todo 874).
+repo_root = git_repo_root
 
 
 def marker_path(session_id: str, repo: str) -> Path:

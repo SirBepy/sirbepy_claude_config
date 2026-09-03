@@ -15,6 +15,8 @@ remove the guard's settings.json entry) without needing a shell.
 """
 
 import json
+import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -22,6 +24,10 @@ from pathlib import Path
 # Shared across all six guards; verified byte-identical before the move (todo 380).
 FRESHNESS_SECONDS = 120
 OUTBOUND_MARKER_GLOB = ".outbound-marker*"
+
+# Shared by every guard that resolves a git root (todo 874: was three
+# separate GIT_TIMEOUT_SECONDS=10 constants and two repo_root() copies).
+GIT_TIMEOUT_SECONDS = 10
 
 # Per-platform claim-bearing field names (todo 381). A write to one of these fields
 # asserts something about the code; a state move or self-assign does not, so it stays
@@ -69,6 +75,28 @@ def strip_quotes(tok: str) -> str:
     if len(tok) >= 2 and tok[0] == tok[-1] and tok[0] in ("\"", "'"):
         return tok[1:-1]
     return tok
+
+
+def git_repo_root(path) -> str | None:
+    """Git toplevel containing `path`, or None if `path` doesn't exist,
+    isn't inside a repo, or git fails/times out. Shared resolver (todo 874)
+    so a timeout bump or a failure-mode fix lands once for every caller.
+    """
+    path = str(path)
+    if not path or not os.path.isdir(path):
+        return None
+    try:
+        proc = subprocess.run(
+            ["git", "-C", path, "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            timeout=GIT_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip() or None
 
 
 def oldest_fresh_marker(

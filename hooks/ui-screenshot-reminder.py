@@ -27,7 +27,6 @@ wedged Stop event is not.
 """
 
 import json
-import subprocess
 import sys
 from pathlib import Path
 
@@ -36,12 +35,11 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, is_tool_result_entry, iter_turn_tool_uses
+    from _hooklib import git_repo_root, read_payload, is_tool_result_entry, iter_turn_tool_uses
 except Exception as e:
     sys.stderr.write(f"[ui-screenshot-reminder] FATAL: cannot import _hooklib ({e}); failing open.\n")
     sys.exit(0)
 
-GIT_TIMEOUT_SECONDS = 10
 SCREENSHOTS_DIRNAME = Path(".for_bepy") / "screenshots"
 
 UI_EXTENSIONS = {".tsx", ".jsx", ".vue", ".svelte", ".css", ".scss", ".dart"}
@@ -66,18 +64,6 @@ def is_ui_path(path: str) -> bool:
     return any(part.lower() in UI_DIR_SEGMENTS for part in normalized.split("/"))
 
 
-def _run_git(cwd: str, args: list[str]) -> subprocess.CompletedProcess | None:
-    try:
-        return subprocess.run(
-            ["git", "-C", cwd, *args],
-            capture_output=True,
-            text=True,
-            timeout=GIT_TIMEOUT_SECONDS,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-
-
 EDIT_TOOL_SUFFIXES = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 
 
@@ -98,18 +84,6 @@ def turn_edited_paths(transcript_path: str) -> list[str]:
         if isinstance(p, str) and p:
             paths.append(p)
     return paths
-
-
-def resolve_repo_root(path: Path) -> str | None:
-    """Git repo root containing `path`, so the screenshot-freshness scan
-    stays pinned to the repo the turn actually edited rather than
-    payload["cwd"] (which follows the last Bash cwd and can drift, todo 487).
-    None if `path` isn't inside a git repo or git fails.
-    """
-    proc = _run_git(str(path.parent), ["rev-parse", "--show-toplevel"])
-    if proc is None or proc.returncode != 0:
-        return None
-    return proc.stdout.strip() or None
 
 
 def newest_mtime(paths: list[Path]) -> float | None:
@@ -156,7 +130,7 @@ def main() -> None:
     if ui_mtime is None:
         sys.exit(0)
 
-    repo_root = resolve_repo_root(ui_files[0]) or payload.get("cwd") or "."
+    repo_root = git_repo_root(ui_files[0].parent) or payload.get("cwd") or "."
     screenshot_mtime = newest_screenshot_mtime(repo_root)
     if screenshot_mtime is not None and screenshot_mtime >= ui_mtime:
         sys.exit(0)
