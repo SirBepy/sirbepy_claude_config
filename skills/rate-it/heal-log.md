@@ -27,3 +27,14 @@ not work and its diagnosis was wrong. Read this before diagnosing anything here.
   versus baseline's 3/3 - **applied and unproven**, not applied and verified. The move-to-point-
   of-use fix did not fully eliminate the ordering miss in this run. Also observed: n=4 (cost/
   tradeoff) dropped to 1/3, unrelated to this todo's edits - out of scope, not investigated here.
+- **2026-09-04, RE-EVALUATED at 6 reps, applied and FALSIFIED.** `python tools/skill_eval.py --skill
+  rate-it --label heal-ordering-r6 --parent v0-baseline-f5x3 --only 5 --repeat 6`. Ordering
+  expectation (n=6): 2/6 PASS, worse than the prior 3-rep run's 2/3. Cap expectation (n=2) held
+  6/6, so that half of todo 475 stays verified. The 4 ordering failures are all descending, not
+  random noise: `7,6,6` / `6,7,6` / `7,6,5` / `8,6` - the model leads with its strongest bullet
+  regardless of which line states the rule. **Conclusion: the move-to-point-of-use patch (P1) is
+  falsified, not merely unproven.** Proximity to Output format is not the causal factor; the
+  canonical rule at line 113 was already unfollowed before this patch, and the point-of-use copy
+  is equally unfollowed now. No further reword attempted here - a blind third wording would be
+  another untested patch, and 475's Acceptance items (the cap fix) are already met. Cost $1.06,
+  run at `C:\tmp\skill-eval\rate-it\heal-ordering-r6`.
