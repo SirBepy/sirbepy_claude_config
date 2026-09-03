@@ -525,7 +525,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "npx -y ccstatusline@latest",
+    "command": "python \"C:\\Users\\tecno\\.claude\\statusline.py\"",
     "padding": 0
   },
   "enabledPlugins": {
