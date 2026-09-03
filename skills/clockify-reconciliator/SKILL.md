@@ -227,6 +227,24 @@ For each target:
 
 List description-less entries in OTHER projects in the same window. Dev handles those separately (could be a different config).
 
+### 8a. Re-fetch if the window includes "now"
+
+If the window's end is today, or any multi-day range ending today (the default Mon-to-now window
+included), re-run step 6's git-log fetch (and the 4h spillover pass) immediately before presenting
+step 9's approval question, not just once at the start of the run. If the re-fetch surfaces anything
+not already shown to the dev, fold it into the plan before asking for approval.
+
+If the re-fetch, or a `list_peers`/`post_message` check on a peer session committing under the same
+git identity, shows work is still actively in flight, don't project the entry forward into guessed
+time. Cap it at the last confirmed commit plus the day's usual pad, or the next clean boundary
+(midnight) if that's closer. Name the excluded tail as a deferred note on that day's row in the step 9
+plan, and echo it in step 13's report - never drop it silently, never guess it in.
+
+2026-08-27 zng-app run: a step 6 fetch taken early in the run missed 5 commits (2 late Wednesday
+night, 3 early Thursday morning) on a linked worktree branch that only existed by the time step 9's
+approval question was actually answered. The dev caught the drift and asked for a peer-session check
+that this step now runs by default.
+
 ### 9. Present plan
 
 Show a table: date, start-end, duration, proposed split, proposed description(s). Precede it with
@@ -335,6 +353,7 @@ If gated in, read `skills/clockify-reconciliator/hubstaff.md` and follow its "St
   "skipped - not a Conductor host" if neither the `show_preview` tool nor the hook endpoint was
   reachable
 - Gap-detection findings (step 6a): unlogged days/blocks surfaced, applied or still pending approval
+- In-flight cap (step 8a): excluded tail named as deferred if live work was detected, omitted otherwise
 - HubStaff comparison results (step 11), or "HubStaff comparison skipped - hubstaff_org_id not configured" if absent
 - HubStaff weekly screenshot path(s) (step 12), or skipped reason (auth failed preflight / org not configured)
 - "Needs manual" targets with time + reason
