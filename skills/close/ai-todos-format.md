@@ -370,6 +370,20 @@ skill-improvement candidates and session handoffs. The wrong bar: "Claude can't 
 Claude's limitation, not a reason to defer. If the dev needs to physically do something first,
 surface it directly in the response instead of filing a todo.
 
+**Which repo's backlog, not just whether it's a todo.** Allocate by the files the todo's own
+Approach/Acceptance would change, never by which session surfaced it. A finding hit while working
+in repo A but whose fix touches repo B's files goes in repo B's `.claude/todos/`, full stop - even
+if that means filing into a backlog this session never otherwise touches. Work on `~/.claude`
+itself (a skill, a hook, a global rule, `CLAUDE.md`) always lands in
+`C:\Users\tecno\.claude\.claude\todos\`, never in the project session that spotted it (CLAUDE.md
+states the same rule; this is where every writer actually reads it). If Approach/Acceptance names
+files across more than one repo, SPLIT rather than pick a side - each half keeps only the files
+and Approach/Acceptance lines that belong to its own repo (worked example: todo 65 split into
+hubbub's platform half and hubbub-game-template's manifest half, 2026-08-22). `/cleanup-todos`
+sweeps and relocates what still slips through this; `hooks/todo-duplicate-guard.py` also warns
+(never blocks) when a new todo's own body points mostly at paths outside the repo it is being
+written into.
+
 ## Triggering execution
 
 Claude does NOT auto-act on this folder. The dev triggers via `/pickup`, `/batch-todos`,

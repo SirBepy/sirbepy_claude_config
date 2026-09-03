@@ -96,6 +96,69 @@ def check_hit(case) -> bool:
     return ok
 
 
+def check_allocation() -> list:
+    fails = []
+    with tempfile.TemporaryDirectory() as tmp:
+        workspace = Path(tmp)
+        repo_root = workspace / "hubbub"
+        (repo_root / ".claude" / "todos").mkdir(parents=True)
+        (workspace / "hubbub-game-music-guesser" / ".git").mkdir(parents=True)
+        (workspace / "hubbub-unrelated-repo" / ".git").mkdir(parents=True)
+
+        cases = [
+            (
+                "# Fix the avatar id rendering\n\nGoal: edit ../hubbub-game-music-guesser/lib/player.dart "
+                "to stop rendering avatarId as raw text.\n",
+                True,
+                "bare ../sibling/ path, no mention of the current repo, warns",
+            ),
+            (
+                "# Fix the avatar id rendering\n\nGoal: edit hubbub-game-music-guesser's player.dart "
+                "to stop rendering avatarId as raw text.\n",
+                True,
+                "sibling name without ../, no current-repo mention, still warns",
+            ),
+            (
+                "# Update hubbub's own dispatcher\n\nGoal: hubbub's dispatcher also reads "
+                "../hubbub-game-music-guesser/ for context, but the fix lands in hubbub.\n",
+                False,
+                "current repo named as often as the sibling, no warning",
+            ),
+            (
+                "# Rename a local variable\n\nGoal: tidy up naming in lib/foo.dart.\n",
+                False,
+                "no repo paths referenced at all, no warning",
+            ),
+        ]
+        for content, expect_warn, label in cases:
+            got = guard.allocation_warning(content, repo_root)
+            ok = (got is not None) == expect_warn
+            print(f"[{'PASS' if ok else 'FAIL'}] allocation: {label} -> {got!r}")
+            if not ok:
+                fails.append(label)
+
+        integration_path = repo_root / ".claude" / "todos" / "700-fix-the-avatar-id-rendering-elsewhere.md"
+        integration_content = (
+            "# Fix the avatar id rendering elsewhere\n\nGoal: edit "
+            "../hubbub-game-music-guesser/lib/player.dart to stop rendering avatarId as raw text.\n"
+        )
+        proc = run_hook({
+            "tool_name": "Write",
+            "tool_input": {"file_path": str(integration_path), "content": integration_content},
+        })
+        ok = (
+            proc.returncode == 0
+            and '"permissionDecision": "allow"' in proc.stdout
+            and "hubbub-game-music-guesser" in proc.stdout
+        )
+        label = "integration: warn-only allocation signal reaches stdout without blocking the write"
+        print(f"[{'PASS' if ok else 'FAIL'}] {label} -> exit={proc.returncode} stdout={proc.stdout.strip()!r}")
+        if not ok:
+            fails.append(label)
+
+    return fails
+
+
 def run_hook(payload: dict) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(_GUARD_PATH)],
@@ -246,6 +309,7 @@ def run() -> int:
         + _testlib.run_cases(HIT_CASES, check_hit)
         + _testlib.run_cases(ID_CASES, check_id)
         + check_integration()
+        + check_allocation()
     )
     return _testlib.summarize(fails)
 

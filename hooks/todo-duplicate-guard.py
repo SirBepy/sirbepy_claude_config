@@ -20,8 +20,14 @@ is a hard block with no override marker, unlike the content heuristic above.
 Todo 851: the check does not delete a matched `*-.reserved` marker on a
 passing write. A PreToolUse hook deleting files is a surprising side effect;
 step 3 of the reserve-then-write contract stays the caller's job.
+
+Todo 481: a third, non-blocking signal - a repo-allocation warning when the
+todo's own body points mostly at paths outside the repo being written to.
+`allow`-decision JSON, never `deny`: allocation needs judgment a text
+heuristic cannot have, so a false positive here must never refuse the write.
 """
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -80,6 +86,54 @@ def todos_target_dir(file_path: str) -> Path | None:
     if len(segments) < 2 or segments[-2] != ".claude" or segments[-1] != "todos":
         return None
     return p.parent
+
+
+RELATIVE_PARENT_RE = re.compile(r"\.\.[\\/]([A-Za-z0-9_.-]+)[\\/]")
+
+
+def _whole_name_re(name: str) -> re.Pattern:
+    """Word-boundary match that also treats `-` as part of the identifier, so
+    a repo named "hubbub" does not match inside "hubbub-game-music-guesser".
+    """
+    return re.compile(rf"(?<![\w-]){re.escape(name)}(?![\w-])")
+
+
+def outside_repo_names(content: str, repo_root: Path) -> set[str]:
+    """Other-repo names this todo's body points at: an explicit `../name/`
+    path, or a bare mention of a sibling directory that is itself a git repo.
+    """
+    names = set(RELATIVE_PARENT_RE.findall(content or ""))
+    try:
+        for child in repo_root.parent.iterdir():
+            if child.name == repo_root.name or not child.is_dir():
+                continue
+            if (child / ".git").exists() and _whole_name_re(child.name).search(content or ""):
+                names.add(child.name)
+    except OSError:
+        pass
+    return names
+
+
+def allocation_warning(content: str, repo_root: Path) -> str | None:
+    """Advisory text (todo 481) when `content`'s own paths point mostly
+    outside `repo_root`: the incident this guards against is a mis-filed
+    todo getting EXECUTED from the wrong session. Per ai-todos-format.md's
+    allocation rule, not a reason to block on its own.
+    """
+    if not content or not repo_root.name:
+        return None
+    outside = outside_repo_names(content, repo_root)
+    if not outside:
+        return None
+    here = len(_whole_name_re(repo_root.name).findall(content))
+    if len(outside) <= here:
+        return None
+    return (
+        f"[todo-duplicate-guard] This todo's own paths point mostly outside "
+        f"{repo_root.name} ({', '.join(sorted(outside))}). Per ai-todos-format.md's "
+        "allocation rule, a todo belongs in the backlog of the repo it changes - "
+        "consider filing it there instead."
+    )
 
 
 def extract_title(content: str) -> str:
@@ -200,6 +254,21 @@ def find_id_collision(todos_dir: Path, target_name: str, target_id: int) -> Path
     return None
 
 
+def allow(warning: str | None) -> None:
+    """Exit 0, optionally surfacing `warning` as a non-blocking `allow`
+    decision - same pattern as list-peers-pre-edit-guard.py's emit_warning.
+    """
+    if warning:
+        print(json.dumps({
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "allow",
+                "permissionDecisionReason": warning,
+            }
+        }))
+    sys.exit(0)
+
+
 def main() -> None:
     payload = read_payload()
     if (payload.get("tool_name") or "") != "Write":
@@ -211,12 +280,15 @@ def main() -> None:
     if todos_dir is None:
         sys.exit(0)
 
+    repo_root = todos_dir.parent.parent
+    content = tool_input.get("content") or ""
+    warning = allocation_warning(content, repo_root)
+
     target_name = Path(file_path).name
     target_id = extract_id(target_name)
     if target_id is not None:
         collision = find_id_collision(todos_dir, target_name.lower(), target_id)
         if collision is not None:
-            repo_root = todos_dir.parent.parent
             deny(
                 f"[todo-duplicate-guard] Id {target_id} is already claimed by "
                 f"{collision.name}. Ids must be unique across .claude/todos/, done/, "
@@ -224,17 +296,16 @@ def main() -> None:
                 f"-RepoRoot {repo_root}` to reserve a free one instead of picking by hand."
             )
 
-    content = tool_input.get("content") or ""
     if OVERRIDE_MARKER_RE.search(content):
-        sys.exit(0)
+        allow(warning)
 
     tokens = salient_tokens(extract_title(content))
     if len(tokens) < 2:
-        sys.exit(0)
+        allow(warning)
 
     hits = find_hits(todos_dir, target_name.lower(), tokens)
     if not hits:
-        sys.exit(0)
+        allow(warning)
 
     hit_lines = "; ".join(f"{f.name} (shares: {', '.join(m)})" for f, m in hits[:5])
     deny(
