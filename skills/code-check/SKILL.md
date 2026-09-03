@@ -169,6 +169,13 @@ that breaks a rule the repo spent a page explaining.
 Every finding from Steps 0-4 gets exactly one class, and the class decides whether it is applied
 here or filed for later. Filing is the default; applying is the exception that must earn itself.
 
+**Check for a prior decline before classifying.** Diff each finding's `path:line` against
+`.claude/todos/done/*.md` and `.claude/todos/dropped-findings.log`. A hit on either (same file,
+same or adjacent line, same defect) skips the table below entirely: append one line to
+`dropped-findings.log` reading `dropped as DECLINED: <what the earlier entry/todo decided>` and
+move to the next finding, filing nothing. No hit: classify as normal. This is what keeps a
+finding a human already saw and rejected from costing a fresh review cycle every run.
+
 | Class | What it covers | Route |
 |-------|----------------|-------|
 | 1 - mechanical | An unused import, a symbol nothing references, a duplicated helper collapsed onto one that already exists, a description over budget | Apply it, if and only if the exercise test below passes |
