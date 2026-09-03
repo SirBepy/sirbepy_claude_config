@@ -58,7 +58,7 @@ Always send all five, as `{field_id, value_id}` pairs.
 | Technical Area | `6216069e-ae53-4892-a4f2-d9cc796f1484` | Web App `6881029c-3921-4900-ad9a-197d3755d25f`, Admin Portal `6216069e-e33b-44b0-a3d8-15a130a5a88b` |
 | ZNG: Product Area | `6881002d-700f-4bb7-b919-6cf8880ccdb9` | WebApp: Billers, RPPS, Billing Accounts `688101d5-cf51-4616-8aad-ed52a9b9a45b`, WebApp: Global `6881002d-2a43-40e9-964b-d72c3f556bcd`, AP: Billers `6977aec4-d5e1-4c55-a993-32a33bba368b` |
 | Priority | `6260361c-cc5f-475f-9758-ea5b740e5b81` | High `6260361c-8f25-4cfd-941c-d32094abaca0`, Medium `6260361c-7ae3-4d8f-9594-fdff9c39fe4e` |
-| Release | `68f8e559-4a18-4a6e-be1c-fa2f5aaa4fdb` | ALWAYS **Next release** `698b4bce-ecd7-44c3-b62a-2b49b2506c1d` (the dev renumbers manually later) |
+| Release | `68f8e559-4a18-4a6e-be1c-fa2f5aaa4fdb` | At creation only: **Next release** `698b4bce-ecd7-44c3-b62a-2b49b2506c1d` (the dev renumbers manually later). Never set on an existing ticket, including a state move - Joe sets it himself at actual release time |
 
 **Repo to field mapping:**
 
