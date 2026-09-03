@@ -43,8 +43,9 @@ target's scope (existing-inclusive vs additional-only, exact window) before this
 
 Gated in by step 3a. Runs a checklist over a period that already has entries, cheapest check first:
 
-- **Hard overlap check:** any two entries in the range with overlapping `[start, end)` - always a bug,
-  fix immediately, no judgment call.
+- **Hard overlap check:** any two entries in the range with overlapping `[start, end)` in the same
+  `clockify_project_id` (scope defined in SKILL.md's Rules section) - always a bug, fix immediately,
+  no judgment call. A cross-project overlap is expected and never a finding.
 - **Mechanical-split fingerprint:** consecutive entries with near-identical (within a few seconds)
   durations - a sign a raw block got auto-split without checking for real gaps. Re-derive each half's
   commit backing independently rather than trusting the original split point.
