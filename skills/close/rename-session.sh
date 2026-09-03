@@ -19,10 +19,25 @@ done
 CLAUDE_ROOT="$HOME/.claude"
 SESSIONS_DIR="$CLAUDE_ROOT/sessions"
 PROJECTS_DIR="$CLAUDE_ROOT/projects"
+GET_ID_CACHE_DIR="$SESSIONS_DIR/.getid-cache"
 
 if [ ! -d "$SESSIONS_DIR" ]; then
     echo "Sessions dir not found: $SESSIONS_DIR" >&2
     exit 1
+fi
+
+# Todo 459/867: a respawn mid-session gives the same CLAUDE_CODE_SESSION_ID a new pid/procStart,
+# so cache the first resolved -get-id per sessionId (same cache dir/filename as rename-session.ps1)
+# and short-circuit here before every later call in the session re-resolves.
+if [ "$GET_ID" = "1" ] && [ -n "$CLAUDE_CODE_SESSION_ID" ]; then
+    CACHE_FILE="$GET_ID_CACHE_DIR/$CLAUDE_CODE_SESSION_ID.txt"
+    if [ -f "$CACHE_FILE" ]; then
+        CACHED_ID=$(cat "$CACHE_FILE")
+        if [ -n "$CACHED_ID" ]; then
+            echo "$CACHED_ID"
+            exit 0
+        fi
+    fi
 fi
 
 # Walk up the process tree from $$ to find the claude ancestor PID.
@@ -108,7 +123,15 @@ if [ "$GET_ID" = "1" ]; then
         # Older session json with no procStart - derive it from the already-known pid, no walk needed.
         PROC_START=$(ps -p "$SESSION_PID" -o lstart= 2>/dev/null | tr -s ' ' | tr ' ' '_')
     fi
-    echo "$SESSION_PID-$PROC_START"
+    RESOLVED_ID="$SESSION_PID-$PROC_START"
+    if [ -n "$CLAUDE_CODE_SESSION_ID" ]; then
+        mkdir -p "$GET_ID_CACHE_DIR" 2>/dev/null
+        CACHE_FILE="$GET_ID_CACHE_DIR/$CLAUDE_CODE_SESSION_ID.txt"
+        # First writer wins: a concurrent call that resolved a moment earlier already set the
+        # canonical value, so a re-resolve here must not overwrite it.
+        [ -f "$CACHE_FILE" ] || printf '%s' "$RESOLVED_ID" > "$CACHE_FILE" 2>/dev/null
+    fi
+    echo "$RESOLVED_ID"
     exit 0
 fi
 
