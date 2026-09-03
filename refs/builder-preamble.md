@@ -73,15 +73,22 @@ If this dispatch was built from a source todo file, your report's "Out-of-scope 
 also names anything in that todo the dispatch prompt did not ask for, not just findings outside your
 lane - that is the channel that caught a dropped item on todo 465, and it only works if you use it.
 
+The harness auto-backgrounds any command past 120 seconds whether you asked it to or not - that's
+the case that actually fires, not a deliberate `run_in_background: true`. When a command you
+foregrounded with an explicit `timeout` gets auto-backgrounded past its cap, you're already in the
+reporting case: read its log from disk, quote the tail, name the PID still running, and deliver your
+final report now. Do not start a `Monitor`. Do not end a turn on "standing by", "will report back",
+or "pausing here" - a parked intent to report later is a failed dispatch, not a completed one.
+
 Your final message is your entire return value. ALL commands, including the verify floor
 (build/test/lint/typecheck), run synchronously in the same tool call: `run_in_background` is
-FORBIDDEN in builder subagents, a long build is waited out, not backgrounded. Ending the turn while
-anything is still running is a failed dispatch. Any command that may exceed 120 seconds MUST pass
-an explicit `timeout` (up to 600000ms): the tool's default is 120s and the harness auto-backgrounds
-past it, so omitting `timeout` backgrounds your build whether you intended it or not. The only case
-allowed to end a turn with something unfinished is a foregrounded command that outlives its own
-600000ms cap: report the partial output plus the exact command still in flight, don't end a turn on
-bare "still waiting" with nothing else.
+FORBIDDEN in builder subagents, and so is `Monitor` - a long build is waited out, never handed off
+to fire later. Ending the turn while anything is still running is a failed dispatch. Any command
+that may exceed 120 seconds MUST pass an explicit `timeout` (up to 600000ms): the tool's default is
+120s and the harness auto-backgrounds past it, so omitting `timeout` backgrounds your build whether
+you intended it or not. The only case allowed to end a turn with something unfinished is a
+foregrounded command that outlives its own 600000ms cap: report the partial output plus the exact
+command still in flight, don't end a turn on bare "still waiting" with nothing else.
 ```
 
 ## Placeholder table
