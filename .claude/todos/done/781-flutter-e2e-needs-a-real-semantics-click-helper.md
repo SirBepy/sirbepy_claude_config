@@ -86,3 +86,4 @@ it targets a global skill file, not the project, and per root CLAUDE.md a findin
   edit cannot prove it.
 - Next run: the cheapest close is to note the outcome the next time a `/flutter-e2e` run actually
   happens in zng-app, rather than staging an artificial trial.
+- Doc half shipped in commit 6dae9c4 (2026-08-31): skills/flutter-e2e/SKILL.md already has the check-for-the-project's-own-harness-FIRST section. Only unmet item was a passive trial run, not a code change. Archived doc-complete during /mega-todos 2026-09-04.

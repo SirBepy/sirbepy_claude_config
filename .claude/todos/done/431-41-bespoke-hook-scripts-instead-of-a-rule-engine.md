@@ -70,3 +70,4 @@ Why this is genuinely uncertain rather than an obvious win:
 The honest default here is probably "no". 41 scripts is untidy but each one is independently readable
 and independently testable, and this repo's guards encode more incident history than pattern matching.
 Do the classification before falling in love with the architecture.
+- Dropped via /mega-todos 2026-09-04 (ai-origin, worth 3/10): the repo's own incident-history-in-docstrings argument makes 'do not do this' the likely conclusion, and the '41 hooks / 27 guards' baseline it reasons from has already drifted (50 .py files under hooks/ now, roughly half test_*.py). Any future revival needs a fresh count first.

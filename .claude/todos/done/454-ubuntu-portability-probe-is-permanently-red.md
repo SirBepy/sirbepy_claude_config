@@ -91,3 +91,4 @@ the only platform this config actually runs on: `.claude/todos/` path matching w
   transient: todo `501` was writing that exact file concurrently. The orchestrator's barrier run
   immediately afterwards was green at 21/21, so there is nothing to chase there.
 - Next run: push, link the green ubuntu run, archive.
+- Already satisfied: gh run 33634238416 (2026-09-02, master after 1a7005c/9105801) shows portability-probe concluding success on ubuntu-latest, the linked green ubuntu run this todo was waiting for. Verified during /mega-todos 2026-09-04.

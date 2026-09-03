@@ -54,3 +54,7 @@ misleading when the conflict IS a reservation.
 - The guard's rejection message names the right remedy for each case.
 - `ai-todos-format.md`'s "deleted at the point its real todo file is written" sentence describes
   something that actually happens.
+
+## Notes
+
+- Duplicate of done/851-id-guard-rejects-the-reservation-it-was-told-to-make.md, fixed 2026-09-01 by commit 32a66cd. hooks/todo-duplicate-guard.py:196 already exempts a matching <id>-.reserved marker; the deletion contract is documented at skills/close/ai-todos-format.md:71 and implemented in reserve-todo-id.ps1:46. Verified during /mega-todos 2026-09-04.

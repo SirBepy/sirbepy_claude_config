@@ -83,3 +83,4 @@ there, the honest move is to stop and ask, not to approximate.
 Do not fold this into `terse-replies.md`. That governs chat tone with Joe, which is a different
 surface with different rules, and merging them would apply chat terseness to outbound professional
 writing.
+- Dropped via /mega-todos 2026-09-04 (ai-origin, worth 4/10): hard-blocked on Joe supplying real writing samples, and none exist on file. The highest-stakes surface is already covered by the em-dash guard plus CLAUDE.md's outbound-receipt rule. Refile if Joe wants to supply samples.

@@ -203,20 +203,15 @@ its once-per-session sentinel is a single boolean, not per-file state.
       it once, not twice. Full flaw list and the rejected `claude -p` alternative are in the todo.
 - [ ] 426 - PreCompact, PermissionRequest, generic PostToolUse; the unused JSON control fields
 - [ ] 434 - per-agent hooks, which could make the delegation ban list real instead of prose
-- [ ] 437 - OS sandbox namespace. Likely only `credentials.mask` survives contact.
 
 ### Phase 7 - evaluations. "No" is an acceptable outcome for several of these.
 
-- [ ] 431 - declarative hook engine. **Expected to close negative**; the 27 guards encode incident history a config row cannot hold.
 - [ ] 433 - config layering. Likely a five-line move, not an architecture.
 - [ ] 444 - prove-it-works / analytical Q&A / MCP scoping. Joe already judged prove-it-works redundant with `/test` and `/e2e`.
-- [ ] 430 - cross-model delegation. Close it without building if the disagreement protocol has no answer.
 - [ ] 438 [P] - permissions deny list (noise half is the real win; namespacing is probably a no)
 - [ ] 440 [P] - config-protection guard. Gated on 427's signal.
-- [ ] 439 [P] - config-default deep-merge. Gated on 415.
 - [ ] 428 [P] - repo README, CONTRIBUTING, generated skills index
 - [ ] 432 [P] - local statusline, kill the per-launch npx fetch
-- [ ] 435 [P] - voice profile. **Blocked on Joe supplying real writing samples.**
 
 ### The three tips that matter
 

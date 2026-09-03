@@ -88,3 +88,4 @@ silent fall back to defaults that then rewrote Joe's config.
 
 If 415's audit shows the merge case is rare, ship the simpler seed-if-absent version. Deep-merge is
 only worth its complexity if there is real per-machine divergence to reconcile.
+- Dropped via /mega-todos 2026-09-04 (ai-origin, worth 3/10): a speculative fresh-machine problem on a one-person one-machine setup, per todo 433's own reasoning. No bootstrap script exists and settings.local.json is gitignored by design.

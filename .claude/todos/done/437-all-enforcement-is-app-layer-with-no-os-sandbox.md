@@ -89,3 +89,4 @@ success, not a failure to deliver.
 
 The point of this todo is a layer underneath the hooks, not a replacement for them. Do not weaken any
 existing guard on the theory that the sandbox now covers it.
+- Dropped via /mega-todos 2026-09-04 (ai-origin, worth 4/10): its own Notes concede only credential-masking is plausibly adoptable, and grep confirms no sandbox.* configuration exists in settings.json or settings.local.json for this harness version. The rest overlaps todos 419/420.

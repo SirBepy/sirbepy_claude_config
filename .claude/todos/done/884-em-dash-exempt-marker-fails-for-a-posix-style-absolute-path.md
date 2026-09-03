@@ -68,3 +68,4 @@ commands through both a Bash tool and a PowerShell tool on this machine, which i
 - Same family as `812` (done) and `853` (done). All three touch `skills/commit/em-dash.sh`, which
   now dot-sources `skills/commit/_prefilter-lib.sh` - read that first, the file layout changed on
   2026-09-02.
+- Premise does not reproduce. A clean scratch-repo repro passed a marked file as /c/tmp/.../10-marked.md to skills/commit/em-dash.sh and it exempted correctly (exit 0), while an unmarked sibling was still flagged - git ls-files --full-name already normalizes a POSIX-style absolute path. Verified during /mega-todos 2026-09-04.

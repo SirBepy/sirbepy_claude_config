@@ -76,3 +76,4 @@ which files are templates.
   (`dispatch (exactly )?ONE subagent`, `fan (subagents )?out`, `dispatch N subagents`,
   `one subagent per`) filtered to files lacking any of `builder-preamble`, `READ-ONLY DISPATCH`,
   `Stage your changes but do NOT commit`, `Leave all changes unstaged`.
+- False positive: the sweep grepped the SKILL.md files, but both dispatch prompts live in companion files that already carry the markers - skills/iterate-it/templates.md:9-14 and skills/shortcut-done-audit/investigation-prompt.md:7. Verified during /mega-todos 2026-09-04.

@@ -75,3 +75,4 @@ Do not reopen the `.claude/rules/` migration as part of this. That was decided o
 The honest counterweight: `code-style/` covers two stacks. A new hook, its self-test, and its
 maintenance may simply cost more than the rule is worth. Say so if that is where the measurement
 lands.
+- Dropped via /mega-todos 2026-09-04 (ai-origin, worth 4/10): only two stacks are covered by code-style/, the todo's own counterweight favours leaving the rule as prose, and the measurement it depends on is blocked on todo 466's harness, which does not exist yet.

@@ -44,3 +44,7 @@ matters most.
   grep to contain neither and the todo is closed with that evidence quoted.
 - No change weakens or removes any of the guard's three literal markers.
 - `python ci/run_all.py` exits 0, and every path referenced by a changed markdown file resolves.
+
+## Notes
+
+- Already satisfied: skills/delegate/SKILL.md:22 and skills/autopilot/SKILL.md:26 both already name both staging-line variants. Verified during /mega-todos 2026-09-04.

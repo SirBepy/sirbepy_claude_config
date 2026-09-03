@@ -89,3 +89,4 @@ building it, and that is a legitimate result rather than a failure.
 Do not wire this into `/rate-it` as a silent extra panel member. Cross-vendor calls send code to
 another provider, which is a decision the dev makes explicitly, not a default that appears in a
 skill.
+- Dropped via /mega-todos 2026-09-04 (ai-origin, worth 4/10): most speculative item in its cohort - real setup, auth and package-safety cost for one narrow review role, and its own Notes leave the disagreement protocol unanswered. No gemini/codex integration exists anywhere in the repo. Recorded as evaluated-and-declined; refile if a specific recurring pain point appears.
