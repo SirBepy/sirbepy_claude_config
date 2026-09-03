@@ -196,12 +196,27 @@ with tempfile.TemporaryDirectory() as tmp:
     subprocess.run(["git", "add", "README.md"], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=repo, check=True)
 
+    # Baseline for the verbatim-move case below: HEAD already holds this exact
+    # 5-line comment block under a different path.
+    (repo / "source_move.py").write_text(
+        "# c1\n# c2\n# c3\n# c4\n# c5\nprint('keep')\n", encoding="utf-8"
+    )
+    subprocess.run(["git", "add", "source_move.py"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "add source_move"], cwd=repo, check=True)
+
     # 5 consecutive "#" lines trips comment-noise's block cap (>=5), independent
     # of the file's total size - see comment-noise.sh's `max[f]>=5` check.
     (repo / "noisy.py").write_text(
         "# c1\n# c2\n# c3\n# c4\n# c5\nprint('ok')\n", encoding="utf-8"
     )
     (repo / "clean.py").write_text("print('ok')\n", encoding="utf-8")
+
+    # Move the block out of source_move.py into moved.py, same commit's pathspec -
+    # the gate must not re-flag lines already present at HEAD under another path (todo 899).
+    (repo / "source_move.py").write_text("print('keep')\n", encoding="utf-8")
+    (repo / "moved.py").write_text(
+        "# c1\n# c2\n# c3\n# c4\n# c5\nprint('moved')\n", encoding="utf-8"
+    )
 
     guard.MARKER_DIR = repo
     guard.SESSION_MARKER_DIR = repo / ".session-markers"
@@ -237,6 +252,15 @@ with tempfile.TemporaryDirectory() as tmp:
 
     label = "a pathspec-less commit is not force-checked (fails open, unresolved)"
     got = run_main("git commit -m 'x'", session_id="sess-gate", cwd=str(repo))
+    if not _testlib.report(got == 0, f"{label} (got exit={got})"):
+        fails.append(label)
+
+    label = "a verbatim comment-block move across files in the same commit is not re-flagged"
+    got = run_main(
+        "git commit -m 'x' -- source_move.py moved.py",
+        session_id="sess-gate",
+        cwd=str(repo),
+    )
     if not _testlib.report(got == 0, f"{label} (got exit={got})"):
         fails.append(label)
 
