@@ -72,3 +72,7 @@ Whichever lands, add a case to the hook's own test file if one exists (`hooks/te
   `close/SKILL.md`.
 - Ambient prose mentioning `close`, `review` or `pickup` WITHOUT a leading slash still does not fire.
 - `python ci/run_all.py` green.
+
+## Notes
+
+- Completed in /mega-todos wave 1, commit 6c293bb: flagged-skill-mention.py now searches the whole prompt instead of only the first line or a line start, with added false-positive cases for a skill name appearing in ordinary prose.

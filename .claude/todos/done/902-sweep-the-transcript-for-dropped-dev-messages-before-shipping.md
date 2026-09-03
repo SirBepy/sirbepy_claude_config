@@ -64,3 +64,4 @@ re-deriving the path, and keep its `Grep`-never-`Read` rule.
 
 The countoff-side record of the same incident is the `joes-messages-can-be-lost-among-peer-relays`
 project memory, which holds the verbatim quote and the file path.
+- Completed in /mega-todos wave 1, commit 98632d5: a pre-push transcript check now gates the push, pushbump and pushnbump subcommands, reusing /close's transcript-resolution recipe to scan dev turns since the last push.

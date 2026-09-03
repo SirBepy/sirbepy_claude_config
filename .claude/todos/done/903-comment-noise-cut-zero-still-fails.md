@@ -42,3 +42,7 @@ In `skills/commit/comment-noise.sh`, wherever the required-cut count is derived:
 - A file at exactly 25% comment lines reports `cut 1` (or more), never `cut 0`.
 - Acting on the printed number once makes the next run exit 0, in a single retry.
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- Completed in /mega-todos wave 1, commit 3ea2f0b: cut is now int((4*c-add)/3)+1, the smallest cut landing strictly below 25 percent, so an exactly-25-percent file reports cut 1 rather than an unsatisfiable cut 0. Added skills/commit/test_comment_noise.sh covering the boundary.

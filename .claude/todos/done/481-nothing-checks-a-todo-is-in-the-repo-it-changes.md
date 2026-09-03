@@ -107,3 +107,4 @@ Two halves, and the second is the one Joe actually asked for.
   (game half), and hubbub's todo 68 was re-scoped to stop reaching into the game repos.
 - hubbub's closed todos 60 and 63 are left in its `done/` where they are. Rewriting completed
   history buys nothing; the point is the ones still open.
+- Completed in /mega-todos wave 1, commit 59935cb: the repo-allocation rule and its decision procedure are now in ai-todos-format.md, and todo-duplicate-guard.py warns when a new todo's referenced paths point mostly outside the current repo. The relocation half was already shipped in /cleanup-todos.

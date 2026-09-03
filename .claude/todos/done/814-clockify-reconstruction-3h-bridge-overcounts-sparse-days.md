@@ -70,3 +70,4 @@ separately rated formalizing that pattern as a standing step at 3/10, preferring
 threshold flag instead; see the session's /rate-it verdict if this todo is picked up together with
 that angle). This todo is specifically about fixing the clustering math itself, independent of
 whether an adversarial-review step is ever added.
+- Completed in /mega-todos wave 1, commit 5537946: Reconstruction clustering now caps each chunk at last-commit plus pad and forbids inventing a chunk in a zero-commit window, closing the 4-6h unbacked-padding hole.

@@ -76,3 +76,4 @@ rather than keep patching.
 Joe was told about this at close on 2026-08-25 and it was filed rather than fixed on the spot,
 because changing a guard mid-session means the session edits the hook currently policing it -
 `PLAN.md`'s "three tips that matter" warns against exactly that.
+- Completed in /mega-todos wave 1, commit e3d3840: shell-content-write-guard.py now has a narrow carve-out for git show and git cat-file redirects to a path outside the repo, with positive and negative test cases.

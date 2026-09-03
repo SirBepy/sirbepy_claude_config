@@ -53,3 +53,4 @@ it leaves no supported path for the plain "look at these screenshots" case.
   `session_id` means the push never appears in any chat.
 - Filed from a hubbub session per CLAUDE.md's rule that findings about the global tree belong in
   this repo's own backlog, not the surfacing project's.
+- Completed in /mega-todos wave 1, commit e71a91a: /preview gained an image branch inlining images as data URIs, and CLAUDE.md plus ui-screenshot-reminder.py now point at a tool the session actually has. CLAUDE.md stayed under its token ceiling.

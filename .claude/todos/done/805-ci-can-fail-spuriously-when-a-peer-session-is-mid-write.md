@@ -73,3 +73,4 @@ second attempt. A flaky gate teaches people to ignore the gate.
 - The runner is `ci/run_all.py` at the repo root; the hook pass is `ci/run_hook_tests.py`.
 - Do not fix this by making `/commit` tolerate a CI failure. The abort is correct; the problem is
   that the failure carries no information.
+- Completed in /mega-todos wave 1, commit 6c5554e: ci/run_all.py propagates the failing suite name and output into the final summary, and run_hook_tests.py skips untracked test files so a peer session mid-write cannot fail the gate spuriously. Reproduced in a scratch repo first.

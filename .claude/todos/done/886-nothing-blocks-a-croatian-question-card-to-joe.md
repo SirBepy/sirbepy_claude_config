@@ -38,7 +38,7 @@ strings and blocks when the text looks Croatian.
 
 Detection worth keeping cheap and boring:
 
-- Croatian-only diacritics (`č ć ž š đ`) anywhere in the payload, plus
+- Croatian-only diacritics (`ÄŤ Ä‡ Ĺľ Ĺˇ Ä‘`) anywhere in the payload, plus
 - a small stopword list (`jel`, `nije`, `samo`, `ovo`, `treba`, `kad`, `sto`, `ako`, `bi`) to catch
   diacritic-free Croatian, which is how Joe himself usually types it.
 
@@ -64,3 +64,4 @@ job for commits.
 - If a hook is judged too heavy for this, the honest alternative is to accept it as a recurring
   miss and say so in the rule, rather than restating the rule a fourth time and expecting a
   different outcome.
+- Completed in /mega-todos wave 1, commit c5ed7c1: hooks/croatian-question-guard.py scans both the built-in and MCP ask-question tools for Croatian diacritics and stopwords, with a documented marker to bypass legitimate quoting. 16 test cases pass.

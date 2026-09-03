@@ -72,3 +72,4 @@ confirmed the ONLY real gaps were elsewhere (Fri + Sat, both zero-entry days). S
 threshold in Approach should read "any step 6a gap detection with existing same-day entries
 nearby", not just Audit mode or a size cutoff - a single day with a handful of entries was enough
 to produce this false positive.
+- Completed in /mega-todos wave 1, commit dd58170: Audit mode now carries explicit script-not-manual guidance plus the subshell-batching gotcha.

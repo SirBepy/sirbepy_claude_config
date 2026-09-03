@@ -67,3 +67,4 @@ try first, and making the two scripts agree removes the trap rather than documen
 Found by `/close`'s Phase 1 retrospective, not by a review pass - it surfaced as a failed tool call
 mid-run and was worked around at the time rather than filed, which is exactly the class of small
 recurring friction that never gets fixed unless it is written down.
+- Completed in /mega-todos wave 1, commit 5aa6c0b: -Id is now [string[]] in both claim-todo.ps1 and complete-todo.ps1, so both the bare and quoted comma forms bind, and the doc examples in ai-todos-format.md and auto-do-todos are corrected. Todo 878's .EXAMPLE fix was folded in here.

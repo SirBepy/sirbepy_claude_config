@@ -84,3 +84,4 @@ disappears", and left open "the path we pick might not work". The bug is the mis
 
 Filed from a countoff session rather than that repo's backlog, because the resolver is shared global
 tooling under `~/.claude-personal/skills/_shared/` and this breaks every project that uses it.
+- Completed in /mega-todos wave 1, commit 37d036d: findInNpxCache now walks sorted candidates and returns the first whose chromium binary genuinely exists, throwing a precise install command when none do.

@@ -56,3 +56,7 @@ command, which is what makes it a hook rather than a checklist line.
       blocked, and the message names both roots.
 - [ ] `git -C <other-repo> push` still runs, and read-only git in any repo still runs.
 - [ ] `hooks/test_git_workdir_guard.py` passes under `python ci/run_all.py`.
+
+## Notes
+
+- Completed in /mega-todos wave 1, commit c1860ab: hooks/git-workdir-guard.py blocks git write ops when the shell cwd repo root differs from the harness session root, honouring git -C and a same-command cd as deliberate bypasses. Modeled on flutter-workdir-guard.py; 9 test cases pass.

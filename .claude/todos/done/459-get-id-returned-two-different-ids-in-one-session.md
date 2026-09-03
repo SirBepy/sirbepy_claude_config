@@ -101,6 +101,10 @@ id on first call, keyed on `sessionId`) over any refinement of the pid lookup.
 - Regression case: the exact shape above - three sessions sharing one `cwd`, `-GetId` early and at
   close.
 
+## Notes
+
+- Completed in /mega-todos wave 1, commit 1a2a67e: /close Phase 4 now detects the mismatch case where the Phase-0 id resolves to a screenshot folder that does not exist while the session demonstrably captured screenshots.
+
 ## Progress 2026-09-01 - advanced, NOT finished
 
 `/mega-todos` batch 1, commit `231b555`. `-GetId` now caches its resolved `<pid>-<procStart-ticks>`

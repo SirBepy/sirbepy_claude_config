@@ -70,3 +70,4 @@ parameter shape before picking, so the two do not end up disagreeing.
 - **Sequencing:** todo 794 is refactoring the id-resolution fallback out of both of these scripts
   into a shared `_shared.ps1`. It does not touch the parameter declaration or the help text, so
   there is no conflict, but land 794 first to avoid two edits racing on the same two files.
+- Completed in /mega-todos wave 1 as part of commit 5aa6c0b (todo 901): the .EXAMPLE block in claim-todo.ps1 now shows both the bare and quoted comma forms, and -Id is [string[]] so both are actually runnable as written.

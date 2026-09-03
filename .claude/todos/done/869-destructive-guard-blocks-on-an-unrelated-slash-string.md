@@ -56,3 +56,7 @@ three killed heuristic hooks did: measure against the real command corpus, then 
 - A real system-path removal (`Remove-Item /`, `Remove-Item C:\Windows`, `rm -rf /`) is still
   blocked, pinned as test cases.
 - `python ci/run_all.py` exits 0.
+
+## Notes
+
+- Completed in /mega-todos wave 1, commit ca2178f: match_remove_item now binds path extraction to real -Path/-LiteralPath/positional arguments instead of scanning the command string for any slash-prefixed token. The original false-positive repro is a regression case.

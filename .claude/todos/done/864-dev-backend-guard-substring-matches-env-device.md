@@ -32,3 +32,7 @@ Worth checking whether the same class of false positive exists for other pattern
 ## Acceptance
 
 `python ci/run_all.py` passes, a `--dart-define-from-file=.env.device` command is allowed through, and a `--dart-define-from-file=.env.dev` command is still blocked.
+
+## Notes
+
+- Completed in /mega-todos wave 1, commit 9cc117e: DEV_MARKERS now match on a path or word boundary, so .env.device no longer trips the .env.dev marker. All 20 test cases pass including the new one.

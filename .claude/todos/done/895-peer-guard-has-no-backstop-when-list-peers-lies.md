@@ -48,3 +48,7 @@ wrong answer, so the fix has to be a second sensor, not more caution.
 A session that runs the check while another session commits underneath it detects the peer from git
 alone, with `list_peers` still returning empty. The rule names what to do on detection: announce,
 narrow the pathspec, or stop.
+
+## Notes
+
+- Completed in /mega-todos wave 1, commit fd90f58: the pre-edit hook now persists this session's last-seen HEAD per repo and warns on a HEAD move independent of list_peers, and /commit step 8 gained a matching HEAD guard alongside the branch guard.

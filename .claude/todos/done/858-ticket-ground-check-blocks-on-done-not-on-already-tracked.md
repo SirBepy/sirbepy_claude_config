@@ -58,3 +58,7 @@ hit is NOT automatically a different unit of work from its implementation.
   ticket can be the reuse target for FE work.
 - Re-running the sc-54902 scenario (search surfaces one open UX ticket covering the draft's scope)
   reaches a "reuse sc-54902?" question, not a title/epic/priority/estimate card.
+
+## Notes
+
+- Completed in /mega-todos wave 1, commit 9447c35: added a REUSE CANDIDATE verdict to the ground check and reordered /ticket Create so the ground check runs before the question round.

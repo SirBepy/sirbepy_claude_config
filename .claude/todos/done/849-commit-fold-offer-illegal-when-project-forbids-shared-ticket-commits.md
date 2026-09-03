@@ -63,3 +63,4 @@ fold illegal, and still asks normally in a repo with no `.claude/commit-style.md
   where fold is doubly invalid (not HEAD, not this session's, different ticket). The fix should
   cover the non-HEAD/other-session branch with the same skip-and-print treatment, not just the
   HEAD-fold offer.
+- Completed in /mega-todos wave 1, commit 66cdd10: step 8 now reads commit-style.md's ticket-sharing rule before offering any fold, on both the HEAD and non-HEAD branches, and prints the quoted rule instead of asking when folding is forbidden.

@@ -39,3 +39,7 @@ and for each intermediate recommit restore the shared file to that commit's own 
 - The fold recipe names the shared-file hazard and the per-commit restore step.
 - A future fold over a shared file produces byte-identical patch-diffs for riding commits without
   the executor re-deriving the technique.
+
+## Notes
+
+- Completed in /mega-todos wave 1, commit f91f8b4: the fold recipe now documents the shared-file hazard and requires git checkout <original-sha> -- <file> before each intermediate recommit.

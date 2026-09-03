@@ -53,3 +53,7 @@ Split the two arms rather than moving the whole hook:
 - `python ci/run_all.py` green (it runs `hooks/test_*.py`).
 - A clean `send_message` is not blocked, and `Write`/`Edit`/`Bash` args stay unscanned, per todo
   307's scope decision.
+
+## Notes
+
+- Completed in /mega-todos wave 1, commit fbb699b: em-dash-guard.py is now registered as a PreToolUse hook for the chat-text tools and denies before delivery, with main() gating on hook_event_name so the Stop arm is unchanged. 24 cases pass.

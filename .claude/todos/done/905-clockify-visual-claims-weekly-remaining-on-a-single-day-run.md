@@ -49,3 +49,4 @@ target bar only when the window provably covers the whole week the target refers
 
 Related: [[486-clockify-reconciliator-weekly-target-scope-ambiguous]] (stated-target scope
 confirmation, already fixed, different bug).
+- Completed in /mega-todos wave 1, commit 293c8d2: the weekly target bar and remaining pill are now gated on the resolved window covering a full Mon-Sun week; a narrower window renders same-window totals only.

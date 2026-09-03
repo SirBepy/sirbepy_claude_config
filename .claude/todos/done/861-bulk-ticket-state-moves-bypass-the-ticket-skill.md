@@ -71,3 +71,4 @@ Writing this file hit todo 851 / 859 again: `reserve-todo-id.ps1` created `861-.
 `hooks/todo-duplicate-guard.py` rejected the write because that marker existed. Worked around by
 deleting the marker first, contradicting ai-todos-format.md's "delete immediately after the write
 succeeds". Third recurrence, so the guard and the reserve script still disagree.
+- Completed in /mega-todos wave 1, commit 085c6da: /ticket Update now carries a bulk-move worked example and a workflow_id pre-check, and shortcut.md pins the UI Design workflow ids. No update-guard hook, per the todo's own lean.

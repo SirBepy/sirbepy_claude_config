@@ -81,3 +81,4 @@ which leaves a materially different mess:
   block omits `/commit`'s working-tree diff check), `879` (builders park when the harness
   auto-backgrounds a long run), `472` (the builder block is hand-copied per dispatch). This one is
   the dispatch-failure recovery gap; none of the four covers it.
+- Completed in /mega-todos wave 1, commit 5d501ec: /mega-todos now has a Retrying a killed wave section covering the committed, complete-but-uncommitted and half-done states plus what resumeFromRunId can recover.

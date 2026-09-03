@@ -69,3 +69,4 @@ ship 2 and call the todo done.
   cap is correct; the gap is that provenance is invisible to it.
 - `hooks/commit-guard.py` deliberately re-runs the gate rather than trusting the caller (todo 844).
   Keep that property - the fix belongs in what the gate reports, not in the guard trusting a claim.
+- Duplicate of 899 - merged during /mega-todos 2026-09-04. Same gap (comment-noise verbatim-move carve-out promised in prose but unenforced), same fix, same files; 899 carries the firmer evidence (commit 9a63324f). Implemented once via 899 (commit ecee356); anything unique here was folded into that fix. The residual doc-wording item lives on in 899, which stays open.

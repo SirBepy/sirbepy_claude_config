@@ -74,3 +74,4 @@ of that skill is many agents committing into one tree at once.
 Worth pairing with todo 806 (shared-worktree foreign-hunk check helper) if that lands first: a
 scripted check is a stronger control here than a paragraph a builder has to remember, and this todo
 is the concrete incident that justifies building it.
+- Completed in /mega-todos wave 1, commit ae9ade1: the injected commit block's step 2 is now a real gate quoting /commit step 8's working-tree diff check, applied to both the per-builder and barrier COMMIT_MODE sections.

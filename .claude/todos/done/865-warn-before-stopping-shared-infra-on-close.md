@@ -65,3 +65,4 @@ Not a code change with a test. Success is a later multi-session day where a sess
   liveness check, only an actual HTTP response is.
 - Filed from the zng-app session that caused the incident, into this repo's backlog because the
   fix is to `supervised-run` and `/close`, both global.
+- Completed in /mega-todos wave 1, commit 81f7815: /supervised-run checks list_peers before stopping a server and /close checks for supervised servers, both defaulting to leaving shared infra up when peers are live.

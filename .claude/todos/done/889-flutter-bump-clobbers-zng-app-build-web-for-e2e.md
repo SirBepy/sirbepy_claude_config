@@ -89,3 +89,4 @@ Related but separate, and NOT this todo: `zng-app/e2e/lib/server.js:73` validati
 disk even when `E2E_APP_URL` points elsewhere. It can also pass while a different bundle is served,
 which is the more dangerous direction. Session `0e07` found it and owns it; file it in zng-app's
 backlog if it is still unfiled.
+- Completed in /mega-todos wave 1, commit 1e1c031: /flutter-bump now rebuilds zng-app with --dart-define-from-file after the bare compile gate, with a non-zero grep assertion proving the defines landed.

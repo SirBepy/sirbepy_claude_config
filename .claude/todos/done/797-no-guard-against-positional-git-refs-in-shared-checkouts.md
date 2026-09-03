@@ -57,3 +57,7 @@ so it cannot collide this way. Scope any guard to the main checkout.
   explicit-sha form named in the message.
 - A worktree session is not affected.
 - The single-session case stays prompt-free.
+
+## Notes
+
+- Completed in /mega-todos wave 1, commit 5099010: destructive-command-guard.py now covers positional-ref destructive git commands in a shared checkout, not just git reset --hard.

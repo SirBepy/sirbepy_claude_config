@@ -63,3 +63,4 @@ In `SKILL.md` step 6 (or a new step right before step 9's approval gate):
 Related but distinct from `814-clockify-reconstruction-3h-bridge-overcounts-sparse-days.md` (that
 one is about the clustering math overcounting; this one is about the input snapshot going stale
 mid-run). Both surfaced in the same 2026-08-27 session.
+- Completed in /mega-todos wave 1, commit 963fe97: added a re-fetch-before-approval step and a cap-at-clean-boundary rule for a window that includes the present moment.
