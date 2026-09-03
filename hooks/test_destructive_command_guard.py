@@ -191,6 +191,17 @@ SHARED_CASES = [
     ("git branch feature", False, "branch with no -f stays clean"),
     ("git rebase origin/main", False, "rebase onto a remote branch stays clean"),
     ("git log HEAD~1", False, "git log is not a destructive verb"),
+    ("git stash push -- lib", True, "todo 775: stash push with an explicit pathspec"),
+    ("git stash push -u", True, "todo 775: stash push with no pathspec sweeps the whole tree"),
+    ("git stash save wip", True, "todo 775: legacy stash save"),
+    ("git stash", True, "todo 775: bare stash defaults to push"),
+    ("git stash pop", False, "todo 775: stash pop replays, doesn't sweep"),
+    ("git stash apply stash@{0}", False, "todo 775: stash apply replays, doesn't sweep"),
+    ("git stash drop", False, "todo 775: stash drop discards a stash entry, not the tree"),
+    ("git stash clear", False, "todo 775: stash clear discards stash entries, not the tree"),
+    ("git stash branch tmp", False, "todo 775: stash branch replays onto a new branch"),
+    ("git stash list", False, "todo 775: stash list is read-only"),
+    ("git stash show -p stash@{0}", False, "todo 775: stash show is read-only"),
 ]
 
 # Measured false positives (candidate_patterns.py / measure.py) that must
@@ -379,6 +390,30 @@ def check_shared_gate_composition() -> bool:
     return ok
 
 
+def check_stash_swept_files_named() -> bool:
+    """todo 775: a stash-push hit in a shared checkout names the dirty files
+    a peer would lose, via a real `git status` against a scratch repo -
+    not mocked, since the file list is the whole point of this check.
+    """
+    real_is_main = guard.is_main_checkout
+    real_peer_count = guard.fetch_peer_count
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp)
+        subprocess.run(["git", "init", "-q", str(repo)], check=True)
+        subprocess.run(["git", "-C", str(repo), "commit", "-q", "--allow-empty", "-m", "init"], check=True)
+        (repo / "peer_file.txt").write_text("peer's uncommitted edit", encoding="utf-8")
+        try:
+            guard.is_main_checkout = lambda cwd: True
+            guard.fetch_peer_count = lambda session_id: 1
+            hit = guard.match_shared_checkout_hit("git stash push", str(repo), "s1")
+        finally:
+            guard.is_main_checkout = real_is_main
+            guard.fetch_peer_count = real_peer_count
+    ok = bool(hit) and "peer_file.txt" in hit
+    print(f"[{'PASS' if ok else 'FAIL'}] stash swept files named: hit={hit!r}")
+    return ok
+
+
 def check_shared_prompt_free_no_session_id() -> bool:
     """E2E, real process: a positional-ref reset with no session_id in the
     payload (the common case) never calls the daemon and stays prompt-free.
@@ -407,6 +442,7 @@ def run() -> int:
         check_is_main_checkout_real_worktree,
         check_fetch_peer_count_unknown_session,
         check_shared_gate_composition,
+        check_stash_swept_files_named,
         check_shared_prompt_free_no_session_id,
     ):
         if not check():

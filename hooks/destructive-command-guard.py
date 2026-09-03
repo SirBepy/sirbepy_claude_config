@@ -58,8 +58,9 @@ Deliberately NOT covered, each already decided elsewhere:
 - shell chaining (&&/;/|): retired outright, see done/07 and done/64.
 - bare eval / Invoke-Expression / iex: measured false positives only, and
   iex is already handled by shell-content-write-guard.py; not duplicated.
-- git stash: read-mostly (108 hits, mostly list/show/pop); todo 391 wants a
-  sanctioned baseline mechanism, not a ban.
+- git stash outside a shared checkout: read-mostly (108 hits, mostly
+  list/show/pop); todo 391 wants a sanctioned baseline mechanism, not a ban.
+  The shared-checkout case is covered under SHARED tier below (todo 775).
 - bare diskpart alone is never denied, only asked/gated per the dial above:
   its one measured use was a legitimate vhdx compaction.
 
@@ -72,6 +73,15 @@ would have resolved to a peer's commit had it landed a second later. A
 worktree is exempt outright (its own HEAD/index can't collide this way);
 a genuinely solo session stays prompt-free even on a hit, since peer count
 comes back 0.
+
+Also SHARED tier (todo 775): `git stash push`/`save` (bare `git stash`
+defaults to push) under the same main-checkout-plus-live-peer gate - it
+reads the WHOLE working tree by pathspec and is the one common command that
+can sweep a peer's uncommitted edits off disk. `list`/`show`/`pop`/`apply`/
+`drop`/`clear`/`branch` never touch another session's files this way and
+stay exempt. The hit message runs `git status` scoped to the command's own
+pathspec (or the whole tree for a bare/no-pathspec stash) and names the
+files currently at risk, so the prompt shows exactly what a peer would lose.
 
 rm/mkfs/dd/chmod are POSIX-only syntax; Remove-Item/Clear-Disk/Format-Volume/
 diskpart are PowerShell-only; the SQL, publish, and git rules apply to
@@ -292,6 +302,12 @@ GIT_RESET_REBASE_CHECKOUT_RE = re.compile(r"^git\s+(?:-[^\s]+\s+)*(reset|rebase|
 GIT_BRANCH_ANCHOR_RE = re.compile(r"^git\s+(?:-[^\s]+\s+)*branch\b", re.IGNORECASE)
 POSITIONAL_REF_RE = re.compile(r"(?:^|[\s=])(?:HEAD|@)(?:~\d*|\^+\d*)")
 
+# todo 775: bare `git stash` defaults to `push`, so only the read/replay
+# subcommands are exempt from the shared-checkout sweep check.
+GIT_STASH_ANCHOR_RE = re.compile(r"^git\s+(?:-[^\s]+\s+)*stash\b", re.IGNORECASE)
+GIT_STASH_SAFE_SUBCMD_RE = re.compile(
+    r"^git\s+(?:-[^\s]+\s+)*stash\s+(list|show|pop|apply|drop|clear|branch)\b", re.IGNORECASE)
+
 FORCE_LEASE_RE = re.compile(r"--force-with-lease\b")
 FORCE_LONG_RE = re.compile(r"--force\b")
 FORCE_SHORT_BUNDLE_RE = re.compile(r"(?<![\w-])-[a-zA-Z]*f[a-zA-Z]*\b")
@@ -501,8 +517,22 @@ def match_git_positional_ref(command: str):
     return None
 
 
+def match_git_stash_push(command: str):
+    """Pure pattern hit, independent of shared-checkout status - same
+    contract as match_git_positional_ref, gated by main() below.
+    """
+    for seg in verb_segments(command):
+        if GIT_STASH_SAFE_SUBCMD_RE.match(seg):
+            continue
+        if GIT_STASH_ANCHOR_RE.match(seg):
+            return ("git stash push/save reads the whole working tree by pathspec and can "
+                    "sweep a peer session's uncommitted work off disk in a shared checkout")
+    return None
+
+
 SHARED_CHECKS = (
     match_git_positional_ref,
+    match_git_stash_push,
 )
 
 
@@ -561,10 +591,47 @@ def fetch_peer_count(session_id: str) -> int:
     return len(peers) if isinstance(peers, list) else 0
 
 
+def stash_pathspec_args(seg: str) -> list:
+    """Positional args after `git stash [push|save]`, following a literal
+    `--` if present. No `--` means "whole tree" (bare stash, or push/save
+    with no pathspec restriction) - the conservative reading for a sweep.
+    """
+    rest = GIT_STASH_ANCHOR_RE.sub("", seg, count=1)
+    rest = re.sub(r"^\s*(push|save)\b", "", rest, flags=re.IGNORECASE)
+    if "--" not in rest:
+        return []
+    return [t for t in rest.split("--", 1)[1].split() if t]
+
+
+def stash_swept_files(command: str, cwd: str) -> list:
+    """`git status` scoped to the stash's own pathspec (whole tree if none),
+    so the prompt names what a peer's uncommitted edits would look like at
+    risk - best-effort, empty on any git failure (todo 775).
+    """
+    pathspecs = []
+    for seg in verb_segments(command):
+        if GIT_STASH_SAFE_SUBCMD_RE.match(seg):
+            continue
+        if GIT_STASH_ANCHOR_RE.match(seg):
+            pathspecs = stash_pathspec_args(seg)
+            break
+    cmd = ["git", "-C", cwd, "status", "--porcelain", "--no-renames"]
+    if pathspecs:
+        cmd += ["--"] + pathspecs
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if proc.returncode != 0:
+        return []
+    return [line[3:].strip() for line in proc.stdout.splitlines() if len(line) > 3]
+
+
 def match_shared_checkout_hit(command: str, cwd: str, session_id: str):
-    """Compound SHARED-tier signal: a positional-ref pattern hit, in the
-    MAIN checkout, with at least one live peer. Any one absent means no hit,
-    which is what keeps a worktree or a solo session prompt-free (todo 797).
+    """Compound SHARED-tier signal: a positional-ref or stash-push pattern
+    hit, in the MAIN checkout, with at least one live peer. Any one absent
+    means no hit, which is what keeps a worktree or a solo session
+    prompt-free (todo 797). A stash hit gets the at-risk file list appended.
     """
     hit = check_shared(command)
     if not hit:
@@ -573,6 +640,12 @@ def match_shared_checkout_hit(command: str, cwd: str, session_id: str):
         return None
     if fetch_peer_count(session_id) <= 0:
         return None
+    if hit.startswith("git stash"):
+        swept = stash_swept_files(command, cwd)
+        if swept:
+            shown = ", ".join(swept[:10])
+            more = f" (+{len(swept) - 10} more)" if len(swept) > 10 else ""
+            return f"{hit} - files currently at risk: {shown}{more}"
     return hit
 
 
