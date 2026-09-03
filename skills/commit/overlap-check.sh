@@ -4,18 +4,27 @@
 # a block (skills/commit/SKILL.md step 8 defines interactive-ask vs unattended-proceed-and-record;
 # that policy stays in SKILL.md, this script only reports).
 
-# Usage: overlap-check.sh [-C|--repo <repo>] <file> [<file> ...]
-# Exit 0 clean (no upstream, no candidates, or line-disjoint candidates printed as info only).
-# Exit 1 a real hunk-level hit, printed as "<file>:<a>-<end> <short-sha> <subject>".
-# Exit 2 could not run (no args, bad/missing repo).
+# Usage: overlap-check.sh [-C|--repo <repo>] [--own <sha,sha,...>] <file> [<file> ...]
+# --own: shas this run already committed (step 1a) - a hit against one is info only, no exit 1.
+# Exit 0 clean (no upstream/candidates, or every candidate own/line-disjoint, info only).
+# Exit 1 hit against a non-own sha: "<file>:<a>-<end> <short-sha> <subject>". Exit 2: could not run.
 set -uo pipefail
 
 repo=""
-if [ "${1:-}" = "-C" ] || [ "${1:-}" = "--repo" ]; then
-  repo="${2:-}"
-  shift 2
-fi
+own=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -C|--repo) repo="${2:-}"; shift 2 ;;
+    --own) IFS=',' read -r -a own <<<"${2:-}"; shift 2 ;;
+    *) break ;;
+  esac
+done
 git_c() { if [ -n "$repo" ]; then git -C "$repo" "$@"; else git "$@"; fi; }
+is_own() {
+  local s="$1" o
+  for o in "${own[@]:-}"; do [ -n "$o" ] && [ "$o" = "$s" ] && return 0; done
+  return 1
+}
 
 if [ $# -eq 0 ]; then
   printf 'ERROR: no files given\n'
@@ -72,9 +81,13 @@ for f in "$@"; do
       for cs in "${file_candidates[@]}"; do
         if [ "$bsha" = "$cs" ]; then
           short=$(git_c rev-parse --short "$cs")
-          printf '%s:%s-%s %s %s\n' "$f" "$a" "$end" "$short" "${subject_of[$cs]}"
+          if is_own "$cs"; then
+            printf '%s:%s-%s %s %s (own commit, no ask)\n' "$f" "$a" "$end" "$short" "${subject_of[$cs]}"
+          else
+            printf '%s:%s-%s %s %s\n' "$f" "$a" "$end" "$short" "${subject_of[$cs]}"
+            status=1
+          fi
           matched["$cs"]=1
-          status=1
         fi
       done
     done
