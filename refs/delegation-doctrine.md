@@ -287,6 +287,13 @@ Response: a targeted re-check (cheap, scoped to the doubt) or, for a high-stakes
 higher-tier verifier per the global CLAUDE.md escalation triggers. Never accept a suspect report
 just because re-checking costs tokens.
 
+**A builder that parks ("standing by", "will report back") is the orchestrator's catch, not a
+hook's**, and `refs/builder-preamble.md`'s ban on it is unenforced by design. A hook sees one tool
+call's payload; the parked-turn failure lives in a subagent's FINAL message, which no `PreToolUse`
+matcher reaches, and the parent's `Stop` hook fires long after the dispatch already returned its
+parked text as a result. So the tell is read here: a report whose deliverable is a promise rather
+than an artifact is a failed dispatch, and it gets re-dispatched, never accepted and waited on.
+
 After any dispatch that reported a teeth-check (mutate production code, watch a test fail,
 restore), grep the changed non-test files for `if (true)`, `if (false)`, an early `return`, or a
 commented-out guard before accepting the report - the builder's own restore claim is not proof

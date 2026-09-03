@@ -59,9 +59,9 @@ submodule's root, not the parent's), so a mix of parent-repo and submodule paths
 fine (todo 412). Exit 0 is clean. Exit 2 means the gate could not run (bad path, no repo found) -
 fix the invocation and rerun, it is not a finding. Exit 1 means a prefilter flagged something, and
 the scripts do NOT get the same treatment:
-comment-noise = trim those blocks to the cap now (2 lines typical, 4 hard per block), do not ask,
-EXCEPT a block that moved verbatim from another file in this same change (confirm via `git show
-HEAD:<old-file>`), which is expected on a pure move and must NOT be trimmed; em-dash = fix the
+comment-noise = trim those blocks to the cap now (2 lines typical, 4 hard per block), do not ask;
+the gate drops verbatim-moved blocks from its own report, so anything it still prints is newly
+authored and gets trimmed, with no manual `git show HEAD:<old-file>` step; em-dash = fix the
 flagged added lines now, same do-not-ask treatment; secret-scan = STOP, never auto-fix it and never
 work around it, leave your work as it stands and report the hit naming the file.
 

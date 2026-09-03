@@ -24,13 +24,13 @@ similar item minutes earlier.
 - After running it, verify independently (`Test-Path`, registry check, etc. per the gotcha above)
   before reporting success - never trust the command's own exit code.
 
-**This gate has no mechanical enforcement, and you should read it as the only thing standing
-between a decision and a deleted file.** Verified 2026-08-29: `hooks/destructive-command-guard.py`
-covers `Remove-Item -Recurse -Force` only when it targets a drive root or a home reference, plus
-mkfs/dd/chmod-777/git-reset-hard/git-clean-f/SQL-delete/diskpart. An ordinary scoped
-`Remove-Item`, `Clear-RecycleBin`, `cleanmgr`, `docker system prune` or an uninstaller matches no
-tier, and `settings.json` runs `defaultMode: auto`, so none of them prompt either. Wiring the
-enforcement is todo `835`.
+**This gate is only partly backed by mechanical enforcement, so read it as the main thing standing
+between a decision and a deleted file.** As of 2026-09-04, `hooks/destructive-command-guard.py`'s
+MIDDLE tier asks on `Clear-RecycleBin`, `cleanmgr`, `docker ... prune`, `winget`/`choco uninstall`,
+`Uninstall-Package` and `msiexec /X`, alongside the older mkfs/dd/chmod-777/git-reset-hard/
+git-clean-f/SQL-delete/diskpart checks. What it still does NOT cover is an ordinary scoped
+`Remove-Item` - that only trips when it targets a drive root or a home reference, deliberately, since
+`settings.json` runs `defaultMode: auto` and a broader match would prompt on routine scratch cleanup.
 
 ## Platform-file edit confirmation gate
 
