@@ -46,7 +46,11 @@ CASES = [
     ("lets finish off all of the todos!!!\n/auto-do-todos \nbut first go thru them",
      True, "todo 342: real corpus case, invocation on line 2 starting that line, must fire"),
     ("explain the plan first\nI think we should probably use /close when done",
-     False, "todo 342: still-uncovered case, mid-sentence mention on a non-first line"),
+     True, "todo 891: mid-sentence mention on a non-first line now fires, position not checked"),
+    ("/e2e\nand then when youre done just /commit and then /close up",
+     True, "todo 891 repro: /close mid-line on the last line, must fire"),
+    ("I closed the laptop, did a review of the pickup truck listing, no slash anywhere",
+     False, "false-positive regression: bare skill-like words in prose, no leading slash, must not fire"),
 ]
 
 

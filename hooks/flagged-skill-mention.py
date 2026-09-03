@@ -20,13 +20,6 @@ _normalized = _ZERO_WIDTH_RE.sub('', prompt).lstrip()
 if _normalized.startswith('[SYSTEM NOTIFICATION') or _ENVELOPE_TAG_RE.match(_normalized):
     sys.exit(0)
 
-# Real slash-command usage is typed as the first thing in the message, OR as
-# its own line further down (todo 342: measured against 509 real prompts on
-# this machine, see flagged-skill-mention.md - first_line-only missed 193 of
-# them). A mention buried mid-sentence still doesn't count as an invocation.
-first_line = prompt.split('\n', 1)[0]
-line_starts = [ln.strip() for ln in prompt.split('\n')]
-
 # Resolve relative to this file first: the hook lives next to skills/ in the
 # same config tree, and $HOME/~ has no ".claude" in CI or a fresh clone.
 skills_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'skills')
@@ -52,12 +45,11 @@ for path in sorted(glob.glob(os.path.join(skills_dir, '*', 'SKILL.md'))):
         continue
 
     # Slash required: bare-word names (close, review, pickup) collide with plain
-    # English and fired on ambient text, not real invocation intent.
+    # English and fired on ambient text, not real invocation intent. Position
+    # in the prompt is not checked (todo 891): mid-line mentions on later
+    # lines are real invocations too, e.g. "and then /close up".
     _name_pattern = r'(?<![\w/-])/' + re.escape(name) + r'(?![\w-])'
-    mentioned = re.search(_name_pattern, first_line, re.IGNORECASE) or any(
-        re.match(_name_pattern, ls, re.IGNORECASE) for ls in line_starts
-    )
-    if not mentioned:
+    if not re.search(_name_pattern, prompt, re.IGNORECASE):
         continue
 
     contexts.append(
