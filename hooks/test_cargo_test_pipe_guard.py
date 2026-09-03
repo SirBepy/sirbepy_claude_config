@@ -1,4 +1,5 @@
-"""Self-test for cargo-test-pipe-guard.py (todo 780, extended by todo 877).
+"""Self-test for cargo-test-pipe-guard.py (todo 780, extended by todo 877,
+quote-position fix by todo 881).
 
 Run directly: python hooks/test_cargo_test_pipe_guard.py
 Exits 0 on all-pass, 1 on any failure, printing a PASS/FAIL line per case.
@@ -66,6 +67,16 @@ CASES = [
     ("npm run dev | tail -f", False, "trust boundary: unrelated dev command piped to tail"),
     ("cargo test", False, "bare cargo test with no pipe at all"),
     ("cargo test --lib", False, "cargo test with flags, no pipe at all"),
+    (
+        '''echo '{"tool_name":"Bash","tool_input":{"command":"cargo test --lib 2>&1 | tail -25"}}' | python hooks/cargo-test-pipe-guard.py''',
+        False,
+        "todo 881 repro: cargo test | tail quoted inside a JSON payload string, not run",
+    ),
+    (
+        'git commit -m "docs: explain why cargo test --lib 2>&1 | tail -25 is blocked"',
+        False,
+        "todo 881: commit message quoting the piped-cargo-test example doesn't block the commit",
+    ),
 ]
 
 

@@ -28,6 +28,13 @@ Detection is regex-based on the raw command string, split on top-level
 `&&`/`||`/`;`/newline into statements, then each statement on `|` into
 pipeline segments in order - only a filter segment that comes AFTER a
 matched cargo segment in the same pipeline counts. Fails open on error.
+
+A `cargo test` match only counts when it sits in command position (start
+of statement, or right after `|`/`;`/`&`/`(`/`{`/newline, mod whitespace) -
+2026-09-02, the guard's own JSON-payload probe command quoted a piped
+`cargo test | tail` inside a string literal and got blocked by its own
+naive `|` split, same day 780 shipped (todo 881). No quote masking needed:
+text living inside a JSON/shell string is never preceded by a delimiter.
 """
 
 import re
@@ -65,6 +72,15 @@ LINE_BUFFERED_RE = re.compile(r"--line-buffered\b", re.IGNORECASE)
 # a pipeline's own "|" segments never get cut here.
 STATEMENT_SPLIT_RE = re.compile(r"&&|\|\||;|\n")
 
+# Chars that legitimately precede a new command/statement, copied from
+# shell-content-write-guard.py's own COMMAND_START_RE (same repo precedent,
+# not moved to _hooklib since only this file needs it here).
+COMMAND_START_RE = re.compile(r"(?:^|[|;&(){\n])\s*$")
+
+
+def is_command_position(text: str, idx: int) -> bool:
+    return bool(COMMAND_START_RE.search(text[:idx]))
+
 
 def deny(filter_name: str, subcommand: str) -> None:
     _lib_deny(
@@ -91,10 +107,13 @@ def find_violation(command: str, cwd: str | None = None) -> tuple[str, str] | No
         segments = statement.split("|")
         cargo_idx = None
         subcommand = None
+        offset = 0
         for i, seg in enumerate(segments):
+            seg_start = offset
+            offset += len(seg) + 1  # +1 for the "|" this segment was split on
             if cargo_idx is None:
                 m = CARGO_SUBCOMMAND_RE.search(seg)
-                if m:
+                if m and is_command_position(statement, seg_start + m.start()):
                     cargo_idx = i
                     subcommand = m.group("subcmd").lower()
                 continue
