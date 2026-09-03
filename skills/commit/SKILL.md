@@ -90,11 +90,22 @@ Commit message follows the normal style - no need to mention the version bump.
 
 If no `package.json` exists, skip the version step and commit normally.
 
+## Pre-push transcript check
+
+Runs only for `/commit push`, `/commit pushbump`, and `/commit pushnbump`, right before the `git push` call in each - never for a plain `/commit` or version-only bump, which stay untaxed. Catches a dev instruction that landed in the transcript but never reached the working context, before the push ships whatever got built on the gap (todo 902: a rejected layout was built, committed, and pushed because a peer relay sat between the dev's correction and the next turn).
+
+1. Resolve the transcript path via `skills/close/SKILL.md`'s "Transcript grounding" recipe (`~/.claude/sessions/*.json` for `sessionId`, then the sanitised-cwd `.jsonl`) - do not re-derive it. `Grep`, never `Read`: transcripts embed full tool payloads and run to megabytes.
+2. Reference point: this session's own last successful push, recalled from an earlier push report in this conversation, never re-derived from git. No prior push this session: the transcript's first line.
+3. Grep `"type":"user"` lines after that point whose content is text, not a `tool_result`. A `[daemon-meta]` peer relay is not itself a dev turn, but leave it in the scanned range - it is exactly what can sit between two dev turns and bury one, per the incident above.
+4. For each dev text turn found, confirm it was addressed: referenced or acted on later in this conversation, or explicitly superseded by a later dev message. A correction, rejection, or preference ("i dont like...", "no, instead...", "wait, actually...") with no visible acknowledgement afterward is unaddressed.
+5. No dev turns since the reference point, or all addressed: proceed silently, no added output.
+6. Any unaddressed turn: stop before `git push`, quote the message verbatim, and ask whether to address it now or push anyway.
+
 ## `/commit push`
 
 Same as `/commit` but also runs `git push` after committing.
 
-**Push rule:** if the commit step failed, do not push. If there was nothing to commit, don't stop there either - check `git rev-list --count @{u}..HEAD` (if `@{u}` doesn't resolve, say so and offer `git push -u origin <branch>` instead of silently doing nothing). Zero ahead: say "nothing to commit, nothing to push" and stop. One or more ahead: push those existing commits and report how many.
+**Push rule:** if the commit step failed, do not push. If there was nothing to commit, don't stop there either - check `git rev-list --count @{u}..HEAD` (if `@{u}` doesn't resolve, say so and offer `git push -u origin <branch>` instead of silently doing nothing). Zero ahead: say "nothing to commit, nothing to push" and stop. One or more ahead: run the **Pre-push transcript check** above, then push those existing commits and report how many.
 
 After a successful push, run the **Build watch** (see `skills/commit/build-watch.md`).
 
@@ -102,7 +113,7 @@ After a successful push, run the **Build watch** (see `skills/commit/build-watch
 
 Same as `/commit v` but also runs `git push` after committing.
 
-Same push rule as `/commit push` above.
+Same push rule as `/commit push` above, including the **Pre-push transcript check**.
 
 After a successful push, run the **Build watch** (see `skills/commit/build-watch.md`).
 
@@ -121,7 +132,7 @@ Order:
 2. Bump the patch version (same procedure as `/commit v`).
 3. Commit ONLY the version files, by pathspec: `git commit -m "<message>" -- <version-file> ...`.
 4. Message: `VERSION: <new-version>` — where `<new-version>` is the full version string after bumping. If a build number field (e.g. `"build"` in `package.json` or `tauri.conf.json`) exists alongside the version, append it: `VERSION: 1.0.1+21`.
-5. Run `git push`.
+5. Run the **Pre-push transcript check** above, then `git push`.
 
 Do not push if either commit step failed. Otherwise same push rule as `/commit push` above - a clean-tree branch that's still ahead of its upstream still gets pushed, it just won't happen here since the version commit always produces new changes.
 
