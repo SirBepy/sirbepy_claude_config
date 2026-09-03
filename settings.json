@@ -411,6 +411,16 @@
             "statusMessage": "Checking for em dash before send"
           }
         ]
+      },
+      {
+        "matcher": "^(AskUserQuestion|([A-Za-z0-9_]+__)?ask_user_question)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\croatian-question-guard.py\"",
+            "statusMessage": "Checking question card for Croatian text"
+          }
+        ]
       }
     ],
     "SessionEnd": [
