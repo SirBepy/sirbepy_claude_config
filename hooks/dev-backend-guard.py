@@ -115,10 +115,17 @@ def tokenize(segment: str) -> list[str]:
 
 
 def dev_marker_in(text: str) -> str | None:
+    """Substring match, but the char right after the marker can't be
+    alnum - so '.env.dev' matches '.env.dev.json' but not '.env.device'.
+    """
     low = text.lower()
     for marker in DEV_MARKERS:
-        if marker in low:
-            return marker
+        idx = low.find(marker)
+        while idx != -1:
+            end = idx + len(marker)
+            if end >= len(low) or not low[end].isalnum():
+                return marker
+            idx = low.find(marker, idx + 1)
     return None
 
 

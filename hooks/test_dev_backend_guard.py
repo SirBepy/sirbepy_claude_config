@@ -68,6 +68,17 @@ CASES = [
         True,
         "cd then flutter run against dev",
     ),
+    # .env.dev is a proper prefix of .env.device, a legit LAN test env.
+    (
+        "fvm flutter build web --release --dart-define-from-file=.env.device --output c:/tmp/lan6",
+        False,
+        "build against .env.device is not a .env.dev substring match",
+    ),
+    (
+        "fvm flutter run -d chrome --dart-define-from-file=.env.dev.json",
+        True,
+        ".env.dev.json still trips the .env.dev marker",
+    ),
 ]
 
 
