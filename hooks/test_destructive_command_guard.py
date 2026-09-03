@@ -8,6 +8,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import _testlib
@@ -146,6 +147,23 @@ MIDDLE_CASES = [
     ("git clean --dry-run -d", False, "git clean long-form dry run"),
 ]
 
+# (command, expect_hit, label) - the pure pattern, independent of the
+# is_main_checkout/peer-count gate main() applies before asking or denying.
+SHARED_CASES = [
+    ("git reset --soft HEAD~1", True, "reset --soft against a positional ref"),
+    ("git reset HEAD~1", True, "bare reset against a positional ref"),
+    ("git rebase -i HEAD~3", True, "interactive rebase against a positional ref"),
+    ("git checkout HEAD~2", True, "checkout against a positional ref"),
+    ("git checkout HEAD^ -- file.txt", True, "checkout HEAD^ of a path"),
+    ("git reset --soft @~1", True, "reset against @~n"),
+    ("git branch -f main HEAD~1", True, "branch -f against a positional ref"),
+    ("git reset --hard a1b2c3d", False, "reset against an explicit sha stays clean"),
+    ("git checkout main", False, "checkout a branch name stays clean"),
+    ("git branch feature", False, "branch with no -f stays clean"),
+    ("git rebase origin/main", False, "rebase onto a remote branch stays clean"),
+    ("git log HEAD~1", False, "git log is not a destructive verb"),
+]
+
 # Measured false positives (candidate_patterns.py / measure.py) that must
 # stay clean under both tiers.
 FALSE_POSITIVE_CASES = [
@@ -171,8 +189,16 @@ def check_middle(case) -> bool:
     return ok
 
 
+def check_shared(case) -> bool:
+    cmd, expect_hit, label = case
+    got_hit = guard.check_shared(cmd) is not None
+    ok = got_hit == expect_hit
+    print(f"[{'PASS' if ok else 'FAIL'}] shared: {label}: {cmd!r} -> {'HIT' if got_hit else 'clean'}")
+    return ok
+
+
 def check_false_positive(cmd) -> bool:
-    ok = guard.check_core(cmd) is None and guard.check_middle(cmd) is None
+    ok = guard.check_core(cmd) is None and guard.check_middle(cmd) is None and guard.check_shared(cmd) is None
     print(f"[{'PASS' if ok else 'FAIL'}] false-positive stays clean: {cmd!r}")
     return ok
 
@@ -272,10 +298,73 @@ def check_bypass_env_var() -> bool:
     return ok
 
 
+def check_is_main_checkout_real_worktree() -> bool:
+    """Real git wiring (todo 797), not mocked: a scratch repo's main
+    checkout is True, a linked worktree off it is False.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        main_repo = Path(tmp) / "main"
+        subprocess.run(["git", "init", "-q", str(main_repo)], check=True)
+        subprocess.run(["git", "-C", str(main_repo), "commit", "-q", "--allow-empty", "-m", "init"], check=True)
+        wt = Path(tmp) / "wt"
+        subprocess.run(["git", "-C", str(main_repo), "worktree", "add", "-q", str(wt), "-b", "wtbranch"], check=True)
+        main_ok = guard.is_main_checkout(str(main_repo)) is True
+        wt_ok = guard.is_main_checkout(str(wt)) is False
+    ok = main_ok and wt_ok
+    print(f"[{'PASS' if ok else 'FAIL'}] is_main_checkout: main={main_ok} worktree-exempt={wt_ok}")
+    return ok
+
+
+def check_fetch_peer_count_unknown_session() -> bool:
+    """Fails closed to 0 for a session the daemon has never seen - covers
+    both an unreachable daemon and a live one answering ok:false.
+    """
+    ok = guard.fetch_peer_count("bogus-test-session-id-todo797") == 0
+    print(f"[{'PASS' if ok else 'FAIL'}] fetch_peer_count: unknown session reports 0 peers")
+    return ok
+
+
+def check_shared_gate_composition() -> bool:
+    """match_shared_checkout_hit(): all three of pattern-hit, main-checkout,
+    and live-peer-count must hold, matching the todo's three acceptance
+    lines (warn when shared, worktree exempt, solo session stays quiet).
+    """
+    real_is_main = guard.is_main_checkout
+    real_peer_count = guard.fetch_peer_count
+    try:
+        guard.is_main_checkout = lambda cwd: True
+        guard.fetch_peer_count = lambda session_id: 1
+        shared = guard.match_shared_checkout_hit("git reset --soft HEAD~1", "C:\\repo", "s1") is not None
+
+        guard.is_main_checkout = lambda cwd: False
+        worktree_exempt = guard.match_shared_checkout_hit("git reset --soft HEAD~1", "C:\\repo\\wt", "s1") is None
+
+        guard.is_main_checkout = lambda cwd: True
+        guard.fetch_peer_count = lambda session_id: 0
+        solo_quiet = guard.match_shared_checkout_hit("git reset --soft HEAD~1", "C:\\repo", "s1") is None
+    finally:
+        guard.is_main_checkout = real_is_main
+        guard.fetch_peer_count = real_peer_count
+    ok = shared and worktree_exempt and solo_quiet
+    print(f"[{'PASS' if ok else 'FAIL'}] shared gate: shared={shared} worktree_exempt={worktree_exempt} solo_quiet={solo_quiet}")
+    return ok
+
+
+def check_shared_prompt_free_no_session_id() -> bool:
+    """E2E, real process: a positional-ref reset with no session_id in the
+    payload (the common case) never calls the daemon and stays prompt-free.
+    """
+    proc = run_guard("git reset --soft HEAD~1")
+    ok = proc.returncode == 0 and not proc.stdout.strip()
+    print(f"[{'PASS' if ok else 'FAIL'}] shared tier prompt-free with no session_id -> exit={proc.returncode} stdout={proc.stdout.strip()!r}")
+    return ok
+
+
 def run() -> int:
     fails = (
         _testlib.run_cases(CORE_CASES, check_core)
         + _testlib.run_cases(MIDDLE_CASES, check_middle)
+        + _testlib.run_cases(SHARED_CASES, check_shared)
         + [cmd for cmd in FALSE_POSITIVE_CASES if not check_false_positive(cmd)]
     )
     for check in (
@@ -286,6 +375,10 @@ def run() -> int:
         check_unrecognised_profile,
         check_fails_open_on_garbage,
         check_bypass_env_var,
+        check_is_main_checkout_real_worktree,
+        check_fetch_peer_count_unknown_session,
+        check_shared_gate_composition,
+        check_shared_prompt_free_no_session_id,
     ):
         if not check():
             fails.append(check.__name__)

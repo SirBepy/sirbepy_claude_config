@@ -49,6 +49,16 @@ Deliberately NOT covered, each already decided elsewhere:
 - bare diskpart alone is never denied, only asked/gated per the dial above:
   its one measured use was a legitimate vhdx compaction.
 
+SHARED tier (todo 797, ask/deny like MIDDLE, but gated on an extra signal):
+git reset/rebase/checkout/branch -f against a positional ref (HEAD~n, HEAD^,
+@~n) in the repo's MAIN checkout, while the Conductor daemon reports live
+peers for this session. HEAD~n is relative, so its meaning changes the
+instant a peer commits - the near-miss was a `reset --soft HEAD~1` that
+would have resolved to a peer's commit had it landed a second later. A
+worktree is exempt outright (its own HEAD/index can't collide this way);
+a genuinely solo session stays prompt-free even on a hit, since peer count
+comes back 0.
+
 rm/mkfs/dd/chmod are POSIX-only syntax; Remove-Item/Clear-Disk/Format-Volume/
 diskpart are PowerShell-only; the SQL, publish, and git rules apply to
 whichever shell carries them. Fails open on any unexpected exception.
@@ -62,9 +72,13 @@ string before any shell parses it, so the hook process never gets that var.
 Verified by a nested `claude -p` run on 2026-08-21.
 """
 
+import json
 import os
 import re
+import subprocess
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 _HOOKS_DIR = Path(__file__).resolve().parent
@@ -240,6 +254,12 @@ GIT_PUSH_ANCHOR_RE = re.compile(r"^git\s+(?:-[^\s]+\s+)*push\b")
 GIT_RESET_HARD_RE = re.compile(r"^git\s+(?:-[^\s]+\s+)*reset\b[^\n]*--hard\b")
 GIT_CLEAN_ANCHOR_RE = re.compile(r"^git\s+(?:-[^\s]+\s+)*clean\b")
 PUBLISH_ANCHOR_RE = re.compile(r"^((npm|yarn|pnpm|bun)\s+publish|cargo\s+publish|gem\s+push|twine\s+upload|wally\s+publish)\b")
+
+# todo 797: reset/rebase/checkout act on HEAD directly, so any positional ref
+# is in scope; branch only moves an EXISTING branch (destructive) under -f.
+GIT_RESET_REBASE_CHECKOUT_RE = re.compile(r"^git\s+(?:-[^\s]+\s+)*(reset|rebase|checkout)\b", re.IGNORECASE)
+GIT_BRANCH_ANCHOR_RE = re.compile(r"^git\s+(?:-[^\s]+\s+)*branch\b", re.IGNORECASE)
+POSITIONAL_REF_RE = re.compile(r"(?:^|[\s=])(?:HEAD|@)(?:~\d*|\^+\d*)")
 
 FORCE_LEASE_RE = re.compile(r"--force-with-lease\b")
 FORCE_LONG_RE = re.compile(r"--force\b")
@@ -417,6 +437,101 @@ def match_diskpart(command: str):
     return None
 
 
+def match_git_positional_ref(command: str):
+    """Pure pattern hit, independent of shared-checkout status - the SHARED
+    tier's caller (main()) is what gates this on is_main_checkout()/peer
+    count, so this alone is never enough to ask or deny.
+    """
+    for seg in verb_segments(command):
+        if GIT_RESET_REBASE_CHECKOUT_RE.match(seg) and POSITIONAL_REF_RE.search(seg):
+            return ("a positional ref (HEAD~n/HEAD^/@~n) is relative and can resolve to a peer "
+                    "session's commit the instant they commit here; use the explicit sha from "
+                    "`git log -1 --format=%H` instead")
+        m = GIT_BRANCH_ANCHOR_RE.match(seg)
+        if m:
+            rest = seg[m.end():]
+            if (FORCE_LONG_RE.search(rest) or FORCE_SHORT_BUNDLE_RE.search(rest)) and POSITIONAL_REF_RE.search(rest):
+                return ("git branch -f against a positional ref (HEAD~n/HEAD^/@~n) can move the "
+                        "branch onto a peer session's commit here; use the explicit sha from "
+                        "`git log -1 --format=%H` instead")
+    return None
+
+
+SHARED_CHECKS = (
+    match_git_positional_ref,
+)
+
+
+def check_shared(command: str):
+    for check in SHARED_CHECKS:
+        result = check(command)
+        if result:
+            return result
+    return None
+
+
+def is_main_checkout(cwd: str) -> bool:
+    """True only for a repo's primary worktree. A linked worktree's --git-dir
+    sits under <common-dir>/worktrees/<name>, so it never equals --git-common-
+    dir the way the main checkout's does; any git failure returns False.
+    """
+    try:
+        common = subprocess.run(["git", "-C", cwd, "rev-parse", "--git-common-dir"],
+                                 capture_output=True, text=True, timeout=10)
+        gitdir = subprocess.run(["git", "-C", cwd, "rev-parse", "--git-dir"],
+                                 capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    if common.returncode != 0 or gitdir.returncode != 0:
+        return False
+    base = Path(cwd)
+    try:
+        return (base / common.stdout.strip()).resolve() == (base / gitdir.stdout.strip()).resolve()
+    except OSError:
+        return False
+
+
+def fetch_peer_count(session_id: str) -> int:
+    """Live peers sharing this session's project, via the same Conductor
+    daemon endpoint list-peers-pre-edit-guard.py already proved reachable
+    (todo 458). Any failure reports 0, matching this file's fail-open
+    convention - a false negative here costs one warning, never a block.
+    """
+    if not session_id:
+        return 0
+    body = json.dumps({"session_id": session_id}).encode("utf-8")
+    req = urllib.request.Request(
+        "http://127.0.0.1:27182/channel/list-peers",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=1.5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, json.JSONDecodeError, ValueError):
+        return 0
+    if data.get("ok") is False:
+        return 0
+    peers = data.get("peers")
+    return len(peers) if isinstance(peers, list) else 0
+
+
+def match_shared_checkout_hit(command: str, cwd: str, session_id: str):
+    """Compound SHARED-tier signal: a positional-ref pattern hit, in the
+    MAIN checkout, with at least one live peer. Any one absent means no hit,
+    which is what keeps a worktree or a solo session prompt-free (todo 797).
+    """
+    hit = check_shared(command)
+    if not hit:
+        return None
+    if not is_main_checkout(cwd):
+        return None
+    if fetch_peer_count(session_id) <= 0:
+        return None
+    return hit
+
+
 CORE_CHECKS = (
     match_rm_rf,
     match_remove_item,
@@ -490,6 +605,14 @@ def main() -> None:
             deny(middle_hit)
         elif profile == "standard":
             _lib_ask(f"[destructive-command-guard] {middle_hit}.{OVERRIDE_HINT}")
+
+    shared_hit = match_shared_checkout_hit(command, payload.get("cwd") or "", payload.get("session_id") or "")
+    if shared_hit:
+        profile = resolve_profile()
+        if profile == "strict":
+            deny(shared_hit)
+        elif profile == "standard":
+            _lib_ask(f"[destructive-command-guard] {shared_hit}.{OVERRIDE_HINT}")
 
     sys.exit(0)
 
