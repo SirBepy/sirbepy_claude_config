@@ -1,4 +1,4 @@
-"""Self-test for cargo-test-pipe-guard.py (todo 780).
+"""Self-test for cargo-test-pipe-guard.py (todo 780, extended by todo 877).
 
 Run directly: python hooks/test_cargo_test_pipe_guard.py
 Exits 0 on all-pass, 1 on any failure, printing a PASS/FAIL line per case.
@@ -16,7 +16,11 @@ guard = _testlib.load_module(
 # (command, expect_block, label). expect_block=False means it must PASS through.
 CASES = [
     ("cargo test --lib 2>&1 | tail -25", True, "acceptance: cargo test | tail is blocked"),
-    ("cargo build 2>&1 | tail -5", False, "acceptance: cargo build | tail is not blocked"),
+    (
+        "cargo build --manifest-path src-tauri/Cargo.toml 2>&1 | tail -5",
+        True,
+        "2026-09-02 repro: cargo build piped into tail",
+    ),
     (
         "cargo test --test daemon_user_todos_e2e --manifest-path Cargo.toml 2>&1 | tail -40",
         True,
@@ -30,8 +34,12 @@ CASES = [
     ("cargo test | head -20", True, "head is also a blocked filter"),
     ("cargo test 2>&1 | grep FAILED", True, "grep is also a blocked filter"),
     ("cargo test --lib 2>&1 | Select-Object -First 20", True, "PowerShell Select-Object is also blocked"),
-    ("cargo check | tail", False, "cargo check is out of scope (todo 780 step 2)"),
-    ("cargo clippy | tail", False, "cargo clippy is out of scope (todo 780 step 2)"),
+    ("cargo check | tail", True, "todo 877: cargo check | tail is now blocked"),
+    ("cargo clippy | tail", True, "todo 877: cargo clippy | tail is now blocked"),
+    ("cargo check --lib 2>&1 | head -20", True, "cargo check with flags piped into head"),
+    ("cargo clippy --all-targets 2>&1 | grep warning", True, "cargo clippy piped into grep"),
+    ("cargo build", False, "bare cargo build with no pipe at all"),
+    ("cargo check", False, "bare cargo check with no pipe at all"),
     ("tail -20 cargo-output.log", False, "carve-out: reading an already-finished output file"),
     (
         "cargo test --lib 2>&1 > cargo-output.log; tail -20 cargo-output.log",

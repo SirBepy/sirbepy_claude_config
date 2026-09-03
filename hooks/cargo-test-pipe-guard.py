@@ -1,29 +1,33 @@
-"""PreToolUse hook: block piping `cargo test` output into tail/head/grep/Select-Object.
+"""PreToolUse hook: block piping cargo test/build/check/clippy output into
+tail/head/grep/Select-Object.
 
-Two incidents, same shape, roughly a week apart:
+Three incidents, same shape:
 
 - 2026-08-19 (`claude_usage_in_taskbar` todo 692): `cargo test --test
-  daemon_user_todos_e2e ... 2>&1 | tail -40` produced 0 bytes for 2h17m.
+  daemon_user_todos_e2e ... 2>&1 | tail -40` produced 0 bytes for 2h17m. A
+  spawned test child inherits the pipe's write end, so the filter never sees
+  EOF even after cargo itself is done.
 - 2026-08-25 (a `/mega-todos` verify barrier): `cargo test --manifest-path
   src-tauri/Cargo.toml --lib 2>&1 | tail -25` hung ~23 minutes, and killing it
   invalidated the build cache, so the retry rebuilt the whole dep tree.
-
-Root cause in both: a test spawns a child process that inherits the pipe's
-write end, so the filter command never sees EOF even after cargo itself is
-done. `cargo build`/`cargo check`/`cargo clippy` don't spawn that kind of
-child and are left alone (todo 780 step 2) - piping those is fine and common.
+- 2026-09-02 (`claude_usage_in_taskbar`, todo 877): `cargo build
+  --manifest-path src-tauri/Cargo.toml 2>&1 | tail -5` gave zero output for
+  ~30 minutes. `build`/`check`/`clippy` don't spawn a child that blocks EOF,
+  but the filter still buffers everything until cargo exits, so a live build
+  and a hung one look identical the whole time - the same "never buffer
+  streaming output" break, different mechanism.
 
 Two patterns must stay allowed or this guard gets switched off:
 - reading an ALREADY-FINISHED output file (`tail -20 <path>`) is the fix this
-  guard steers people toward, so a bare tail/head/grep with no `cargo test`
+  guard steers people toward, so a bare tail/head/grep with no cargo command
   feeding it through a pipe is never touched.
 - `grep --line-buffered` flushes per line, so it never has the swallowing
-  problem and is carved out even when it follows `cargo test`.
+  problem and is carved out even when it follows a matched cargo command.
 
 Detection is regex-based on the raw command string, split on top-level
 `&&`/`||`/`;`/newline into statements, then each statement on `|` into
 pipeline segments in order - only a filter segment that comes AFTER a
-`cargo test` segment in the same pipeline counts. Fails open on error.
+matched cargo segment in the same pipeline counts. Fails open on error.
 """
 
 import re
@@ -40,18 +44,17 @@ except Exception as e:
     sys.stderr.write(f"[cargo-test-pipe-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
 
-# cargo subcommands that spawn a child inheriting the pipe. Todo 877 (a sibling
-# todo, not this one) wants "build"/"check"/"clippy" appended here - keeping
-# this a list, not an inline regex literal, makes that a one-line append later
-# instead of a rewrite. This todo's own step 2 says stay at "test" only.
-CARGO_SUBCOMMANDS = ("test",)
+# cargo subcommands long/hang-prone enough that a buffering filter hides a
+# hung run from a live one (todo 877). Kept as a list, not an inline regex
+# literal, so appending another subcommand later is a one-line change.
+CARGO_SUBCOMMANDS = ("test", "build", "check", "clippy")
 
 # Commands that block waiting for EOF on a still-open pipe, kept as its own
 # named list for the same reason as CARGO_SUBCOMMANDS above.
 PIPE_FILTERS = ("tail", "head", "grep", "Select-Object")
 
 CARGO_SUBCOMMAND_RE = re.compile(
-    r"\bcargo(?:\.exe)?\b(?:\s+\+\S+)?\s+(?:" + "|".join(CARGO_SUBCOMMANDS) + r")\b",
+    r"\bcargo(?:\.exe)?\b(?:\s+\+\S+)?\s+(?P<subcmd>" + "|".join(CARGO_SUBCOMMANDS) + r")\b",
     re.IGNORECASE,
 )
 PIPE_FILTER_RE = re.compile(r"\b(" + "|".join(PIPE_FILTERS) + r")\b", re.IGNORECASE)
@@ -63,33 +66,37 @@ LINE_BUFFERED_RE = re.compile(r"--line-buffered\b", re.IGNORECASE)
 STATEMENT_SPLIT_RE = re.compile(r"&&|\|\||;|\n")
 
 
-def deny(filter_name: str) -> None:
+def deny(filter_name: str, subcommand: str) -> None:
     _lib_deny(
-        f"[cargo-test-pipe-guard] Blocked: piping `cargo test` output through `{filter_name}` "
-        "can hang forever - a spawned test child inherits the pipe's write end, so the filter "
-        "never sees EOF even after cargo itself finishes (2026-08-19: 2h17m silent hang; "
-        "2026-08-25: ~23min hang that also invalidated the build cache on retry).",
+        f"[cargo-test-pipe-guard] Blocked: piping `cargo {subcommand}` output through "
+        f"`{filter_name}` hides a hang - the filter buffers everything until it sees EOF, and a "
+        "spawned test child (for `test`) or a merely long run (for build/check/clippy) can make "
+        "that take forever with zero visible output (2026-08-19: 2h17m silent hang; 2026-08-25: "
+        "~23min hang that also invalidated the build cache on retry; 2026-09-02: cargo build | "
+        "tail gave 0 bytes for ~30min).",
         suffix=(
-            " Run cargo test bare with run_in_background: true, then once it finishes run "
-            '`grep -E "^test result" <output-file>` against the finished file. Reading an '
-            "already-finished output file this way is fine; `grep --line-buffered` is also fine "
-            "since it flushes per line instead of swallowing output."
+            f" Run cargo {subcommand} bare with run_in_background: true, then once it finishes "
+            f"grep the finished output file (`{'^test result' if subcommand == 'test' else 'error|warning'}` "
+            "is a useful pattern). Reading an already-finished output file this way is fine; "
+            "`grep --line-buffered` is also fine since it flushes per line instead of swallowing output."
         ),
     )
 
 
-def find_violation(command: str, cwd: str | None = None) -> str | None:
+def find_violation(command: str, cwd: str | None = None) -> tuple[str, str] | None:
     # `cwd` is accepted but unused: this guard is deliberately global (todo 780
     # step 4's own lean), kept as a parameter so a future repo-scoped check
     # only needs to read it here, not re-plumb the call site.
     for statement in STATEMENT_SPLIT_RE.split(command):
         segments = statement.split("|")
         cargo_idx = None
+        subcommand = None
         for i, seg in enumerate(segments):
-            if cargo_idx is None and CARGO_SUBCOMMAND_RE.search(seg):
-                cargo_idx = i
-                continue
             if cargo_idx is None:
+                m = CARGO_SUBCOMMAND_RE.search(seg)
+                if m:
+                    cargo_idx = i
+                    subcommand = m.group("subcmd").lower()
                 continue
             m = PIPE_FILTER_RE.search(seg)
             if not m:
@@ -97,7 +104,7 @@ def find_violation(command: str, cwd: str | None = None) -> str | None:
             filter_name = m.group(1)
             if filter_name.lower() == "grep" and LINE_BUFFERED_RE.search(seg):
                 continue
-            return filter_name
+            return filter_name, subcommand
     return None
 
 
@@ -107,9 +114,9 @@ def main() -> None:
     if not command.strip():
         sys.exit(0)
 
-    filter_name = find_violation(command, payload.get("cwd"))
-    if filter_name:
-        deny(filter_name)
+    violation = find_violation(command, payload.get("cwd"))
+    if violation:
+        deny(*violation)
     sys.exit(0)
 
 
