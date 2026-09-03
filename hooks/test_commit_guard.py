@@ -197,9 +197,10 @@ with tempfile.TemporaryDirectory() as tmp:
     subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=repo, check=True)
 
     # Baseline for the verbatim-move case below: HEAD already holds this exact
-    # 5-line comment block under a different path.
+    # 5-line comment block under a different path. Text deliberately distinct from
+    # noisy.py's below - a coincidental match would silently exempt genuine new noise too.
     (repo / "source_move.py").write_text(
-        "# c1\n# c2\n# c3\n# c4\n# c5\nprint('keep')\n", encoding="utf-8"
+        "# m1\n# m2\n# m3\n# m4\n# m5\nprint('keep')\n", encoding="utf-8"
     )
     subprocess.run(["git", "add", "source_move.py"], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-q", "-m", "add source_move"], cwd=repo, check=True)
@@ -215,7 +216,7 @@ with tempfile.TemporaryDirectory() as tmp:
     # the gate must not re-flag lines already present at HEAD under another path (todo 899).
     (repo / "source_move.py").write_text("print('keep')\n", encoding="utf-8")
     (repo / "moved.py").write_text(
-        "# c1\n# c2\n# c3\n# c4\n# c5\nprint('moved')\n", encoding="utf-8"
+        "# m1\n# m2\n# m3\n# m4\n# m5\nprint('moved')\n", encoding="utf-8"
     )
 
     guard.MARKER_DIR = repo
@@ -262,6 +263,15 @@ with tempfile.TemporaryDirectory() as tmp:
         cwd=str(repo),
     )
     if not _testlib.report(got == 0, f"{label} (got exit={got})"):
+        fails.append(label)
+
+    label = "a moved block in one file does not exempt genuinely new noise in another"
+    got = run_main(
+        "git commit -m 'x' -- source_move.py moved.py noisy.py",
+        session_id="sess-gate",
+        cwd=str(repo),
+    )
+    if not _testlib.report(got == 2, f"{label} (got exit={got})"):
         fails.append(label)
 
 sys.exit(_testlib.summarize(fails, style="count"))
