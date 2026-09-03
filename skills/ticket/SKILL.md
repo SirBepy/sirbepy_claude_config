@@ -57,29 +57,38 @@ product. Default to one ticket per shared root cause, not one per symptom.
 Past incident 2026-07-21: a ticket drafted by paraphrasing design-ticket spec text instead of
 reading `zng-admin`'s actual biller-group screens landed wrong until the dev pointed at real code.
 
-### 2. Front-load the questions
+### 2. State the claim
+
+Name the concrete file or behaviour the ticket asserts is missing or broken, as a literal string
+that will appear in a `grep` - a function, component, selector, or error text, never a paraphrase.
+That string is step 3's input, and without it step 3 cannot really run.
+
+### 3. Ground check - MANDATORY, both platforms, before the creation questions
+
+Run `~/.claude/refs/outbound-ground-check.md` in full, before asking anything in step 4. Asking
+title/epic/priority/estimate first is what turns a reuse into a filed duplicate - the dev has
+already answered a card that should have been "reuse this instead?". It is platform-agnostic by
+design: queries 1 (merged/open PRs) and 3 (the claim at the tracked branch) are identical
+everywhere, and it carries the per-tracker form of query 2 for both Shortcut and Linear.
+
+- **Clean or soft:** write the marker exactly as that file specifies (`New-Item`, never
+  `Set-Content`), immediately before the create call.
+- **Reuse candidate:** do not write the marker and do not open step 4 yet. Put the hit to the dev -
+  id, title, type, state, and a one-line reason the draft is or isn't the same unit of work. A
+  `UX:`/design-typed hit is not automatically a different unit of work from its FE/BE
+  implementation; it is often the reuse target. Only a dev confirmation that the work is genuinely
+  separate opens step 4.
+- **Hard stop:** do not write the marker. Report the hit and stop. `hooks/shortcut-create-guard.py`
+  and `hooks/linear-create-guard.py` block the create without a fresh marker - that is the
+  mechanism working, not a failure.
+
+### 4. Front-load the questions
 
 One `AskUserQuestion`, never open-ended, skipping anything the invocation already answered. What to
 ask is platform-specific (Shortcut needs epic, priority and estimate; Linear needs team and
 priority) - the quirks file lists them.
 
-**State the claim.** Name the concrete file or behaviour the ticket asserts is missing or broken,
-as a literal string that will appear in a `grep` - a function, component, selector, or error text,
-never a paraphrase. That string is step 3's input, and without it step 3 cannot really run.
-
-### 3. Ground check - MANDATORY, both platforms
-
-Run `~/.claude/refs/outbound-ground-check.md` in full. It is platform-agnostic by design: queries 1
-(merged/open PRs) and 3 (the claim at the tracked branch) are identical everywhere, and it carries
-the per-tracker form of query 2 for both Shortcut and Linear.
-
-- **Clean or soft:** write the marker exactly as that file specifies (`New-Item`, never
-  `Set-Content`), immediately before the create call.
-- **Hard stop:** do not write the marker. Report the hit and stop. `hooks/shortcut-create-guard.py`
-  and `hooks/linear-create-guard.py` block the create without a fresh marker - that is the
-  mechanism working, not a failure.
-
-### 4. Description - smallest shape that fits
+### 5. Description - smallest shape that fits
 
 The dev consistently finds Claude-drafted tickets too long. When in doubt, write less.
 
@@ -92,7 +101,7 @@ The dev consistently finds Claude-drafted tickets too long. When in doubt, write
 Relationships use the tracker's native link primitive, never a `# RELATED` prose block. Prefer
 smaller scopes as well as smaller descriptions: two independently shippable chunks are two tickets.
 
-### 5. Create, log, report
+### 6. Create, log, report
 
 One API call per the quirks file. Capture the returned id and URL, append the log entry the quirks
 file specifies, then tell the dev the id, the URL, and which defaults were applied.
@@ -169,7 +178,7 @@ move it backward - flag the mismatch and let the dev decide. Finish by asking wh
 
 - Never files into a tracker it could not resolve from the remote.
 - Never posts a comment without explicit approval.
-- Never writes the ground-check marker on a hard stop.
+- Never writes the ground-check marker on a hard stop or an unresolved reuse candidate.
 - Never invents an id, UUID, or custom-field value. Unknown ones get fetched and pinned in the
   quirks file.
 - Never generates branch names. The dev handles git.

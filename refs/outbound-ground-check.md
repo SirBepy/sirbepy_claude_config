@@ -104,6 +104,14 @@ On a hard stop: **do not write the marker.** The write is blocked without it, wh
 mechanism, not a failure. Put the hit in front of the dev - id, state, URL, or PR number and merge
 date - and stop. Filing anyway requires the dev to say so.
 
+**REUSE CANDIDATE** on a query-2 hit that is **open** and whose scope overlaps the draft's, not
+merely the same feature area. Do not write the marker and do not proceed to the creation questions.
+Put the hit to the dev first: story id, title, type, state, and a one-line reason the draft is or
+is not the same unit of work. Creation proceeds only if the dev says it is genuinely separate.
+Hit live 2026-09-01: sc-54902, an open `UX:` chore, read as "soft" because it was design-typed and
+the draft was FE - the dev's answer was to reuse sc-54902 outright. A design-typed hit is not
+automatically a different unit of work from its implementation.
+
 **SOFT** on a fuzzy keyword-only match with no state or file overlap: name it inline in the draft
 and proceed. Soft signals never block.
 
