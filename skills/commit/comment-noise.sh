@@ -37,10 +37,9 @@ END {
     block = (max[k]>=5)
     if (!ratio && !block) continue
     line = sprintf("%s %d/%d (%d%%) longest %d", k, c[k], add[k], c[k]*100/add[k], max[k])
-    # cut N solves c <= (add - c_now)/3, the post-trim ratio with c also shrinking the denominator.
+    # cut N solves 4*(c-N) < add-N so the post-trim ratio lands strictly below 25%, not merely at it.
     if (ratio) {
-      cut = c[k] - int((add[k]-c[k])/3)
-      if (cut < 0) cut = 0
+      cut = int((4*c[k]-add[k])/3) + 1
       line = line sprintf(" -> cut %d comment lines", cut)
     }
     if (block) {
