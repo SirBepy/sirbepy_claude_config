@@ -440,11 +440,19 @@ nothing. Recover reports from it before reconstructing from the tree alone.
 Archival is **main-thread only**, because `complete-todo.ps1` prunes the shared `PLAN.md`:
 
 1. At each barrier, for every todo that passed: decide its ending per `close/ai-todos-format.md`'s
-   "Two endings" first, then run `~/.claude/skills/close/complete-todo.ps1 -Id <id> -Note "<what
-   happened>"` for the Completed ones only. One call per todo, sequential. A todo that advanced but
-   left `## Acceptance` items unmet is not archived, however clean its builder's report read.
-2. Commit the archival as one `CHORE: archive completed todos` commit per barrier, via `/commit`
-   (the main thread CAN invoke skills, so it uses the real one).
+   "Two endings" first. For the Completed ones, call
+   `~/.claude/skills/mega-todos/archive-batch.ps1 -Items "<id>|<what happened>", ...` once for the
+   whole batch instead of hand-rolling the `complete-todo.ps1` loop and pathspec - it resolves each
+   id against the live backlog only, never a `done/` glob (the exact shape that broke twice, see
+   `done/855-mega-todos-step-e-archival-is-hand-rolled-every-barrier.md`), and returns `.Pathspec`
+   naming both halves of every move plus `PLAN.md`, and `.Failures` for any id it could not resolve
+   to exactly one file. A todo that advanced but left `## Acceptance` items unmet is not archived,
+   however clean its builder's report read; a non-empty `.Failures` is not archived either until
+   re-resolved (retry with the full filename stem as the id to disambiguate a live-backlog
+   collision).
+2. Commit the archival as one `CHORE: archive completed todos` commit per barrier, via `/commit`,
+   passing the helper's `.Pathspec` as the commit pathspec - the main thread CAN invoke skills, so it
+   uses the real one; the helper itself never commits.
 3. Diff the set of ids actually archived or parked against the lane map from Step C, per
    `refs/delegation-doctrine.md`'s "Fan-out reconciliation" - an id in neither set is a silent drop,
    re-dispatch or park it, never assume done.
