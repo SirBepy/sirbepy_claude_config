@@ -35,6 +35,20 @@ CORE_CASES = [
     ('Remove-Item -Recurse -Force "C:\\"', True, "Remove-Item quoted drive root (round-2 coverage hole)"),
     ("Remove-Item -Recurse -Force '~'", True, "Remove-Item quoted home"),
     ("Remove-Item -Recurse -Force .\\build", False, "Remove-Item scoped path"),
+    (
+        'Remove-Item -Recurse -Force -Path "C:\\Users\\tecno\\.claude\\.claude\\todos\\.claims\\862.claim",'
+        '"C:\\Users\\tecno\\.claude\\.claude\\todos\\.claims\\849.claim" -ErrorAction SilentlyContinue '
+        '-Confirm:$false # archived /mega-todos work',
+        False,
+        "todo 869 repro: unrelated /mega-todos prose in the same segment as a scoped -Path removal",
+    ),
+    (
+        "Remove-Item -Recurse -Force -Path $claim1,$claim2 -ErrorAction Stop # backup lives on drive D: too",
+        False,
+        "todo 869: drive-root token in a comment, not bound to -Path, stays clean",
+    ),
+    ("Remove-Item -Recurse -Force -Path C:\\", True, "Remove-Item drive root via -Path stays blocked"),
+    ("Remove-Item -Recurse -Force -LiteralPath ~", True, "Remove-Item home via -LiteralPath stays blocked"),
     ("echo hi > /dev/sda", True, "raw device write"),
     ("cmd 2>/dev/null", False, "fd redirect to devnull"),
     ("cmd &>/dev/null", False, "fd redirect to devnull, bash form"),
