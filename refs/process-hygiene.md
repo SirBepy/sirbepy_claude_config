@@ -63,6 +63,14 @@ for its whole lifetime, readable by anything that can enumerate processes. Prefe
 environment variable instead (2026-08-14, `revaire-mobile`: a live API key sat exposed this way in
 an orphaned `flutter run`).
 
+## Red-checking a new test (prove it fails against pre-fix code)
+
+Never `git stash` a fix to prove its test is non-vacuous, a shared checkout may hold a peer
+session's own uncommitted work in the same tree. Use `skills/close/red-check.ps1 -FixPaths
+<paths> -TestCommand "<cmd>"` instead: it checks out HEAD into a detached worktree (the same
+trick `/commit` step 6 uses for its baseline comparison), overlays every other dirty file
+(the new test included) on top, and runs the test there. The live tree is only ever read.
+
 ## Subagent commit handoff (READY_TO_COMMIT marker)
 
 Subagents cannot invoke skills, so they must NEVER commit (the global rule covers the verbatim "stage only" dispatch sentence). For **background** subagents specifically: have them write a short `READY_TO_COMMIT.md` marker (or similar report-back doc) listing what they staged, so when the completion notification arrives the main agent knows there is staged work waiting and can run `/commit` against it.
