@@ -47,6 +47,7 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 - A subagent is required for research on anything load-bearing or crypto/network.
 - Otherwise prefer one; a single obvious package can be an inline web search.
 - Asking gate: personal projects (those importing `full-auto.md`) auto-add once the check passes; otherwise ask before installing. If the check is inconclusive, finds no patched version, or the package looks risky - stop and ask regardless.
+- Never clone a third-party `.claude` tree into cwd/an ancestor (both scanned); neutralize first via `supply-chain-audit`.
 
 ## Process Hygiene
 
