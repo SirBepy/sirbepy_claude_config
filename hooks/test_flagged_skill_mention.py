@@ -69,8 +69,28 @@ def check(case) -> bool:
     return ok
 
 
+def check_wording() -> bool:
+    """todo 491: injected text must offer judgement, not suppress it - the
+    hook can't tell a relayed mention from a real invocation, so it must
+    not tell the model to treat every mention as one.
+    """
+    proc = subprocess.run(
+        [sys.executable, str(_HOOK_PATH)],
+        input=json.dumps({"prompt": "/close --dont-close"}),
+        capture_output=True,
+        text=True,
+    )
+    ok = (
+        "genuine request to run it" in proc.stdout
+        and "never report it as unavailable" not in proc.stdout
+    )
+    return _testlib.report(ok, "todo 491: injected wording allows judgement, drops the suppression line")
+
+
 def run() -> int:
     fails = _testlib.run_cases(CASES, check)
+    if not check_wording():
+        fails.append("todo 491: injected wording allows judgement, drops the suppression line")
     return _testlib.summarize(fails)
 
 
