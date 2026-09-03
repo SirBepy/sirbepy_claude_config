@@ -296,6 +296,11 @@ EXCEPTION - see the COMMITTING section below.
 COMMITTING IS PART OF YOUR JOB. You cannot invoke /commit as a skill, so follow this procedure
 exactly. Do not improvise around it and do not skip a step because the change looks small.
 
+Commit as soon as this work is gated, before you write your report-back. A builder that commits
+first keeps its work through a session-limit kill or a process exit; one still composing its report
+when the kill lands loses everything even if the diff was finished - confirmed twice, 2026-08-31 and
+2026-09-02.
+
 1. A global PreToolUse hook BLOCKS raw `git commit`. Immediately before EVERY commit, write a fresh
    marker IN ITS OWN TOOL CALL, never chained with the commit (`;`/`&&`) - the hook inspects the
    whole command string BEFORE any of it runs, so a chained marker is always rejected whole (the
@@ -390,6 +395,45 @@ lie the injected block immediately overrides.
 **The `<OFF_LIMITS>` list is load-bearing here in a way it is not in a normal dispatch.** In a
 stage-only dispatch a stray edit is caught at review; here it goes straight into history. Name the
 lane's owned files explicitly and state that everything else in the repo is another agent's.
+
+## Retrying a killed wave
+
+A wave dies two ways: an account session limit killing agents on dispatch, or the harness process
+itself exiting before the workflow returns. Neither is total loss - see `refs/delegation-doctrine.md`'s
+"Liveness and session budget" for how to tell a dispatch is actually dead rather than merely quiet;
+do not re-derive that check here.
+
+Before touching the lane map, triage per todo in this order - re-dispatching onto finished work is
+the expensive mistake:
+
+1. **`git log` first.** A todo whose builder committed is DONE regardless of whether a report ever
+   arrived - drop it from the retry map entirely. When the report is missing, verify its
+   `## Acceptance` block against the committed diff yourself; that verdict is a legitimate substitute
+   for the agent's own.
+2. **Then `git status` on the remaining lanes' owned files.** Anything dirty is that builder's
+   partial work. Never assume it is correct just because it exists.
+3. **Per partial, decide complete-and-verifiable vs genuinely half-done.** Complete-and-verifiable
+   (a coherent, finished diff that simply never got committed) is cheaper to finish from the main
+   thread: run the verify floor and commit it yourself instead of re-dispatching. Genuinely half-done
+   (todo 794, 2026-09-02: one of two scripts converted, the shared helper created, the second script
+   untouched) gets re-dispatched, with the partial state DESCRIBED in the brief and an explicit
+   instruction to judge it rather than trust it - "THERE IS PRE-EXISTING UNCOMMITTED WORK IN YOUR
+   OWNED FILES AND IT IS YOURS TO FINISH" is the phrasing that worked.
+
+**`resumeFromRunId` only fits when the retry prompts are unchanged**, which the triage above usually
+makes false. Resume replays completed agents from cache and re-runs only the failed ones with their
+ORIGINAL prompts - it cannot inject the partial-work description above into a retry prompt, and a
+prompt built for a clean tree is wrong once the tree is not clean. Author a fresh script instead,
+once the lane map has been re-cut against the survivors. (`472` tracks extracting the shared
+preamble/commit block so a fresh script does not have to re-paste it - check whether it landed before
+hand-copying again.)
+
+**If the workflow's own result is gone** (a process exit, or a task notification saying no
+completion record was found), do not fall back to `git log` alone: read
+`<transcriptDir>/journal.jsonl`, printed in the original Workflow tool result. It carries one
+`{"type":"result"}` line per completed agent with that agent's full structured return - commit sha,
+decisions made, unmet acceptance items, out-of-scope findings - even when the harness itself has
+nothing. Recover reports from it before reconstructing from the tree alone.
 
 ## Step E - Archival, verification, wrap-up
 
