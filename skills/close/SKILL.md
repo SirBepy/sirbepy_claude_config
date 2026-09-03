@@ -169,8 +169,13 @@ Run in this order:
 3. **Screenshot summary.** `/close` no longer deletes screenshots - todo 324 moved that to
    `/disk-doctor`, which ages folders out later while Joe decides. If Phase 0 recorded any
    screenshots captured this session, count the files under this session's own
-   `.for_bepy/screenshots/<pid>-<start-ticks>/` subfolder (the Phase 0 id) for Phase 4's counter; 0
-   if none were captured or the subfolder is missing/empty. Nothing is printed or deleted here. If
+   `.for_bepy/screenshots/<pid>-<start-ticks>/` subfolder (the Phase 0 id) for Phase 4's counter. 0
+   if Phase 0's zero-writes flag was true. If that flag is FALSE (this session did capture
+   screenshots) but the Phase-0 id's subfolder is missing or empty, that is an id mismatch (todo
+   459: `-GetId` can still resolve to an id nobody wrote to), not a real zero - flag it as
+   `mismatch` for Phase 4 instead of counting 0. Never substitute an mtime-matched folder here; the
+   ownership proof is by subfolder name only (Phase 0), since a concurrent session's files can be
+   newer or older. Nothing is printed or deleted here. If
    this session captured any screenshot via the Playwright MCP
    (`mcp__playwright__browser_take_screenshot`), also check the repo root and `.playwright-mcp/`
    for stray `.png` files - the MCP writes there directly and this summary cannot see them; report
@@ -186,7 +191,7 @@ Print one line, always - this is the one thing Joe reliably sees from Phases 1-3
 N memory writes . N todos written (M from review, K skill-improvement) . N screenshots written to <dir> . chain: <list of chained commands or "none"> . closing: yes/no
 ```
 
-`M from review` is the count of findings from Phase 2 (size + DRY + dead code). If Phase 2 was skipped, omit the parenthetical and say `review skipped`. `K skill-improvement` is the subset of this close's todos tagged `skill-improvement` in Phase 3 step 2; omit `, K skill-improvement` if zero. `N screenshots written to <dir>` is Phase 3 step 3's count plus this session's subfolder path, so the folder stays discoverable; if the count is 0, print `0 screenshots` and drop the `to <dir>` clause. `/close` never deletes screenshots - `/disk-doctor` reclaims that space later, by age (todo 324).
+`M from review` is the count of findings from Phase 2 (size + DRY + dead code). If Phase 2 was skipped, omit the parenthetical and say `review skipped`. `K skill-improvement` is the subset of this close's todos tagged `skill-improvement` in Phase 3 step 2; omit `, K skill-improvement` if zero. `N screenshots written to <dir>` is Phase 3 step 3's count plus this session's subfolder path, so the folder stays discoverable; if the count is 0, print `0 screenshots` and drop the `to <dir>` clause. If Phase 3 step 3 flagged `mismatch`, never print `0 screenshots` - print `screenshots: id mismatch, this session captured some but <dir> is missing - check .for_bepy/screenshots/ for the real folder` instead, so the loss stays visible rather than reading as a clean close. `/close` never deletes screenshots - `/disk-doctor` reclaims that space later, by age (todo 324).
 
 ## Phase 5 - Run chained commands
 
