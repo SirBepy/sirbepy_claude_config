@@ -179,6 +179,16 @@ pre-crystallized DEV questions and they feed Step 5 directly, no re-derivation.
 Otherwise **skip this step entirely**, grind the AUTO queue, and let Step 8 park the DEV forks for
 next time. A run that has real work to do never interrupts the dev.
 
+**Decided 2026-09-04 (todo 915): stay as-is, no size or end-of-run trigger added.** A big backlog
+does make the empty-queue trigger unreachable on its own, but Step 8's parking converts every
+unresolved DEV fork into a pre-written `## Open questions` block, which the SECOND trigger catches on
+the very next run regardless of AUTO queue size - measured 2026-09-04: a 67-todo backlog already
+carried 20 such blocks from prior runs, so the round fired on trigger two alone. The two triggers
+together are self-correcting across repeated invocations even though a single cold run over a large,
+question-free backlog can go a whole pass without asking. Adding a size trigger would ask sooner on
+that first cold pass, at the cost of interrupting a run that still has real AUTO work - not worth it
+for a gap that resolves itself by the next run.
+
 **Shape.** Keep it quick - the dev's words are "ask me quick and then we done":
 
 - Highest priority first, `AskUserQuestion` only, 4 per call, chain past 4.
