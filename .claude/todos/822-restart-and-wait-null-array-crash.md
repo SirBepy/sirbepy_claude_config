@@ -22,3 +22,21 @@ Reproduce with a running flutter entry, find the null-indexed collection (likely
 
 - `restart-and-wait.ps1 -Id <healthy flutter entry>` restarts/reloads and waits for the marker.
 - A genuinely missing id produces a clear one-line error, not a null-array crash.
+
+## Notes
+
+- INVESTIGATED in the /mega-todos wave-2 run on 2026-09-04. NO COMMIT was made, because no code
+  change turned out to be needed for what could be verified.
+- The original crash appears already fixed, incidentally, by `9fcd807` ("anchor restart-and-wait's
+  freshness on log text, not on line count"). Two independent re-checks confirmed every API result
+  that gets indexed is now `@()`-wrapped and `.Count`-guarded first: lines 60-61 (proc lookup),
+  72-73 (log high-water mark), 83 and 88-93 (fresh-log windowing), and 112 (final log dump).
+- Acceptance item 1 is UNVERIFIABLE without a live flutter process running under the supervisor.
+  The supervisor itself was confirmed running and reachable, but there was no flutter entry to
+  restart. This was NOT faked or worked around, and the item is not being claimed.
+- Acceptance item 2 was the testable half and is the reason this todo stays open rather than being
+  archived. Whoever picks it up should run the script against an id that does not exist and check
+  the message names what was missing, per this todo's own Approach ("a real error naming what was
+  null instead of the bare exception"). An unreachable supervisor deserves the same treatment.
+- Do not archive this on the strength of the code reading above. The `@()` wrapping makes a crash
+  unlikely; it does not prove the error message is useful, which is what item 2 actually asks.

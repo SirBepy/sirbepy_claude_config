@@ -53,3 +53,23 @@ Reuse the token-matching half of `figma-pixel-diff` instead of writing a second 
 - Given two screenshots at different zooms and a named anchor, the skill reports both bboxes in
   comparable units plus the delta, with no hand-written PIL in the session transcript.
 - The nearest-token lookup names a real constant from the target repo.
+
+## Notes
+
+- ADVANCED in the /mega-todos wave-2 run, commit `29335e4`, NOT finished. The measurement METHOD is
+  now documented in `skills/figma-pixel-diff/SKILL.md` (anchor, glyph-height, scale-factor), and no
+  invented numbers were put in it: the dispatch could not run a real fetch or render, so every
+  worked-example figure from this todo's own Context was deliberately left out rather than asserted.
+- BOTH Acceptance items are still unmet, and the reason is the same for each: the dispatch was
+  scoped to `SKILL.md` only and forbidden from creating a helper script.
+  1. "no hand-written PIL in the session transcript" needs a `measure` subcommand for
+     `figma_pixel_diff.py` doing bbox detection (background-threshold plus row/column profiling, so
+     drop-shadow and antialiasing bleed do not read as true edges) and the anchor scale-factor
+     maths. Until that exists, a real run still needs ad-hoc PIL per session, which is exactly what
+     this todo set out to remove.
+  2. "the nearest-token lookup names a real constant" needs `nearest-token` to gain a numeric
+     `--value` distance mode. Today it is colour-only, Euclidean RGB on `--hex`, so a spacing or
+     size number cannot be matched to a token at all.
+- SO THE REMAINING WORK IS THE SCRIPT, not more prose. Whoever picks this up should own
+  `skills/figma-pixel-diff/` including its `.py`, and verify against two real screenshots rather
+  than reasoning about the method.
