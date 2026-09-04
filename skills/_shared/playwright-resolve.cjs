@@ -77,4 +77,33 @@ function getChromium() {
   );
 }
 
-module.exports = { getChromium, findInNpxCache };
+// Google returns "this browser isn't secure" for ANY WebDriver-controlled sign-in, regardless of
+// account or profile freshness (confirmed 2026-08-27, todo 816). Callers driving an interactive
+// human login should check the target URL here before launching, so the flow fails fast instead
+// of burning a browser launch and an OTP round trip.
+const AUTOMATION_BLOCKED_LOGIN_HOSTS = new Set(['accounts.google.com']);
+
+function isKnownAutomationLoginBlock(targetUrl) {
+  try {
+    return AUTOMATION_BLOCKED_LOGIN_HOSTS.has(new URL(targetUrl).hostname);
+  } catch {
+    return false;
+  }
+}
+
+function assertNoAutomationLoginBlock(targetUrl) {
+  if (!isKnownAutomationLoginBlock(targetUrl)) return;
+  throw new Error(
+    `${targetUrl} is a Google sign-in page: Google blocks ANY WebDriver-controlled browser from ` +
+    'signing in, regardless of account or profile freshness. Skip the automated browser - have the ' +
+    'dev log in through their own regular browser, and handle only the mechanical parts (target ' +
+    'URL, resulting credentials, config writes).'
+  );
+}
+
+module.exports = {
+  getChromium,
+  findInNpxCache,
+  isKnownAutomationLoginBlock,
+  assertNoAutomationLoginBlock,
+};
