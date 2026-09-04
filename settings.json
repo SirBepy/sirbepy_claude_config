@@ -6,7 +6,6 @@
     "allow": [
       "Read(/Users/josipmuzic/.claude/**)",
       "Edit(C:/Users/tecno/Desktop/Projects/Web/video-script-assistant/**)",
-      "Write(C:/Users/tecno/Desktop/Projects/Web/video-script-assistant/**)",
       "Bash(git add*)",
       "Bash(git commit*)",
       "Bash(git status*)",
@@ -81,7 +80,6 @@
       "WebFetch(domain:api.flutter.dev)",
       "Edit(~/.claude/skills/**)",
       "Edit(C:/Users/tecno/.claude/skills/**)",
-      "Write(C:/Users/tecno/.claude/skills/**)",
       "Edit(~/.claude/skills/jest-lua/**)",
       "Edit(~/.claude/skills/test-flow/**)",
       "Read(C:/Users/tecno/**)",
