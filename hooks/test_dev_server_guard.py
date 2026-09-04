@@ -8,6 +8,11 @@ must pass so a naive `npm run` match never blocks the test floor, a real
 `sv.ps1 ensure ...` invocation (the exact shape from SKILL.md:36) must pass
 even though its own -Cmd argument contains "vite", and a `cargo test` must
 pass so this guard never fires on a sibling guard's own trigger pattern.
+
+Also covers todo 908: an unrelated unbalanced quote elsewhere in the command
+forces tokenize_command's naive-split fallback, which can make prose quoting
+"next start" look like two adjacent real tokens - the fallback-triggering
+MAIN_CASES entries reproduce and confirm the fix.
 """
 
 import sys
@@ -116,6 +121,16 @@ MAIN_CASES = [
     ("next start", 2, "raw next start is caught"),
     ("vite preview", 2, "raw vite preview is caught"),
     ("dart run bin/server.dart", 0, "raw dart run passes, deliberately uncovered"),
+    (
+        "powershell -Note commit 883 is 'when next start became a matched shape",
+        0,
+        "todo 908 repro: next start only inside fallback-corrupted quoted prose is allowed",
+    ),
+    (
+        "next start && echo 'unterminated",
+        2,
+        "genuine next start still blocks even when a later unrelated quote is unbalanced",
+    ),
 ]
 
 

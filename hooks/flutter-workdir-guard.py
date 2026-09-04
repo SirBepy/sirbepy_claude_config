@@ -47,6 +47,7 @@ try:
         deny,
         strip_quotes as _lib_strip_quotes,
         tokenize_segment as tokenize,
+        basename,
     )
 except Exception as e:
     sys.stderr.write(f"[flutter-workdir-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
@@ -56,6 +57,7 @@ OVERRIDE_ENV = "CLAUDE_WORKDIR_GUARD_BYPASS"
 
 RUNNER_BASENAMES = {"flutter", "flutter.bat", "flutter.exe", "dart", "dart.exe", "dart.bat"}
 BASH_LEADING_BASENAMES = RUNNER_BASENAMES | {"fvm", "fvm.bat", "fvm.exe"}
+FILEPATH_FLAG_TOKENS = {"-filepath", "-file"}
 DESTRUCTIVE_FLAG = "--delete-conflicting-outputs"
 CD_WORDS = {"cd", "cd.", "chdir", "pushd", "sl", "set-location", "push-location"}
 DIR_FLAGS = {"-c", "--directory", "--working-directory", "-workingdirectory"}
@@ -71,12 +73,18 @@ def allow(message: str = "") -> None:
     sys.exit(0)
 
 
-def basename(tok: str) -> str:
-    return re.split(r"[\\/]", tok)[-1].lower()
-
-
 def has_runner(tokens: list[str]) -> bool:
-    return any(basename(tok) in RUNNER_BASENAMES for tok in tokens)
+    """True when a flutter/dart basename sits in COMMAND position: index 0,
+    or right after a Start-Process -FilePath/-File flag. Any other position
+    is an argument, not an invocation - `grep -r "flutter" pubspec.yaml`
+    merely contains the word.
+    """
+    for i, tok in enumerate(tokens):
+        if basename(tok) not in RUNNER_BASENAMES:
+            continue
+        if i == 0 or tokens[i - 1].lower() in FILEPATH_FLAG_TOKENS:
+            return True
+    return False
 
 
 def is_destructive(tokens: list[str]) -> bool:

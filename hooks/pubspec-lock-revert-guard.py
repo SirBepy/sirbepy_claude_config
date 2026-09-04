@@ -34,12 +34,15 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, GIT_TIMEOUT_SECONDS, FRESHNESS_SECONDS
+    from _hooklib import read_payload, GIT_TIMEOUT_SECONDS, FRESHNESS_SECONDS, is_command_position
 except Exception as e:
     sys.stderr.write(f"[pubspec-lock-revert-guard] cannot import _hooklib ({e}); failing open.\n")
     sys.exit(0)
 
-COMMAND_RE = re.compile(r"\bflutter\s+(analyze|run)\b", re.IGNORECASE)
+# The optional `fvm ` prefix keeps the match's own start (what
+# is_command_position below checks) at the real invocation's start rather
+# than at "flutter" - `fvm flutter analyze` is this guard's own typical case.
+COMMAND_RE = re.compile(r"\b(?:fvm\s+)?flutter\s+(analyze|run)\b", re.IGNORECASE)
 MARKER_DIR = Path(tempfile.gettempdir()) / "claude-pubspec-lock-guard"
 
 
@@ -122,7 +125,9 @@ def main() -> None:
     if payload.get("tool_name") not in ("Bash", "PowerShell"):
         sys.exit(0)
     command = (payload.get("tool_input") or {}).get("command", "") or ""
-    if not COMMAND_RE.search(command):
+    # todo 908: anchored to command position - a commit message or note
+    # merely quoting "flutter analyze" must not snapshot/revert the lock.
+    if not any(is_command_position(command, m.start()) for m in COMMAND_RE.finditer(command)):
         sys.exit(0)
 
     pubspec_dir = find_nearest_pubspec_dir(Path(payload.get("cwd") or "."))

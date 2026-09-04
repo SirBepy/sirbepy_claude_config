@@ -22,8 +22,15 @@ allowed unconditionally before the pattern scan runs.
 Incident: 90+ orphan vitest processes once pegged the CPU at 100% and 90C.
 `/supervised-run` (SKILL.md) already exists to prevent this; it was prose
 only. Fails open on any hook error so a bug here can never block shell work.
+
+todo 908: tokenize_command's ValueError fallback (naive `command.split()`,
+no quote awareness) let a quoted `-Note` prose mentioning "next start" read
+as two adjacent real tokens once an unrelated apostrophe broke shlex. A
+clean shlex parse never needs the second pass below.
 """
 
+import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -32,7 +39,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, tokenize_command as tokenize
+    from _hooklib import read_payload, deny, tokenize_command as tokenize, basename, is_command_position
 except Exception as e:
     sys.stderr.write(f"[dev-server-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -40,18 +47,14 @@ except Exception as e:
 INFO_FLAGS = {"--version", "-v", "-V", "--help", "-h"}
 
 
-def basename(tok: str) -> str:
-    return tok.replace("\\", "/").rstrip("/").split("/")[-1]
-
-
 def invokes_supervisor(tokens) -> bool:
-    return any(basename(t).lower() == "sv.ps1" for t in tokens)
+    return any(basename(t) == "sv.ps1" for t in tokens)
 
 
 def is_dev_server_command(tokens):
     """Return a short label naming the matched dev-server shape, or None."""
     lc = [t.lower() for t in tokens]
-    bases = [basename(t).lower() for t in tokens]
+    bases = [basename(t) for t in tokens]
     n = len(lc)
 
     for i in range(n):
@@ -80,6 +83,24 @@ def is_dev_server_command(tokens):
     return None
 
 
+def _shlex_clean(command: str) -> bool:
+    try:
+        shlex.split(command, posix=False)
+        return True
+    except ValueError:
+        return False
+
+
+def _confirmed_at_command_position(command: str, label: str) -> bool:
+    """Second pass, only trusted when `_shlex_clean` is False (todo 908):
+    does `label`'s own words ("next start", "vite", ...) appear anywhere in
+    the RAW command text at command position - start of a statement/pipe
+    segment, not deep inside quoted prose?
+    """
+    pattern = re.compile(r"\b" + r"\s+".join(re.escape(w) for w in label.split()) + r"\b", re.IGNORECASE)
+    return any(is_command_position(command, m.start()) for m in pattern.finditer(command))
+
+
 def main() -> None:
     payload = read_payload()
     command = (payload.get("tool_input") or {}).get("command", "") or ""
@@ -94,6 +115,8 @@ def main() -> None:
         sys.exit(0)
 
     matched = is_dev_server_command(tokens)
+    if matched and not _shlex_clean(command) and not _confirmed_at_command_position(command, matched):
+        matched = None
     if matched:
         deny(
             "[dev-server-guard] \"%s\" looks like a long-lived dev server started "

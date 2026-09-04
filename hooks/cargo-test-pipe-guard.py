@@ -46,7 +46,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny as _lib_deny
+    from _hooklib import read_payload, deny as _lib_deny, is_command_position
 except Exception as e:
     sys.stderr.write(f"[cargo-test-pipe-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -72,14 +72,21 @@ LINE_BUFFERED_RE = re.compile(r"--line-buffered\b", re.IGNORECASE)
 # a pipeline's own "|" segments never get cut here.
 STATEMENT_SPLIT_RE = re.compile(r"&&|\|\||;|\n")
 
-# Chars that legitimately precede a new command/statement, copied from
-# shell-content-write-guard.py's own COMMAND_START_RE (same repo precedent,
-# not moved to _hooklib since only this file needs it here).
-COMMAND_START_RE = re.compile(r"(?:^|[|;&(){\n])\s*$")
+# Same leading-prefix shapes destructive-command-guard.py's own
+# verb_segments() strips (a different lane's module, not imported - this is
+# a two-regex local echo, not worth a cross-file dependency): a filter still
+# anchors on `sudo tail` / `FOO=bar tail` right after a pipe.
+LEADING_SUDO_RE = re.compile(r"^\s*sudo\s+", re.IGNORECASE)
+LEADING_ENV_RE = re.compile(r"^\s*[A-Za-z_][A-Za-z0-9_]*=\S*\s+")
 
 
-def is_command_position(text: str, idx: int) -> bool:
-    return bool(COMMAND_START_RE.search(text[:idx]))
+def _strip_leading_prefix(seg: str) -> str:
+    s = seg
+    while True:
+        m = LEADING_SUDO_RE.match(s) or LEADING_ENV_RE.match(s)
+        if not m:
+            return s.lstrip()
+        s = s[m.end():]
 
 
 def deny(filter_name: str, subcommand: str) -> None:
@@ -117,7 +124,9 @@ def find_violation(command: str, cwd: str | None = None) -> tuple[str, str] | No
                     cargo_idx = i
                     subcommand = m.group("subcmd").lower()
                 continue
-            m = PIPE_FILTER_RE.search(seg)
+            # todo 908: anchored to the segment's own start (post prefix-strip), not
+            # a bare search - `| xargs echo tail` merely names tail as an argument.
+            m = PIPE_FILTER_RE.match(_strip_leading_prefix(seg))
             if not m:
                 continue
             filter_name = m.group(1)

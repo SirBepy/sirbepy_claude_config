@@ -10,8 +10,13 @@ live fvm/flutter/dart, no network. The pre-existing destructive-flag/pin
 logic already has coverage via done/380-era manual verification and is not
 re-covered here beyond confirming this addition does not break its pass-
 through cases.
+
+Also covers todo 908: has_runner() anchored to command position so a
+`grep -r "flutter" pubspec.yaml` no longer counts as a runner invocation.
 """
 
+import contextlib
+import io
 import os
 import sys
 from pathlib import Path
@@ -47,6 +52,72 @@ def run_main(tool_name: str, command: str) -> int:
         return e.code
 
 
+def run_main_captured(tool_name: str, command: str) -> tuple[int, str]:
+    guard.read_payload = lambda: {"tool_name": tool_name, "tool_input": {"command": command}}
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        try:
+            guard.main()
+            code = 0
+        except SystemExit as e:
+            code = e.code
+    return code, buf.getvalue()
+
+
+# --- has_runner: command-position anchoring (todo 908) ---
+
+HAS_RUNNER_CASES = [
+    (["flutter", "analyze"], True, "flutter as the leading token is a runner"),
+    (["grep", "-r", "flutter", "pubspec.yaml"], False, "flutter as a grep pattern argument is not a runner"),
+    (["echo", "flutter"], False, "flutter as a bare echo argument is not a runner"),
+    (
+        ["Start-Process", "-FilePath", "dart.bat", "-ArgumentList", "run", "build_runner", "build"],
+        True,
+        "dart.bat right after -FilePath is a runner (Start-Process pattern)",
+    ),
+]
+
+
+def check_has_runner(case) -> bool:
+    tokens, expected, label = case
+    got = guard.has_runner(tokens)
+    ok = got == expected
+    print(f"{'PASS' if ok else 'FAIL'}: {label} (expected {expected}, got {got})")
+    return ok
+
+
+has_runner_fails = _testlib.run_cases(HAS_RUNNER_CASES, check_has_runner)
+
+# --- end to end: the grep-pubspec false positive prints no spurious warning ---
+
+WARNING_CASES = [
+    (
+        "PowerShell",
+        'grep -r "flutter" pubspec.yaml',
+        False,
+        "grep flutter pubspec.yaml via PowerShell warns about no directory pin",
+    ),
+    (
+        "PowerShell",
+        "flutter analyze",
+        True,
+        "a real bare flutter call via PowerShell still warns about no directory pin",
+    ),
+]
+
+
+def check_warning(case) -> bool:
+    tool_name, command, expect_warning, label = case
+    code, out = run_main_captured(tool_name, command)
+    got_warning = "Warning" in out
+    ok = code == 0 and got_warning == expect_warning
+    print(f"{'PASS' if ok else 'FAIL'}: {label} (expected warning={expect_warning}, got {got_warning}, exit={code})")
+    return ok
+
+
+warning_fails = _testlib.run_cases(WARNING_CASES, check_warning)
+
+
 # (tool_name, command, expected exit code, label)
 CASES = [
     ("Bash", "fvm flutter analyze", 2, "fvm flutter analyze via Bash is denied"),
@@ -75,7 +146,7 @@ def check(case) -> bool:
 
 saved_bypass = os.environ.pop(guard.OVERRIDE_ENV, None)
 try:
-    fails = alias_fails + _testlib.run_cases(CASES, check)
+    fails = alias_fails + has_runner_fails + warning_fails + _testlib.run_cases(CASES, check)
 finally:
     if saved_bypass is not None:
         os.environ[guard.OVERRIDE_ENV] = saved_bypass
