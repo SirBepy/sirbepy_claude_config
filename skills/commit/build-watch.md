@@ -37,7 +37,24 @@ When the watcher finishes you are re-invoked with its stdout. Parse the `BUILD_R
 - `BUILD_RESULT=api_error` -> every poll in the detection loop errored (`LAST_ERROR` holds the last message) - this is NOT "no run exists", the watcher just couldn't reach/authenticate to the API (e.g. `gh`'s active account flipped mid-poll). Tell the user the watcher hit an auth/API problem, not a missing run, and offer `gh run list` as a direct fallback to check manually.
 - `BUILD_RESULT=failure` -> the build is red. Run the **gated auto-fix** below.
 - `BUILD_RESULT=watch_error` -> `gh` hit a persistent transient error (auth flip, network blip, rate limit) while polling and could not confirm a completed status for one or more runs after retrying with backoff. This is NOT a build verdict - the run(s) may still be green, red, or in progress. Tell the user the watcher couldn't confirm the result and relaunch it (same command as before) rather than diagnosing a "failure" that might not exist.
-- `BUILD_RESULT=timeout` -> the wall-clock ceiling (`TIMEOUT_MINUTES`, default 30) was hit before all runs resolved. Not a build verdict either - CI may still be running. Tell the user the watcher gave up after the timeout and offer to relaunch it (same command as before) if they still want the result.
+- `BUILD_RESULT=timeout` -> the wall-clock ceiling (`TIMEOUT_MINUTES`, default 30) was hit before all runs resolved. Not a build verdict either - CI may still be running. Tell the user the watcher gave up after the timeout and offer to relaunch it (same command as before) if they still want the result. If a relaunch on the SAME run id times out a second time, treat it as an orphaned run per the section below rather than relaunching a third time.
+
+### Recovering an orphaned run
+
+A run can get stuck `queued` forever, with `updated_at` equal to `run_started_at` and `steps: []` -
+it never actually started. The signal that distinguishes this from an ordinary in-progress build:
+`gh run cancel <id>` and `gh run rerun <id> --failed` both fail with mutually contradicting errors
+(e.g. cancel says "cannot cancel a workflow run that is completed" while `gh run view <id>` still
+reports `queued`), or the same run id times out on a second consecutive watch. Neither `gh run
+cancel` nor `gh run rerun` can touch a run in this state - confirmed 2026-08-26 on a `Tauri Release`
+run stuck `queued` 4+ hours after a resolved GitHub Actions incident.
+
+Recovery: check the workflow file for a `workflow_dispatch:` trigger under `on:`. If present, start a
+genuinely fresh run instead of retrying the stuck one: `gh workflow run <file> --ref <branch>`, then
+watch that new run with a fresh `watch-build.ps1 -Branch -RepoPath -Sha` call (it resolves the new
+HEAD itself). If the workflow has no manual-dispatch trigger, say so plainly rather than guessing
+another retry path - an empty commit / re-push is the fallback, but treat it as a last resort, not a
+default.
 
 ### Reporting discipline
 
