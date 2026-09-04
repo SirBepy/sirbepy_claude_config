@@ -69,3 +69,4 @@ hand `/code-check` a file list padded with someone else's unrelated code.
 Related but distinct from #271 (done, fixes the commit/shas branch) and #774 (open, fixes
 untracked-file omission in the same `uncommitted` row) - this is the third distinct gap in that one
 scope-resolution row, all discovered independently.
+- Completed in wave 2, commit b0cb357: /close now passes its own tracked edited-file list as the /code-check scope when peers are active, instead of a blind uncommitted scope that swept a peer session work.

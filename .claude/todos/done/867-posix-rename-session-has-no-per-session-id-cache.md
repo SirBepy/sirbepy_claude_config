@@ -48,3 +48,7 @@ the failure mode is identical rather than merely analogous.
   different underlying records, print the identical id.
 - `session-shot-dir.cjs` and `rename-session.sh --get-id` agree on POSIX, proven by running both.
 - `python ci/run_all.py` exits 0.
+
+## Notes
+
+- Completed in wave 2, commit 8e8be8d: rename-session.sh mirrors the ps1 per-session id cache. A two-process cache-agreement test passed and session-shot-dir.cjs agrees with both.

@@ -62,3 +62,4 @@ re-typing the whole procedure by hand every run, a different problem than write-
 
 - Not urgent - the hand-written version works, just wastes tokens and adds classifier-trip risk
   each time it's rewritten. Low complexity, small win.
+- Completed in wave 2, commit 772d2d2: the Hubstaff token exchange and env-file update are extracted into skills/clockify-reconciliator/scripts/hs_get_token.ps1, with Step 11 pointing at it. No credential is hardcoded.

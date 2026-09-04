@@ -23,3 +23,7 @@ Add an explicit step somewhere in the implementation path - candidates, pick whi
 
 - A ticket-implementation flow that encounters a linked Figma (on the ticket itself, or on a ticket it descends from / relates to) surfaces it to the session before code gets written, not after.
 - Doesn't fire on tickets with no design link (most bug/chore tickets) - scoped to UX-descended feature work.
+
+## Notes
+
+- Completed in wave 2, commit a851249: the /ticket Pickup flow now pulls a linked design before implementing a UX-descended ticket, reusing the shape the Create-flow ground check already had.

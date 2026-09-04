@@ -50,3 +50,7 @@ disk - see the project memory `project_peer_commit_can_revert_your_hunks`.
 
 Running the helper against a tree where a peer has hunks in one of your pathspec files names that
 file and says whether the overlap is sub-hunk, without reading any diff by hand.
+
+## Notes
+
+- Completed in wave 2, commit 49fd7a2: skills/commit/foreign-hunk-check.sh compares pathspec hunks against this-session-edited line ranges and flags sub-hunk collisions, following the 0/1/2 exit convention the sibling prefilters use. Verified against a scratch repo with separate-hunk, sub-hunk, multi-file and no-own-given cases.

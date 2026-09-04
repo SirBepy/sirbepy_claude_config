@@ -56,3 +56,4 @@ read that note first, and only re-verify if it looks stale or a new drive is inv
 - Distinct from todo 835 (delete-confirmation gate has no mechanical enforcement) - that's about
   destructive actions lacking a hook backstop; this is about advisory accuracy on a non-destructive
   recommendation, caught by Joe's question rather than any gate.
+- Completed in wave 2, commit 4a7877f: the cross-drive-move advice now consults the vault storage note first and falls back to Get-PhysicalDisk and Get-Partition.

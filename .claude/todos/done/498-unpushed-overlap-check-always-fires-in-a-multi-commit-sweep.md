@@ -78,3 +78,4 @@ todo belongs in the same script.
 Do not treat this as licence to skip the check. Two commits in this session took the
 genuinely-separate branch and both said so explicitly in their report; the silent version of that is
 the actual hazard.
+- Completed in wave 2 with no commit of its own: the sweep-aware marker this todo asked for was already delivered by two lane siblings that ran first - commit 1d987dd (todo 860) added an own-commit flag to overlap-check.sh so a same-run sha never stops the sweep, and commit 22bc405 (todo 862) added the session answer memory. Verified by its own builder rather than reimplemented.

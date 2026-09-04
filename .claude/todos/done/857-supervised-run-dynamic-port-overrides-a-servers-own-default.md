@@ -22,3 +22,7 @@ Add a short row or note to the Port table itself, not to the existing localStora
 
 ## Acceptance
 `grep -n "NoDynamicPort" ~/.claude/skills/supervised-run/SKILL.md` returns a hit, and it sits in or beside the Port table rather than only inside the client-side-persistence note.
+
+## Notes
+
+- Completed in wave 2, commit 4bcd190: the Port table now states that PORT is injected into the child environment regardless of templating, and names the -NoDynamicPort escape.

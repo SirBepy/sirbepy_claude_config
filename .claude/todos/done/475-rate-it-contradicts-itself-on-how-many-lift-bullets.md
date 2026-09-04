@@ -69,7 +69,7 @@ reword. Append one sentence to `skills/rate-it/SKILL.md:107`, leaving line 113 a
 rule:
 
 > Then a blank line and a `**How to raise the score:**` block: 2-4 bullets, each a concrete change
-> with the score it would unlock (e.g. `→ 7/10`). **Order the bullets by that score, lowest
+> with the score it would unlock (e.g. `â†’ 7/10`). **Order the bullets by that score, lowest
 > first.** Be specific [...]
 
 Note the interaction with the cap fix above: that sentence lands on the same line whose `2-4` is
@@ -105,3 +105,4 @@ without the other leaves line 107 self-inconsistent again.
   canonical line further down is what the model actually follows and the move-to-point-of-use theory
   is wrong. Re-run with more reps before changing anything, then decide. Do not archive this on the
   cap fix alone; the ordering item is the half that was failing in practice.
+- Completed in wave 2, commit ccbc8fc: the cap fix was already satisfied and was reconfirmed 6 of 6. The ordering half is now RESOLVED as a falsification rather than left unproven - re-run at 6 reps, the move-to-point-of-use patch passed only 2 of 6, consistently worse than the 3-rep run, so it is falsified and recorded as such in heal-log.md. The todo framed either outcome as valid and asked which; this is the answer.

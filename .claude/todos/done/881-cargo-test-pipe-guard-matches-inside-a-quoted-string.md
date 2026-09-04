@@ -73,3 +73,4 @@ with `grep -c "npm run dev" refs/process-hygiene.md` - it correctly did NOT fire
 - Coordinate with `877`, which wants the subcommand list widened to `build`/`check`/`clippy`.
   Widening the trigger set without fixing this makes the false-positive surface strictly larger, so
   do this one first if both are picked up.
+- Completed in wave 2, commit cbcc0c9: the cargo token must now sit in command position, reusing COMMAND_START_RE from shell-content-write-guard.py rather than adding quote masking, so the guard own documentation and test payloads no longer trip it. Its one stated negative is deliberately superseded by lane sibling 877, which widened the subcommand list so that case now blocks on purpose.

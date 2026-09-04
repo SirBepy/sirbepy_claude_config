@@ -62,3 +62,7 @@ rather than adding a second script that does 80% of the same thing.
 
 - One command red-checks a new test without mutating the live working tree.
 - Verified on a repo with a dirty peer file present, confirming that file is untouched throughout.
+
+## Notes
+
+- Completed in wave 2, commit db5181b: skills/close/red-check.ps1 red-checks a new test using a detached worktree, never touching the shared tree, and cleans up even on failure.

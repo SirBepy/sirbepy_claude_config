@@ -88,3 +88,4 @@ framing, and do not let a tuning change to it quietly loosen the security entrie
 
 Namespacing is probably a no. 83 renames against one permission-entry saving is a bad trade unless
 prompts are a real recurring cost.
+- Completed in wave 2, commit b48a4b1: settings.json and settings.local.json now carry labelled security-deny and noise-deny groups alongside the existing allow list.

@@ -78,3 +78,4 @@ Worth considering as a follow-up rather than folding in here: nothing mechanical
 for entries the harness will ignore. `ci/run_all.py` validates skill frontmatter and gates
 `CLAUDE.md`'s token weight, so a `settings.json` permission-entry linter would fit the same slot.
 That is a bigger idea than this cleanup and should be judged on its own, not smuggled in.
+- Completed in wave 2, commit e8e3235: both dead Write allow entries deleted after confirming each Edit twin is present; a nested claude -p run prints neither warning.

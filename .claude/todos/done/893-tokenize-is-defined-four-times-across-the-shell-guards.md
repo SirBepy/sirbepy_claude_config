@@ -85,3 +85,4 @@ drift that has now reached four copies, which is the same count that made `done/
 - Filed as class 3 (judgment) rather than the reviewer's class 2, specifically because the two
   families disagree on malformed input. A class-2 "collapse the duplicate" treatment would have
   picked one fallback and silently changed two guards.
+- Completed in wave 2, commit 5403a61: the ValueError fallback semantics are decided and documented per guard family in _hooklib.py. This found a real bug - the flutter workdir guard empty-list fallback let an unbalanced quote silently bypass its hard block; proven against HEAD, old guard exited 0, new one exits 2.

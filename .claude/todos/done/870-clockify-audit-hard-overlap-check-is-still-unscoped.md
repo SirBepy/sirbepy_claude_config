@@ -46,3 +46,7 @@ current text before editing, since `modes.md` may have moved since.
 - The rule reads the same way in `SKILL.md` and `modes.md`, or exists in exactly one place that
   both point at.
 - `python ci/run_all.py` exits 0, and every path referenced by the changed markdown resolves.
+
+## Notes
+
+- Completed in wave 2, commit 4a7877f: the modes.md overlap line is scoped to same-project pairs, matching the post-448 wording already in SKILL.md.

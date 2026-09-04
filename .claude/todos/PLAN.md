@@ -208,10 +208,8 @@ its once-per-session sentinel is a single boolean, not per-file state.
 
 - [ ] 433 - config layering. Likely a five-line move, not an architecture.
 - [ ] 444 - prove-it-works / analytical Q&A / MCP scoping. Joe already judged prove-it-works redundant with `/test` and `/e2e`.
-- [ ] 438 [P] - permissions deny list (noise half is the real win; namespacing is probably a no)
 - [ ] 440 [P] - config-protection guard. Gated on 427's signal.
 - [ ] 428 [P] - repo README, CONTRIBUTING, generated skills index
-- [ ] 432 [P] - local statusline, kill the per-launch npx fetch
 
 ### The three tips that matter
 

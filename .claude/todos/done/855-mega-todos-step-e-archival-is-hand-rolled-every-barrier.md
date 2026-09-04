@@ -76,3 +76,4 @@ every wide run, because the glob-by-id-prefix shape is the obvious way to write 
 - The `git mv` two-path rule this depends on was written into `/commit` step 8 by
   `done/495-commit-pathspec-drops-the-source-half-of-a-git-mv.md` in the same run, so the helper
   should cite it rather than re-explain it.
+- Completed in wave 2, commit 9fa351b: skills/mega-todos/archive-batch.ps1 scripts the per-todo archive loop with safe id resolution and pathspec emission naming BOTH halves of each move, which is the failure done/495 traces.

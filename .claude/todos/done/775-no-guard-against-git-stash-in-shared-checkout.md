@@ -72,3 +72,7 @@ they are the same class of working-tree-wide destructive command.
 - `git stash push -- lib` in a repo with a live peer is refused or warns, naming the peer's files
   that would be swept.
 - `git stash list` / `git stash show` are unaffected.
+
+## Notes
+
+- Completed in wave 2, commit 1586edf: a guard now covers the shared-checkout case for stashing specifically, honouring todo 391 intent that a sanctioned baseline mechanism beats a blanket ban.

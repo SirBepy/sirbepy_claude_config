@@ -49,3 +49,7 @@ one.
 - [ ] Running `fvm flutter analyze` in zng-app leaves `git status` free of `pubspec.lock`
 - [ ] A genuine `pubspec.yaml` dependency change still updates the lock and leaves it dirty
 - [ ] `python ci/run_all.py` passes
+
+## Notes
+
+- Completed in wave 2, commit 5cf7d96: a PostToolUse hook reverts pubspec.lock only when it is the sole newly-dirty file after an analyze or run; a dirty pubspec.yaml alongside it leaves both alone.

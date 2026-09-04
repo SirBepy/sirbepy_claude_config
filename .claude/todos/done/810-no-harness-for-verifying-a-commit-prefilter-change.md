@@ -75,3 +75,4 @@ one of the five changes built one.
 - The expected outputs are already written down. Every `done/` file listed in step 3 records the
   exact before-and-after behaviour that was measured, so the suite can be seeded from them rather
   than re-derived.
+- Completed in wave 2, commit 698ebbc: a fixture-based suite covers the commit prefilters and is wired into ci/run_all.py, which now reports 6 checks instead of 5. It absorbed the comment-noise test added earlier the same day by todo 903 rather than duplicating it.

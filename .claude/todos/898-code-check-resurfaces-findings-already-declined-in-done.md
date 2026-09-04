@@ -66,3 +66,7 @@ exists for, and puts the bookkeeping where the bookkeeping already lives.
 - A finding NOT present in `done/` or the log is unaffected and still files normally. Prove this
   with a second run over a diff that has a real new finding, rather than only proving the
   suppression half.
+
+## Notes
+
+- Advanced in /mega-todos wave 2, commit `a836f59`, NOT finished. `/code-check` Step 4a now diffs each finding's `path:line` against `done/*.md` and `dropped-findings.log` before classifying, and routes a hit straight to the log as "dropped as DECLINED" instead of filing a new todo. The mechanism was demonstrated against real data by appending a proof line to `dropped-findings.log` (the re-scan of the `bvh_to_keyframes.py:29` unused import, which correctly matched its 2026-08-22 decline). Remaining: acceptance wants two real `/code-check` runs, one over a diff touching zng-app's `v2_request_status_screen.dart` (must suppress) and one over a diff with a genuinely new finding (must file normally). The first needs a zng-app session. Run both the next time `/code-check` fires naturally rather than staging them.

@@ -55,3 +55,7 @@ Deliberately NOT matched, or the guard will be turned off:
 - `tail -20 /tmp/some-build.output` and `git log --oneline | head -5` both still run.
 - `python ci/run_all.py` green (the hook needs its own `hooks/test_*.py` suite, per this repo's
   convention).
+
+## Notes
+
+- Completed in wave 2, commit b71e365: the build, check and clippy subcommands were appended to CARGO_SUBCOMMANDS, with the matched subcommand threaded through so the block message names it. 27 cases pass.

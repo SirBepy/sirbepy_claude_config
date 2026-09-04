@@ -75,3 +75,4 @@ supply-chain surface for no benefit at this size.
 
 Keep it boring. A statusline that fails is a permanent visual annoyance, and this one runs on every
 launch.
+- Completed in wave 2, commit d0b7498 plus orchestrator commit 17d004c: tools/statusline.py reads model, output style, context percentage, duration and a 600s-cached branch straight from Claude Code own statusLine stdin JSON, making zero network calls, and settings.json points at it instead of the npx package. The builder left the script uncommitted because a root-level .py is excluded by the allowlist .gitignore; the orchestrator moved it under the already-allowlisted tools/ and repointed settings.json, so it now survives a fresh clone.

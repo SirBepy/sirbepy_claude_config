@@ -47,3 +47,4 @@ weeks, which is what makes this worth more than a normal DRY nit.
 
 Pairs naturally with todo 874 (git-root resolution, the same shape in the same two files). Doing
 them together is cheaper than twice, but they are independent and either can land alone.
+- Completed in wave 2, commit 7142a64: is_tool_result_entry and iter_turn_tool_uses moved into hooks/_hooklib.py and both hooks import them. Each symbol now exists exactly once; both test suites pass unmodified.

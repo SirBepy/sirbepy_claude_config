@@ -60,3 +60,4 @@ sees `npm run dev` blocked will reasonably assume `vite preview` is too.
 - `881` is a false-positive fix on the sibling guard from the same run. Unrelated mechanism, but if
   both are picked up, note that this todo makes the trigger set LARGER and `881` makes a trigger set
   more precise - the precision work is the safer one to do first.
+- Completed in wave 2, commit 906b709: two further long-lived launch shapes are now matched with fixture cases, and the docstring records why the dart script form stays uncovered - it is a script-name distinction, not a command-shape one, the same ambiguity as an npm script.

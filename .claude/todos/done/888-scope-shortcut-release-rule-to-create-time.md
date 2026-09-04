@@ -51,3 +51,4 @@ same file, so the two halves do not disagree after the edit.
   carries the scope boundary and Joe's exact wording, dated 2026-09-02.
 - Do not "fix" this by deleting the create-time rule. Release IS set at creation; only the
   existing-ticket case is out of scope.
+- Completed in wave 2, commit cb2c37e: the release-field rule is scoped to ticket-creation time with an explicit never-on-an-existing-ticket clause.

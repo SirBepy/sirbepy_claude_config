@@ -61,3 +61,7 @@ check, so a helper that paraphrases them breaks every dispatch it generates.
   present) - prove it with one real dispatch, not by inspection.
 - `refs/builder-preamble.md` remains the single source of the preamble text; the helper reads it
   rather than embedding a second copy.
+
+## Notes
+
+- Completed in wave 2, commit 777aa02: skills/mega-todos/build-dispatch.ps1 emits the full builder block by reading refs/builder-preamble.md as the source of truth, and asserts the three dispatch-preamble-guard marker strings survive the emission.

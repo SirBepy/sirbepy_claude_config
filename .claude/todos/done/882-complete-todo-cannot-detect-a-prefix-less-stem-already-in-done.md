@@ -62,3 +62,4 @@ todo does not exist when it does, in `done/`, which invites someone to re-create
 - There is no test suite for `skills/close/*.ps1` (no `test_*.ps1` exists anywhere), so the
   acceptance above is manual in a scratch repo. `810` proposes the fixture harness that would make
   this kind of proof cheap.
+- Completed in wave 2, commit 1a219f5: Resolve-TodoFile now also tries the stem pattern against done/, so a prefix-less stem already archived is detected instead of erroring.

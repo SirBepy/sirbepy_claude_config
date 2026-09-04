@@ -74,3 +74,4 @@ the log directly later): sc-55077 (To Do -> Won't do, duplicates sc-55186); sc-5
 55112/55113/55114/55115/55116/55117/55118 (batch move to Testing, epic 54968); sc-55112 and
 sc-55116 description corrections (stale "created at Verify"/"unlocks on email verification" text
 fixed to match shipped code). See zng-app's own todo 29 for the full context.
+- Completed in wave 2, commit dd4dab7: the ticket log append is now best-effort and surfaces a skipped append in the report rather than losing it silently. The 2026-08-28 block was not reproducible, which is exactly why the design does not depend on detecting it.

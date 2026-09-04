@@ -48,3 +48,7 @@ a judgment call, which is why it is filed rather than fixed on sight.
 - `hooks/test_ui_screenshot_reminder.py` passes, with a case covering whichever multi-repo
   behaviour was chosen.
 - `python ci/run_all.py` exits 0.
+
+## Notes
+
+- Completed in wave 2, commit 37a621e: repo_root is resolved from the same newest file that drives ui_mtime. A regression test was proven to fail against the pre-fix code and pass after.

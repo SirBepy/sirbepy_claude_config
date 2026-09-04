@@ -72,3 +72,4 @@ Options, roughly in increasing effort:
   script (todo 474) were deliberate work; this is about when to ASK, not about whether to detect.
 - Runtime is also worth a look while in here: `overlap-check.sh` scales with pathspec size times
   unpushed depth, and on this branch each call took several seconds.
+- Completed in wave 2, commit 1d987dd: the interactive stop is scoped to a different session commits via a new own-commit flag on overlap-check.sh, and the rest batch into one end-of-run question instead of firing per commit.

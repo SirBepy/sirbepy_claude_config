@@ -48,3 +48,4 @@ ten seconds, and a hook that cannot resolve its repo root fails open silently by
 ## Notes
 
 Pairs with todo 873, which moves a different duplicated pair out of the same two files.
+- Completed in wave 2, commit 4ab9ede: one git_repo_root resolver plus the timeout constant now live in _hooklib.py, with both guards pointed at it and an alias kept so the existing tests pass unmodified.

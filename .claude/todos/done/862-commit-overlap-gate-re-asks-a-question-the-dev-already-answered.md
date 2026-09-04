@@ -68,3 +68,4 @@ commit 4. Any fix has to keep the question alive for a materially different over
 - The same "answered once, re-asked per invocation" shape may exist in other gates that use
   `AskUserQuestion` inside a loop; worth a grep across `skills/` while in here, but file separately
   rather than widening this todo.
+- Completed in wave 2, commit 22bc405: the fold-vs-separate answer is now recorded per session and reused, re-asking only when the overlap newly includes HEAD or names a this-session commit the prior answer did not cover.
