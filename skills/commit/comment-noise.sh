@@ -49,8 +49,10 @@ BEGIN {
       n = split(head_line_files[l], parts, "\001")
       for (i = 1; i <= n; i++) if (parts[i] != f) { moved = 1; break }
     }
-    if (moved) run = 0
-    else { c[f]++; run++; if (run>max[f]) max[f]=run }
+    # A moved line is neutral, not a run-ender: skip it without counting or resetting, so a
+    # paragraph-break separator ("* ", "//") that spuriously resolves as moved (899) can no
+    # longer zero out the run of a genuinely new block around it.
+    if (!moved) { c[f]++; run++; if (run>max[f]) max[f]=run }
   } else run=0
   next
 }
