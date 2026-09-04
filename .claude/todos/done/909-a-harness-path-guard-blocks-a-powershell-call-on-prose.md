@@ -51,3 +51,4 @@ lands on this repo's guards, which is where the time went.
 ## Notes
 
 - Filed by /mega-todos on 2026-09-04. Not a defect in this repo, but it cost real time here.
+- Fixed in e8291f5: the harness path-guard false positive and its workaround are recorded in refs/incidents.md. The trigger reads as a semantic classifier rather than a fixed regex, and the entry says so instead of overclaiming.

@@ -50,3 +50,4 @@ detects a verbatim move automatically, so the gate will not fight this.
 ## Notes
 
 - Filed by /mega-todos on 2026-09-04 from the run's own `/code-check` pass.
+- Fixed in b3803ef: destructive-command-guard split into per-concern modules with the entry-point path unchanged, so settings.json needed no edit. NOTE: the mid-write window of this split bricked shell access for two concurrent sessions - see todo 923.

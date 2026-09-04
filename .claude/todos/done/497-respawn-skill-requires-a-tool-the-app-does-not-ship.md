@@ -79,3 +79,4 @@ handoff. The bug is the missing tool, not the refusal to improvise around it.
 Interim workaround for anyone blocked: `/handoff` writes a durable record without spawning, and the
 phase plan in `.claude/todos/PLAN.md` is deliberately written so a cold session can execute from the
 file alone.
+- Fixed in 56500b0: respawn carries the retry hint, and check_skill_frontmatter gained the MCP-tool check as INFORMATIONAL rather than a hard gate. Settled that offline registration is not knowable - tools attach per-session - and recorded that as the decision.

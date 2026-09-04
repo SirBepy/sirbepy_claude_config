@@ -54,3 +54,7 @@ and dismissed, not folded.
 - The prescribed `gate && git commit -- <paths>` form still passes, proven by the existing tests.
 - If the decision is to leave it open, `skills/commit/SKILL.md` step 8 says so explicitly.
 - `python ci/run_all.py` exits 0.
+
+## Notes
+
+- Fixed in 1f78a66: the pathspec-less commit case is now decided rather than pinned as unresolved, with the test label and skills/commit/SKILL.md step 8 both stating the decided behaviour.

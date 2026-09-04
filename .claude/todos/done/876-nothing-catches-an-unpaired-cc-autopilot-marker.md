@@ -64,3 +64,4 @@ shape this repo's own doctrine says not to leave a rule in.
 Low blast radius: the badge is cosmetic, and a wrong badge never damaged anything. It is filed
 because the failure was invisible for two hours and the fix is bounded, not because it was costly.
 Do not build a heavyweight mechanism for it; if option 2 or 3 is cheaper, take it.
+- Fixed in 2534940: the unpaired cc-autopilot marker asymmetry resolved at the skill level rather than by building a transcript-scanning Stop hook for a cosmetic badge.

@@ -50,3 +50,7 @@ no lookahead or lookbehind. See `skills/commit/secret-scan.md`.
 - `python ci/run_all.py` passes with the new fixtures.
 - If a narrowing was needed, the todo-471 fixtures still pass unchanged afterwards, so the original
   false positive stays fixed.
+
+## Notes
+
+- Fixed in 351ba12: fixtures now pin that a placeholder-shaped value which also matches a real credential pattern still blocks.

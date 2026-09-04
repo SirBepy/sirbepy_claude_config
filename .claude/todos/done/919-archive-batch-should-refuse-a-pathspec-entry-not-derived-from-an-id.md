@@ -43,3 +43,7 @@ against a future edit, not a live bug.
   normal batch.
 - An existing multi-id archival still returns both halves of every move plus `PLAN.md`, unchanged.
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- Fixed in a41b457: archive-batch now asserts every emitted pathspec entry traces back to a given id, throwing rather than warning on a violation.

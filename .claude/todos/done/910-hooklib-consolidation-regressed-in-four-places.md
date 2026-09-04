@@ -63,3 +63,4 @@ since only this file needs it" - which the second copy disproves.
 ## Notes
 
 - Filed by /mega-todos on 2026-09-04 from the run's own `/code-check` pass.
+- Fixed in 80d9033: git_repo_root, basename, COMMAND_START_RE/is_command_position and a new allow_with_warning are now shared in _hooklib. Settled the two open divergences explicitly - the 5s timeout unified to the shared 10s, and dev-server-guard's missing .lower() judged NOT deliberate (both call sites already lowered the result).

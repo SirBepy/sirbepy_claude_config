@@ -76,3 +76,4 @@ next guard author does not have to re-derive it.
 ## Notes
 
 - Filed by /mega-todos on 2026-09-04 from a triage-sweep out-of-scope report.
+- Fixed in 51025d8: flutter-workdir, dev-server, cargo-test-pipe and pubspec-lock-revert guards now anchor to command position, so a keyword inside a quoted string no longer trips them. dev-backend-guard's DEV_MARKERS deliberately left alone as a data marker.

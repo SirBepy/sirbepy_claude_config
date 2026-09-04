@@ -71,3 +71,4 @@ becomes noise that gets skipped.
 - Do not widen this into a general "always check peers" rule. The specific failure is artifacts that
   assert unstarted state; a blanket check on every skill would be the kind of ceremony that gets
   ignored.
+- Fixed in fe67271: handoff and close now check peers before asserting work is unstarted, conditionally so a solo repo pays nothing. The wording states that list_peers underreports, so an empty result is never treated as proof.

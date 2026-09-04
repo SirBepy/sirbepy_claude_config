@@ -46,3 +46,4 @@ spellings - copy its shape rather than deriving a new one.
 ## Notes
 
 - Filed by /mega-todos on 2026-09-04 from a wave-1 builder's out-of-scope report.
+- Fixed in 7616ca5: the em-dash guard now matches the built-in PascalCase AskUserQuestion as well as the MCP snake_case variant, both in CHAT_TOOL_TEXT_FIELDS and the settings.json matcher. Payload field paths confirmed against croatian-question-guard's committed integration test rather than assumed.

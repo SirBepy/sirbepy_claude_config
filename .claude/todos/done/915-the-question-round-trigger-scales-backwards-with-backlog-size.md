@@ -65,3 +65,4 @@ removing the whole-run latency, and the summary turn is already an interruption.
 
 - Filed by /close on 2026-09-04 from the `/mega-todos` run's own retrospective. Origin is `ai`: the
   dev did not raise this, the run noticed it about itself.
+- Fixed in 4ab5a5b: the question-round trigger decision is now recorded with reasoning in auto-do-todos. Real evidence from this run - 67 todos, 20 carrying Open questions - fed the call.
