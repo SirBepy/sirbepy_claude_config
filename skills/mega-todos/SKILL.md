@@ -283,6 +283,11 @@ that file's own note), then append this block verbatim when `COMMIT_MODE = per-b
 see "Barrier COMMIT_MODE" below for the `barrier` case. Substitute `<EXPECTED_BRANCH>` from Step A;
 leave `<FILES>` as-is, the agent fills that with its own owned paths.
 
+Prefer `skills/mega-todos/build-dispatch.ps1` over hand-pasting either block: it reads both this file
+and `refs/builder-preamble.md` off disk and emits the finished prompt from `-Owned`, `-OffLimits`,
+`-Task`, `-CommitMessage` and `-ExpectedBranch`, which is what closes the drift risk (`bdb0323`)
+retyping created.
+
 The opening two lines below are load-bearing, not decoration: `hooks/dispatch-preamble-guard.py`
 hard-requires the literal staging sentence somewhere in the prompt, and this skill's whole point is
 that the builder commits, so the honest move is to quote the normal-case sentence and then say
@@ -424,9 +429,9 @@ the expensive mistake:
 makes false. Resume replays completed agents from cache and re-runs only the failed ones with their
 ORIGINAL prompts - it cannot inject the partial-work description above into a retry prompt, and a
 prompt built for a clean tree is wrong once the tree is not clean. Author a fresh script instead,
-once the lane map has been re-cut against the survivors. (`472` tracks extracting the shared
-preamble/commit block so a fresh script does not have to re-paste it - check whether it landed before
-hand-copying again.)
+once the lane map has been re-cut against the survivors. Build each retry prompt with
+`skills/mega-todos/build-dispatch.ps1` (472) rather than re-pasting the preamble/commit block by
+hand.
 
 **If the workflow's own result is gone** (a process exit, or a task notification saying no
 completion record was found), do not fall back to `git log` alone: read
