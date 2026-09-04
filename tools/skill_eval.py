@@ -23,6 +23,12 @@ Usage:
     python tools/skill_eval.py --skill rate-it --label v0-baseline --regrade
     python tools/skill_eval.py --skill rate-it --label mutant \\
         --skill-under-test C:\\tmp\\mutant\\rate-it --only 2,3
+    python tools/skill_eval.py --skill rate-it --label mutant-noverify \\
+        --cut-section "## How-to-raise rules" --only 5 --repeat 3
+
+--cut-section cuts a named heading out of the LIVE skill file for the duration
+of the run and restores it byte-for-byte afterward, even on a crash - see
+`mutated_files()`. Never combine it with --skill-under-test.
 
 Results land in scratch (`C:\\tmp\\skill-eval\\<skill>\\<label>\\`), never the
 repo: they contain full model output and are regenerable. Only the pass rates
@@ -39,6 +45,7 @@ import subprocess
 import sys
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -199,6 +206,129 @@ def compare(previous: dict, current: dict) -> str:
     if after < before:
         return "lost"
     return "tied"
+
+
+# --------------------------------------------------------------- mutate/restore
+
+HEADING_RE = re.compile(r"^(#{1,6})\s")
+
+
+class SectionNotFound(Exception):
+    """Raised with every missing heading at once, so a batch of --cut-section
+    flags fails before any file is touched rather than one at a time."""
+
+    def __init__(self, headings):
+        super().__init__(f"heading(s) not found: {headings}")
+        self.headings = list(headings)
+
+
+def locate_section(text: str, heading: str):
+    """Char offsets (start, end) of `heading`'s section, end exclusive, or
+    None. A section runs from its own heading line to the next heading of
+    equal or higher level, or EOF. Matched by exact line text, not substring,
+    so cutting "## Foo" never also eats "## Foo Bar".
+    """
+    target = heading.strip()
+    lines = text.splitlines(keepends=True)
+    start = level = None
+    for i, line in enumerate(lines):
+        if line.rstrip("\r\n") == target:
+            match = HEADING_RE.match(line)
+            if match:
+                start, level = i, len(match.group(1))
+                break
+    if start is None:
+        return None
+    end = len(lines)
+    for j in range(start + 1, len(lines)):
+        match = HEADING_RE.match(lines[j])
+        if match and len(match.group(1)) <= level:
+            end = j
+            break
+    start_off = sum(len(l) for l in lines[:start])
+    end_off = sum(len(l) for l in lines[:end])
+    return start_off, end_off
+
+
+def cut_sections(text: str, headings: list) -> tuple:
+    """Delete every named section from `text`. Refuses (SectionNotFound naming
+    ALL missing headings at once) rather than silently cutting only the ones
+    it found, which would measure a skill nobody asked to mutate this way.
+    """
+    spans, missing = [], []
+    for heading in headings:
+        span = locate_section(text, heading)
+        if span is None:
+            missing.append(heading)
+        else:
+            spans.append(span)
+    if missing:
+        raise SectionNotFound(missing)
+    mutated, removed = text, 0
+    for start, end in sorted(spans, reverse=True):
+        removed += end - start
+        mutated = mutated[:start] + mutated[end:]
+    return mutated, removed
+
+
+def dangling_references(mutated_text: str, heading: str) -> int:
+    """How many times a cut heading's own label still appears in the text
+    afterward - a cross-reference to the section that is now gone (todo 478
+    hazard 2: a naive single-section cut silently measures a chimera)."""
+    label = re.sub(r"^#{1,6}\s*", "", heading.strip())
+    return mutated_text.count(label) if label else 0
+
+
+def assert_mutation_target_clean(root: Path, path: Path) -> None:
+    """Refuse to mutate a file with uncommitted changes: other sessions edit
+    this tree concurrently, and clobbering their in-progress edit here would
+    look identical to their own file vanishing out from under them."""
+    try:
+        rel = path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        rel = str(path.resolve())
+    proc = subprocess.run(
+        ["git", "-C", str(root), "status", "--porcelain", "--", rel],
+        capture_output=True, text=True, timeout=30,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(f"git status check failed for {path}: {proc.stderr.strip()}")
+    if proc.stdout.strip():
+        raise RuntimeError(
+            f"{path} has uncommitted changes, refusing to mutate:\n{proc.stdout.strip()}"
+        )
+
+
+@contextmanager
+def mutated_files(cuts_by_file: dict):
+    """Snapshot each file's exact BYTES, apply its cuts, yield, then restore
+    those exact bytes in a finally - unconditionally, so an exception or a
+    KeyboardInterrupt mid-run never leaves a live skill truncated on disk.
+    Restoration is the one hard constraint of this whole flag (todo 478).
+    """
+    snapshots = {}
+    try:
+        for path, headings in cuts_by_file.items():
+            original = path.read_bytes()
+            snapshots[path] = original
+            mutated, removed = cut_sections(original.decode("utf-8"), headings)
+            path.write_bytes(mutated.encode("utf-8"))
+            print(f"MUTATED {path}: removed {removed} char(s) across {len(headings)} section(s)")
+            for heading in headings:
+                leftover = dangling_references(mutated, heading)
+                if leftover:
+                    print(f"WARN: {path}: {leftover} reference(s) to {heading!r} remain after cut")
+        yield
+    finally:
+        mismatches = []
+        for path, original in snapshots.items():
+            path.write_bytes(original)
+            ok = path.read_bytes() == original
+            print(f"RESTORED {path}: {'ok' if ok else 'MISMATCH'}")
+            if not ok:
+                mismatches.append(str(path))
+        if mismatches:
+            raise RuntimeError(f"restore mismatch, check by hand: {mismatches}")
 
 
 # ------------------------------------------------------------------- processes
@@ -400,6 +530,12 @@ def main() -> int:
                         help="reuse saved responses, re-run only the grader")
     parser.add_argument("--dry-run", action="store_true",
                         help="print the exact prompts and commands, spend nothing")
+    parser.add_argument("--cut-section", action="append", default=None,
+                        help='exact heading text to delete for this run only, e.g. '
+                             '"## How-to-raise rules" (repeatable; never combine with '
+                             '--skill-under-test)')
+    parser.add_argument("--cut-file", type=Path, default=None,
+                        help="file --cut-section applies to (default skills/<skill>/SKILL.md)")
     parser.add_argument("--no-history", action="store_true")
     args = parser.parse_args()
 
@@ -428,6 +564,37 @@ def main() -> int:
         json.loads(prior_path.read_text(encoding="utf-8")).get("entry")
         if prior_path.is_file() else None
     )
+
+    if args.cut_section:
+        if args.skill_under_test:
+            print("FAIL: --cut-section mutates the live skill; --skill-under-test hashes "
+                  "a copy, combining them is ambiguous")
+            return 1
+        cut_file = (args.cut_file or (skill_dir / "SKILL.md")).resolve()
+        if not cut_file.is_file():
+            print(f"FAIL: --cut-file {cut_file} does not exist")
+            return 1
+        try:
+            cut_sections(cut_file.read_text(encoding="utf-8"), args.cut_section)
+        except SectionNotFound as exc:
+            print(f"FAIL: {exc}, running nothing")
+            return 1
+        try:
+            assert_mutation_target_clean(root, cut_file)
+        except RuntimeError as exc:
+            print(f"FAIL: {exc}")
+            return 1
+        with mutated_files({cut_file: args.cut_section}):
+            return run_evaluation(args, skill_dir, evals, template, fixtures,
+                                   hashed_dir, set_hash, prior_entry)
+    return run_evaluation(args, skill_dir, evals, template, fixtures,
+                           hashed_dir, set_hash, prior_entry)
+
+
+def run_evaluation(args, skill_dir: Path, evals: dict, template: str, fixtures: list,
+                    hashed_dir: Path, set_hash: str, prior_entry: dict) -> int:
+    """Everything from hashing through history write - the part that must see
+    the skill's on-disk state AFTER any --cut-section mutation has landed."""
     sk_hash = resolve_skill_hash(args.regrade, prior_entry, skill_hash(hashed_dir))
     print(f"skill={args.skill} label={args.label} fixtures={len(fixtures)}")
     print(f"fixture_set_hash={set_hash} skill_hash={sk_hash} (hashed: {hashed_dir})")
