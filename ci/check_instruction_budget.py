@@ -11,12 +11,11 @@ import argparse
 import sys
 from pathlib import Path
 
-# Measured weight of the real CLAUDE.md after phase 4 settled, 2026-08-22.
 # This is a RATCHET, not a target: lower it whenever CLAUDE.md shrinks, never
-# raise it without the dev's explicit say-so. Todo 424 cut 412 tokens of incident
-# narrative into refs/incidents.md; 429 and 442 then spent 206 of that back on
-# three new rules, which is why this lands at 6558 rather than 6320.
-CEILING_TOKENS = 6558
+# raise it without the dev's explicit say-so. Raised from 6558 on the dev's
+# explicit say-so, 2026-09-04, because headroom had reached 1 token and was
+# blocking queued rules; todo 921 is the paired commitment to cut it back down.
+CEILING_TOKENS = 7000
 
 GATED_FILE = "CLAUDE.md"
 
