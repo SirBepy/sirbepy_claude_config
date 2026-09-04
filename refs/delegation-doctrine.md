@@ -190,6 +190,11 @@ Every dispatch instead asks for an "Out-of-scope findings" section in the report
 and why it sits outside this dispatch's lane. The orchestrator turns each one into a properly
 allocated todo after the fan-out returns, per the reporting requirement named above.
 
+File each dispatch's out-of-scope findings the moment that dispatch's report lands, before the next
+round launches - not batched to run end. A finding held only in the orchestrator's own context does
+not survive a session that ends abruptly or a run with no end (todo 863, 2026-08-27: fifteen
+dispatches, none filed until `/close`, several agents having died unreported in between).
+
 ## Fan-out reconciliation
 
 Partitioning a batch into dispatches by hand drops items silently, and nothing in a fan-out
