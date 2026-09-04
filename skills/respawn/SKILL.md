@@ -15,8 +15,9 @@ Replaces Claude Conductor's retired "Handoff to next AI" menu button, which hid 
 context now lives in the successor's first user message, where Joe can read it.
 
 **Requires the `respawn` MCP tool** (Conductor-hosted sessions only). If it isn't in your tool
-list, stop and say so - do not fall back to `spawn_chat` + `close_session`, do not write a handoff
-file, and do not close.
+list, restart the app and retry first - MCP tools register at session start, so a session older
+than the tool won't see it yet. If it's still missing after a restart, stop and say so - do not
+fall back to `spawn_chat` + `close_session`, do not write a handoff file, and do not close.
 
 `respawn` does both halves in one call, so there is no ordering to get wrong and no separate
 `close_session`. It also stamps `successor_of` on the new chat, which is what makes the app move

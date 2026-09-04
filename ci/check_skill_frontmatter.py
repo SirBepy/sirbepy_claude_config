@@ -36,6 +36,9 @@ REQUIRED_KEYS = ("name", "description")
 
 TOP_LEVEL_KEY = re.compile(r"^([A-Za-z][A-Za-z0-9_-]*):(.*)$")
 
+# Matches body prose like "Requires the `respawn` MCP tool" (skills/respawn/SKILL.md:17).
+REQUIRED_MCP_TOOL = re.compile(r"[Rr]equires the `([A-Za-z0-9_.-]+)` MCP tool")
+
 
 def is_quoted(value: str) -> bool:
     v = value.strip()
@@ -129,6 +132,34 @@ def check_skill(root: Path, path: Path) -> list[str]:
     return problems
 
 
+def find_required_mcp_tools(root: Path, path: Path) -> list[str]:
+    """Return one info line per "Requires the `X` MCP tool" sentence in a
+    skill's body.
+
+    Informational only, never a FAIL: MCP tools attach at session start (todo
+    497), so whether one is actually registered is a per-session runtime fact
+    this offline script has no way to observe - it only surfaces the
+    declaration for a human to cross-check.
+    """
+    rel = path.relative_to(root).as_posix()
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+
+    close_idx = None
+    for i in range(1, len(lines)):
+        if lines[i] == "---":
+            close_idx = i
+            break
+    body_start = close_idx + 1 if close_idx is not None else 0
+
+    info = []
+    for i, line in enumerate(lines[body_start:], start=body_start + 1):
+        m = REQUIRED_MCP_TOOL.search(line)
+        if m:
+            info.append(f"{rel}:{i}: declares required MCP tool '{m.group(1)}' (registration unverifiable offline)")
+    return info
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     default_root = Path(__file__).resolve().parent.parent
@@ -144,14 +175,19 @@ def main() -> int:
 
     all_problems = []
     skills_with_problems = 0
+    all_info = []
     for path in files:
         problems = check_skill(root, path)
         if problems:
             skills_with_problems += 1
             all_problems.extend(problems)
+        all_info.extend(find_required_mcp_tools(root, path))
 
     for problem in all_problems:
         print(problem)
+
+    for info in all_info:
+        print(f"INFO: {info}")
 
     if all_problems:
         print(f"FAIL: {len(all_problems)} problem(s) across {skills_with_problems} skill(s)")
