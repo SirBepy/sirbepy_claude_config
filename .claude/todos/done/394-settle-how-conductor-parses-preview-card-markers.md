@@ -50,6 +50,7 @@ both defensively.
 ## Notes
 
 - This needs a live Conductor session, so it cannot be closed from a headless or subagent context.
+- Relocated to 911 in claude_usage_in_taskbar (remote: SirBepy/claude_conductor) via /mega-todos 2026-09-04, on Joe's suggestion. The observation it needs can only be made inside a live Conductor session. NOTE: the fix still lands in this repo at skills/create-pr/SKILL.md:219-237 - the relocated todo says so and asks that the observed answer be recorded precisely enough to apply here without re-observing. Also flagged there that text markers are being retired in favour of the MCP API, which may moot both branches.
 
 ## Open questions
 

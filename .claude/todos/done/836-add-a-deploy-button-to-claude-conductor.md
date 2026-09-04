@@ -54,6 +54,7 @@ confirmation and watch logic, and the two surfaces would drift.
   it is slow. Budget for it.
 - Deferred from the 2026-08-29 session that built `/deploy` because the Rust build was more than
   that session had left; Joe chose "skill + Hubbub workflow" as that session's scope.
+- Relocated to 910 in claude_usage_in_taskbar (remote: SirBepy/claude_conductor) via /mega-todos 2026-09-04, on Joe's explicit say-so. It was misfiled here: every file it targets lives in that repo, which has its own active backlog. Placement of the button is that session's call.
 
 ## Open questions
 
