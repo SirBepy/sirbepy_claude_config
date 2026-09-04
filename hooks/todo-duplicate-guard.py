@@ -27,7 +27,6 @@ todo's own body points mostly at paths outside the repo being written to.
 heuristic cannot have, so a false positive here must never refuse the write.
 """
 
-import json
 import re
 import sys
 from pathlib import Path
@@ -37,7 +36,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny
+    from _hooklib import read_payload, deny, allow_with_warning
 except Exception as e:
     sys.stderr.write(f"[todo-duplicate-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -256,16 +255,10 @@ def find_id_collision(todos_dir: Path, target_name: str, target_id: int) -> Path
 
 def allow(warning: str | None) -> None:
     """Exit 0, optionally surfacing `warning` as a non-blocking `allow`
-    decision - same pattern as list-peers-pre-edit-guard.py's emit_warning.
+    decision via _hooklib's shared helper (todo 910).
     """
     if warning:
-        print(json.dumps({
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolUse",
-                "permissionDecision": "allow",
-                "permissionDecisionReason": warning,
-            }
-        }))
+        allow_with_warning(warning)
     sys.exit(0)
 
 

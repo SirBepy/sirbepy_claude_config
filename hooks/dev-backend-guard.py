@@ -47,7 +47,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, tokenize_segment as tokenize
+    from _hooklib import read_payload, deny, tokenize_segment as tokenize, basename
 except Exception as e:
     sys.stderr.write(
         f"[dev-backend-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n"
@@ -90,10 +90,6 @@ def allow(message: str = "") -> None:
     if message:
         print(message)
     sys.exit(0)
-
-
-def basename(tok: str) -> str:
-    return re.split(r"[\\/]", tok)[-1].lower()
 
 
 def dev_marker_in(text: str) -> str | None:

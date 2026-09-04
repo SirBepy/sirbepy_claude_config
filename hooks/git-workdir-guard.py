@@ -25,7 +25,6 @@ itself misfires.
 import os
 import re
 import shlex
-import subprocess
 import sys
 from pathlib import Path
 
@@ -34,13 +33,17 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, strip_quotes
+    from _hooklib import read_payload, deny, strip_quotes, basename, git_repo_root
 except Exception as e:
     sys.stderr.write(f"[git-workdir-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
 
 OVERRIDE_ENV = "CLAUDE_GIT_WORKDIR_GUARD_BYPASS"
-GIT_TIMEOUT_SECONDS = 10
+
+# Kept as a module-level name (not just the bare import) so this guard's own
+# test suite can call `guard.repo_root(...)` unmodified - same precedent as
+# list-peers-pre-edit-guard.py (todo 874).
+repo_root = git_repo_root
 
 GIT_BASENAMES = {"git", "git.exe"}
 WRITE_SUBCOMMANDS = {"push", "commit", "reset", "checkout", "restore", "update-ref", "rebase", "stash"}
@@ -58,10 +61,6 @@ def tokenize(segment: str) -> list[str]:
         return [strip_quotes(t) for t in shlex.split(segment, posix=False)]
     except ValueError:
         return []
-
-
-def basename(tok: str) -> str:
-    return re.split(r"[\\/]", tok)[-1].lower()
 
 
 def pinned_cd(tokens: list[str]) -> str | None:
@@ -107,21 +106,6 @@ def git_write_subcommand(tokens: list[str]) -> tuple[bool, str | None]:
     return pinned, (sub if sub in WRITE_SUBCOMMANDS else None)
 
 
-def repo_root(path: str) -> str | None:
-    if not path or not os.path.isdir(path):
-        return None
-    try:
-        result = subprocess.run(
-            ["git", "-C", path, "rev-parse", "--show-toplevel"],
-            capture_output=True, text=True, timeout=GIT_TIMEOUT_SECONDS,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    if result.returncode != 0:
-        return None
-    return result.stdout.strip() or None
-
-
 def norm(path: str) -> str:
     return os.path.normcase(os.path.normpath(path))
 
@@ -155,8 +139,8 @@ def main() -> None:
     if not write_hit:
         sys.exit(0)
 
-    shell_root = repo_root(effective_cwd)
-    harness_root = repo_root(os.environ.get("CLAUDE_PROJECT_DIR") or "")
+    shell_root = git_repo_root(effective_cwd)
+    harness_root = git_repo_root(os.environ.get("CLAUDE_PROJECT_DIR") or "")
 
     # Can't determine one side - fail open rather than block on a guess.
     if not shell_root or not harness_root:

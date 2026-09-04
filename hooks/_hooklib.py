@@ -16,6 +16,7 @@ remove the guard's settings.json entry) without needing a shell.
 
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -56,6 +57,21 @@ def deny(reason: str, suffix: str = "") -> None:
     sys.exit(2)
 
 
+def allow_with_warning(reason: str) -> None:
+    """Advisory PreToolUse 'allow' decision carrying `reason`: JSON on
+    stdout, exit 0. The tool call proceeds either way - unlike ask()/deny(),
+    this only surfaces `reason` to the transcript.
+    """
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "allow",
+            "permissionDecisionReason": reason,
+        }
+    }))
+    sys.exit(0)
+
+
 def ask(reason: str) -> None:
     """Emit an advisory PreToolUse 'ask' decision: JSON on stdout, exit 0.
 
@@ -70,6 +86,26 @@ def ask(reason: str) -> None:
         }
     }))
     sys.exit(0)
+
+
+def basename(tok: str) -> str:
+    """Last path segment of `tok`, case-folded. The rstrip handles a
+    trailing slash ("foo/" -> "foo", not "") - dev-server-guard's two call
+    sites already lower() the result too, so folding case here is a no-op
+    for them, not a behaviour change.
+    """
+    return re.split(r"[\\/]", tok.rstrip("\\/"))[-1].lower()
+
+
+# Chars that legitimately precede a new command/statement. A regex match is
+# only treated as a real invocation when it sits right after one of these
+# (or at the very start), so a keyword inside a quoted string or prose never
+# counts. Was byte-identical in cargo-test-pipe-guard.py/shell-content-write-guard.py.
+COMMAND_START_RE = re.compile(r"(?:^|[|;&(){\n])\s*$")
+
+
+def is_command_position(text: str, idx: int) -> bool:
+    return bool(COMMAND_START_RE.search(text[:idx]))
 
 
 def strip_quotes(tok: str) -> str:

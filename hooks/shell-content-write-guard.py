@@ -29,7 +29,6 @@ config/authored-content write. Carved out narrowly below: bare `git show`/
 """
 
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -38,7 +37,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny as _lib_deny
+    from _hooklib import read_payload, deny as _lib_deny, git_repo_root, is_command_position
 except Exception as e:
     sys.stderr.write(f"[shell-content-write-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -99,8 +98,6 @@ GIT_BLOB_READ_RE = re.compile(
     r"^\s*git\s+(?:show|cat-file\s+(?:-p|blob))\b[^|;&$`<>\n]*\s\S+:\S+\s*$"
 )
 
-GIT_TIMEOUT_SECONDS = 5
-
 
 def _statement_before(masked: str, idx: int) -> str:
     bounds = [m.end() for m in STATEMENT_BOUNDARY_RE.finditer(masked[:idx])]
@@ -109,19 +106,14 @@ def _statement_before(masked: str, idx: int) -> str:
 
 
 def _repo_root(cwd: str) -> Path | None:
-    if not cwd:
+    # todo 910: was its own 5s timeout, diverging from _hooklib's shared 10s
+    # with no reason on record. Unified onto git_repo_root/10s; this call
+    # only runs behind the rare git-blob-redirect carve-out below.
+    root = git_repo_root(cwd)
+    if root is None:
         return None
     try:
-        proc = subprocess.run(
-            ["git", "-C", cwd, "rev-parse", "--show-toplevel"],
-            capture_output=True, text=True, timeout=GIT_TIMEOUT_SECONDS,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    if proc.returncode != 0 or not proc.stdout.strip():
-        return None
-    try:
-        return Path(proc.stdout.strip()).resolve()
+        return Path(root).resolve()
     except OSError:
         return None
 
@@ -189,17 +181,6 @@ def mask_quoted(command: str, dquote_re: re.Pattern) -> str:
     real `>` in between.
     """
     return _combined_quote_re(dquote_re).sub("QSTR", command)
-
-
-# Chars that legitimately precede a new command/statement. A cmdlet match is
-# only treated as an invocation when it sits right after one of these (or at
-# the very start), so `grep 'Set-Content'` (inside a masked-out string) or
-# prose naming the cmdlet never counts, only actual command position does.
-COMMAND_START_RE = re.compile(r"(?:^|[|;&(){\n])\s*$")
-
-
-def is_command_position(masked: str, idx: int) -> bool:
-    return bool(COMMAND_START_RE.search(masked[:idx]))
 
 
 def _has_iex(masked: str) -> bool:

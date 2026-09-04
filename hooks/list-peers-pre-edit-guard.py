@@ -39,7 +39,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import GIT_TIMEOUT_SECONDS, git_repo_root, read_payload
+    from _hooklib import GIT_TIMEOUT_SECONDS, git_repo_root, read_payload, allow_with_warning
 except Exception as e:
     sys.stderr.write(f"[list-peers-pre-edit-guard] FATAL: cannot import _hooklib ({e}); failing open.\n")
     sys.exit(0)
@@ -114,19 +114,6 @@ def peer_label(peer: dict) -> str:
     return f"{name} ({branch})" if branch else str(name)
 
 
-def emit_warning(reason: str) -> None:
-    """Advisory, non-blocking: `allow` auto-continues the tool call while
-    still surfacing `reason`, unlike hooklib's `ask()`/`deny()` gates.
-    """
-    print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "allow",
-            "permissionDecisionReason": reason,
-        }
-    }))
-
-
 def main() -> None:
     payload = read_payload()
     session_id = payload.get("session_id") or ""
@@ -153,13 +140,12 @@ def main() -> None:
         # HEAD moved since this session's own last check (including "went from no
         # commits to one"): proof of a peer even though list_peers reported none.
         write_marker(marker, current_head)
-        emit_warning(
+        allow_with_warning(
             f"[list-peers-pre-edit-guard] HEAD moved ({recorded[:8] or 'none'} -> "
             f"{current[:8] or 'none'}) in this repo without this session committing, "
             f"while editing {file_path}. list_peers may be wrong - announce on the "
             "repo channel, narrow this edit's pathspec, or stop and investigate."
         )
-        sys.exit(0)
 
     peers = fetch_peers(session_id, DAEMON_PORT)
     write_marker(marker, current_head)
@@ -168,12 +154,11 @@ def main() -> None:
         sys.exit(0)
 
     names = ", ".join(peer_label(p) for p in peers)
-    emit_warning(
+    allow_with_warning(
         f"[list-peers-pre-edit-guard] {len(peers)} peer session(s) share this repo "
         f"({names}) while editing {file_path}. Call list_peers/post_message before "
         f"proceeding if your edit might collide."
     )
-    sys.exit(0)
 
 
 if __name__ == "__main__":
