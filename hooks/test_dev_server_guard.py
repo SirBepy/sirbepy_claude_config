@@ -53,6 +53,9 @@ MATCH_CASES = [
     (['vite', 'build'], None, "vite build is a one-off, not matched"),
     (['next', 'dev'], 'next dev', "next dev matches"),
     (['next', 'build'], None, "next build is a one-off, not matched"),
+    (['next', 'start'], 'next start', "next start matches"),
+    (['vite', 'preview'], 'vite', "vite preview matches"),
+    (['dart', 'run', 'bin/server.dart'], None, "dart run is deliberately uncovered"),
     (['npm', 'run', 'dev'], 'npm run dev', "npm run dev matches"),
     (['npm', 'test'], None, "npm test is out of scope"),
     (['npm', 'run', 'build'], None, "npm run build is a one-off, not matched"),
@@ -110,6 +113,9 @@ MAIN_CASES = [
     ("flutter run -d chrome", 2, "raw flutter run is caught"),
     ("uvicorn app:app --reload", 2, "raw uvicorn is caught"),
     ("cargo tauri dev", 2, "raw cargo tauri dev is caught"),
+    ("next start", 2, "raw next start is caught"),
+    ("vite preview", 2, "raw vite preview is caught"),
+    ("dart run bin/server.dart", 0, "raw dart run passes, deliberately uncovered"),
 ]
 
 

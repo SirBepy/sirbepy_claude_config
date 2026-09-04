@@ -2,11 +2,16 @@
 
 Fires on every Bash/PowerShell call. Tokenizes the command (same shlex
 convention as package-manager-guard.py) and matches a fixed list of
-dev-server launch shapes: bare `vite`, `next dev`, `npm|pnpm|yarn run dev`,
-`pnpm|yarn dev`, `flutter run`, `uvicorn`, `fastify [start]`, and `tauri dev`
-(any prefix: cargo/npm run/pnpm/yarn). One-off commands (`npm test`,
-`npm run build`, `vite build`) are deliberately not matched - CLAUDE.md's
-Process Hygiene rule exempts them.
+dev-server launch shapes: bare `vite` (including `vite preview`), `next dev`,
+`next start`, `npm|pnpm|yarn run dev`, `pnpm|yarn dev`, `flutter run`,
+`uvicorn`, `fastify [start]`, and `tauri dev` (any prefix: cargo/npm
+run/pnpm/yarn). One-off commands (`npm test`, `npm run build`, `vite build`)
+are deliberately not matched - CLAUDE.md's Process Hygiene rule exempts them.
+
+`dart run` is deliberately NOT matched (see todo 883): unlike the shapes
+above, `dart run <script>` is a script-name distinction, not a command-shape
+one - the same ambiguity `npm run` has for `dev` vs `build`, but with no
+fixed script name to key on across projects.
 
 Escape condition: `skills/supervised-run/sv.ps1` never execs the dev command
 in the calling shell, it POSTs it to the server_supervisor daemon (sv.ps1:147,
@@ -61,8 +66,8 @@ def is_dev_server_command(tokens):
             return "uvicorn"
         if base == "flutter" and nxt == "run":
             return "flutter run"
-        if base == "next" and nxt == "dev":
-            return "next dev"
+        if base == "next" and nxt in ("dev", "start"):
+            return f"next {nxt}"
         if base == "fastify" and nxt in (None, "start"):
             return "fastify"
         if base == "tauri" and nxt == "dev":
