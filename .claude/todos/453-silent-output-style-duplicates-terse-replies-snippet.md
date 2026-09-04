@@ -77,8 +77,28 @@ The failure mode is a tidy-looking merge that quietly drops the deliverable exem
 would compress commit messages and outbound drafts. That is the one part of `terse-replies.md`
 whose absence would not be obvious until it had already caused damage.
 
-## Open questions
+## Dev intent, recorded 2026-09-04
 
-Written by /mega-todos on 2026-09-04. The next run opens with these.
+Joe, asked which of the two files should own the chat-tone rules, answered with the underlying goal
+rather than the file question, and it reframes this todo:
 
-- [ ] [TOOLING] `output-styles/silent.md` and `snippets/terse-replies.md` both carry near-identical chat-tone rules with no authority marker in either. Which one owns them going forward? Options: the style owns everything, delete the snippet and its import / the style is primary and the snippet keeps only what a style cannot express (deliverable exemptions, subagent scope) / keep both duplicated. Recommended: style primary with a reduced snippet, because a style does not reach subagents and dropping the snippet entirely would lose that coverage.
+> "the reason why i even have that output style or whatever, is because i dont want claude to even
+> say much in a normal chat, the only time its talking, i want it to talk to me thru my app
+> in an ideal world, i could define an output style for that, but tbh, thats lower priority right
+> now, that can be left as a todo"
+
+So the actual goal is not deduplication. It is: **assistant text in the terminal should be near-zero,
+and everything Claude wants to say to Joe should go through `send_message` into the Conductor app.**
+Deduplicating `silent.md` against `terse-replies.md` is a means to that, and possibly the wrong one -
+the two files might both be the wrong shape for what he wants.
+
+He explicitly marked it LOWER PRIORITY and said to leave it as a todo, so **do not build this in an
+unattended run.** It is parked pending his say-so, not waiting on more analysis.
+
+Note the constraint that shaped the original question and still applies: an output style does not
+reach subagents; a snippet does. Any design that puts everything in the style silently drops tone
+control for every subagent dispatch.
+
+Related: todo 410 is building a Stop-hook guard that requires at least one `send_message` per turn.
+That is the enforcement half of the same intent - Joe wants the app to be the channel - so whoever
+picks this up should check what 410 landed first rather than designing against a stale picture.
