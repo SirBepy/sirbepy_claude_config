@@ -86,3 +86,19 @@ arguments, and a skill would add a description to the always-loaded budget for n
 Do not cache the extracted corpus in the repo. It is roughly 18MB for the command set alone and
 contains the full text of every command run on this machine, including any that carried a
 credential on the command line. It belongs in scratch, regenerated on demand.
+
+- ADVANCED in the /mega-todos wave-1 run, commit `99d6d43`, NOT finished. Both tools now exist:
+  `tools/extract_corpus.py` walks transcripts to caller-named JSONL, and `tools/measure_corpus.py`
+  imports the real candidate module's own matching function rather than re-declaring a copy of the
+  regex under test. Both are deliberately kept out of `ci/run_all.py`'s CHECKS.
+  REMAINING, two items:
+  1. Acceptance asks that re-running phase 2's measurement through these tools reproduces its
+     published numbers (0 hits for every CORE rule, 3/1/4/1 for the four MIDDLE rules). The builder
+     reported this is not literally reproducible against a live, ever-growing transcript corpus, and
+     this todo's own Notes forbid caching the corpus to freeze it. Settle what the acceptance should
+     actually be: either pin a fixed transcript subset as the oracle, or replace the numeric
+     reproduction with a weaker check (the tools run clean and agree with each other on the same
+     input). Do not quietly declare it met.
+  2. Approach item 5 wants the harness documented in `PLAN.md`'s hook-doctrine block, pointing at
+     both tools by path. The builder could not do this: builders are barred from editing `PLAN.md`.
+     It is a main-thread edit.

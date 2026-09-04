@@ -54,3 +54,14 @@ Playwright-driven login flows already get discussed is enough.
 Low-frequency issue (only comes up when a task needs an actual human login inside an
 automated/testing browser), but the failure mode (a fully wasted browser-launch round trip) is
 clean and easy to prevent once known.
+
+- ADVANCED in the /mega-todos wave-1 run, commit `c96ce95`, NOT finished. The detection itself is
+  built and exported from `skills/_shared/playwright-resolve.cjs` as `assertNoAutomationLoginBlock()`.
+  Only Google is covered: Microsoft and Apple are named in this todo as likely but unconfirmed, and
+  were deliberately left out rather than baking an unverified claim into shared code.
+  REMAINING, and it is what the Acceptance item actually asks for: nothing calls the check yet, so
+  the fail-fast behaviour is not reachable from any real flow. Two known call sites need wiring, both
+  outside the wave-1 builder's owned path:
+  `skills/screenshot/screenshot-helper.cjs:133` and `:234` (`const chromium = getChromium();`), and
+  `skills/clockify-reconciliator/scripts/hs_common.cjs:14`
+  (`getChromium().launchPersistentContext(profile, ...)`). Wire both, then this closes.
