@@ -32,6 +32,10 @@ earlier gate call and `git commit` can no longer let a flagged diff land -
 the gate's verdict is recomputed here, at commit time, independent of how
 the caller chained the shell command. A pathspec-less commit or a gate that
 can't be invoked at all fails open, same philosophy as the rest of this file.
+
+Decided (todo 868): a pathspec-less commit stays fail-open, deliberately -
+resolving it would mean reading the shared git index to guess a pathspec,
+which can hold another concurrent session's staged work.
 """
 
 import os

@@ -251,7 +251,7 @@ with tempfile.TemporaryDirectory() as tmp:
     if not _testlib.report(got == 0, f"{label} (got exit={got})"):
         fails.append(label)
 
-    label = "a pathspec-less commit is not force-checked (fails open, unresolved)"
+    label = "a pathspec-less commit is not force-checked (fails open, decided: accepted gap, todo 868)"
     got = run_main("git commit -m 'x'", session_id="sess-gate", cwd=str(repo))
     if not _testlib.report(got == 0, f"{label} (got exit={got})"):
         fails.append(label)
