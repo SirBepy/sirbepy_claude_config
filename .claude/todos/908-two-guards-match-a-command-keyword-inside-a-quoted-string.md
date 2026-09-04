@@ -43,6 +43,27 @@ before editing.
 3. Add a positive and a negative case per guard: a real `fvm flutter run` in the wrong workdir still
    blocks, a real `next start` still blocks, and neither prose form does.
 
+## Two more anchoring gaps, found by /code-check over the same run
+
+Both are the same question, so settle them in this pass rather than as separate todos:
+
+- **`hooks/cargo-test-pipe-guard.py:114-120`** is internally inconsistent. `CARGO_SUBCOMMAND_RE`
+  requires `is_command_position()` at :116, added by todo 881 for exactly this reason, but
+  `PIPE_FILTER_RE.search(seg)` at :120 is still a bare substring search. A downstream pipe segment
+  whose text merely CONTAINS `tail`/`head`/`grep`/`Select-Object` (as another command's argument)
+  denies, even though that word is not that segment's own command. Anchor the filter match to the
+  start of `seg` the way `verb_segments()` does elsewhere, allowing a leading env-assignment or
+  `sudo` prefix.
+- **`hooks/pubspec-lock-revert-guard.py:42,125`** matches `flutter\s+(analyze|run)` as a bare
+  substring over the raw command. Lower severity, because this guard never denies - the worst case
+  is a spurious marker write - but it is the same shape.
+
+The general rule worth writing down once this lands: **every guard scanning shell text anchors its
+trigger to command position, unless the thing it matches is a DATA marker rather than a command
+verb.** `hooks/dev-backend-guard.py`'s `DEV_MARKERS` is the legitimate exception - `.env.dev` and
+hostnames genuinely appear anywhere in an argument list - and the exception is worth stating so the
+next guard author does not have to re-derive it.
+
 ## Acceptance
 
 - A `grep`/`ls` whose text merely contains `flutter` is not blocked.

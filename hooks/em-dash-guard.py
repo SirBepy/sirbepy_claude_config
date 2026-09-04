@@ -34,7 +34,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, is_tool_result_entry, iter_turn_tool_uses
+    from _hooklib import read_payload, deny, iter_turn_tool_uses
 except Exception as e:
     sys.stderr.write(f"[em-dash-guard] FATAL: cannot import _hooklib ({e}); failing open.\n")
     sys.exit(0)
