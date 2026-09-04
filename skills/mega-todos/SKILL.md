@@ -38,8 +38,7 @@ Everything from Step 6 onward is replaced by this file.
 
 ## Sidebar badge
 
-Emit `<cc-autopilot:on>` at the end of the first response, `<cc-autopilot:off>` at the end of the
-final one. Same markers `/autopilot` uses.
+Removed 2026-09-04 (todo 876) - see `/autopilot`'s own "Sidebar badge" section for the reason.
 
 ## Prerequisite: explicit opt-in
 
@@ -50,8 +49,7 @@ skill - say so and offer `/auto-do-todos` instead.
 
 ## Order of operations
 
-1. Preflight (Step A) - record `START_SHA`, verify the repo's commit preconditions, emit
-   `<cc-autopilot:on>`.
+1. Preflight (Step A) - record `START_SHA`, verify the repo's commit preconditions.
 2. `/cleanup-todos` and `/batch-todos`, unattended, per `/auto-do-todos` Steps 2-3.
 3. Triage and the one question round, per `/auto-do-todos` Steps 4-5.
 4. Exclusion pass (Step B) - drop what must not be automated.
@@ -479,7 +477,6 @@ Step D: file each as a properly allocated todo, `**Origin:** ai`, per `refs/dele
 its own reason (never a bare count), the lane map and actual achieved parallelism, every fork
 auto-decided and what it picked, barrier failures and how they were repaired, final ctx% used, and
 the verification result.
-End with `<cc-autopilot:off>`.
 
 ## Notes
 

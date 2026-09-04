@@ -13,10 +13,7 @@ disable-model-invocation: true
 
 ## Sidebar badge
 
-`<cc-autopilot:on>` and `<cc-autopilot:off>` drive the "autopilot" badge on the session row in the
-sidebar, same markers `/autopilot` uses, and are stripped from the rendered chat. Step 1 and Step 9
-below are the only place they get emitted; this section documents what they do, it is not a second
-instruction to emit them.
+Removed 2026-09-04 (todo 876) - see `/autopilot`'s own "Sidebar badge" section for the reason.
 
 ## Precedence
 
@@ -94,7 +91,7 @@ Cleanout mode and attended mode are independent and may both be active in the sa
 
 ## Order of operations
 
-1. Record `START_SHA` (`git rev-parse HEAD`) - Step 9 diffs against it, then end this first response with `<cc-autopilot:on>` on its own line, nothing after.
+1. Record `START_SHA` (`git rev-parse HEAD`) - Step 9 diffs against it.
 2. `/cleanup-todos`, unattended - always runs (Steps 2-3).
 3. `/batch-todos`, unattended, unless Step 2 left nothing EASY - its EASY batch executes here.
 4. Triage the remaining queue into AUTO and DEV (Step 4).
@@ -102,7 +99,7 @@ Cleanout mode and attended mode are independent and may both be active in the sa
 6. Grind the AUTO queue (Step 6).
 7. Second-pass escalation if the AUTO queue empties with headroom left (Step 7).
 8. Park every unresolved DEV fork into its todo (Step 8).
-9. Wrap-up verification, then the written summary. Emit `<cc-autopilot:off>` (Step 9).
+9. Wrap-up verification, then the written summary (Step 9).
 
 ## Steps 2-3 - Nested skills run unattended
 
@@ -308,7 +305,7 @@ verification finding Claude made on its own: `**Origin:** ai`.
 Then the written summary: todos completed with commit shas, todos parked and why, every fork the run
 auto-decided and what it picked, questions asked and answers applied, `/cleanup-todos`'s still-pending
 dedupe/drop candidates, final ctx% used, and the verification result (code-check finding count,
-test/e2e pass-fail), immediately followed by `<cc-autopilot:off>` on its own line, nothing after.
+test/e2e pass-fail).
 
 ## Notes
 

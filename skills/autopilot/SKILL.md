@@ -13,7 +13,13 @@ argument-hint: "[--sleep]"
 
 ## Sidebar badge
 
-`<cc-autopilot:on>` and `<cc-autopilot:off>` drive the "autopilot" badge on the session row in the sidebar, and are stripped from the rendered chat - Joe never sees them as text. Step 1 and step 6 below are the only place they get emitted; this section documents what they do, it is not a second instruction to emit them.
+Removed 2026-09-04 (todo 876). The `<cc-autopilot:on>`/`<cc-autopilot:off>` markers had no enforcement
+anywhere - `grep -rln 'cc-autopilot' hooks/ ci/` returned nothing, and `hooks/status-marker-guard.py`
+only flags a malformed `cc-status`/`cc-title` marker, never a missing `cc-autopilot` one. A run that
+emitted `off` without a preceding `on` left the badge silently wrong for its whole duration
+(2026-09-01) and nothing caught it. Building a Stop hook to enforce pairing was heavier than the
+cosmetic badge justified, so the markers are dropped rather than enforced; `/mega-todos` and
+`/auto-do-todos` no longer carry them either.
 
 ## Precedence
 
@@ -90,12 +96,12 @@ This folder is reserved for genuine blockers only - never for routine FYI notes.
 
 ## Order of operations
 
-1. **Restate the task + its success criteria in one line (the completion oracle), then proceed** - do not wait for confirmation. If the prompt is too vague to derive testable criteria, do NOT invent criteria and self-grade against them. Instead: (a) pick the narrowest defensible interpretation, (b) log it as `ASSUMED SCOPE: <X> - revisit`, (c) set the oracle = that scope's fast-check floor green + no regressions, (d) flag the assumption prominently in the final summary. **The oracle may only restate criteria the request already contained. It may never add an ACTION the request did not ask for, and meeting a criterion the run wrote for itself is not authorisation to take that action** - "ship it" in an oracle the run composed is not the dev saying ship it. End this first response with the oracle line immediately followed by `<cc-autopilot:on>` on its own line, nothing after.
+1. **Restate the task + its success criteria in one line (the completion oracle), then proceed** - do not wait for confirmation. If the prompt is too vague to derive testable criteria, do NOT invent criteria and self-grade against them. Instead: (a) pick the narrowest defensible interpretation, (b) log it as `ASSUMED SCOPE: <X> - revisit`, (c) set the oracle = that scope's fast-check floor green + no regressions, (d) flag the assumption prominently in the final summary. **The oracle may only restate criteria the request already contained. It may never add an ACTION the request did not ask for, and meeting a criterion the run wrote for itself is not authorisation to take that action** - "ship it" in an oracle the run composed is not the dev saying ship it.
 2. **Check remaining context first, every chunk including a single-chunk run** (see "Context self-regulation" above for thresholds and actions). Then, for a big task, produce a short plan / task list (delegate or do briefly in main), then execute chunk-by-chunk via subagents, running `/commit` between chunks.
 3. Real judgment call -> bounded iterate-it (within the 3/run cap) -> log. Trivia -> decide.
 4. Verify against the fast-check floor. **Runaway guard:** every loop is 3-strike. If the SAME verification fails 3x consecutively, OR a single chunk makes zero forward progress across 3 consecutive subagent dispatches, stop that loop, park the failure, and continue other unblocked work. There is no infinite retry.
 5. `/commit` between chunks. Never push, deploy, or otherwise send work off the machine unless the invocation itself asked for it (the dev said push, or named a `/commit push*` mode). If a run believes a push is wanted, it says so in the final summary ("ready to push, N commits") and stops there.
-6. **Completion oracle:** done = stated success criteria met AND fast-check floor green. Never self-vibe done. End with a written summary immediately followed by `<cc-autopilot:off>` on its own line, nothing after.
+6. **Completion oracle:** done = stated success criteria met AND fast-check floor green. Never self-vibe done. End with a written summary.
 
 ## Hard stops (autopilot does NOT override these)
 
