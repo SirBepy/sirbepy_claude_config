@@ -70,13 +70,29 @@ if (-not (Test-Path $todosDir)) {
 
 . (Join-Path $PSScriptRoot '..\close\_shared.ps1')
 
+# Mirrors Resolve-TodoFile's numericId normalization (strip a leading-zero run before
+# the hyphen) so a filename prefix and an -Items entry compare equal either way.
+function Get-NormalizedTodoId([string]$RawId) {
+    if ($RawId -match '^0*(\d+)-(.+)$') { return $matches[1] }
+    return $RawId
+}
+
+# Prefix-less stems (Resolve-TodoFile's fallback path) have no "<id>-" to strip,
+# so the whole stem IS the id for matching purposes.
+function Get-FilenameIdPrefix([string]$Name) {
+    if ($Name -match '^0*(\d+)-') { return $matches[1] }
+    return [System.IO.Path]::GetFileNameWithoutExtension($Name)
+}
+
 $pathspec = New-Object System.Collections.Generic.List[string]
 $failures = New-Object System.Collections.Generic.List[string]
+$inputIds = New-Object System.Collections.Generic.HashSet[string]
 
 foreach ($item in $Items) {
     $parts = $item -split '\|', 2
     $id = $parts[0].Trim()
     $note = if ($parts.Count -gt 1) { $parts[1].Trim() } else { $null }
+    [void]$inputIds.Add((Get-NormalizedTodoId $id))
 
     # Resolve against the LIVE backlog only, before archiving moves the file -
     # done/ is never globbed here, which is the bug this script exists to kill.
@@ -115,6 +131,21 @@ foreach ($item in $Items) {
 }
 
 if (Test-Path $planPath) { $pathspec.Add($planPath) }
+
+# Defence in depth: every path returned traces back to an id this call actually
+# received, so a future edit that widens $pathspec by accident cannot hand the
+# caller's git commit a stray path (the caller passes .Pathspec straight through).
+foreach ($p in $pathspec) {
+    if ($p -eq $planPath) { continue }
+    $normalized = $p -replace '/', '\'
+    if (-not $normalized.StartsWith($todosDir, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "archive-batch.ps1: refusing to return pathspec entry '$p' - not under '$todosDir' and not PLAN.md"
+    }
+    $prefix = Get-FilenameIdPrefix (Split-Path -Leaf $p)
+    if (-not $inputIds.Contains($prefix)) {
+        throw "archive-batch.ps1: refusing to return pathspec entry '$p' - id prefix '$prefix' was not in the input id set"
+    }
+}
 
 if ($failures.Count -gt 0) {
     foreach ($f in $failures) { Write-Warning "[$RepoRoot] $f" }
