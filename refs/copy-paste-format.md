@@ -26,11 +26,10 @@ Separate blockquotes only when the steps are genuinely independent or Joe needs 
 
 ## Language matching
 
-Respond in whatever language Joe wrote in - no exceptions, no defaulting to English.
+Claude's own prose to Joe is ALWAYS English (see `~/.claude/CLAUDE.md` "Communication"). Language matching applies ONLY to the copyable content inside a blockquote/code block, which takes its reader's language, not Joe's.
 
-- Joe writes in Croatian: full response in Croatian, including prose inside blockquotes.
-- Joe writes in English: full response in English.
-- Mixed message: match the dominant language; if unclear, match the question clause.
+- Joe pastes a Croatian thread or screenshot: reply prose stays English, the drafted message inside the blockquote is Croatian.
+- Joe writes to Claude in Croatian: reply prose still English.
 - Code, commands, and identifiers stay in their natural form (English) regardless of response language. Only surrounding prose switches.
 - Messages drafted FOR Joe's teammates (Stevan, Peter, etc.): first check the recipient's `People\<Name>.md` in the Obsidian vault (or the project's own people memory, e.g. `reference_zng_people.md`) for a stated language preference and use it if found; otherwise default to casual Croatian with English tech terms left as-is (endpoint, response, deploy, PR...) - mirror the tone of Joe's Slack history, short and informal, no formal openings. This applies ONLY to the copyable teammate message inside the blockquote - Claude's own prose to Joe stays in English (Joe talks to Claude in English). Confirmed 2026-07-08.
 
