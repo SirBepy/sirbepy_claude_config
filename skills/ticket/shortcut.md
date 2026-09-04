@@ -96,6 +96,10 @@ from the list, marked with a recommendation, never "name a reference ticket"), p
 (Low/Medium/High), estimate (1/2/3/5 points). Description defaults to "drafted from this
 conversation" unless the dev has a spec to paste.
 
+**SKILL.md step 4 carve-out defaults**, used only when that carve-out fires (skip the card, infer
+instead): epic none, priority Medium, estimate 1 - unless the invocation itself signals otherwise
+(e.g. "urgent" implies High).
+
 **Title style** - match the dev's existing tickets, never an invented convention:
 
 - zng-app features/chores: `FE: <verb phrase>`

@@ -88,6 +88,14 @@ One `AskUserQuestion`, never open-ended, skipping anything the invocation alread
 ask is platform-specific (Shortcut needs epic, priority and estimate; Linear needs team and
 priority) - the quirks file lists them.
 
+**Carve-out - explicit file-it directive:** skip the card entirely when the invocation is itself an
+imperative to create the ticket now, not a description that could merely lead to one - "file a
+ticket for X", "log this as a bug", "open a ticket for Stevan" all qualify; "there's a bug in X" or
+"should we track this?" do not, because neither commits to creating. On a qualifying invocation,
+infer every field the card would have asked (title from step 2's stated claim, the rest from the
+quirks file's own defaults and inference rules) and name EVERY inferred value in step 6's report
+line - the disclosure is what makes the skip recoverable, never skip without it.
+
 ### 5. Description - smallest shape that fits
 
 The dev consistently finds Claude-drafted tickets too long. When in doubt, write less.
