@@ -28,6 +28,8 @@ PLAIN_LITERAL = "hunter2" + "hunter2"
 FIREBASE_KEY = "AIza" + "SyCMxWyGRJScXgsl1qa_nNbUdIs5o86w83Y"
 FIREBASE_KEY_TOO_LONG = FIREBASE_KEY + "x"
 MIDSTRING_NOT = "cannot-" + "be-rotated-abc123xyz"
+SUFFIXED_FAKE = PLAIN_LITERAL + "-fake"
+MIDVALUE_FAKE = PLAIN_LITERAL + "fakemarker"
 
 # (content, expect_hit, label). One positive + one negative per pattern row
 # in secret-patterns.txt, plus the negative cases the spec calls out by name.
@@ -54,6 +56,26 @@ CASES = [
         f'token = "{MIDSTRING_NOT}"',
         True,
         "generic_assignment: not- allow is leading-anchor only, mid-value not- still trips",
+    ),
+    (
+        f'token = "{SUFFIXED_FAKE}"',
+        True,
+        "generic_assignment: fake allow is leading-anchor only, trailing -fake still trips (todo 918)",
+    ),
+    (
+        f'password = "{MIDVALUE_FAKE}"',
+        True,
+        "generic_assignment: fake allow is leading-anchor only, mid-value fake still trips (todo 918)",
+    ),
+    (
+        f'aws_access_key_id = not-{AKIA}',
+        True,
+        "aws_akia: not- marker does not exempt a dedicated-pattern credential shape (todo 918)",
+    ),
+    (
+        f'token = "fake-{GH_TOKEN}"',
+        True,
+        "github_token: fake- marker does not exempt a dedicated-pattern credential shape (todo 918)",
     ),
     ("const x = process.env.AWS_KEY;", False, "generic_assignment: process.env excluded"),
     ('api_key = os.environ["API_KEY"]', False, "generic_assignment: os.environ excluded"),
