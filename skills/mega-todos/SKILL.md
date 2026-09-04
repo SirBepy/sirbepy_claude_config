@@ -388,10 +388,10 @@ commit at each barrier instead, once per completed todo, in lane order:
 1. Write a fresh marker (block's step 1).
 2. `git add` any untracked file that todo's builder created, by name.
 3. Run the branch guard (step 5).
-4. Run the working-tree diff check again, right now, against the same `<FILES>` (step 2, above) -
-   time has passed since the builder's own pass and another agent's commit may have landed in
-   between. An unrecognised hunk is the same STOP: drop that path from `<FILES>` and name it in the
-   barrier's own summary, then commit the rest.
+4. Run the working-tree diff check again, right now, against the same `<FILES>` (step 2, above,
+   which is `/commit` step 8) - time has passed since the builder's own pass and another agent's
+   commit may have landed in between. An unrecognised hunk is the same STOP: drop that path from
+   `<FILES>` and name it in the barrier's own summary, then commit the rest.
 5. `git commit -m "<PREFIX>: <title>" -- <FILES>` (step 6), naming that todo's files only.
 
 Same HARD RULES apply, main thread substituted for builder throughout.
@@ -462,7 +462,9 @@ Archival is **main-thread only**, because `complete-todo.ps1` prunes the shared 
    collision).
 2. Commit the archival as one `CHORE: archive completed todos` commit per barrier, via `/commit`,
    passing the helper's `.Pathspec` as the commit pathspec - the main thread CAN invoke skills, so it
-   uses the real one; the helper itself never commits.
+   uses the real one; the helper itself never commits. This commit is bound by `/commit` step 8's
+   working-tree diff check like any other commit, so the pathspec is the helper's `.Pathspec`, never
+   a directory-wide `git status`.
 3. Diff the set of ids actually archived or parked against the lane map from Step C, per
    `refs/delegation-doctrine.md`'s "Fan-out reconciliation" - an id in neither set is a silent drop,
    re-dispatch or park it, never assume done.
