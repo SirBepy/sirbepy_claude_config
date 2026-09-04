@@ -164,7 +164,19 @@ Run in this order:
 1. **Memory writes.** Read `~/.claude/refs/memory-rubric.md` first if it hasn't been read this session - it defines the ADD/UPDATE/DELETE/NONE gate, the bar for writing at all, and the evidence requirement. Then for each correction or non-obvious confirmation from Phase 1, route it through that gate and write to the store CLAUDE.md's Global Knowledge Vault section says it belongs in (vault for cross-project facts and people, native per-project Auto Memory for project-local ones), updating the relevant index. Skip if nothing qualifies; NONE is a normal outcome. Never invent memories to look productive.
 
    **Dedup against this session's own writes.** Memories written live earlier in this session are already covered - list them before evaluating, and treat a Phase 1 candidate matching one as NONE rather than writing a near-duplicate. The transcript sweep exists to catch what live capture MISSED, not to re-extract what it already got.
-2. **`.claude/todos/`** Write a separate `.md` file per item from:
+2. **`.claude/todos/`** Peer sweep first, conditional on concurrent sessions: before writing any
+   `task` todo below, call `list_peers` once - the one unconditional call, cheap even solo. Phase 0
+   and Phase 1 step 5 are the two sources that assert work is unstarted or unfinished, and a live
+   peer may already have picked one up (todo 890: a `/handoff` todo called two Shortcut items
+   unstarted while a peer had already fixed and shipped both). Zero peers: add nothing and write the
+   todos below as-is - `list_peers` returning zero is a weak signal, not proof of solitude, it has
+   undercounted a live peer in this repo before, so an empty sweep is never worded as "confirmed
+   unstarted". One or more peers: also call `read_messages`, check whether a peer's session name or
+   a recent message names the same ticket/file/feature as the item about to be filed, and where it
+   does `post_message` to ask directly, folding the answer (or "asked, no reply yet") plus the
+   sweep's timestamp into that todo's Notes instead of filing it as plain unstarted work.
+
+   Write a separate `.md` file per item from:
    - Phase 0 (unfinished dev commitments where the dev chose "close anyway") - tag `**Type:** task`,
      `**Origin:** dev` (the dev asked for it; Claude just didn't finish it in time).
    - Phase 1 step 5 (unfinished offers) - tag `**Type:** task`, `**Origin:** ai` (Claude proposed it
