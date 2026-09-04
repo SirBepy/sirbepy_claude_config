@@ -19,7 +19,7 @@ assumed - do not wait for `browser_wait_for`/`browser_take_screenshot` to appear
   A prior run's browser left open on this profile makes the next launch fail with a misleading "Target
   closed" error instead of a real one (see `reference_playwright_orphan_profile_lock.md`).
 - Run `node skills/clockify-reconciliator/scripts/hs_preflight.cjs --org {hubstaff_org_id} --user
-  {hubstaff_user_id} --profile skills/clockify-reconciliator/playwright-profiles/hubstaff --mon {mon}
+  {hubstaff_user_id} --profile C:/Users/tecno/AppData/Local/claude-clockify/playwright-profiles/hubstaff --mon {mon}
   --sun {sun}` for the first week, with `HUBSTAFF_EMAIL`/`HUBSTAFF_PASSWORD` set in the process env if
   present. The script prints one JSON line: `{"authOk":true}` or `{"authOk":false,"reason":"..."}`.
   - `authOk:false`, reason mentions auto-login: warn that the screenshot step will be skipped, mark it
@@ -123,7 +123,7 @@ Auth already confirmed in step 2 - no login-check needed here. Same orphan-brows
 applies before opening the browser here too.
 
 Run `node skills/clockify-reconciliator/scripts/hs_weekshot.cjs --org {hubstaff_org_id} --user
-{hubstaff_user_id} --profile skills/clockify-reconciliator/playwright-profiles/hubstaff --weeks
+{hubstaff_user_id} --profile C:/Users/tecno/AppData/Local/claude-clockify/playwright-profiles/hubstaff --weeks
 {mon1}:{sun1},{mon2}:{sun2},... --out-dir C:/Users/tecno/Desktop` with all Mon-Sun weeks computed in
 step 2 (dates as `YYYY-MM-DD`). The script navigates each week (with the required `showWeeklycopy`
 param, resizes the viewport to >= 2300 wide, and collapses the left nav so the **Total** column isn't
@@ -154,7 +154,7 @@ Entries file shape, one object per HubStaff entry to create:
 ```
 
 Run `node skills/clockify-reconciliator/scripts/hs_addtime.cjs --org {hubstaff_org_id} --user
-{hubstaff_user_id} --profile skills/clockify-reconciliator/playwright-profiles/hubstaff --entries
+{hubstaff_user_id} --profile C:/Users/tecno/AppData/Local/claude-clockify/playwright-profiles/hubstaff --entries
 <path-to-json> --project-label {hubstaff_project_label} --reason-label {hubstaff_reason_label}`.
 `--project-label` is required (project config field `hubstaff_project_label`, same source as
 `hubstaff_org_id`/`hubstaff_user_id` - never hardcode an account's project name here).
