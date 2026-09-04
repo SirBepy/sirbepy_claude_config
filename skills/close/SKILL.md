@@ -28,11 +28,10 @@ argument-hint: "[--dont-close] [--skip-review] [--light] [/commit ...] [/sleep-w
 
 If `--light` is passed: read `close/light.md` before proceeding. It overrides Phases 1-3 with high-context-mode versions.
 
-Remaining args are a chain of slash commands. Each slash command may be followed by its own positional args (anything until the next `/`).
-
-- A token starting with `/` opens a new chained command.
-- Tokens between `/foo` and the next `/bar` are `/foo`'s args.
-- Empty remaining args = bare /close (retrospect + persist, then close unless --dont-close).
+Remaining args follow the chaining convention in `~/.claude/refs/slash-arg-parsing.md`: each is a
+chain of slash commands, and each slash command may be followed by its own positional args (anything
+until the next `/`). Empty remaining args = bare /close (retrospect + persist, then close unless
+--dont-close).
 
 Examples:
 
