@@ -336,6 +336,48 @@ def run_cwd_drift_regression() -> list[str]:
     return fails
 
 
+def run_multirepo_freshness_regression() -> list[str]:
+    """Todo 875: a turn touching UI files in two repos must scope the
+    freshness scan to the repo of the NEWEST UI file, not the first one
+    attributed. repo_a's older file is covered by its own screenshot; repo_b's
+    newer file is also covered by its own later screenshot. Scanning repo_a
+    (the first-touched file's repo, the bug) would wrongly fire since repo_a's
+    screenshot predates repo_b's newer edit.
+    """
+    fails: list[str] = []
+    tmp = Path(tempfile.mkdtemp(prefix="ui-reminder-multirepo-"))
+    try:
+        repo_a = tmp / "repo-a"
+        repo_a.mkdir()
+        init_repo(repo_a)
+        repo_b = tmp / "repo-b"
+        repo_b.mkdir()
+        init_repo(repo_b)
+        session = f"test-{uuid.uuid4()}"
+        t0 = time.time()
+
+        ui_file_a = repo_a / "src" / "Old.tsx"
+        touch(ui_file_a, t0)
+        touch(repo_a / ".for_bepy" / "screenshots" / "s" / "shot.png", t0 + 50)
+
+        ui_file_b = repo_b / "src" / "New.tsx"
+        touch(ui_file_b, t0 + 200)
+        touch(repo_b / ".for_bepy" / "screenshots" / "s" / "shot.png", t0 + 300)
+
+        transcript = write_transcript(repo_a, [
+            ("Write", {"file_path": str(ui_file_a)}),
+            ("Edit", {"file_path": str(ui_file_b)}),
+        ])
+        proc = run_hook(str(repo_a), session, str(transcript))
+        silent = proc.stdout.strip() == "" and proc.returncode == 0
+        print(f"[{'PASS' if silent else 'FAIL'}] regression 875: newest file's repo (b) already covered, stays quiet -> exit={proc.returncode} stdout={proc.stdout.strip()!r}")
+        if not silent:
+            fails.append("875: multi-repo freshness scoped to newest file's repo")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return fails
+
+
 def run() -> int:
     fails = (
         _testlib.run_cases(UNIT_CASES, check_unit)
@@ -343,6 +385,7 @@ def run() -> int:
         + run_487_regression()
         + run_readonly_regression()
         + run_cwd_drift_regression()
+        + run_multirepo_freshness_regression()
     )
     return _testlib.summarize(fails)
 

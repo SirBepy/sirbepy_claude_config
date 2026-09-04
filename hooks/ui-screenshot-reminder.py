@@ -101,6 +101,24 @@ def newest_mtime(paths: list[Path]) -> float | None:
     return newest
 
 
+def newest_path(paths: list[Path]) -> Path | None:
+    """The path with the newest mtime among `paths`, same skip semantics as
+    newest_mtime. Used to pick which file's repo to scan for screenshots, so
+    that repo matches the file actually driving ui_mtime.
+    """
+    newest_p: Path | None = None
+    newest_m: float | None = None
+    for p in paths:
+        try:
+            mtime = p.stat().st_mtime
+        except OSError:
+            continue
+        if newest_m is None or mtime > newest_m:
+            newest_m = mtime
+            newest_p = p
+    return newest_p
+
+
 def newest_screenshot_mtime(cwd: str) -> float | None:
     """Newest .png mtime anywhere under `cwd`/.for_bepy/screenshots/, across
     every session subfolder - the hook has no reliable way to resolve its
@@ -130,7 +148,8 @@ def main() -> None:
     if ui_mtime is None:
         sys.exit(0)
 
-    repo_root = git_repo_root(ui_files[0].parent) or payload.get("cwd") or "."
+    newest_ui_file = newest_path(ui_files)
+    repo_root = git_repo_root(newest_ui_file.parent) or payload.get("cwd") or "."
     screenshot_mtime = newest_screenshot_mtime(repo_root)
     if screenshot_mtime is not None and screenshot_mtime >= ui_mtime:
         sys.exit(0)
