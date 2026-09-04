@@ -213,6 +213,16 @@
             "statusMessage": "Checking UI changes"
           }
         ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\pubspec-lock-revert-guard.py\"",
+            "statusMessage": "Reverting pubspec.lock pub-get churn"
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -324,6 +334,16 @@
             "type": "command",
             "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\flutter-workdir-guard.py\"",
             "statusMessage": "Checking Flutter/Dart working-directory pin"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\pubspec-lock-revert-guard.py\"",
+            "statusMessage": "Snapshotting pubspec.lock state"
           }
         ]
       },
