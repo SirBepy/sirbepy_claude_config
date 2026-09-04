@@ -27,6 +27,7 @@ CONN = "postgres://admin:" + "realpassword123" + "@db.internal:5432/app"
 PLAIN_LITERAL = "hunter2" + "hunter2"
 FIREBASE_KEY = "AIza" + "SyCMxWyGRJScXgsl1qa_nNbUdIs5o86w83Y"
 FIREBASE_KEY_TOO_LONG = FIREBASE_KEY + "x"
+MIDSTRING_NOT = "cannot-" + "be-rotated-abc123xyz"
 
 # (content, expect_hit, label). One positive + one negative per pattern row
 # in secret-patterns.txt, plus the negative cases the spec calls out by name.
@@ -47,6 +48,13 @@ CASES = [
     ("postgresql+psycopg://{DB_USER}:{DB_PASS}@{DB_HOST}:5432/db", False, "conn_string_creds: interpolated template"),
     (f'password = "{PLAIN_LITERAL}"', True, "generic_assignment: real literal"),
     ('password = "changeme"', False, "generic_assignment: placeholder"),
+    ('token: "not-the-real-token"', False, "generic_assignment: leading not- placeholder (todo 471)"),
+    ('token = "fake-oauth-secret-abc123"', False, "generic_assignment: leading fake- placeholder (todo 471)"),
+    (
+        f'token = "{MIDSTRING_NOT}"',
+        True,
+        "generic_assignment: not- allow is leading-anchor only, mid-value not- still trips",
+    ),
     ("const x = process.env.AWS_KEY;", False, "generic_assignment: process.env excluded"),
     ('api_key = os.environ["API_KEY"]', False, "generic_assignment: os.environ excluded"),
     ('token: "<your-token-here>"', False, "generic_assignment: angle-bracket placeholder"),
