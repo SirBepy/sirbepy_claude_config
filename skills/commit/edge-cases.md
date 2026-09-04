@@ -25,6 +25,13 @@ When a single file holds changes belonging to different commits, stage the speci
 - This is surgical and leaves the working tree untouched - prefer it over restore-edit-amend whenever you need exact lines.
 - **Exception to step 8's pathspec rule:** a hunk-level split genuinely needs the index (that's what `apply --cached` stages into), so it is the one case that commits FROM the index instead of by pathspec. Re-run `git diff --cached --stat` immediately before committing to confirm the index holds ONLY the hunks you just staged - if a concurrent session added anything else in between, stop and re-isolate rather than committing whatever the index now contains.
 
+## Foreign hunk inside your own hunk
+
+When `foreign-hunk-check.sh` (step 8's working-tree diff check) reports `foreign-hunks-inside-your-hunk`, a peer's uncommitted lines and yours share one `@@` block - `git apply --cached` cannot split a hunk, so a pathspec commit of that file takes both. Two safe orders, no third:
+
+- **Peer commits first.** Once their commit lands, `git diff HEAD` for that file now shows only your remaining delta (their part already matches the new HEAD) - rerun the check to confirm clean, then commit normally.
+- **Reconstruct the blob yourself**, same patch-trim technique as "Splitting one file across commits" above: dump the diff, delete the peer's hunk lines by hand, `apply --cached --recount`, verify, commit from the index.
+
 ## Shared-checkout hook hazard
 
 A pathspec commit (step 8) protects the INDEX from a concurrent session's
