@@ -39,7 +39,6 @@ reachable phone number, never a generated one, and run no negative tests.
 
 import os
 import re
-import shlex
 import sys
 from pathlib import Path
 
@@ -48,7 +47,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, strip_quotes as _lib_strip_quotes
+    from _hooklib import read_payload, deny, tokenize_segment as tokenize
 except Exception as e:
     sys.stderr.write(
         f"[dev-backend-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n"
@@ -95,23 +94,6 @@ def allow(message: str = "") -> None:
 
 def basename(tok: str) -> str:
     return re.split(r"[\\/]", tok)[-1].lower()
-
-
-def flatten_tokens(tokens: list[str]) -> list[str]:
-    out: list[str] = []
-    for tok in tokens:
-        for piece in tok.split(","):
-            piece = _lib_strip_quotes(piece.strip())
-            if piece:
-                out.append(piece)
-    return out
-
-
-def tokenize(segment: str) -> list[str]:
-    try:
-        return flatten_tokens(shlex.split(segment, posix=False))
-    except ValueError:
-        return [p for p in re.split(r"\s+", segment) if p]
 
 
 def dev_marker_in(text: str) -> str | None:

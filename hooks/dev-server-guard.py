@@ -19,7 +19,6 @@ Incident: 90+ orphan vitest processes once pegged the CPU at 100% and 90C.
 only. Fails open on any hook error so a bug here can never block shell work.
 """
 
-import shlex
 import sys
 from pathlib import Path
 
@@ -28,21 +27,12 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, strip_quotes as _lib_strip_quotes
+    from _hooklib import read_payload, deny, tokenize_command as tokenize
 except Exception as e:
     sys.stderr.write(f"[dev-server-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
 
 INFO_FLAGS = {"--version", "-v", "-V", "--help", "-h"}
-
-
-def tokenize(command: str):
-    # posix=False so backslashes in unquoted Windows paths survive; quotes
-    # are stripped manually since posix=False otherwise leaves them attached.
-    try:
-        return [_lib_strip_quotes(t) for t in shlex.split(command, posix=False)]
-    except ValueError:
-        return command.split()
 
 
 def basename(tok: str) -> str:

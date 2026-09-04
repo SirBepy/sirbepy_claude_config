@@ -16,6 +16,7 @@ remove the guard's settings.json entry) without needing a shell.
 
 import json
 import os
+import shlex
 import subprocess
 import sys
 import time
@@ -75,6 +76,49 @@ def strip_quotes(tok: str) -> str:
     if len(tok) >= 2 and tok[0] == tok[-1] and tok[0] in ("\"", "'"):
         return tok[1:-1]
     return tok
+
+
+def tokenize_command(command: str) -> list[str]:
+    """Shell-tokenize a whole command (todo 893). posix=False keeps Windows
+    backslash paths intact; quotes are stripped manually since posix=False
+    otherwise leaves them attached. For dev-server-guard/package-manager-
+    guard, both already documented as failing open on any hook error: an
+    unbalanced-quote ValueError falls back to a naive whitespace split
+    rather than an empty list, so pattern matching still gets a shot.
+    """
+    try:
+        return [strip_quotes(t) for t in shlex.split(command, posix=False)]
+    except ValueError:
+        return command.split()
+
+
+def flatten_tokens(tokens: list[str]) -> list[str]:
+    """PowerShell `-ArgumentList "a","b","c"` collapses to one shlex token
+    when there's no whitespace between the commas; split those back apart.
+    """
+    out: list[str] = []
+    for tok in tokens:
+        for piece in tok.split(","):
+            piece = strip_quotes(piece.strip())
+            if piece:
+                out.append(piece)
+    return out
+
+
+def tokenize_segment(segment: str) -> list[str]:
+    """Shell-tokenize one chain-split segment (todo 893), for the two HARD
+    BLOCK guards (dev-backend-guard, flutter-workdir-guard). Unlike
+    tokenize_command, the ValueError fallback must never be an empty list:
+    both callers skip a segment outright when it has no tokens, so an empty
+    result on unbalanced quotes would smuggle a blocked command straight
+    past the hard-block check it exists to enforce. flutter-workdir-guard
+    returned [] here before this fix; dev-backend-guard's whitespace-split
+    behaviour is the one both guards now share.
+    """
+    try:
+        return flatten_tokens(shlex.split(segment, posix=False))
+    except ValueError:
+        return segment.split()
 
 
 def git_repo_root(path) -> str | None:

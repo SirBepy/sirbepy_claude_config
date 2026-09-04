@@ -16,7 +16,6 @@ Fails open on any hook error so a bug here can never block package work.
 """
 
 import json
-import shlex
 import sys
 from pathlib import Path
 
@@ -25,7 +24,15 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, strip_quotes as _lib_strip_quotes
+    # strip_quotes stays imported under its own name (unused locally, no
+    # longer than a line) purely to keep test_package_manager_guard.py's
+    # todo-501 alias-pin case (guard._lib_strip_quotes) passing.
+    from _hooklib import (
+        read_payload,
+        deny,
+        strip_quotes as _lib_strip_quotes,
+        tokenize_command as tokenize,
+    )
 except Exception as e:
     sys.stderr.write(f"[package-manager-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -46,16 +53,6 @@ MUTATING = {
     "npm": {"install", "i", "ci", "add", "uninstall", "remove", "rm", "un", "update", "up", "dedupe"},
     "pnpm": {"install", "i", "add", "remove", "rm", "update", "up", "dedupe", "import"},
 }
-
-
-def tokenize(command: str):
-    # posix=False so backslashes in unquoted Windows paths (PowerShell's
-    # native style) survive; quotes are then stripped manually since
-    # posix=False otherwise leaves them attached to the token.
-    try:
-        return [_lib_strip_quotes(t) for t in shlex.split(command, posix=False)]
-    except ValueError:
-        return command.split()
 
 
 def find_nearest_package_json(start_dir: Path):

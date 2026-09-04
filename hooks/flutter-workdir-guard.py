@@ -31,7 +31,6 @@ silently skipped check. PowerShell commands are untouched.
 
 import os
 import re
-import shlex
 import sys
 from pathlib import Path
 
@@ -40,7 +39,15 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, strip_quotes as _lib_strip_quotes
+    # strip_quotes stays imported under its own name (unused locally, no
+    # longer than a line) purely to keep test_flutter_workdir_guard.py's
+    # todo-501 alias-pin case (guard._lib_strip_quotes) passing.
+    from _hooklib import (
+        read_payload,
+        deny,
+        strip_quotes as _lib_strip_quotes,
+        tokenize_segment as tokenize,
+    )
 except Exception as e:
     sys.stderr.write(f"[flutter-workdir-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -66,29 +73,6 @@ def allow(message: str = "") -> None:
 
 def basename(tok: str) -> str:
     return re.split(r"[\\/]", tok)[-1].lower()
-
-
-def flatten_tokens(tokens: list[str]) -> list[str]:
-    """PowerShell `-ArgumentList "a","b","c"` collapses to one shlex token
-    when there's no whitespace between the commas; split those back apart.
-    Runs on posix=False output (see tokenize), so quotes are stripped here
-    per comma-piece rather than relying on shlex - posix mode would mangle
-    Windows backslash paths like C:\\Users\\... by treating \\U as an escape.
-    """
-    out: list[str] = []
-    for tok in tokens:
-        for piece in tok.split(","):
-            piece = _lib_strip_quotes(piece.strip())
-            if piece:
-                out.append(piece)
-    return out
-
-
-def tokenize(segment: str) -> list[str]:
-    try:
-        return flatten_tokens(shlex.split(segment, posix=False))
-    except ValueError:
-        return []
 
 
 def has_runner(tokens: list[str]) -> bool:
