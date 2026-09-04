@@ -227,6 +227,11 @@ stop** - a wide parallel run with no verify floor is 15 agents committing unchec
 Only the per-todo rung belongs to a builder, because a builder is a real agent with real shell
 access. Every other rung is the main thread's, between workflow invocations.
 
+**Every per-batch barrier also checks whether the run edited its own execution files:**
+`git diff --name-only <last-barrier-sha>..HEAD` and, if `skills/mega-todos/SKILL.md`,
+`refs/delegation-doctrine.md`, or `refs/builder-preamble.md` appears, re-read the changed sections
+before continuing - a run that touched none of the three pays nothing beyond the one diff.
+
 **In `barrier` COMMIT_MODE (Step A)**, the per-batch and full-floor barriers each additionally
 perform the commit step before their verify commands run - see "Barrier COMMIT_MODE" under the
 injected commit block below. Builders never commit in this mode; the main thread does, once per
