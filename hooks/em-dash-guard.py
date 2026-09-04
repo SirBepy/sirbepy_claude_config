@@ -55,6 +55,15 @@ CHAT_TOOL_TEXT_FIELDS = {
         "questions[].options[].label",
         "questions[].options[].description",
     ],
+    # Built-in tool (todo 906), payload shape confirmed identical to the MCP
+    # variant above by croatian-question-guard.py's own field paths and its
+    # passing "AskUserQuestion" integration test.
+    "AskUserQuestion": [
+        "questions[].question",
+        "questions[].header",
+        "questions[].options[].label",
+        "questions[].options[].description",
+    ],
 }
 
 _PATH_TOKEN_RE = re.compile(r"\[\]|[^.\[\]]+")

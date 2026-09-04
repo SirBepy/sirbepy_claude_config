@@ -457,7 +457,7 @@
         ]
       },
       {
-        "matcher": "^([A-Za-z0-9_]+__)?(send_message|post_message|update_message|ask_user_question)$",
+        "matcher": "^(AskUserQuestion|([A-Za-z0-9_]+__)?(send_message|post_message|update_message|ask_user_question))$",
         "hooks": [
           {
             "type": "command",

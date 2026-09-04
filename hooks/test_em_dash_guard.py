@@ -139,6 +139,11 @@ TRANSCRIPT_CASES = [
         False,
         "unknown MCP tool stays unscanned",
     ),
+    (
+        [("AskUserQuestion", {"questions": [{"question": f"bad{ED}q", "options": []}]})],
+        True,
+        "built-in AskUserQuestion question field blocks (todo 906)",
+    ),
 ]
 
 
@@ -235,6 +240,13 @@ PRE_TOOL_USE_CASES = [
     ("mcp__cc_conductor__send_message", {"text": f"bad{ED}text"}, True, "send_message denied pre-delivery"),
     ("mcp__cc_conductor__send_message", {"text": "all clean"}, False, "clean send_message not denied"),
     ("Write", {"file_path": "foo.py", "content": f"# comment{ED}here"}, False, "Write stays unscanned at PreToolUse too"),
+    (
+        "AskUserQuestion",
+        {"questions": [{"question": f"bad{ED}q", "options": []}]},
+        True,
+        "built-in AskUserQuestion denied pre-delivery (todo 906)",
+    ),
+    ("AskUserQuestion", {"questions": [{"question": "clean q", "options": []}]}, False, "clean built-in AskUserQuestion not denied (todo 906)"),
 ]
 
 
