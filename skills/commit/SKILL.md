@@ -82,9 +82,10 @@ If nothing to commit, say so and stop.
 Same as `/commit` but also bumps the patch version before committing (e.g. 1.0.0 -> 1.0.1).
 
 Version bump procedure:
-1. Find `package.json` in the repo root. If it exists, it is the **source of truth** - read the version from it, increment the patch number, and write it back.
-2. Find any other `.json` files in the repo root that contain a top-level `"version"` field (e.g. `tauri.conf.json`, `manifest.json`). Update each one to match the new version. If a Rust crate manifest exists for the app (`src-tauri/Cargo.toml`), it needs the same bump too - see `skills/commit/edge-cases.md` for the lockfile-regen and scope rules.
-3. Include all modified version files in step 8's commit pathspec, alongside the other changed files.
+1. Before bumping, compare the current version across `package.json`, any other root `.json` with a top-level `"version"` field, and `src-tauri/Cargo.toml` if present. If they disagree, the repo is already drifted: bring every one of them to the new version in this same commit, not just whichever file the last `VERSION:` commit happened to touch, and say so in the summary. A run of prior commits that all touched one file is evidence of an unfixed habit, not a per-repo convention this procedure defers to.
+2. Find `package.json` in the repo root. If it exists, it is the **source of truth** - read the version from it, increment the patch number, and write it back.
+3. Find any other `.json` files in the repo root that contain a top-level `"version"` field (e.g. `tauri.conf.json`, `manifest.json`). Update each one to match the new version. If a Rust crate manifest exists for the app (`src-tauri/Cargo.toml`), it needs the same bump too - see `skills/commit/edge-cases.md` for the lockfile-regen and scope rules.
+4. Include all modified version files in step 8's commit pathspec, alongside the other changed files.
 
 Commit message follows the normal style - no need to mention the version bump.
 
