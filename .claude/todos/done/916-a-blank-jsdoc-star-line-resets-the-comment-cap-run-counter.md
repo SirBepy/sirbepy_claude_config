@@ -79,3 +79,4 @@ the pattern never matches those at all). Both are holes in the same enforcer; th
 construct the pattern DOES match, so it is the more surprising of the two. **403** questions whether
 the cap should exist in this shape at all - if 403 lands first and changes the rule, re-read this
 before implementing.
+- Fixed in fc30ae0: comment-noise.sh now skips a moved line neutrally instead of resetting the run counter, so a bare JSDoc separator no longer lets a long block escape the 4-line cap. Verified in a scratch repo both ways - the new case flags, and done/258's verbatim-move regression case stays silent.

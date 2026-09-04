@@ -81,3 +81,4 @@ needs network, and `tools/test_skill_eval.py` already asserts the harness stays 
 Keep the flag out of the default path. A tool that can edit live skills should only do so when
 explicitly asked, and the restore is the only thing standing between a probe and every concurrent
 session reading a mutated skill.
+- Fixed in 27630b0: skill_eval now has a mutate-and-restore mode with restoration guaranteed on every exit path including exceptions, and refuses to mutate a dirty file. Test covers the restore-on-exception path.

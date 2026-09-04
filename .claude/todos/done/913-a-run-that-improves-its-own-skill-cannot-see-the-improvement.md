@@ -58,3 +58,4 @@ other orchestrator-hygiene rules already live.
 ## Notes
 
 - Filed by /close on 2026-09-04 from the `/mega-todos` run's own retrospective.
+- Fixed in 99f84d0: every per-batch barrier now diffs last-barrier-sha..HEAD for changes to the run's own execution files and re-reads the changed sections. Costs nothing when none changed.

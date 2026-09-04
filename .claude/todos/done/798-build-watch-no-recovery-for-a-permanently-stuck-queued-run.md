@@ -68,3 +68,4 @@ be a last resort, not a default.
 Not urgent - this is a rare GitHub-infra edge case, not a routine failure mode. The value is in not
 re-deriving the multi-command diagnostic dance (view -> cancel -> REST cancel -> githubstatus.com
 -> workflow_dispatch) from zero next time it happens.
+- Fixed in 6bc4749: build-watch.md now carries a recovery path for a permanently queued run.

@@ -41,3 +41,4 @@ Not a code change - no test. Success is a later multi-dispatch session where fin
 - Relocated from `07` in `c:\Users\tecno\Desktop\Projects\zng-app` via /cleanup-todos 2026-09-01: the todo's own Notes said it belongs to the global `~/.claude` tree because its subject is `refs/delegation-doctrine.md`, and it was only filed in zng-app because that is where the incident happened.
 - Related: global todo 817 (a progress-status skill) covers the adjacent problem of silent agent deaths being invisible.
 - Distinct from todo 404, which covers the opposite side of the same doctrine section - a subagent writing INTO the backlog, rather than the orchestrator failing to file after the fan-out returns.
+- Fixed in f37bec4: delegation-doctrine now requires out-of-scope findings to be filed as each dispatch's report lands, not batched to run end. Stop-hook option deliberately not taken.

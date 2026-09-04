@@ -59,3 +59,4 @@ unreachable. The orchestrator did not, for the reason the sibling todo covers.
 
 - Filed by /close on 2026-09-04 from the `/mega-todos` run's own retrospective. The incident is the
   orchestrator's, not a builder's.
+- Fixed in ab5f7c1: Step E point 2 and the Barrier COMMIT_MODE section now both name /commit step 8's working-tree diff check explicitly. The pathspec mechanism itself already existed via archive-batch.ps1.

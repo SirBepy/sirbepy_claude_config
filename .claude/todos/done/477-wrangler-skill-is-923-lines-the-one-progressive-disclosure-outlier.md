@@ -65,3 +65,4 @@ for, and 422's own scope was the harness plus one pilot.
 Consider writing eval fixtures for `/wrangler` first (`tools/skill_eval.py`, see `skills/rate-it/
 evals/` for the shape). A 923-line-to-sidecar split is exactly the change where "behavior is
 identical" is asserted and not checked, and this is now the one repo where it can be measured.
+- Fixed in 1ccac92: the 923-line wrangler skill is split into progressive-disclosure sidecars with SKILL.md as the routing entry point. Frontmatter unchanged, all instructions preserved.

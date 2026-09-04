@@ -53,3 +53,7 @@ evidence of an unfixed habit, not of a deliberate per-repo convention.
 
 Running `/commit pushnbump` in a drifted repo brings every version file to the new version in one
 commit and reports that it did, instead of reproducing the drift.
+
+## Notes
+
+- Fixed in ea88412: the bump procedure now compares the current version across package.json, other root .json files with a top-level version, and src-tauri/Cargo.toml before bumping, and states that prior commit habit is not a per-repo convention.

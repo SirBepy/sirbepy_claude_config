@@ -64,3 +64,4 @@ test-file exemption would blind.
   under a minute. File it as a papercut, not a priority. The reason to fix it at all is that the
   workaround pushes toward renaming code to satisfy a linter, which is a bad habit to encode.
 - Do not touch this from a project session; it is global-tree work.
+- Fixed in d0c35fd: secret-scan now allows self-evident placeholder values, with test coverage on both arms - a placeholder passes, a real-looking credential still blocks. Portable ERE only, no backslash-b or backslash-d.

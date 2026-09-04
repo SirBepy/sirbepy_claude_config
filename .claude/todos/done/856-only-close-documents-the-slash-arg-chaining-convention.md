@@ -70,3 +70,4 @@ problem.
 - The counter-argument worth weighing before building: `/close` is the only skill that actually
   ACCEPTS a chain today. If no other skill ever will, documenting the convention globally may be
   solving a problem that only ever had one instance. Decide that first; it may make option 3 correct.
+- Fixed in 4fa7ca3: the slash-arg chaining convention now lives in refs/slash-arg-parsing.md, with skills/close/SKILL.md reduced to a pointer. CLAUDE.md untouched - it has one token of headroom.
