@@ -60,6 +60,10 @@ hook fires on the same trigger surface and may be extendable rather than duplica
 - `comment-noise.md` stays the single place the cap numbers are defined - do not restate them in
   a hook.
 
+## Notes
+
+- DECLINED by Joe, 2026-09-04. His words: 'this can be removed now, i no longer care about it, at this point we are back to wanting comments in our code again.' The premise (the comment cap only reports at commit time, after the code is written) still holds, but making that report friendlier is not wanted when the cap itself is on its way out. The broader question of whether the cap should exist at all stays with todo 403, parked for a dedicated /brainstorm session.
+
 ## Open questions
 
 Written by /mega-todos on 2026-09-04. The next run opens with these.

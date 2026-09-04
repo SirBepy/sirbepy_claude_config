@@ -63,3 +63,4 @@ Two options were offered, neither built yet:
 Ask Joe first which path he wants (or neither, if the transcript alone is enough) - this was an
 open question when the session ended, never front-loaded because the session closed before an
 answer came back.
+- Archived on Joe's explicit call, 2026-09-04. Every file it targets lives in C:\Users\tecno\tools\meetily-diarize, a different project with no .claude/todos/ backlog, so it could never be relocated and no run in this repo could ever act on it. Refile there if the mistranslation recurs.
