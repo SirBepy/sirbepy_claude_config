@@ -206,8 +206,6 @@ its once-per-session sentinel is a single boolean, not per-file state.
 
 ### Phase 7 - evaluations. "No" is an acceptable outcome for several of these.
 
-- [ ] 433 - config layering. Likely a five-line move, not an architecture.
-- [ ] 444 - prove-it-works / analytical Q&A / MCP scoping. Joe already judged prove-it-works redundant with `/test` and `/e2e`.
 - [ ] 440 [P] - config-protection guard. Gated on 427's signal.
 - [ ] 428 [P] - repo README, CONTRIBUTING, generated skills index
 

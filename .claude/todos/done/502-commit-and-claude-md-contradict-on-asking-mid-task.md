@@ -88,6 +88,7 @@ disclosed the deviation in the dev-facing report rather than asking beforehand. 
 for the "Carve-out in `/commit`" candidate shape above: the peer-check (already run at step 7a for
 an unrelated reason) is a cheap, mechanical signal for "is anyone else touching this repo" that a
 same-session-sha carve-out could piggyback on, rather than needing a new check.
+- Premise dead: skills/commit/SKILL.md step 8 was rewritten by done/849, done/860 and done/862 into a queued/batched-ask model that never asks in an unattended run. The literal STOP-per-hit wording this todo quotes no longer exists. Dropped via /mega-todos 2026-09-04.
 
 ## Open questions
 
