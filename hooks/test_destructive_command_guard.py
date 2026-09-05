@@ -13,6 +13,10 @@ from pathlib import Path
 
 import _testlib
 
+# CI runners have no global git identity, so a bare commit exits 128 there while
+# passing on any dev machine. Scratch-repo commits below carry their own.
+GIT_IDENTITY = ["-c", "user.email=ci@example.invalid", "-c", "user.name=CI"]
+
 _HOOKS_DIR = Path(__file__).resolve().parent
 _GUARD_PATH = _HOOKS_DIR / "destructive-command-guard.py"
 guard = _testlib.load_module("destructive_command_guard", _GUARD_PATH)
@@ -345,7 +349,7 @@ def check_is_main_checkout_real_worktree() -> bool:
     with tempfile.TemporaryDirectory() as tmp:
         main_repo = Path(tmp) / "main"
         subprocess.run(["git", "init", "-q", str(main_repo)], check=True)
-        subprocess.run(["git", "-C", str(main_repo), "commit", "-q", "--allow-empty", "-m", "init"], check=True)
+        subprocess.run(["git", "-C", str(main_repo), *GIT_IDENTITY, "commit", "-q", "--allow-empty", "-m", "init"], check=True)
         wt = Path(tmp) / "wt"
         subprocess.run(["git", "-C", str(main_repo), "worktree", "add", "-q", str(wt), "-b", "wtbranch"], check=True)
         main_ok = guard.is_main_checkout(str(main_repo)) is True
@@ -400,7 +404,7 @@ def check_stash_swept_files_named() -> bool:
     with tempfile.TemporaryDirectory() as tmp:
         repo = Path(tmp)
         subprocess.run(["git", "init", "-q", str(repo)], check=True)
-        subprocess.run(["git", "-C", str(repo), "commit", "-q", "--allow-empty", "-m", "init"], check=True)
+        subprocess.run(["git", "-C", str(repo), *GIT_IDENTITY, "commit", "-q", "--allow-empty", "-m", "init"], check=True)
         (repo / "peer_file.txt").write_text("peer's uncommitted edit", encoding="utf-8")
         try:
             guard.is_main_checkout = lambda cwd: True
