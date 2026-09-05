@@ -8,6 +8,8 @@ what makes it gate anything, both in `.github/workflows/ci.yml` and in
 
 import argparse
 import importlib.util
+import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -77,6 +79,28 @@ def check_hook_imports(root: Path) -> tuple:
     return True, ""
 
 
+def _bash_exe() -> str:
+    """A bash that can actually run these suites.
+
+    On a Windows GitHub runner bare `bash` resolves to WSL, which has no distro
+    installed and exits with an install prompt, so the suites failed on CI while
+    passing on any dev machine with Git Bash first on PATH.
+    """
+    if os.name != "nt":
+        return "bash"
+    for candidate in (
+        r"C:\Program Files\Git\bin\bash.exe",
+        r"C:\Program Files\Git\usr\bin\bash.exe",
+    ):
+        if Path(candidate).is_file():
+            return candidate
+    found = shutil.which("bash")
+    # System32's bash.exe IS the WSL shim, never a usable bash here.
+    if found and "system32" not in found.lower():
+        return found
+    return "bash"
+
+
 def check_prefilter_suites(root: Path) -> tuple:
     """Runs every skills/commit/test_*.sh fixture suite (secret-scan.sh, em-dash.sh,
     overlap-check.sh; todo 810). comment-noise.sh's own cut-arithmetic self-test was removed
@@ -112,7 +136,7 @@ def check_prefilter_suites(root: Path) -> tuple:
             # posix form is required here even though run_hook_tests.py's python subprocess
             # accepts either.
             proc = subprocess.run(
-                ["bash", rel.as_posix()], cwd=str(root), capture_output=True,
+                [_bash_exe(), rel.as_posix()], cwd=str(root), capture_output=True,
                 text=True, encoding="utf-8", errors="replace", timeout=120,
             )
             ok, out, err = proc.returncode == 0, proc.stdout, proc.stderr
