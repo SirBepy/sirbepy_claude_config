@@ -75,6 +75,26 @@ HAS_RUNNER_CASES = [
         True,
         "dart.bat right after -FilePath is a runner (Start-Process pattern)",
     ),
+    (
+        ["fvm", "flutter", "pub", "run", "build_runner", "build"],
+        True,
+        "flutter after the fvm launcher is a runner (the primary form on this machine)",
+    ),
+    (
+        ["&", "C:/tools/flutter.bat", "run", "build_runner", "build"],
+        True,
+        "flutter.bat after PowerShell's & call operator is a runner",
+    ),
+    (
+        ["echo", "hi", "&", "flutter", "build"],
+        True,
+        "& separates commands in both PowerShell and cmd, so a runner after it is a real invocation",
+    ),
+    (
+        ["echo", "fvm flutter build"],
+        False,
+        "a quoted string naming fvm flutter is one argument, not an invocation",
+    ),
 ]
 
 

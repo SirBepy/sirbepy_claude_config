@@ -58,6 +58,8 @@ OVERRIDE_ENV = "CLAUDE_WORKDIR_GUARD_BYPASS"
 RUNNER_BASENAMES = {"flutter", "flutter.bat", "flutter.exe", "dart", "dart.exe", "dart.bat"}
 BASH_LEADING_BASENAMES = RUNNER_BASENAMES | {"fvm", "fvm.bat", "fvm.exe"}
 FILEPATH_FLAG_TOKENS = {"-filepath", "-file"}
+CALL_OPERATOR = "&"
+LAUNCHER_BASENAMES = {"fvm", "fvm.bat", "fvm.exe"}
 DESTRUCTIVE_FLAG = "--delete-conflicting-outputs"
 CD_WORDS = {"cd", "cd.", "chdir", "pushd", "sl", "set-location", "push-location"}
 DIR_FLAGS = {"-c", "--directory", "--working-directory", "-workingdirectory"}
@@ -74,15 +76,25 @@ def allow(message: str = "") -> None:
 
 
 def has_runner(tokens: list[str]) -> bool:
-    """True when a flutter/dart basename sits in COMMAND position: index 0,
-    or right after a Start-Process -FilePath/-File flag. Any other position
-    is an argument, not an invocation - `grep -r "flutter" pubspec.yaml`
-    merely contains the word.
+    """True when a flutter/dart basename sits in COMMAND position: index 0, right
+    after a Start-Process -FilePath/-File flag, after PowerShell's `&` call
+    operator, or after a launcher like fvm. Any other position is an argument,
+    not an invocation - `grep -r "flutter" pubspec.yaml` merely contains the word.
+
+    The `&` and fvm forms are not optional extras: `fvm flutter` is the primary
+    invocation on this machine, and `& "C:\\tools\\flutter.bat"` is the documented
+    way to call an exe path containing spaces. Anchoring to index 0 alone silently
+    stopped catching both (todo 908 regression, caught 2026-09-05).
     """
     for i, tok in enumerate(tokens):
         if basename(tok) not in RUNNER_BASENAMES:
             continue
-        if i == 0 or tokens[i - 1].lower() in FILEPATH_FLAG_TOKENS:
+        if i == 0:
+            return True
+        prev = tokens[i - 1]
+        if prev.lower() in FILEPATH_FLAG_TOKENS or prev == CALL_OPERATOR:
+            return True
+        if basename(prev) in LAUNCHER_BASENAMES:
             return True
     return False
 
