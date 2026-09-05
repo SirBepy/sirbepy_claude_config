@@ -65,6 +65,7 @@ Joe's answer when asked why not do all three (2026-08-20): do them all, with the
   that causes the miss is worth encoding: `report_turn_status` is prompted explicitly as the last
   action of a turn and so survives under load, while `send_message` carries equal obligation with
   no prompt, so it is the one that gets dropped. Resolve step 1 before assuming either direction.
+- Fixed in c84debb: hooks/send-message-stop-guard.py blocks a turn only after 3 consecutive Conductor-signal turns with no send_message, so a quiet turn or two passes and a fully silent stretch does not. The relay exception is implemented and tested, including the near-miss case where a relay turn also edits files and therefore gets no exemption.
 
 ## Open questions
 

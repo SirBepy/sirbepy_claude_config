@@ -84,6 +84,7 @@ Execution Discipline section.
 The honest counterweight: the session that skipped these reads still shipped three todos with real
 measurement behind them and caught three false-positive classes by hand. The reads are not what makes
 a session good, which is part of why they get skipped.
+- Fixed in 7a5f6c0: hooks/push-read-gate.py gates the session's FIRST git push on snippets/auto-commit.md having been read, via a PostToolUse marker on the Read tool. Known scoped gap, recorded rather than hidden: it tracks the Read tool only, not a bash cat of the same path.
 
 ## Open questions
 

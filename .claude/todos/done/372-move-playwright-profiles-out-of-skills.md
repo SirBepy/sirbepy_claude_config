@@ -62,6 +62,7 @@ it waits.
 - Related history: `done/85-clockify-skill-orphan-playwright-check.md` shows the profile once lived
   at `C:/tmp/playwright-profiles/hubstaff`, so this directory has already moved once. Whatever
   destination gets picked, put it somewhere a future audit will not read as spill again.
+- Fixed in 6c11c56: the Hubstaff Playwright profile now lives at %LOCALAPPDATA%\claude-clockify\playwright-profiles\hubstaff, with the file count verified at the destination before the source was removed. Three call sites updated, not the two the todo named.
 
 ## Open questions
 

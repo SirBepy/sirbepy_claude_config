@@ -50,6 +50,10 @@ of this fix unless the dev raises it again.
 - Confirm what caused the stall (capture-app not running vs. pipe-script failure vs. scheduler
   issue) so it doesn't silently recur.
 
+## Notes
+
+- Closed as REMOVED, not repaired, per Joe's 2026-09-04 instruction that he deleted Screenpipe deliberately. A full inventory found nothing left to delete in this repo: the automation was never implemented as a Claude skill, and the external pipeline was already gone from disk. The two remaining mentions were historical records, not live config, and were corrected in place rather than deleted - a dated disk-doctor scan log now notes the 27G is gone on purpose, and IDEAS.md no longer cites screenpipe as an example.
+
 ## Provenance
 
 Filed 2026-08-21 as todo 176 in zng-app's backlog by a clockify-reconciliator session, then

@@ -87,6 +87,7 @@ Sketch, not settled:
   merging session dying) or lives only in the session's context.
 - Origin is `dev` - asked for directly on 2026-08-20, mid-session, while deciding how to wrap two
   chats at once.
+- Fixed in 84fe63e: /pickup gained a --merge mode. Consumed handoff todos are archived to done/ via complete-todo.ps1, per Joe's 2026-09-04 decision to keep the audit trail rather than hard-delete. Auto-detect of a handoff set is interactive-only and always confirms, because no machine-checkable handoff marker exists.
 
 ## Open questions
 

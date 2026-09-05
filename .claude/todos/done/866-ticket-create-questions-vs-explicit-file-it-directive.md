@@ -67,6 +67,7 @@ front-loaded and CLAUDE.md fully permits it; the cost is purely the Conductor tu
 
 Do not resolve this by weakening step 5's report line. The defaults-disclosure is what made the
 2026-09-01 skip recoverable, and it is the part worth keeping under every candidate shape.
+- Fixed in 2dacd47: /ticket create skips its question card when the invocation is already an imperative to file, infers the remaining fields, and names every inferred value in the result line. Disclosure is mandatory - a skip without it is explicitly forbidden, since disclosure is what makes the skip recoverable.
 
 ## Open questions
 
