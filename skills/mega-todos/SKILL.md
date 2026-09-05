@@ -337,12 +337,10 @@ when the kill lands loses everything even if the diff was finished - confirmed t
 
    Exit 1's labeled sections do NOT all get the same treatment:
 
-   - comment-noise: if it prints anything, TRIM those blocks to the cap (2 lines typical, 4 hard per
-     block) before committing. Do not ask, just trim. `comment-noise.sh` already excludes any flagged
-     line byte-identical to a HEAD line under a different path, so a verbatim code move never reaches
-     this report and needs no manual `git show` confirmation - whatever it does print is newly
-     authored comment, which the cap exists to catch.
-   - em-dash: fix the flagged added lines now, same do-not-ask treatment as comment-noise.
+   - comment-noise: INFORMATIONAL ONLY since todo 922 demoted it on 2026-09-05. It still prints,
+     labeled as non-blocking, and never sets the gate's exit status. Read it or ignore it; comment
+     length is guidance now, not a gate. Write comments that say WHY, not what.
+   - em-dash: fix the flagged added lines now, do not ask.
    - comment-tense: rewrite the flagged comment to state what the code IS, not what changed about
      it, same do-not-ask treatment. The gate runs this one too, so you can see its section here.
    - secret-scan: a hit STOPS YOU. Never auto-fix it and never commit around it - a hardcoded
