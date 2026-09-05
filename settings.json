@@ -223,6 +223,16 @@
             "statusMessage": "Reverting pubspec.lock pub-get churn"
           }
         ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\push-read-gate.py\"",
+            "statusMessage": "Recording auto-commit.md read for the push gate"
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -294,6 +304,16 @@
             "type": "command",
             "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\commit-guard.py\"",
             "statusMessage": "Checking commit-guard marker"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\push-read-gate.py\"",
+            "statusMessage": "Checking first-push read gate"
           }
         ]
       },
