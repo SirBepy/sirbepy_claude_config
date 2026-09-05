@@ -33,7 +33,7 @@ this app means: invoke /supervised-run") is the fallback to try next.
 
 1. **Ensure it's up - one call.** Run `sv.ps1` (next to this file) instead of re-deriving the token/health/list/reuse dance by hand:
    ```
-   powershell -File "<this skill's dir>\sv.ps1" ensure -Project <folder-name> -Cmd "<cmd>" [-Kind flutter] [-Restart]
+   powershell -File "<this skill's dir>\sv.ps1" ensure -Project <folder-name> -Cmd "<cmd>" [-Kind flutter|ephemeral] [-Restart]
    ```
    `cmd` must have `{PORT}` templated into the actual port flag - see the Port table below for the exact flag per tool. `sv.ps1` reuses a matching entry (running: left alone, or reloaded/restarted with `-Restart`; stopped/crashed: started/restarted), or `/run`s a new one if nothing matches.
    - **Reuse is matched by project name AND absolute root** (from `projects.json`), not name alone - so a git worktree of the same project (e.g. Fibo's `frontend`/`frontend-2`/`frontend-3`) never reuses another worktree's process and serves stale code.
@@ -62,6 +62,31 @@ this app means: invoke /supervised-run") is the fallback to try next.
    - Reload (flutter only, fast path - no `sv.ps1` subcommand yet, raw API): `POST /procs/<id>/reload` with header `Authorization: Bearer <token>` - hot-restarts via the flutter daemon instead of respawning the process; for a `web-server` target this also auto-refreshes every open browser tab on the live-reload proxy port (see Port table). Prefer this over `/restart` for any flutter entry - `ensure -Restart` already does this automatically.
    - Delete (remove the entry entirely): `sv.ps1 rm -Id <id>` (stop it first if running)
    - List everything: `sv.ps1 ls`
+
+## Kinds: `generic`, `flutter`, `ephemeral`
+
+`-Kind` is passed straight through as the `/run` payload's `kind` field (`sv.ps1:53` declares it a
+plain string with no ValidateSet, `sv.ps1:146` puts it in the body), so any kind the backend knows
+works without an `sv.ps1` change.
+
+| Kind | On process exit |
+| --- | --- |
+| `generic` (default) | entry RETAINED as `stopped`, so a later `ensure`/`restart` reuses it |
+| `flutter` | same as `generic`, plus the daemon reload fast path in step 4 |
+| `ephemeral` | entry DELETED, not retained |
+
+**Use `ephemeral` for anything throwaway** - a preview server started for one screenshot, a temp
+server a single test run needs, anything spun up to answer one question and never reused. Those
+have no reuse value, so retaining them just accumulates permanent `stopped` rows in the dashboard
+that nobody ever cleans up.
+
+```
+powershell -File "<this skill's dir>\sv.ps1" ensure -Project <folder-name> -Cmd "<cmd>" -Kind ephemeral
+```
+
+A running `ephemeral` entry appears in `GET /procs` and the dashboard exactly like any other; the
+kind only changes what happens once its pid goes away. It is never inferred from the command, only
+set by an explicit `kind` on the `/run` payload, so an existing entry's kind never changes under you.
 
 ## Wait for readiness before using it
 
