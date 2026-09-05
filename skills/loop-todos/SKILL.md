@@ -61,8 +61,8 @@ Skipped entirely on a `--resumed` run (see Phase 4).
 
    | Outcome | Edit |
    |---|---|
-   | Answered | Delete the checkbox, add the answer + date as a bullet under `## Decisions` (create the section after `## Approach` if absent) |
-   | Autopilot | Delete the checkbox, add `- <question> - dev delegated to autopilot on <date>` under `## Decisions` |
+   | Answered | Delete the checkbox, add the answer + date as a bullet under `## Notes` (the contract's freeform-carryover section; create it if absent) |
+   | Autopilot | Delete the checkbox, add `- <question> - dev delegated to autopilot on <date>` under `## Notes` |
    | Skipped | Rename the heading to `## Deferred questions` and add `<!-- loop-skip: dev deferred <date> -->` above it |
 
    No touched file may keep a `## Open questions` heading. That heading is the mid-loop stall.
