@@ -562,6 +562,15 @@
             "statusMessage": "Checking status marker form"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\send-message-stop-guard.py\"",
+            "statusMessage": "Checking send_message obligation"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
