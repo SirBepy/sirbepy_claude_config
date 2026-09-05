@@ -78,9 +78,11 @@ def check_hook_imports(root: Path) -> tuple:
 
 
 def check_prefilter_suites(root: Path) -> tuple:
-    """Runs every skills/commit/test_*.sh fixture suite (secret-scan.sh, comment-noise.sh,
-    em-dash.sh, overlap-check.sh; todo 810). Tracked-only discovery, same as
-    run_hook_tests.py's todo-805 fix: a peer's half-written untracked test can't fail this gate.
+    """Runs every skills/commit/test_*.sh fixture suite (secret-scan.sh, em-dash.sh,
+    overlap-check.sh; todo 810). comment-noise.sh's own cut-arithmetic self-test was removed
+    with its enforcement (todo 922) - test_prefilters.sh still exercises its informational
+    output directly. Tracked-only discovery, same as run_hook_tests.py's todo-805 fix: a peer's
+    half-written untracked test can't fail this gate.
     """
     print("\n=== prefilter self-tests (skills/commit/test_*.sh) ===", flush=True)
     skill_dir = root / "skills" / "commit"

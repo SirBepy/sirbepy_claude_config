@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Comment-noise prefilter; the cap itself is defined in skills/commit/comment-noise.md.
+# Comment-noise informational scan (demoted, todo 922: no longer a cap, never blocks a commit).
+# Kept for the parked todo 403 brainstorm; thresholds and history in skills/commit/comment-noise.md.
 # On disk rather than markdown-embedded: skill-argument substitution rewrites a bare $0 in a
 # skill body, which clobbered awk's $0 ("whole current line") every time this was pasted inline.
 

@@ -92,7 +92,7 @@ per the global subagent-model rule; never inherit.
    (edit vs. create framing), the step 1 title-convention probe's raw title
    list, and an instruction to read
    `C:\Users\tecno\.claude\skills\create-pr\drafting-rules.md` in full for the
-   detailed rules (auto-tier thresholds, comment-noise check, visual scan,
+   detailed rules (auto-tier thresholds, visual scan,
    Slack-block format, image-hosting conventions) rather than re-explaining
    them inline. Its job, all read-only except the final file write:
    - **Gather**: `git log --oneline <base>..HEAD`, `git diff --stat <base>..HEAD`,
@@ -105,16 +105,11 @@ per the global subagent-model rule; never inherit.
      **not** an abort the subagent can act on - it must come back and report
      the failing command + output verbatim so the main agent can abort and
      show the dev. Do not draft a PR for a red branch.
-   - **Comment-noise check** (always, not skippable by `--no-checks` - it costs
-     nothing and no linter can do it): see "Comment-noise check" in
-     `drafting-rules.md`. Report the offenders as `file:line` + the block's
-     first line + line count, or `clean`. Never rewrite them itself - the main
-     agent gates it.
    - **Secret-scan check** (always, not skippable by `--no-checks`): see
      "Secret-scan check" in `drafting-rules.md`. Report any hit as `file:line`
-     + the flagged text, or `clean`. Unlike comment-noise this is not
-     auto-fixable - do not draft the PR body if it hits, report the hit and
-     stop so the main agent can surface it to the dev.
+     + the flagged text, or `clean`. This is not auto-fixable - do not draft
+     the PR body if it hits, report the hit and stop so the main agent can
+     surface it to the dev.
    - **Auto-tier** (see the auto-tier rubric in `drafting-rules.md`) and
      **title**, one line: match the shape of the step 1 probe's titles
      (case, punctuation, scope, and whether they carry a ticket id). If a
@@ -142,27 +137,18 @@ per the global subagent-model rule; never inherit.
      (gitignored personal space - create the folder if missing).
    - **Return** (short - this is what crosses back into the main agent's
      context, keep it to a few lines): title, tier, base, checks status
-     (pass, or the exact failure to show the dev), the comment-noise verdict
-     (`clean`, or the offender list), the secret-scan verdict (`clean`, or the
-     hit list), visual recommendation + reason, and confirmation of the file
-     path written. Do NOT return the full diffs, commit log, or check output
-     in the happy-path case - the file on disk is the artifact; the return
-     value is just enough for the main agent to act on.
+     (pass, or the exact failure to show the dev), the secret-scan verdict
+     (`clean`, or the hit list), visual recommendation + reason, and
+     confirmation of the file path written. Do NOT return the full diffs,
+     commit log, or check output in the happy-path case - the file on disk is
+     the artifact; the return value is just enough for the main agent to act
+     on.
 
-2b. **Comment-noise gate (main agent).** If the verdict was `clean`, continue.
-   Otherwise TRIM THE OFFENDERS FIRST, before the preview - do not ask whether
-   to, do not offer to do it later, and never open the PR with them in. Cut to
-   the constraint/gotcha/measurement the code can't show and delete the rest;
-   if a whole block only restates the code, delete the whole block. Then
-   re-run the project's fast checks, amend or add a commit via `/commit` (per
-   the global rule, never a raw `git commit`), and only then continue. Say what
-   was trimmed in one line - the dev does not need the before/after text.
-
-2c. **Secret-scan gate (main agent).** If the verdict was `clean`, continue.
+2b. **Secret-scan gate (main agent).** If the verdict was `clean`, continue.
    Otherwise STOP - do not write the preview file, do not open the PR. Show
    the dev the flagged `file:line` and tell them to remove the literal value,
    replace it with an env var or secret-store read, and commit the fix before
-   `/create-pr` runs again. This is not auto-fixable, unlike step 2b.
+   `/create-pr` runs again. This is not auto-fixable.
 
 3. **Visual approval (main agent - live gate, cannot delegate).** If the
    subagent recommended `none`, there's nothing to ask - continue to step 4.
@@ -238,8 +224,8 @@ per the global subagent-model rule; never inherit.
      rendered card is a duplicate wall of text for the dev.
 
 See `skills/create-pr/drafting-rules.md` for the auto-tier rubric, the
-comment-noise check, the secret-scan check, the visual-scan rules, and the
-Slack-announcement-block format the drafting subagent applies in step 2.
+secret-scan check, the visual-scan rules, and the Slack-announcement-block
+format the drafting subagent applies in step 2.
 
 5. **Confirm, then create (main agent - live gate, cannot delegate).**
    Pre-flight: have you already asked step 3's visual y/n as its OWN question
