@@ -205,10 +205,12 @@ with tempfile.TemporaryDirectory() as tmp:
     subprocess.run(["git", "add", "source_move.py"], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-q", "-m", "add source_move"], cwd=repo, check=True)
 
-    # 5 consecutive "#" lines trips comment-noise's block cap (>=5), independent
-    # of the file's total size - see comment-noise.sh's `max[f]>=5` check.
+    # An em dash trips em-dash.sh, which still gates; this was a 5-line comment
+    # block until todo 922 demoted comment-noise to informational.
+    # Written as an escape, never a literal: em-dash.sh's exempt marker only covers
+    # .claude/todos/, so a literal one would make this file uncommittable.
     (repo / "noisy.py").write_text(
-        "# c1\n# c2\n# c3\n# c4\n# c5\nprint('ok')\n", encoding="utf-8"
+        "print('a \u2014 b')\n", encoding="utf-8"
     )
     (repo / "clean.py").write_text("print('ok')\n", encoding="utf-8")
 
@@ -265,7 +267,7 @@ with tempfile.TemporaryDirectory() as tmp:
     if not _testlib.report(got == 0, f"{label} (got exit={got})"):
         fails.append(label)
 
-    label = "a moved block in one file does not exempt genuinely new noise in another"
+    label = "a verbatim move alongside a genuinely flagged file still blocks"
     got = run_main(
         "git commit -m 'x' -- source_move.py moved.py noisy.py",
         session_id="sess-gate",
