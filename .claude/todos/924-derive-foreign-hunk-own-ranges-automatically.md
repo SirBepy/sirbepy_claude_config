@@ -75,3 +75,51 @@ step inside it is self-defeating.
 - Related: [[806-shared-worktree-foreign-hunk-check-helper]] (done, shipped the
   script), [[474-commit-step-8s-overlap-check-should-be-a-script]] (done, the
   sha-based sibling).
+- 2026-09-06, video_editor (Cueline) `/autopilot` run: the gate was skipped
+  outright, not transcribed, on three commits of 60+ brand-new files (scaffold,
+  MCP crate, timeline). Every file was untracked, so `--own` would have been
+  "the whole file" for each of 60 paths, and no peer session existed
+  (`list_peers` empty each time). Skipped with a stated reason in the run
+  summary. Second data point for the same gap: for an all-new-files pathspec
+  the script should accept "untracked = wholly mine" without ranges, or the
+  auto-derive in step 1 should treat an added file as one own hunk.
+
+### REOPENED 2026-09-11 (/loop-todos): the arithmetic went away, the safety property went with it
+
+An audit pass reported this todo satisfied by `skills/commit/commit-pathspec.sh`. It is not, and the
+way it is not is worse than the original gap.
+
+`commit-pathspec.sh:211-236` derives own-ranges by passing EVERY hunk of `git diff HEAD` to
+`foreign-hunk-check.sh` as `--own`. The check therefore reads back the exact set it was handed and
+cannot report a foreign hunk under any input. It then prints `clean` and the commit proceeds.
+
+Reproduced on a scratch repo, one working tree, two hunks (`1-4` written by "me", `7-10` standing in
+for a peer):
+
+- `foreign-hunk-check.sh -C <repo> --own f.txt:1-4 f.txt`
+  -> `f.txt: foreign-hunks-present 7-10`, exit 1. Correct.
+- `commit-pathspec.sh -C <repo> ... -- f.txt` (no `--own-range` declared)
+  -> `auto-derived own-range 1-4,7-10 (every current hunk assumed own, todo 924/933)`
+  -> `[foreign-hunk-check] clean` -> `[commit] committed`.
+
+Todo 933's Notes already recorded this exact shape happening in the wild on 2026-09-05, before the
+script shipped: a caller-side loop passed every hunk as `--own` and the check printed `clean` on a
+file holding a peer session's six uncommitted lines. That note names the rule the script then broke:
+own-unless-told-otherwise is wrong.
+
+Acceptance item 2 of this todo, and item 2 of 933, both fail on the auto-derived path.
+
+**933 is folded into this todo** (archived 2026-09-11): same ask, same file, same fix. Its own data
+point is quoted above.
+
+**Proposed fix, no dev decision required.** Keep auto-derivation, since removing the hand arithmetic
+is the point of both todos, but stop laundering it into a `clean` verdict. `hooks/.session-markers/`
+already holds one live marker per active session in this checkout, which is exactly the concurrency
+signal that decides whether an auto-derived range is trustworthy:
+
+- one live marker: this session is alone in the tree, every hunk really is its own, `clean` is true.
+- two or more: a peer shares the tree, so an auto-derived range proves nothing. Print an explicit
+  unverified verdict and require either a declared `--own-range` or an explicit waiver flag.
+
+A check that cannot fail must never report success.
+

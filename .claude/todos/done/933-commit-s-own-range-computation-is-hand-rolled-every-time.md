@@ -61,3 +61,11 @@ per-range form kept for the shared-file case.
   working-tree state, and `git status`'s single `M` cannot say whose lines are in it.
 - Related surface: `/commit` step 8 also asks for the unpushed-overlap check per commit; that one
   already takes a plain file list and needs no arithmetic, which is the ergonomic target here.
+- 2026-09-05, claude_usage_in_taskbar autopilot (8 commits, 70 files): the orchestrator scripted the
+  arithmetic as a bash loop over `git diff HEAD -U0` hunk headers and passed EVERY hunk as `--own`.
+  That is exactly the "own-unless-told-otherwise is WRONG" shape above, reproduced in practice: the
+  check printed `clean` on `src/views/sessions/pending-pane.ts` while a peer session's six
+  uncommitted lines sat in it (the peer had authorized them, so no damage, but the gate saw nothing).
+  Seven repetitions in one session. Reinforces folding 924 + this into one wrapper that owns the
+  derivation; a caller-side script cannot be trusted to name foreign hunks it does not know about.
+- Folded into todo 924 on 2026-09-11: same ask (stop hand-rolling foreign-hunk --own ranges), same file, same fix. 924 carries the 2026-09-11 reproduction showing commit-pathspec.sh's auto-derivation makes foreign-hunk-check structurally unable to fail while still printing clean; this file's own 2026-09-05 data point is quoted there.
