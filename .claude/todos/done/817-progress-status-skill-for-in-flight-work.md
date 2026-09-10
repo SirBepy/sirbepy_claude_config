@@ -28,3 +28,8 @@ A skill (`/status` or similar) that reports, per work item, in a scannable forma
 - Cheap sources that worked well that day: `git status --short` scoped to an item's paths, unused-import warnings from `flutter analyze` (that is how a half-wired feature was caught - the agent had added imports and died before using them), and the bogus-id `TaskStop` probe.
 - Related: [[811-nothing-checks-a-dispatch-covers-every-item-in-its-source-todo]] covers the fan-out reconciliation half of this problem. This todo is the dev-facing view; that one is the orchestrator-facing check.
 - Should work under both `/delegate` (dev present, wants a quick answer) and `/autopilot` (dev returning to a finished run).
+
+
+## Notes
+
+- Built 2026-09-11 (/loop-todos) as skills/status/SKILL.md, model-invocable. Covers all four things the todo asked for: emoji state markers (five of them, never the bare word, since Joe asked for that explicitly), the bogus-id TaskStop liveness probe with output-file mtime and size explicitly forbidden as substitutes, per-item git status and diff scoped to that item's owned paths so running is separated from producing, and a four-level evidence ladder (on disk / compiles / tests pass / reviewed by something other than the author) reported instead of the word done. The ladder was missing from the builder's first pass and was added by the orchestrator; the builder had also substituted plain words for the emoji Joe asked for, which was reverted. Description trimmed on the way in, since todo 976 is about descriptions going over budget and this one was 45 words. Frontmatter carries allowed-tools with no Edit, Write or Agent, so the read-only constraint is mechanical rather than a promise.
