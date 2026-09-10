@@ -25,6 +25,20 @@ silently-consumed escapes); escaping the short compact form is a few dozen
 bytes and mechanical. Do not use -AsJsLiteral alone on the full block for a
 real dispatch - it technically works but produces an unreviewable wall of
 escaped text; prefer -Compact -AsJsLiteral for any Workflow-authored run.
+
+-CommitMode selects which commit procedure the builder's prompt carries
+(todo 974). Default 'PerBuilder' reproduces every existing caller's output
+byte-for-byte: the builder commits its own work via the injected commit
+block, unchanged. 'Barrier' is SKILL.md's "Barrier COMMIT_MODE" - the
+builder never touches git; it runs only step 2 (diff review) and step 3
+(the prefilter) of the same injected block as its verify floor, then reports
+finished paths, and the main thread commits by pathspec at the next barrier.
+Steps 2 and 3 are extracted verbatim from the same on-disk commit block
+(never a hand-copied duplicate), so a future edit to those steps' wording
+stays the single source of truth. See SKILL.md's own note that in `barrier`
+mode <STAGING_LINE>'s "Leave all changes unstaged..." variant is simply true
+(the builder genuinely never commits), unlike `per-builder` mode where the
+same line would be a lie the injected block immediately overrides.
 #>
 param(
     [Parameter(Mandatory)] [string[]] $Owned,
@@ -37,7 +51,8 @@ param(
     [string] $VerifyFloor = '',
     [string] $Extra = '',
     [switch] $Compact,
-    [switch] $AsJsLiteral
+    [switch] $AsJsLiteral,
+    [ValidateSet('PerBuilder', 'Barrier')] [string] $CommitMode = 'PerBuilder'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -112,6 +127,19 @@ $ownedList = ($Owned | ForEach-Object {
     if ($NewFiles -contains $_) { "  $_ (NEW)" } else { "  $_" }
 }) -join "`n"
 
+# Barrier mode overrides the staging line with the placeholder table's other
+# <STAGING_LINE> variant (refs/builder-preamble.md) - truthful here since a
+# barrier builder genuinely never touches git - and needs steps 2 and 3
+# pulled out of the same on-disk commit block, verbatim, never re-typed.
+if ($CommitMode -eq 'Barrier') {
+    $stagingLine = 'Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.'
+
+    $barrierStepsPattern = '(?ms)^2\.\s.*?(?=^4\.\s)'
+    $barrierStepsMatch = [regex]::Match($commitRest, $barrierStepsPattern)
+    if (-not $barrierStepsMatch.Success) { throw "Could not extract steps 2-3 from the commit block in $skillPath" }
+    $barrierSteps = $barrierStepsMatch.Value.TrimEnd() -replace '<FILES>', (Protect $filesArg)
+}
+
 if ($Compact) {
     $banInstruction = if ($inClaudeDir) {
         'GLOBAL_EDIT_BAN -> DELETE that line entirely; this working directory IS ~/.claude, so global work is the assigned task.'
@@ -150,7 +178,24 @@ $Task
     if ($VerifyFloor) { $final += "`n`n## VERIFY FLOOR`n`n$VerifyFloor" }
     if ($Extra) { $final += "`n`n$Extra" }
 
-    $final += @"
+    if ($CommitMode -eq 'Barrier') {
+        $final += @"
+
+
+# YOUR VERIFY FLOOR - COMMIT_MODE IS BARRIER, YOU DO NOT COMMIT
+
+Read the fenced code block under the heading "## The injected commit block" in $skillPath, then
+read the "### Barrier COMMIT_MODE" section immediately after it in the same file - it is what
+tells you which of that block's steps are yours. Per that section: follow ONLY step 2 (diff
+review) and step 3 (the prefilter, carve-out included) as your verify floor, applying:
+  FILES -> $filesArg
+
+Do NOT run steps 1, 4, 5, or 6 of that block: no commit marker, no `git add`, no branch guard, no
+`git commit`. Report your finished paths in your report-back without touching git further; the
+main thread commits them by pathspec at the next barrier.
+"@
+    } else {
+        $final += @"
 
 
 # COMMITTING IS PART OF YOUR JOB
@@ -161,6 +206,7 @@ and follow it VERBATIM, applying:
   FILES -> $filesArg
   PREFIX: <title> -> $CommitMessage
 "@
+    }
 } else {
     $prompt = $preambleBlock `
         -replace '<WORKING_DIR>', (Protect $WorkingDir) `
@@ -173,16 +219,30 @@ and follow it VERBATIM, applying:
         $prompt = $prompt -replace '<GLOBAL_EDIT_BAN>', (Protect $banCell)
     }
 
-    $commitRest = $commitRest -replace '<EXPECTED_BRANCH>', (Protect $ExpectedBranch)
-    $commitRest = $commitRest -replace '<FILES>', (Protect $filesArg)
-    $commitRest = $commitRest -replace '<PREFIX>: <title>', (Protect $CommitMessage)
-
     $sections = @($prompt.Trim())
     $sections += "## YOUR FILES - the only paths you may write`n`n$ownedList"
     $sections += "# YOUR TASK`n`n$Task"
     if ($VerifyFloor) { $sections += "## VERIFY FLOOR`n`n$VerifyFloor" }
     if ($Extra) { $sections += $Extra }
-    $sections += "# COMMITTING IS PART OF YOUR JOB`n`n$commitRest"
+
+    if ($CommitMode -eq 'Barrier') {
+        $barrierSection = @"
+# YOUR VERIFY FLOOR - COMMIT_MODE IS BARRIER, YOU DO NOT COMMIT
+
+This run's COMMIT_MODE is barrier. Per the "### Barrier COMMIT_MODE" section of ${skillPath}: you
+never run steps 1, 4, 5, or 6 of the injected commit block below - only step 2 (diff review) and
+step 3 (the prefilter, carve-out included), as your verify floor. Then report your finished paths
+without touching git further; the main thread commits them by pathspec at the next barrier.
+
+$barrierSteps
+"@
+        $sections += $barrierSection
+    } else {
+        $commitRest = $commitRest -replace '<EXPECTED_BRANCH>', (Protect $ExpectedBranch)
+        $commitRest = $commitRest -replace '<FILES>', (Protect $filesArg)
+        $commitRest = $commitRest -replace '<PREFIX>: <title>', (Protect $CommitMessage)
+        $sections += "# COMMITTING IS PART OF YOUR JOB`n`n$commitRest"
+    }
 
     $final = ($sections -join "`n`n")
 }

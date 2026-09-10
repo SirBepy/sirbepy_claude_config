@@ -58,3 +58,4 @@ and it is why this is a separate todo.
 - Both other `build-dispatch.ps1` todos closed on 2026-09-10 without touching this, so read their
   `done/` entries before starting: the script now also has `-Compact` and `-AsJsLiteral` modes, and a
   barrier variant has to work with both.
+- Fixed 2026-09-11 by a loop-todos run: build-dispatch.ps1 gained -CommitMode with a ValidateSet of PerBuilder and Barrier. Default reproduces today's output byte for byte, proven by diffing generated output across all four pre-existing flag combinations before and after the change, all empty. Barrier mode swaps in the truthful 'Leave all changes unstaged' staging line and emits only steps 2 and 3 of the injected block, extracted programmatically from the same on-disk fenced block rather than hand-copied, so those steps keep a single source of truth. All three dispatch-preamble-guard markers verified present across eight generated variants.
