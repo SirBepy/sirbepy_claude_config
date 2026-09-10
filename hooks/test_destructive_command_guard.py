@@ -72,7 +72,22 @@ CORE_CASES = [
     ("chmod 644 file.sh", False, "chmod 644"),
     ("npm publish", True, "publish with no dry-run"),
     ("npm publish --dry-run", False, "publish with dry-run"),
+    (
+        "npm publish -n",
+        True,
+        "todo 971: npm's -n is --no-yes, not an alias for --dry-run, so this still needs the real flag",
+    ),
+    ("pnpm publish", True, "todo 971: pnpm publish with no dry-run stays CORE"),
+    ("pnpm publish --dry-run", False, "todo 971: pnpm publish with dry-run"),
+    ("bun publish", True, "todo 971: bun publish with no dry-run stays CORE"),
+    ("bun publish --dry-run", False, "todo 971: bun publish with dry-run"),
     ("cargo publish", True, "cargo publish with no dry-run stays CORE"),
+    ("cargo publish --dry-run", False, "todo 971: cargo publish with long-form dry-run"),
+    (
+        "cargo publish -n",
+        False,
+        "todo 971: cargo's -n is a real short alias for --dry-run, confirmed via cargo's own --help",
+    ),
     (
         "wally publish --project-path packages/obby-system",
         False,
@@ -187,6 +202,36 @@ MIDDLE_CASES = [
         "wally package --output out.zip",
         False,
         "wally's real dry-run equivalent (the named remedy) stays clean",
+    ),
+    (
+        "yarn publish",
+        True,
+        "todo 971: yarn (classic v1) has no --dry-run flag, gated at MIDDLE with a real remedy",
+    ),
+    (
+        "yarn pack",
+        False,
+        "todo 971: yarn's real preflight equivalent (yarn pack) stays clean",
+    ),
+    (
+        "gem push somepkg-1.0.0.gem",
+        True,
+        "todo 971: gem push has no --dry-run flag, gated at MIDDLE with a real remedy",
+    ),
+    (
+        "gem build somepkg.gemspec",
+        False,
+        "todo 971: gem's real preflight equivalent (gem build) stays clean",
+    ),
+    (
+        "twine upload dist/*",
+        True,
+        "todo 971: twine upload has no --dry-run flag, gated at MIDDLE with a real remedy",
+    ),
+    (
+        "twine check dist/*",
+        False,
+        "todo 971: twine's real preflight equivalent (twine check) stays clean",
     ),
     ("Remove-Item C:\\tmp\\scratch-file.txt -Force", False, "ordinary scratch cleanup stays unprompted"),
     (
@@ -311,11 +356,120 @@ def check_wally_publish_names_real_remedy() -> bool:
 
 def check_npm_publish_still_core_denied() -> bool:
     """todo 945 regression guard: fixing wally must not loosen npm/cargo,
-    which DO have --dry-run and stay CORE-denied outright.
+    which DO have --dry-run and stay CORE-denied outright. todo 971: npm's
+    own --help has no -n alias for --dry-run (unlike cargo's), so the
+    message must name only the long form, never "-n".
     """
     proc = run_guard("npm publish")
+    ok = (
+        proc.returncode == 2
+        and "add --dry-run first" in proc.stderr
+        and "-n" not in proc.stderr.split("add --dry-run first")[0][-30:]
+    )
+    print(f"[{'PASS' if ok else 'FAIL'}] npm publish still CORE-denied with the dry-run remedy, no -n named -> exit={proc.returncode} stderr={proc.stderr.strip()!r}")
+    return ok
+
+
+def check_pnpm_publish_names_dry_run_only() -> bool:
+    """todo 971: pnpm's own --help has no -n alias, same reasoning as npm."""
+    proc = run_guard("pnpm publish")
+    ok = (
+        proc.returncode == 2
+        and "add --dry-run first" in proc.stderr
+        and "-n" not in proc.stderr.split("add --dry-run first")[0][-30:]
+    )
+    print(f"[{'PASS' if ok else 'FAIL'}] pnpm publish CORE-denied naming only --dry-run -> exit={proc.returncode} stderr={proc.stderr.strip()!r}")
+    return ok
+
+
+def check_bun_publish_names_dry_run_only() -> bool:
+    """todo 971: bun's own --help has no -n alias, same reasoning as npm."""
+    proc = run_guard("bun publish")
+    ok = (
+        proc.returncode == 2
+        and "add --dry-run first" in proc.stderr
+        and "-n" not in proc.stderr.split("add --dry-run first")[0][-30:]
+    )
+    print(f"[{'PASS' if ok else 'FAIL'}] bun publish CORE-denied naming only --dry-run -> exit={proc.returncode} stderr={proc.stderr.strip()!r}")
+    return ok
+
+
+def check_cargo_publish_names_dry_run_and_n() -> bool:
+    """todo 971: cargo's own --help genuinely lists "-n, --dry-run", so
+    (unlike npm/pnpm/bun) naming -n alongside --dry-run is correct here.
+    """
+    proc = run_guard("cargo publish")
     ok = proc.returncode == 2 and "add --dry-run/-n first" in proc.stderr
-    print(f"[{'PASS' if ok else 'FAIL'}] npm publish still CORE-denied with the dry-run remedy -> exit={proc.returncode} stderr={proc.stderr.strip()!r}")
+    print(f"[{'PASS' if ok else 'FAIL'}] cargo publish CORE-denied naming --dry-run/-n -> exit={proc.returncode} stderr={proc.stderr.strip()!r}")
+    return ok
+
+
+def check_yarn_publish_names_real_remedy() -> bool:
+    """todo 971: yarn (classic v1) has no --dry-run flag (confirmed against
+    classic.yarnpkg.com's own docs and a local repro); the ask message must
+    name yarn's real preflight (yarn pack), never the impossible flag.
+    """
+    proc = run_guard("yarn publish", profile="standard")
+    parsed = None
+    try:
+        parsed = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        pass
+    hook_out = (parsed or {}).get("hookSpecificOutput", {})
+    reason = hook_out.get("permissionDecisionReason", "")
+    ok = (
+        proc.returncode == 0
+        and hook_out.get("permissionDecision") == "ask"
+        and "yarn pack" in reason
+        and "--dry-run first" not in reason
+    )
+    print(f"[{'PASS' if ok else 'FAIL'}] yarn publish names a real remedy -> exit={proc.returncode} reason={reason!r}")
+    return ok
+
+
+def check_gem_push_names_real_remedy() -> bool:
+    """todo 971: gem push has no --dry-run flag (guides.rubygems.org/command-
+    reference/#gem-push lists no such option); the ask message must name
+    gem's real preflight (gem build), never the impossible flag.
+    """
+    proc = run_guard("gem push somepkg-1.0.0.gem", profile="standard")
+    parsed = None
+    try:
+        parsed = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        pass
+    hook_out = (parsed or {}).get("hookSpecificOutput", {})
+    reason = hook_out.get("permissionDecisionReason", "")
+    ok = (
+        proc.returncode == 0
+        and hook_out.get("permissionDecision") == "ask"
+        and "gem build" in reason
+        and "--dry-run first" not in reason
+    )
+    print(f"[{'PASS' if ok else 'FAIL'}] gem push names a real remedy -> exit={proc.returncode} reason={reason!r}")
+    return ok
+
+
+def check_twine_upload_names_real_remedy() -> bool:
+    """todo 971: twine upload has no --dry-run flag (twine.readthedocs.io
+    lists no such option); the ask message must name twine's real preflight
+    (twine check), never the impossible flag.
+    """
+    proc = run_guard("twine upload dist/*", profile="standard")
+    parsed = None
+    try:
+        parsed = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        pass
+    hook_out = (parsed or {}).get("hookSpecificOutput", {})
+    reason = hook_out.get("permissionDecisionReason", "")
+    ok = (
+        proc.returncode == 0
+        and hook_out.get("permissionDecision") == "ask"
+        and "twine check" in reason
+        and "--dry-run first" not in reason
+    )
+    print(f"[{'PASS' if ok else 'FAIL'}] twine upload names a real remedy -> exit={proc.returncode} reason={reason!r}")
     return ok
 
 
@@ -600,6 +754,12 @@ def run() -> int:
         check_shared_prompt_free_no_session_id,
         check_wally_publish_names_real_remedy,
         check_npm_publish_still_core_denied,
+        check_pnpm_publish_names_dry_run_only,
+        check_bun_publish_names_dry_run_only,
+        check_cargo_publish_names_dry_run_and_n,
+        check_yarn_publish_names_real_remedy,
+        check_gem_push_names_real_remedy,
+        check_twine_upload_names_real_remedy,
         check_import_retry_recovers_from_transient_failure,
         check_import_retry_still_fails_when_genuinely_broken,
         check_import_retry_does_not_retry_other_exceptions,

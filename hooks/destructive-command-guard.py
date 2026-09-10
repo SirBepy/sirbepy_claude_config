@@ -12,9 +12,12 @@ an unresolved $VAR, ../.. or a drive root; rm -rf on a system directory;
 Remove-Item -Recurse -Force on a drive root/home; a raw write to /dev/<x>;
 mkfs/dd of=|if=/dev/<x>; Clear-Disk/Format-Volume/format <drive>:; DROP
 TABLE/DATABASE/SCHEMA and TRUNCATE TABLE run through a real SQL client/ORM/
-inline-script driver; chmod 777/a+rwx; package publish with no --dry-run/-n
-(except wally, which has no such flag and lives at MIDDLE instead - todo 945);
-git push --force (or a short flag bundle containing f) without
+inline-script driver; chmod 777/a+rwx; package publish with no dry-run
+preflight, per tool (npm/pnpm/bun --dry-run, cargo --dry-run/-n; yarn
+classic/gem/twine/wally have no such flag and live at MIDDLE instead with
+their own real preflight named - todo 945 for wally, todo 971 for the rest,
+see PUBLISH_DRYRUN_TOOLS/PUBLISH_NO_DRYRUN_TOOLS below); git push --force
+(or a short flag bundle containing f) without
 --force-with-lease. Pipe-to-shell (curl/wget/iwr piped into a shell) also
 measured 0 hits once quoted spans are masked before matching; its one raw
 hit was a shell name inside a quoted grep alternation.
@@ -223,14 +226,57 @@ MSIEXEC_BARE_ANCHOR_RE = re.compile(r"^msiexec(?:\.exe)?\b", re.IGNORECASE)
 MSIEXEC_ARGLIST_RE = re.compile(r"-ArgumentList\b", re.IGNORECASE)
 MSIEXEC_UNINSTALL_FLAG_RE = re.compile(r"/x\{|/uninstall\b", re.IGNORECASE)
 
-PUBLISH_ANCHOR_RE = re.compile(r"^((npm|yarn|pnpm|bun)\s+publish|cargo\s+publish|gem\s+push|twine\s+upload|wally\s+publish)\b")
-DRYRUN_RE = re.compile(r"--dry-run\b|(?<!\S)-n(?!\S)")
-# wally has no --dry-run/-n flag at all (todo 945: wally 0.3.2 errors on
-# `wally publish --dry-run` with "wasn't expected, or isn't valid in this
-# context"), so demanding one is an unreachable remedy that leaves an
-# approved publish with no path forward. Excluded from the CORE dry-run
-# rule below and handled at MIDDLE instead, with a remedy that exists.
-NO_DRYRUN_PUBLISH_RE = re.compile(r"^wally\s+publish\b")
+# Per-tool publish dry-run support (todo 971). npm/pnpm/bun/cargo publish all
+# genuinely accept a dry-run preflight - verified against each tool's own
+# `<tool> publish --dry-run --help` output on this machine (npm 10.x, pnpm,
+# bun 1.3.14, cargo, all installed). Only cargo's dry-run has a real -n short
+# alias ("-n, --dry-run" in cargo's own --help); npm's and pnpm's and bun's
+# --help list only the long form, and npm's own `-n` is a DIFFERENT flag
+# (--no-yes, per docs.npmjs.com/cli/v10/using-npm/config#dry-run's shorthand
+# table, confirmed there is no -n alias for --dry-run) - so naming -n to
+# npm/pnpm/bun would send the user to a flag that doesn't do what they need.
+# yarn (classic v1, the version the literal `yarn publish` command resolves
+# to), gem push, and twine upload have no dry-run flag at all: confirmed via
+# classic.yarnpkg.com/en/docs/cli/publish/, guides.rubygems.org/command-
+# reference/#gem-push, and twine.readthedocs.io (neither gem nor twine is
+# installed on this machine, so those two verdicts are docs-only; yarn's is
+# also reproduced locally - `yarn publish --dry-run --help` did not stop into
+# any dry-run/help mode, it proceeded straight toward the real publish flow).
+# wally's verdict and remedy are unchanged from todo 945.
+PUBLISH_DRYRUN_TOOLS = (
+    # (anchor_re, accepted_flag_re, flag_text_for_message)
+    (re.compile(r"^npm\s+publish\b"), re.compile(r"--dry-run\b"), "--dry-run"),
+    (re.compile(r"^pnpm\s+publish\b"), re.compile(r"--dry-run\b"), "--dry-run"),
+    (re.compile(r"^bun\s+publish\b"), re.compile(r"--dry-run\b"), "--dry-run"),
+    (re.compile(r"^cargo\s+publish\b"), re.compile(r"--dry-run\b|(?<!\S)-n(?!\S)"), "--dry-run/-n"),
+)
+
+# Publish tools with NO dry-run flag (todo 945 for wally, todo 971 for the
+# rest): still an irreversible publish, so still gated at MIDDLE, each with
+# its own real preflight named instead of a flag it doesn't have.
+PUBLISH_NO_DRYRUN_TOOLS = (
+    # (anchor_re, message)
+    (
+        re.compile(r"^yarn\s+publish\b"),
+        "yarn publish ships to a public registry irreversibly and yarn (classic v1) has no --dry-run flag; "
+        "run `yarn pack` first to build the exact upload artifact without publishing",
+    ),
+    (
+        re.compile(r"^gem\s+push\b"),
+        "gem push ships to a public registry irreversibly and gem push has no --dry-run flag; "
+        "run `gem build <name>.gemspec` first to build the exact .gem artifact without pushing",
+    ),
+    (
+        re.compile(r"^twine\s+upload\b"),
+        "twine upload ships to a public registry irreversibly and twine upload has no --dry-run flag; "
+        "run `twine check <dist files>` first to validate the package before uploading",
+    ),
+    (
+        re.compile(r"^wally\s+publish\b"),
+        "wally publish ships to a public registry irreversibly and wally has no --dry-run flag; "
+        "run `wally package --output <file>` first to build the exact upload artifact without uploading",
+    ),
+)
 
 SQUOTE_RE = re.compile(r"'[^']*'")
 DQUOTE_RE = re.compile(r'"(?:[^"\\]|\\.)*"')
@@ -246,25 +292,24 @@ def mask_quotes(command: str) -> str:
 
 def match_publish_no_dryrun(command: str):
     for seg in verb_segments(command):
-        if PUBLISH_ANCHOR_RE.match(seg) and not NO_DRYRUN_PUBLISH_RE.match(seg) and not DRYRUN_RE.search(seg):
-            return "package publish with no --dry-run/-n ships to a public registry irreversibly; add --dry-run/-n first"
+        for anchor_re, flag_re, flag_text in PUBLISH_DRYRUN_TOOLS:
+            if anchor_re.match(seg) and not flag_re.search(seg):
+                return f"package publish with no {flag_text} ships to a public registry irreversibly; add {flag_text} first"
     return None
 
 
 def match_publish_no_preflight(command: str):
     """MIDDLE-tier counterpart to match_publish_no_dryrun for publishers with
-    no dry-run flag to demand (todo 945). Still an irreversible publish, so
-    still gated, just via ask/deny-per-profile instead of an unconditional
-    CORE deny naming a flag that doesn't exist. `wally package --output
-    <file>` builds the exact upload artifact without uploading, so it's
-    named as the real pre-flight equivalent.
+    no dry-run flag to demand (todo 945, extended per-tool by todo 971).
+    Still an irreversible publish, so still gated, just via ask/deny-per-
+    profile instead of an unconditional CORE deny naming a flag that doesn't
+    exist for that tool - each tool's real preflight equivalent is named in
+    PUBLISH_NO_DRYRUN_TOOLS instead.
     """
     for seg in verb_segments(command):
-        if NO_DRYRUN_PUBLISH_RE.match(seg):
-            return (
-                "wally publish ships to a public registry irreversibly and wally has no --dry-run flag; "
-                "run `wally package --output <file>` first to build the exact upload artifact without uploading"
-            )
+        for anchor_re, message in PUBLISH_NO_DRYRUN_TOOLS:
+            if anchor_re.match(seg):
+                return message
     return None
 
 
