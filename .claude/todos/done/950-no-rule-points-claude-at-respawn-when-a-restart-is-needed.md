@@ -78,3 +78,4 @@ and the Conductor-side options in todo 955.
 
 Joe's exact words, so the intent is not paraphrased away: "when you need a restart, just
 /respawn".
+- DONE 2026-09-10 via /loop-todos cycle 1. CLAUDE.md line 22, in Communication next to the popup-attribution bullet as this todo directed: when a change only takes effect after a Claude Code restart (a settings.json edit, a newly installed skill or hook), never tell Joe to restart the app, tell him to run /respawn, which hands this chat context to a fresh session in place. Verified the gap first rather than trusting the file: grep for respawn in CLAUDE.md returned nothing before the edit and matches the new bullet after. MCP servers are deliberately NOT listed as an example, per this todo rejecting the earlier draft that led with them - MCP config is not restart-fixable in this harness, so naming it would have been wrong. python ci/run_all.py exits 0.
