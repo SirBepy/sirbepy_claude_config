@@ -1,6 +1,6 @@
 ---
 name: apply-styleguide
-description: Triggers on /apply-styleguide only.
+description: Applies the bepy styleguide to a project - replaces hardcoded values with CSS vars and applies standard components. Runs via /apply-styleguide standalone or as a step in /bepy-project-setup-web.
 ---
 
 # /apply-styleguide

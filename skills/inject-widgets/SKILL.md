@@ -1,6 +1,6 @@
 ---
 name: inject-widgets
-description: Triggers on /inject-widgets only.
+description: Injects the settings widget and animated background into index.html. Runs via /inject-widgets standalone or as a step in /bepy-project-setup-web.
 ---
 
 # /inject-widgets

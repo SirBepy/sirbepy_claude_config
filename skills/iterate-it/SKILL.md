@@ -1,6 +1,6 @@
 ---
 name: iterate-it
-description: Triggers on /iterate-it only. Converges a hypothesis through two phases (Explore, then Polish), one subagent per round, exiting once the score threshold is hit. Use when a one-shot /rate-it isn't enough and you want the panel to PROPOSE BETTER VERSIONS, not just judge.
+description: Converges a hypothesis through two phases (Explore, then Polish), one subagent per round, exiting once the score threshold is hit. Use when a one-shot /rate-it isn't enough and you want the panel to PROPOSE BETTER VERSIONS, not just judge. Also invoked as a bounded nested step by /autopilot and /auto-do-todos.
 argument-hint: "[--threshold=N] [--floor=N] [--explore-max=N] [--polish-max=N] [--research] <hypothesis>"
 ---
 

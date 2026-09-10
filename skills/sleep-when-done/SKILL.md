@@ -9,6 +9,11 @@ description: Triggers on /sleep-when-done only. Puts the PC to sleep as the fina
 
 **Trigger:** `/sleep-when-done` only. Never auto-invoke.
 
+Stays model-invocable (no `disable-model-invocation`) on purpose: `/autopilot --sleep` and
+`/close /sleep-when-done` both chain-invoke it via the Skill tool, and flagging it would silently
+break those two paths (todo 842). The "Never auto-invoke" rule above, not the frontmatter, is what
+stops Claude firing this unprompted.
+
 **Precondition:** never sleep on red - the project's fast checks (typecheck, unit tests, lint, build, whichever the project has) must have passed this session before the sleep call runs.
 
 ## Sleep command

@@ -1,6 +1,6 @@
 ---
 name: rate-it
-description: Triggers on /rate-it only. Brutally honest 1-10 rating with named score tiers, no sugar-coating. Solo by default; pass an integer N for an N-subagent panel (higher stakes, ~5-6x cost). Auto-detects if web research is needed; supports --research and --dont-research flags.
+description: Brutally honest 1-10 rating with named score tiers, no sugar-coating. Solo by default; pass an integer N for an N-subagent panel (higher stakes, ~5-6x cost). Auto-detects if web research is needed; supports --research and --dont-research flags. Also invoked as a nested step by /rate-it-and-commit.
 argument-hint: "[N] <thing to rate> [strict] [--research|--dont-research]"
 ---
 

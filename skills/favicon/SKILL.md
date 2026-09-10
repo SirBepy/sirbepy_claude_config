@@ -1,6 +1,6 @@
 ---
 name: favicon
-description: Triggers on /favicon only.
+description: Checks for and generates favicon files (svg, png, ico) for any project type. Runs via /favicon standalone or as a step in /bepy-project-setup-web.
 ---
 
 # /favicon

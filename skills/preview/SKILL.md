@@ -1,6 +1,6 @@
 ---
 name: preview
-description: Triggers on /preview only. Pushes a static HTML mockup, one or more markdown files/a directory rendered into a single navigable page, or one or more images inlined as a gallery page, into Claude Conductor's in-app preview panel via its localhost hook endpoint - replacing the localhost-server + browser-tab flow and, for images, replacing SendUserFile in a session that doesn't have it.
+description: Pushes a static HTML mockup, one or more markdown files/a directory rendered into a single navigable page, or one or more images inlined as a gallery page, into Claude Conductor's in-app preview panel via its localhost hook endpoint - replacing the localhost-server + browser-tab flow and, for images, replacing SendUserFile in a session that doesn't have it.
 argument-hint: "<file.html | file.md... | image.png... | dir | inline html> [--slug <name>] [--title <text>]"
 ---
 

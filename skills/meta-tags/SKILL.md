@@ -1,6 +1,6 @@
 ---
 name: meta-tags
-description: Triggers on /meta-tags only.
+description: Ensures index.html has all required meta tags (description, og:*, twitter:card). Runs via /meta-tags standalone or as a step in /bepy-project-setup-web.
 ---
 
 # /meta-tags

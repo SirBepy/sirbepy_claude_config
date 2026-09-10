@@ -1,6 +1,6 @@
 ---
 name: batch-todos
-description: Triggers on /batch-todos only. Dedupes todos, auto-executes EASY ones after a dry-run confirm, then surfaces the HARD queue.
+description: Dedupes todos, auto-executes EASY ones after a dry-run confirm, then surfaces the HARD queue. Invoked as /batch-todos, and chain-invoked unattended by /auto-do-todos as its own Step 3.
 ---
 
 # /batch-todos

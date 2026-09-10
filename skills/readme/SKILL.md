@@ -1,6 +1,6 @@
 ---
 name: readme
-description: Triggers on /readme only.
+description: Generates or updates README.md for the project. Runs via /readme standalone or as a step in /bepy-project-setup-web.
 ---
 
 # /readme
