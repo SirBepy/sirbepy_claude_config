@@ -58,3 +58,7 @@ the next session re-derives the same failure.
 - Both documented commands run as written in a PowerShell 5.1 tool call with a quote-containing
   payload and return the endpoint's `{"id": ...}`.
 - `python ci/run_all.py` still passes (skill frontmatter + token budget checks).
+
+## Notes
+
+- DONE 2026-09-10 via /loop-todos cycle 2, and proven by running both forms rather than reasoning about quoting. skills/preview/SKILL.md:48 no longer uses a node -e one-liner carrying embedded double quotes; it writes a .mjs file to C:\tmp via the Write tool, runs node against it, then removes it, with the budget and drop-reporting logic carried over verbatim. Live evidence from this session PowerShell: the OLD form produced SyntaxError Unexpected token colon, matching the error this todo reported, and the NEW form printed out with included 1 dropped empty, with the generated HTML confirmed to carry a properly double-quoted img src data URI. The quote-free form further down at :62-66 was left alone because it genuinely works, verified by running it, and now carries a one-line note explaining WHY it survives (no embedded double quote) plus a pointer to the file variant for any payload that needs one. The whole skills tree was grepped for the same shape: the only other PowerShell-run instance, in supervised-run, is the quote-free shape and was executed to confirm it works; the react.yml one runs on a Linux CI runner and is out of scope. python ci/run_all.py exits 0.

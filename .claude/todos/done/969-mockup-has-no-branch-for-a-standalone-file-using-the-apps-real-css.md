@@ -58,3 +58,7 @@ Concretely:
   mechanism themselves.
 - `python ci/run_all.py` passes (skill-frontmatter validation and the always-loaded token budget -
   the description is unchanged here, but the file is not).
+
+## Notes
+
+- DONE 2026-09-10 via /loop-todos cycle 2. skills/mockup/SKILL.md now has three branches, and the new Spliced-CSS one is listed FIRST with a trigger a reader can actually evaluate: a web project with real stylesheets where the dev server the mockup would otherwise use is the dev own live workspace right now, so a scratch route hot-reload would land in his open tab. That condition explicitly wins over the real-component branch when both are technically true, because the point is not disturbing the live server rather than whether reusable components exist. Step 5 carries the mechanical recipe (a .src.html with an APP_CSS marker, a small node build script concatenating the app real stylesheets and splicing them in to produce the generated .html that gets previewed) with the countoff evidence and the ancestor-scope caveat. The renumbering was done properly rather than left half-applied: every internal cross-reference was updated, the verify step now names the new branch explicitly rather than leaving it to analogy, the show-to-dev step gained its bullet, disposal names the .src.html and its build script, and the staging heading says all three branches. python ci/run_all.py exits 0.

@@ -44,8 +44,32 @@ When the input is one or more `.md` paths, or a directory of them, render first,
 When the input is one or more image paths, or a directory of them, build a gallery HTML page first, then fall through to the same HTML steps below - this is the path for "show Joe this screenshot" when the session has no `SendUserFile` tool.
 
 1. Expand a directory arg to its `.png/.jpg/.jpeg/.gif/.webp` files (sorted) first. Then inline them, capping by RAW byte size before encoding (base64 adds ~33%, so a 1.5MB raw budget lands just under the endpoint's ~2MB cap): once a file would push the running total over budget, drop it and every file after it, and report every dropped filename - never truncate what made it in, and never let the POST hit 413.
+
+   This builder's HTML has embedded `"` (image attributes), so it can never be written as a single quote-free `node -e` argument - a `node -e` one-liner here is a parse error in PowerShell 5.1 before node ever runs (`\"` inside a native-command argument gets stripped, leaving `SyntaxError: Unexpected token ':'`). Write the builder to a file instead, run it, delete it:
    ```powershell
-   node -e 'const fs=require("fs");const path=require("path");const files=["C:/path/shot1.png","C:/path/shot2.png"];const mime={".png":"image/png",".jpg":"image/jpeg",".jpeg":"image/jpeg",".gif":"image/gif",".webp":"image/webp"};const BUDGET=1.5*1024*1024;let used=0,included=[],dropped=[];for(const f of files){const size=fs.statSync(f).size;if(used+size>BUDGET){dropped.push(f);continue;}used+=size;included.push(f);}const figs=included.map(f=>{const ext=path.extname(f).toLowerCase();const b64=fs.readFileSync(f).toString("base64");return "<figure><img src=\"data:"+(mime[ext]||"image/png")+";base64,"+b64+"\" style=\"max-width:100%\"><figcaption>"+path.basename(f)+"</figcaption></figure>";}).join("\n");const html="<!doctype html><html><body style=\"font-family:sans-serif\">"+figs+"</body></html>";fs.writeFileSync("C:/tmp/preview-images.html",html);console.log("out:","C:/tmp/preview-images.html","included:",included.length,"dropped:",dropped);'
+   # Write to C:\tmp\preview-build.mjs (via the Write tool, not shell redirection):
+   #   import fs from "fs";
+   #   import path from "path";
+   #   const files = ["C:/path/shot1.png", "C:/path/shot2.png"];
+   #   const mime = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp" };
+   #   const BUDGET = 1.5 * 1024 * 1024;
+   #   let used = 0, included = [], dropped = [];
+   #   for (const f of files) {
+   #     const size = fs.statSync(f).size;
+   #     if (used + size > BUDGET) { dropped.push(f); continue; }
+   #     used += size;
+   #     included.push(f);
+   #   }
+   #   const figs = included.map(f => {
+   #     const ext = path.extname(f).toLowerCase();
+   #     const b64 = fs.readFileSync(f).toString("base64");
+   #     return `<figure><img src="data:${mime[ext] || "image/png"};base64,${b64}" style="max-width:100%"><figcaption>${path.basename(f)}</figcaption></figure>`;
+   #   }).join("\n");
+   #   const html = `<!doctype html><html><body style="font-family:sans-serif">${figs}</body></html>`;
+   #   fs.writeFileSync("C:/tmp/preview-images.html", html);
+   #   console.log("out:", "C:/tmp/preview-images.html", "included:", included.length, "dropped:", dropped);
+   node C:\tmp\preview-build.mjs
+   Remove-Item C:\tmp\preview-build.mjs
    ```
    Edit the `files` array for the actual paths, then tell the dev about any `dropped` entries before pushing.
 2. Default slug/title derive from the first image path's stem, or the directory name for a directory input, same convention as the markdown branch.
@@ -59,7 +83,7 @@ When the input is one or more image paths, or a directory of them, build a galle
    `POST http://127.0.0.1:27182/hooks/preview`
    Body: `{ "title": string, "slug"?: string, "html": string, "source": "terminal", "session_id": string }`
 
-   **Primary: Node body-builder + curl.exe POST** (reliable string escaping on a large HTML string - write the JSON to a temp file, then POST that file so quoting/escaping isn't hand-rolled):
+   **Primary: Node body-builder + curl.exe POST** (reliable string escaping on a large HTML string - write the JSON to a temp file, then POST that file so quoting/escaping isn't hand-rolled). This exact one-liner only survives PowerShell because every JS string inside it is single-quoted with no embedded `"` - PowerShell 5.1 strips `\"` out of a double-quoted native-command argument before node ever sees it. The moment a payload needs an embedded `"` (e.g. building HTML with double-quoted attributes), switch to the `.mjs` file variant shown in the Image branch below instead of trying to escape it inline:
    ```powershell
    node -e "const fs=require('fs');const html=fs.readFileSync('C:/path/to/mockup.html','utf8');fs.writeFileSync('C:/tmp/preview-body.json',JSON.stringify({title:'Ring preview',slug:'mockup-ring-preview',html,source:'terminal',session_id:process.env.CLAUDE_CODE_SESSION_ID}))"
    curl.exe -X POST http://127.0.0.1:27182/hooks/preview -H "Content-Type: application/json" --data-binary "@C:\tmp\preview-body.json"
