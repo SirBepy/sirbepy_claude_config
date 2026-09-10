@@ -2,7 +2,9 @@
 # Fixture suite for secret-scan.sh, comment-noise.sh, em-dash.sh, overlap-check.sh (todo 810),
 # seeded from done/412, done/460, done/456, done/778. Invoke directly:
 #   bash skills/commit/test_prefilters.sh
-# Sibling test_comment_noise.sh (todo 903) already covers comment-noise.sh's cut-ratio math.
+# The comment-noise.sh cut-ratio arithmetic (the exact-25%-boundary math) has no test coverage
+# here: its old suite, test_comment_noise.sh, was deleted with the cap it tested (todo 922).
+# Accepted gap - the number is advisory-only now, not a gate; see todo 935.
 set -uo pipefail
 
 script_dir=$(cd "$(dirname "$0")" && pwd)
@@ -86,6 +88,53 @@ check "secret-scan.sh sees a planted credential in a gitignored file" \
 printf 'nothing to see here\n' > "$repo/clean.txt"
 out=$(cd "$repo" && "$gate" clean.txt); rc=$?
 check "an unremarkable gitignored file still clears the gate" 0 '' '' "$out" "$rc"
+
+# --- prefilter-gate.sh: staged deletion is skipped, not a repo-resolution failure (todo 944) ---
+# git rm'ing the only file in a directory removes the directory too, so the deleted path's own
+# dirname is gone from disk - the exact shape that made repo resolution exit 2 in the wild.
+delrepo=$(new_repo); tmp_dirs+=("$delrepo")
+mkdir -p "$delrepo/assets"
+printf 'seed\n' > "$delrepo/assets/README.md"
+git -C "$delrepo" add assets/README.md
+git -C "$delrepo" commit -q -m "add assets/README.md"
+git -C "$delrepo" rm -q assets/README.md
+out=$(cd "$delrepo" && "$gate" assets/README.md); rc=$?
+check "a lone staged deletion whose own directory is gone clears the gate instead of exit 2" \
+  0 '' 'ERROR' "$out" "$rc"
+
+# A staged deletion mixed into a pathspec with a live file must not blind the scan of that
+# live file - the whole point of skipping rather than aborting is the rest keeps getting checked.
+printf 'seed\n' > "$delrepo/keep.txt"
+git -C "$delrepo" add keep.txt
+git -C "$delrepo" commit -q -m "add keep.txt"
+fake_tok3="ghp_""lmnopqrstuvwxyzabcdefghi"
+printf 'seed\nconst tok = "%s";\n' "$fake_tok3" > "$delrepo/keep.txt"
+git -C "$delrepo" rm -q README.md
+out=$(cd "$delrepo" && "$gate" README.md keep.txt); rc=$?
+check "a staged deletion mixed with a live file skips the deletion and still flags the live file" \
+  1 'keep\.txt:2: ghp_' 'ERROR' "$out" "$rc"
+
+# An UNSTAGED deletion of a tracked file is the other half of todo 944, and the two need
+# different git questions: `git rm` above drops the path from the index, so `diff --cached`
+# says D while ls-files misses it; here the file is merely gone from disk, so `diff --cached`
+# says nothing while ls-files still finds it. This is the shape complete-todo.ps1 produces on
+# every archive (Move-Item plus a `git add` of the destination only), which is how a /commit
+# run hit it for real on 2026-09-10.
+printf 'seed\n' > "$delrepo/archived.md"
+git -C "$delrepo" add archived.md
+git -C "$delrepo" commit -q -m "add archived.md"
+rm -f "$delrepo/archived.md"
+out=$(cd "$delrepo" && "$gate" archived.md); rc=$?
+check "an unstaged deletion of a tracked file is skipped, not a repo-resolution failure" \
+  0 '' 'ERROR' "$out" "$rc"
+
+# --- prefilter-gate.sh: missing but NOT staged for deletion still exits 2 (todo 944) ---
+# Mechanical distinction from the three cases above: neither git question recognises this exact
+# path - not staged for deletion, not in the index - so it is a typo or wrong cwd, not a deletion.
+bogus=$(new_repo); tmp_dirs+=("$bogus")
+out=$(cd "$bogus" && "$gate" never/existed.txt); rc=$?
+check "a path that was never tracked and is not on disk still exits 2" \
+  2 'ERROR: could not find a git repository for never/existed\.txt' '' "$out" "$rc"
 
 # --- comment-noise.sh: generated-file skip, filename suffix only (done/456) ---
 # comment-noise.sh's own exit code is sort's (always 0), so this checks stdout content only;

@@ -48,3 +48,7 @@ produces is advisory rather than enforced.
 - Either an arithmetic check exists in `test_prefilters.sh`, or a comment states plainly that the cut
   arithmetic is untested and why that was accepted.
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- DONE 2026-09-10 via /loop-todos cycle 1. skills/commit/test_prefilters.sh no longer points at test_comment_noise.sh, which was deleted along with the comment cap it tested in todo 922. The accept-the-loss branch was taken deliberately rather than restoring the suite, and the replacement comment says exactly what is now uncovered instead of quietly dropping the reference: the cut-ratio arithmetic in comment-noise.sh has no test, and that is acceptable because the number is advisory only since 2026-09-05 and no longer gates a commit. No reference to the deleted file survives under skills/commit/. python ci/run_all.py exits 0.

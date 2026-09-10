@@ -32,12 +32,48 @@ elif [ "${1:-}" != "--range" ] && [ $# -gt 0 ]; then
   # was not diffable run to run (todo 802). Track first-seen order in a plain array instead.
   declare -a repo_order=()
   for a in "$@"; do
-    # A directory argument that IS a submodule root resolves via its own toplevel, not its
-    # parent's, or the whole submodule reads back as one gitlink entry (todo 801).
-    if [ -d "$a" ]; then
-      arg_repo=$(git -C "$a" rev-parse --show-toplevel 2>/dev/null)
+    if [ -e "$a" ]; then
+      # A directory argument that IS a submodule root resolves via its own toplevel, not its
+      # parent's, or the whole submodule reads back as one gitlink entry (todo 801).
+      if [ -d "$a" ]; then
+        arg_repo=$(git -C "$a" rev-parse --show-toplevel 2>/dev/null)
+      else
+        arg_repo=$(git -C "$(dirname -- "$a")" rev-parse --show-toplevel 2>/dev/null)
+      fi
     else
-      arg_repo=$(git -C "$(dirname -- "$a")" rev-parse --show-toplevel 2>/dev/null)
+      # Missing from disk: `git rm` can delete the last file in a directory and take the
+      # directory with it, so even dirname's OWN dirname can be gone (todo 944). Walk up to
+      # the nearest surviving ancestor to resolve a repo, then ask the INDEX (not the working
+      # tree) whether git still tracks this exact path - that is the mechanical line between
+      # "legitimately gone" and "typo'd path, wrong cwd".
+      probe="$(dirname -- "$a")"
+      while [ -n "$probe" ] && [ "$probe" != "." ] && [ "$probe" != "/" ] && [ ! -d "$probe" ]; do
+        probe="$(dirname -- "$probe")"
+      done
+      [ -d "$probe" ] || probe="."
+      probe_repo=$(git -C "$probe" rev-parse --show-toplevel 2>/dev/null)
+      known=""
+      if [ -n "$probe_repo" ]; then
+        # Two different deletions reach here and NEITHER check sees both, so ask both. A
+        # `git rm` drops the path from the index, so ls-files misses it but `diff --cached`
+        # reports `D`. An archive helper that moves the file and only `git add`s the
+        # destination leaves the source deletion UNSTAGED, so `diff --cached` reports nothing
+        # while ls-files still finds the path in the index. A path git never knew answers to
+        # neither, which is what keeps a typo an exit 2.
+        if [ "$(git -C "$probe_repo" diff --cached --name-status -- "$a" 2>/dev/null | cut -f1)" = "D" ]; then
+          known=1
+        elif git -C "$probe_repo" ls-files --error-unmatch -- "$a" >/dev/null 2>&1; then
+          known=1
+        fi
+      fi
+      if [ -n "$known" ]; then
+        # A deleted file has no content left for em-dash/comment-tense/secret-scan to read -
+        # skip it silently and keep scanning the rest of the pathspec.
+        continue
+      fi
+      # Missing and untracked: a real invocation error (typo, wrong cwd). Force the same
+      # ERROR/exit-2 path below even though some ancestor happened to resolve.
+      arg_repo=""
     fi
     if [ -z "$arg_repo" ]; then
       printf 'ERROR: could not find a git repository for %s\n' "$a"
