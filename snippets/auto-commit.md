@@ -43,7 +43,15 @@ Do **not** fold (make a new commit on top instead) when:
 
 When it's genuinely unclear whether feedback is categorically-wrong-redo-it or an ordinary small tweak, ask.
 
-Never `git commit --amend` or `git rebase` interactively. Always new commit on top OR the atomic `update-ref` fold below, nothing else.
+### Self-discovered: a file belongs in the commit you just made
+
+Different trigger from the correction round above - no user feedback involved. You commit, then notice, before touching anything else, that a file you didn't stage genuinely belongs in that same commit: same logical change, e.g. a lockfile that only went dirty because of the commit you just made.
+
+Fold it in using the same Case A path below (requires `<captured-sha>`, same safe/unsafe checks) - never `git commit --amend`, pathspec-scoped or otherwise. After the atomic `update-ref` rollback, add the missing file to the pathspec and re-run `/commit` with the full set (the original files plus the missing one), same message. If the safety checks say unsafe, this is not a fold: make a normal new commit containing just the missing file instead.
+
+This also covers `skills/commit/SKILL.md` step 8's "half-committed move" recovery (a `git mv` or relocate script where only the destination was named in the commit pathspec, leaving the source deletion staged and unreported) - same mechanism, treat the omitted source-deletion path as the missing file.
+
+Never `git commit --amend` or `git rebase` interactively, in any form - including a pathspec-scoped `--amend --no-edit -- <paths>` recovery for the case above. There is no carve-out. Always a new commit on top, or the atomic `update-ref` fold below (Case A), nothing else.
 
 ### Identify the bad commit
 
