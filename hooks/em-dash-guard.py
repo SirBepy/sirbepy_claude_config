@@ -77,9 +77,19 @@ def build_reason(text: str, idx: int, source: str = "your reply", already_sent: 
     start = max(0, idx - 20)
     end = min(len(text), idx + 21)
     snippet = text[start:end].replace("\n", " ")
+    # todo 963: this arm only ever sees a message that has ALREADY sent, but
+    # the payload gives no way to know whether it still sits inside
+    # update_message's own reachability window (messages since Joe's
+    # second-most-recent message) - a long unattended run can flag a bubble
+    # many turns after it went out, well outside that window. Naming both
+    # branches keeps the instruction actionable either way, instead of
+    # ordering a revise call that may silently no-op.
     repair = (
         " That message already reached its recipient; revise it with "
-        "mcp__cc_conductor__update_message (newest ordinal first)." if already_sent else ""
+        "mcp__cc_conductor__update_message if it is still within that tool's "
+        "window (messages sent since Joe's second-most-recent message); if it "
+        "is older, say the correction plainly in your next message instead of "
+        "silently leaving it." if already_sent else ""
     )
     return (
         "Em dash (U+2014) found in %s near: \"...%s...\". Global rule "

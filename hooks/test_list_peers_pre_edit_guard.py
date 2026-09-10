@@ -257,4 +257,100 @@ with tempfile.TemporaryDirectory() as tmp:
         server.shutdown()
         thread.join(timeout=5)
 
+# --- is_git_commit_command: token-based detection (todo 907) ---
+
+IS_GIT_COMMIT_CASES = [
+    ('git commit -m "msg" -- foo.py', True, "plain commit with pathspec"),
+    ('git -C /some/repo commit -m "msg"', True, "-C global flag before subcommand"),
+    ('git commit', True, "bare commit"),
+    ('git commit-graph verify', False, "commit-graph is not commit"),
+    ('git log --grep="commit"', False, "commit as a grep pattern, not a subcommand"),
+    ('git commit -m "reword the commit message"', True, "the word commit in the message doesn't confuse the real subcommand"),
+    ('echo "please git commit this"', False, "commit mentioned in unrelated prose"),
+    ('git push origin main', False, "unrelated git subcommand"),
+]
+
+
+def check_is_git_commit_command(case) -> bool:
+    command, expected, label = case
+    got = guard.is_git_commit_command(command)
+    ok = got == expected
+    print(f"{'PASS' if ok else 'FAIL'}: is_git_commit_command: {label} (expected {expected!r}, got {got!r})")
+    return ok
+
+
+fails += _testlib.run_cases(IS_GIT_COMMIT_CASES, check_is_git_commit_command)
+
+
+# --- own-commit marker refresh (todo 907), both directions ---
+
+
+def run_post_tool_use(session_id: str, cwd: str, command: str):
+    guard.read_payload = lambda: {
+        "hook_event_name": "PostToolUse",
+        "session_id": session_id,
+        "cwd": cwd,
+        "tool_name": "Bash",
+        "tool_input": {"command": command},
+    }
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        try:
+            guard.main()
+            code = 0
+        except SystemExit as e:
+            code = e.code
+    return code, buf.getvalue()
+
+
+# Direction 1: this session's OWN commit does not warn on the next edit.
+with tempfile.TemporaryDirectory() as tmp:
+    tmpdir = Path(tmp)
+    guard.MARKER_DIR = tmpdir / "markers"
+    repo = make_repo(tmpdir)
+    server, thread = start_fake_daemon(json.dumps({"peers": []}).encode())
+    guard.DAEMON_PORT = server.server_address[1]
+    try:
+        code, out = run_main(session_id="s7", cwd=str(repo), file_path="a.py")
+        fails += [] if (code == 0 and out == "") else ["own-commit case: first check with zero peers stays silent"]
+
+        # Session commits its own work, then the PostToolUse arm fires for
+        # that same `git commit` call and refreshes the marker.
+        commit(repo, "a.py")
+        pcode, pout = run_post_tool_use("s7", str(repo), 'git commit -m "a.py" -- a.py')
+        fails += [] if (pcode == 0 and pout == "") else ["own-commit case: PostToolUse refresh produces no output"]
+
+        marker_after_commit = guard.marker_path("s7", guard.repo_root(str(repo))).read_text(encoding="utf-8").strip()
+        live_head = guard.get_head(str(repo))
+        fails += [] if marker_after_commit == live_head else ["own-commit case: marker was not refreshed to the post-commit HEAD"]
+
+        code2, out2 = run_main(session_id="s7", cwd=str(repo), file_path="b.py")
+        fails += [] if (code2 == 0 and out2 == "") else [f"own-commit case: next edit after own commit must not warn, got {out2!r}"]
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+
+# Direction 2: a PEER's commit (nothing runs the PostToolUse refresh for it)
+# still warns on the next edit - the guard's whole reason for existing.
+with tempfile.TemporaryDirectory() as tmp:
+    tmpdir = Path(tmp)
+    guard.MARKER_DIR = tmpdir / "markers"
+    repo = make_repo(tmpdir)
+    server, thread = start_fake_daemon(json.dumps({"peers": []}).encode())
+    guard.DAEMON_PORT = server.server_address[1]
+    try:
+        code, out = run_main(session_id="s8", cwd=str(repo), file_path="a.py")
+        fails += [] if (code == 0 and out == "") else ["peer-commit case: first check with zero peers stays silent"]
+
+        # A peer commits directly - no PostToolUse call for this session ever
+        # observes it, so nothing refreshes s8's marker.
+        commit(repo, "peer-change.py")
+
+        code2, out2 = run_main(session_id="s8", cwd=str(repo), file_path="b.py")
+        ok2 = code2 == 0 and "HEAD moved" in out2 and "b.py" in out2
+        fails += [] if ok2 else [f"peer-commit case: a genuine peer commit between two edits must still warn, got {out2!r}"]
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+
 sys.exit(_testlib.summarize(fails))

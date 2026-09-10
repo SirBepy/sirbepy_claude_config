@@ -15,18 +15,34 @@ live `list_peers` MCP call would see - no separate discovery step needed.
 
 Fails open on every non-"peers found" outcome (unreachable daemon, unknown
 session, non-git cwd) and marks the session+repo pair so later edits in the
-same turn/session never re-query - `main()`'s early-exit chain is the
-single place all four skip conditions funnel through.
+same turn/session never re-query - `handle_pre_edit()`'s early-exit chain is
+the single place all four skip conditions funnel through.
 
 Second sensor (todo 895): `list_peers` returned empty twice while another
 session committed underneath it. The marker now also carries this session's
 last-seen `HEAD` sha; a later edit whose live `HEAD` differs warns on that
 alone, even with zero peers reported, since a wrong daemon answer never
 changes what git itself recorded.
+
+Own-commit refresh (todo 907): the sensor above cannot tell "a peer committed"
+apart from "I just committed" by sha alone - both move HEAD, so the fix for
+todo 895 also warned on the session's own ordinary commits. A second
+PostToolUse arm, wired in settings.json on Bash|PowerShell, watches for this
+session's own `git commit` and re-syncs the marker to the resulting HEAD the
+moment it lands, so the very next edit's pre-check compares against a marker
+that already accounts for this session's own history. A failed/rejected
+commit never moves HEAD, so refreshing unconditionally on any `git commit`
+invocation is always safe - it just re-reads whatever HEAD already is. This
+cannot distinguish a peer commit that lands in the narrow window between this
+session's own edits and its own `git commit` call (no Edit/Write fires in
+that window to catch it) - accepted, see todo 907's own Approach; the
+PreToolUse sensor above still catches any peer commit that lands between two
+of this session's edits, which is the case todo 895 was filed for.
 """
 
 import hashlib
 import json
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -54,6 +70,36 @@ MARKER_DIR = Path(tempfile.gettempdir()) / "claude-list-peers-guard"
 # Kept as a module-level name (not just the bare import) so this guard's
 # own test suite can call `guard.repo_root(...)` unmodified (todo 874).
 repo_root = git_repo_root
+
+# Global flags that take a separate following token as their value, so that
+# token is never mistaken for the `commit` subcommand itself. Same shape as
+# commit-guard.py's own VALUE_FLAGS, kept as an independent copy since the
+# two guards ask a different question: commit-guard decides whether to BLOCK
+# the call, this one decides whether to REFRESH a marker after it already ran.
+_GIT_VALUE_FLAGS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
+
+
+def is_git_commit_command(command: str) -> bool:
+    """True if `command` contains a real `git commit` subcommand call,
+    walking past global flags (and their values) token by token so
+    `commit-graph`, `--grep="commit"`, or a message/path containing "commit"
+    never false-positives a marker refresh."""
+    try:
+        tokens = shlex.split(command, posix=True)
+    except ValueError:
+        return False
+    for i, tok in enumerate(tokens):
+        if tok != "git":
+            continue
+        j = i + 1
+        while j < len(tokens) and tokens[j].startswith("-"):
+            if tokens[j] in _GIT_VALUE_FLAGS and "=" not in tokens[j]:
+                j += 2
+            else:
+                j += 1
+        if j < len(tokens) and tokens[j] == "commit":
+            return True
+    return False
 
 
 def marker_path(session_id: str, repo: str) -> Path:
@@ -114,8 +160,27 @@ def peer_label(peer: dict) -> str:
     return f"{name} ({branch})" if branch else str(name)
 
 
-def main() -> None:
-    payload = read_payload()
+def handle_post_tool_use(payload: dict) -> None:
+    """Own-commit refresh (todo 907): after this session's own `git commit`
+    lands, re-sync the marker to the resulting HEAD before any later edit's
+    pre-check can compare against a stale, pre-commit value."""
+    if payload.get("tool_name") not in ("Bash", "PowerShell"):
+        sys.exit(0)
+    command = (payload.get("tool_input") or {}).get("command", "") or ""
+    if not is_git_commit_command(command):
+        sys.exit(0)
+    session_id = payload.get("session_id") or ""
+    cwd = payload.get("cwd") or ""
+    if not session_id or not cwd:
+        sys.exit(0)
+    repo = repo_root(cwd)
+    if not repo:
+        sys.exit(0)
+    write_marker(marker_path(session_id, repo), get_head(repo))
+    sys.exit(0)
+
+
+def handle_pre_edit(payload: dict) -> None:
     session_id = payload.get("session_id") or ""
     cwd = payload.get("cwd") or ""
     if not session_id or not cwd:
@@ -159,6 +224,14 @@ def main() -> None:
         f"({names}) while editing {file_path}. Call list_peers/post_message before "
         f"proceeding if your edit might collide."
     )
+
+
+def main() -> None:
+    payload = read_payload()
+    if payload.get("hook_event_name") == "PostToolUse":
+        handle_post_tool_use(payload)
+        return
+    handle_pre_edit(payload)
 
 
 if __name__ == "__main__":

@@ -225,6 +225,16 @@
         ]
       },
       {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\list-peers-pre-edit-guard.py\"",
+            "statusMessage": "Refreshing own-commit HEAD marker (list-peers guard)"
+          }
+        ]
+      },
+      {
         "matcher": "Read",
         "hooks": [
           {

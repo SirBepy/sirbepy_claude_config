@@ -62,6 +62,40 @@ def check_extract_field(case) -> bool:
     return ok
 
 
+# (already_sent, must_contain, must_not_contain, label) - todo 963: an
+# already-sent violation must name BOTH branches of update_message's
+# reachability window rather than unconditionally ordering a revise call
+# that may be out of the tool's reach; a not-yet-sent violation gets no
+# repair suffix at all (unchanged).
+BUILD_REASON_CASES = [
+    (
+        False,
+        [],
+        ["update_message", "recipient"],
+        "not already sent: no repair suffix at all",
+    ),
+    (
+        True,
+        [
+            "update_message if it is still within that tool's window",
+            "if it is older, say the correction plainly in your next message",
+        ],
+        ["revise it with mcp__cc_conductor__update_message (newest ordinal first)."],
+        "already sent: names both branches, drops the old unconditional order",
+    ),
+]
+
+
+def check_build_reason(case) -> bool:
+    already_sent, must_contain, must_not_contain, label = case
+    text = f"bad{ED}text"
+    idx = guard.find_em_dash(text)
+    reason = guard.build_reason(text, idx, "your reply", already_sent=already_sent)
+    ok = all(s in reason for s in must_contain) and all(s not in reason for s in must_not_contain)
+    print(f"[{'PASS' if ok else 'FAIL'}] build_reason: {label} -> {reason!r}")
+    return ok
+
+
 # (payload, expect_block, label) - full-process integration via stdin/stdout,
 # so the stop_hook_active loop guard is exercised for real.
 INTEGRATION_CASES = [
@@ -269,6 +303,7 @@ def run() -> int:
     fails = (
         _testlib.run_cases(UNIT_CASES, check_unit)
         + _testlib.run_cases(EXTRACT_FIELD_CASES, check_extract_field)
+        + _testlib.run_cases(BUILD_REASON_CASES, check_build_reason)
         + _testlib.run_cases(INTEGRATION_CASES, check_integration)
         + run_transcript_cases()
         + run_boundary_regression_case()

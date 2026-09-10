@@ -18,7 +18,7 @@ of silently staying wrong.
 Hit 2026-09-05 in a `countoff` `/mega-todos` session. The Stop hook fired:
 
 > Em dash (U+2014) found in `mcp__cc_conductor__send_message` (text) near: "... - `fde6344` **11**
-> — setup is now an ord...". Global rule bans it outright, rewrite using a comma, colon, or hyphen
+> â€” setup is now an ord...". Global rule bans it outright, rewrite using a comma, colon, or hyphen
 > instead. That message already reached its recipient; revise it with
 > `mcp__cc_conductor__update_message` (newest ordinal first).
 
@@ -65,3 +65,4 @@ which can be several bubbles later.
 The detection half worked exactly as designed: it caught a genuine violation of the global no-em-dash
 rule in outbound text, which is the whole point. Only the prescribed remedy is wrong. Do not weaken
 the matcher while fixing the instruction.
+- DONE 2026-09-10 via /loop-todos cycle 1. hooks/em-dash-guard.py:80-91 stops ordering a fix that is often impossible. The already-sent arm used to say flatly "revise it with mcp__cc_conductor__update_message"; it now names both branches, revise it IF it is still inside that tool window (messages since Joe second-most-recent message), otherwise say the correction plainly in the next message rather than silently leaving it. The builder deliberately did NOT try to compute real reachability, and the reasoning is worth keeping: the transcript helpers can find real user turns, but they anchor on "since the last real user entry", which is a different boundary than update_message uses, and the original incident happened precisely in a long unattended run with no new real user turn to anchor on. Computing it would have traded one wrong instruction for a differently wrong one. Two new build_reason cases cover both directions, not-sent produces no repair suffix at all and already-sent names both branches. Detection logic is untouched. python ci/run_all.py exits 0.
