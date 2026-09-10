@@ -210,8 +210,14 @@ when, the call comes from a dispatched agent:
 
 Both halves were captured the same way, by temporarily instrumenting `hooks/todo-duplicate-guard.py`
 behind a marker file and firing a Write whose id was guaranteed to collide, so nothing was ever
-created and the hook was reverted after. Absent means orchestrator, present means subagent. What is
-NOT yet built is the guard itself; todo 404 carries the remaining work.
+created and the hook was reverted after. Absent means orchestrator, present means subagent.
+
+The guard now exists: `hooks/agent-todo-write-guard.py`, wired `PreToolUse` on `Write|Edit`, shipped
+2026-09-11 (todo 404). It denies a dispatched agent's write to a backlog file directly under
+`.claude/todos/` and points it at the report-back channel below; an orchestrator write is untouched,
+and so is a subagent's own `.claims/` write, since the path match requires the file to sit directly
+in `.claude/todos/` with no further segment. The report-back channel is still the sanctioned route,
+not a fallback: the guard stops the bypass, it does not carry the finding anywhere.
 
 Every dispatch instead asks for an "Out-of-scope findings" section in the report: what was found,
 and why it sits outside this dispatch's lane. The orchestrator turns each one into a properly
