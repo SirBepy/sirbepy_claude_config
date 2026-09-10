@@ -68,3 +68,10 @@ it has no access to a subagent's transcript, and the exposure is upstream of any
 Filed from a `roblox-trend-pipeline` session, per the global rule that a finding about the
 `~/.claude` tree belongs in `~/.claude`'s own backlog. Nothing in `~/.claude` was edited from that
 session.
+
+**2026-09-10:** landed in `refs/builder-preamble.md`'s pasted block, directly after the prefilter
+paragraph's secret-scan sentence, per Approach step 1/2. Wording permits a presence check, forbids
+printing values. No change to `hooks/dispatch-preamble-guard.py` (Approach step 3's own prediction
+held - the read-only opt-out section's reasoning against a fourth marker applies here too, and
+`ci/run_all.py` passed 30/30 hook suites unchanged).
+- DONE 2026-09-10 via /loop-todos cycle 1. refs/builder-preamble.md line 73-75 now carries the ban inside the pasted block, placed next to the secret-scan sentence as this todo asked so the two read as one concern: printing the whole environment while probing or debugging is forbidden, checking whether a variable is SET stays explicitly allowed, and the paragraph states why the existing gate cannot cover it, namely that secret-scan reads diffs rather than tool output. That last clause is the load-bearing part, since a builder would otherwise assume the prefilter already catches this. hooks/dispatch-preamble-guard.py was left untouched, exactly as this todo predicted in its step 3. python ci/run_all.py exits 0 and the prefilter gate exits 0.

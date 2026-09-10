@@ -77,3 +77,12 @@ here is not only "point builders at the helper": (a) the preamble's "use `git wo
 needs a matching "remove it with `safe-remove-worktree.ps1`, never `rm -rf`" line, and (b) an
 explicit ban on copying a `node_modules` that holds `link:`/`workspace:` packages into a worktree.
 Vault note: `Git Bash rm -rf follows pnpm link symlinks.md`.
+
+**2026-09-10:** both (a) and (b) landed in `refs/builder-preamble.md`'s pasted block, in the same
+sentence as the existing `git worktree add` clause, naming `safe-remove-worktree.ps1`'s real
+`-WorktreePath`/`-RepoRoot` params. Hook question (Approach's last paragraph) decided explicitly:
+no new hook this pass. `hooks/` was off-limits for this dispatch (three other agents editing hooks
+concurrently), so a hook to catch a raw `git worktree remove --force`/`rm -rf` on a worktree path
+could not be built or tested here regardless of merit. If a hook is still wanted, it needs its own
+todo - this one's acceptance criteria are met by the prose fix alone.
+- DONE 2026-09-10 via /loop-todos cycle 1. refs/builder-preamble.md now names safe worktree removal inside the pasted block, directly after the "git worktree add" clause that routes builders into the hazard. It points at skills/close/safe-remove-worktree.ps1 with its real signature, verified by reading the script rather than guessed, forbids the two destructive alternatives by name with the reason stated (both follow a reparse point or symlink inside the worktree into whatever it targets, including a linked submodule or a node_modules holding link: and workspace: entries, and destroy that target too even though it lives in the main checkout), and adds the never-copy-a-linked-node_modules-into-a-worktree line. That covers parts a and b of the third-recurrence note. The preamble grew from 135 to 145 lines, all ten inside the pasted block, which matters because that block is pasted verbatim into every builder dispatch in every repo. All three dispatch-preamble-guard.py marker substrings were re-grepped after the edit and are intact. python ci/run_all.py exits 0. The optional hook half is deliberately NOT built: hooks/ was off limits for that dispatch because three other agents were editing hooks concurrently, so this is a scheduling decision, not a judgement that a hook is unwarranted.

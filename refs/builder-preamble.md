@@ -16,8 +16,13 @@ Stage changed files by name, never `git add -A`.
 Taking a baseline (pnpm audit, test counts, bundle size, a test proven RED against the pre-edit
 file): take it FIRST, before you edit anything - default, costs nothing, needs no git surgery. Only
 if you're already mid-edit and genuinely need a clean tree, use `git worktree add` to a scratch
-path instead - never a stash or reset on the shared tree. A baseline is taken before you edit,
-never recovered by rewinding a shared tree.
+path instead - never a stash or reset on the shared tree. Remove that worktree with
+`~/.claude/skills/close/safe-remove-worktree.ps1 -WorktreePath <path> -RepoRoot <repo root>`, never
+`git worktree remove --force` or `rm -rf` - both follow a reparse point or symlink inside the
+worktree into whatever it targets (a linked submodule, a node_modules holding `link:`/`workspace:`
+entries) and delete that target too, even though it lives in the main checkout. Never copy a
+`node_modules` containing `link:`/`workspace:` entries into a worktree in the first place. A
+baseline is taken before you edit, never recovered by rewinding a shared tree.
 
 Clean up only the exact files you created, by exact name, never by glob or wildcard: never touch
 `hooks/.commit-marker-*` (the guard consumes those itself) or `hooks/.session-markers/` (a live
@@ -63,6 +68,11 @@ exit 1 - it stopped gating commits 2026-09-05, todo 922), and the two do NOT get
 treatment: em-dash = fix the flagged added lines now, do not ask; secret-scan = STOP, never
 auto-fix it and never work around it, leave your work as it stands and report the hit naming the
 file.
+
+Never print the whole environment while probing or debugging - secret-scan reads diffs, not tool
+output, so it never catches this. Checking whether a variable is set is fine (a boolean presence
+test); dumping `process.env`, `os.environ`, or `Get-ChildItem Env:` puts live credentials into a
+session transcript that persists on disk.
 
 If you mutated any non-test file to prove a test fails (an `if (true)`, an `if (false)`, an early
 `return`, or a commented-out guard), restore it before reporting and paste `git diff HEAD -- <that
