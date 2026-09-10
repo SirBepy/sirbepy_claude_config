@@ -92,3 +92,49 @@ three guess-based hard-blocking hooks in one day) is the better trade here.
 Filed 2026-09-05 by `/respawn`'s Phase 1 retrospective, from a violation the same session committed.
 Related: `hooks/git-workdir-guard.py`, `hooks/flutter-workdir-guard.py`, and the `server_supervisor`
 memory `feedback_shell_discipline`.
+
+**DECLINED 2026-09-10, do not build.** Measured against a real corpus instead of guessing: 695
+session transcripts under `~/.claude-personal/projects` (every project, every session this machine
+has run), 32766 Bash tool calls total.
+
+- A bare leading `cd` (first word of the first chain segment) appears in 17362 of those calls,
+  53 percent of every Bash command ever run. It is not an edge case to catch - it is the dominant
+  idiom for scoping a series of commands to a directory (`cd X && cmd1 && cmd2`), used precisely
+  because the Bash tool's cwd persists across a whole command string but not across separate tool
+  calls, the same fact that makes the drift possible in the first place.
+- The one-shot subshell form `(cd X && ...)`, the Approach's proposed escape hatch, is used only
+  21 times in the same corpus - an 800:1 ratio against the bare form. Steering toward it as the
+  sanctioned pattern would fight the idiom actually in use, not accommodate it.
+- Of the 17204 leading-cd calls with an absolute target, comparing the target against each
+  session's own top-level project directory (derived from the transcript's own project folder, not
+  the drifting per-message `cwd`) put 1839 (10.7 percent) into a genuinely different project tree -
+  the closest reachable proxy for "what this guard would flag." A random sample of 25 of those 1839
+  was read in full: 25/25 were deliberate, correct navigation - reading this repo's own
+  backlog/hooks/CI output from a sibling session, a cross-repo prefilter/CI check in a related repo,
+  reading a Conductor daemon log, reading an already-neutralized harvested repo (see todo 417), or
+  reopening the session's own project after the per-message `cwd` had already drifted elsewhere.
+  Zero of 25 were the wrong-repo-write failure mode the 2026-09-02 incident actually caused.
+- That incident (the only one of three recurrences with real damage) was caught by
+  `hooks/git-workdir-guard.py` at the point of actual consequence (`git push`), not by anything that
+  would need to inspect the `cd` itself. The other two recurrences (2026-09-05, four drifts) caused
+  no damage and were all reads of declared additional working directories - which the hook payload
+  has no field for. The plugin-dev `hook-development` skill documents the full PreToolUse payload as
+  `session_id`, `transcript_path`, `cwd`, `permission_mode`, `hook_event_name`, `tool_name`,
+  `tool_input`, `tool_result` - no additional-directories list - so this todo's own Acceptance
+  criterion ("a cd into a declared additional working directory is not blocked") has nothing to
+  check against and cannot be built honestly today.
+
+This is exactly the shape `PLAN.md`'s Hook doctrine already names and kills: a heuristic detector
+with a high false-positive rate against the dominant real idiom (compare the killed command-chaining
+detector's 55 percent false-positive rate on 30047 commands, `done/311`). Here the number is worse
+in the direction that matters - the closest true-positive proxy found zero real wrong-repo-write
+attempts in a random sample of its candidate set, while the candidate set itself is built from the
+ordinary, necessary way this environment navigates between related repos and its own nested
+subdirectories.
+
+**Conclusion: the two consequence guards (`hooks/git-workdir-guard.py`,
+`hooks/flutter-workdir-guard.py`) are the right layer. A `cd`-detecting guard would be noise on
+roughly 11 percent of an idiom used in the majority of all commands, in exchange for catching a risk
+already caught downstream. Not building it. This question is closed; do not re-open without a new
+incident the consequence guards demonstrably missed.**
+- CLOSED AS DECLINED 2026-09-10 via /loop-todos cycle 4, on measurement rather than judgement. The builder scanned all 695 session transcripts on this machine, 32766 Bash calls, and the numbers killed the idea: a leading cd is the first word of 53 percent of every Bash command ever run here, so it is the dominant directory-scoping idiom, not an edge case. Of the 17204 with an absolute target, 1839 (10.7 percent) resolved to a different project tree, which is the closest proxy for what this guard would flag; a random sample of 25 read in full came back 25 of 25 legitimate deliberate navigation, and none was the wrong-repo-write failure mode from the single real incident. The subshell escape hatch this todo Approach recommends allowing is used 21 times in the entire corpus against 17362 bare forms, an 800 to 1 ratio, so the recommended mitigation is not a pattern anyone actually uses. A blocker was also found: the PreToolUse payload carries no field for a session declared additional working directories, so this todo own Acceptance criterion about not blocking those has nothing to check against and could not be satisfied honestly today. That last fact blocks ANY future cwd-allowlist guard, not just this one, and is recorded because it was not documented anywhere. Verdict: the consequence guards, git-workdir-guard.py and flutter-workdir-guard.py, are the right layer. This matches the doctrine precedent exactly, the killed command-chaining detector that flagged 55 percent of 30047 real commands.

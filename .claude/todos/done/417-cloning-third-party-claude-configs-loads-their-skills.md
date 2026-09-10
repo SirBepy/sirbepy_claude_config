@@ -82,3 +82,33 @@ the reading agent.** The one instruction-shaped artifact was `skill-eval.js`'s o
 aimed at whoever runs that hook. The risk here was structural, not adversarial, and the rule should
 say so rather than implying the ecosystem is hostile.
 - Advanced in /mega-todos wave 2, commit `7f108ee`, NOT finished. The scan-behaviour experiment ran with nested `claude -p` sessions from throwaway cwds and its result is recorded here so it is not re-derived: a skill under **cwd's own** `.claude/skills` is discovered; a skill under an **ancestor** directory's `.claude/skills` is ALSO discovered (verified 1 and 2 levels up); a skill under a **sibling** directory, or nested several levels **below** cwd with no `.claude` of cwd's own, is NOT discovered. So the scan walks cwd plus its ancestors. A short rule went into CLAUDE.md's Packages section. Remaining: decide the hook (step 4). Given the finding, a PreToolUse guard matching `git clone` / `Expand-Archive` / `tar -x` destinations against cwd-or-ancestor is buildable - either build it with a test proving it fires on an unsafe destination and stays quiet on a safe one, or record here that it was decided against and why.
+
+**Step 4 DECLINED 2026-09-10, do not build.** Measured against the same 695-transcript,
+32766-Bash-call corpus used to close todo 948: `git clone` appears exactly 3 times, ever, across
+every project this machine has run. Two of the three ARE the 2026-08-19 harvest itself (the incident
+this todo exists to prevent, already mitigated and now covered by the CLAUDE.md rule plus the
+supply-chain-audit procedure); the third is `git clone --local` of the current repo into
+`/c/tmp/hubbub-ci` for a CI dry-run - entirely benign, and its destination is NOT within cwd's
+ancestor chain, so a naive "destination outside cwd/ancestor" trigger would have fired on it too
+(a false positive on 1 of the only 3 clones ever run), and more importantly would be testing the
+wrong variable.
+
+The scan behaviour established above is the reason why: cwd's own `.claude/skills` plus ancestors
+are scanned; siblings and deep descendants are not. A `git clone` destination is essentially never
+itself in the scanned zone - a clone always creates a NEW subdirectory, i.e. a descendant, which is
+the one case confirmed NOT scanned. The actual exposure step in the harvest incident was the session
+LATER `cd`-ing into the cloned repo to read it, at which point that repo's own `.claude/skills`
+becomes "cwd's own" and gets scanned - the same drift mechanism todo 948 just declined to
+hard-block, for the same reason: it is the dominant, necessary way this environment reads any
+freshly-fetched content, not a distinguishing signal. A guard on the `git clone` command itself also
+cannot inspect the clone's contents (PreToolUse fires before the clone runs, so `.claude/skills`
+does not exist yet to check), so at best it could only fire a blanket reminder on a command that ran
+3 times in this machine's entire transcript history - negligible marginal safety for another hook to
+maintain.
+
+**Conclusion: the CLAUDE.md rule (Packages section) plus `skills/supply-chain-audit/SKILL.md`'s
+"Reading an untrusted tree safely" procedure are the right layer, same reasoning as todo 948's
+consequence guards. Not building a `git clone` PreToolUse guard. This closes the "Consider
+mechanical enforcement" question in step 4; do not re-open without a new incident these two didn't
+cover.**
+- CLOSED 2026-09-10 via /loop-todos cycle 4. Steps 1 to 3 were already shipped and were re-verified present this session: the CLAUDE.md Packages rule against cloning a third-party .claude tree into a scanned directory, and skills/supply-chain-audit/SKILL.md Reading an untrusted tree safely section. Step 4, the optional mechanical git clone guard, is DECLINED on measurement. Across every project transcript on this machine, git clone appears exactly THREE times ever. Two are the 2026-08-19 harvest that prompted this todo, already mitigated; the third is a benign --local clone of the current repo into a CI scratch path whose destination sits outside the cwd ancestor chain, so a naive location-based trigger would have false-positived on one of only three real occurrences. The deeper reason is structural: the established scan behaviour covers cwd and its ANCESTORS, not descendants, so a clone destination is essentially never in the scanned zone by itself. The actual exposure step is a later cd into the clone, which is the same mechanism todo 948 declined to hard-block in the same run, and a PreToolUse guard cannot inspect clone contents anyway since it fires before the clone runs. A blanket reminder on a three-in-all-history command is noise.
