@@ -80,7 +80,11 @@ This is distinct from Phase 1 step 5 (Claude's own unexecuted "want me to...?" o
 
 If everything the dev asked for was completed: proceed silently to Phase 1, no output from this phase.
 
-If anything is unfinished AND this `/close` was triggered interactively (the dev typed it, or it's a live chain the dev is watching): print a short list (what was asked, what state it's in), then ask via `AskUserQuestion` with exactly two options:
+Before asking anything below: search this project's memory for the subject first. If a memory entry already decides this exact fork (a past override, a standing preference for this kind of unfinished item), apply it directly and log which memory decided it, instead of asking again.
+
+If anything is unfinished AND the repo's own `CLAUDE.md` imports `~/.claude/snippets/full-auto.md` (check for the literal `@import` line - mechanical detection, not a guess about repo ownership): treat the fork exactly as the non-interactive branch below does - pick "close anyway", file the item per Phase 3 - then print one line naming the choice and why, e.g. `full-auto repo: filing "<item>" as a task todo instead of asking (repo imports full-auto.md)`. Never post the `AskUserQuestion` card here; this repo opted out of being asked.
+
+If anything is unfinished AND this `/close` was triggered interactively (the dev typed it, or it's a live chain the dev is watching) AND the repo does NOT import `full-auto.md`: print a short list (what was asked, what state it's in), then ask via `AskUserQuestion` with exactly two options:
 
 - **Finish it first** - pause `/close`, do the unfinished work, then resume at Phase 1.
 - **Close anyway** - proceed through the rest of `/close` with the item left unfinished. Hand it to Phase 3 to be filed as a `task` todo (same treatment as an unfinished offer) so it isn't lost.
