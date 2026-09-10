@@ -28,11 +28,13 @@ Before starting any creative/implementation work:
    - **Triviality escape.** All three hold: the change is confined to a single existing file, adds no new file, and adds no new skill / hook / global-rule / ref surface. Any one of the three failing means this escape does not apply.
 
    If an escape applies, emit a one-liner like "Planning done, implementing." and proceed straight to implementation.
-5. **Otherwise, checkpoint.** Present a plan capped at roughly 5 lines (not an essay) via `AskUserQuestion` (2-4 options, domain tag, per global CLAUDE.md's Communication section) and wait for the go-ahead before writing any code.
+5. **Otherwise, checkpoint.** Present a plan capped at roughly 5 lines (not an essay).
+   - **Full-auto repo:** if the repo's own `CLAUDE.md` imports `~/.claude/snippets/full-auto.md` (check for the literal `@import` line - mechanical detection, the same check `/close` Phase 0 uses, not a guess about repo ownership), do not post the `AskUserQuestion` card - this repo opted out of being asked, and an unattended run would have nobody there to answer it anyway. Instead, print the capped plan followed by one line naming the choice, e.g. `full-auto repo: proceeding with the plan above without asking (repo imports full-auto.md)`, then go straight to implementation. The printed plan is the audit record - a decision made and unrecorded is not the goal.
+   - **Otherwise:** present the plan via `AskUserQuestion` (2-4 options, domain tag, per global CLAUDE.md's Communication section) and wait for the go-ahead before writing any code.
 
 ## Gate-free only for the two escapes
 
-The default is a checkpoint: present the capped plan and wait. The gate-free guarantee still holds, but only inside the two escape branches from step 4 - a go-word in the invocation, or a change trivial enough to hit all three triviality conditions. Inside either branch: no per-section design-approval checkpoint, no spec-review gate, no implementation-plan sign-off, and no separate execution-mode question - task size still decides subagent-driven vs inline per CLAUDE.md's execution-discipline rules. Outside both branches, the checkpoint in step 5 fires; there is no third path back to gate-free.
+The default is a checkpoint: present the capped plan and wait. The gate-free guarantee still holds, but only inside the two escape branches from step 4 - a go-word in the invocation, or a change trivial enough to hit all three triviality conditions. Inside either branch: no per-section design-approval checkpoint, no spec-review gate, no implementation-plan sign-off, and no separate execution-mode question - task size still decides subagent-driven vs inline per CLAUDE.md's execution-discipline rules. Outside both branches, the checkpoint in step 5 fires; there is no third path back to gate-free. The full-auto branch inside step 5 is not a third gate-free path either - the plan still gets generated and printed every time, it just proceeds without waiting for a reply.
 
 ## What still holds
 
