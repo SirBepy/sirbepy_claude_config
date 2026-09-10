@@ -138,3 +138,17 @@ denial. Not reproducible here is not the same as does not exist.
 **Process finding worth keeping regardless of the outcome:** the classifier appears to treat
 "narrows or removes an existing deny rule" as high risk no matter how it is framed, while "adds a
 new deny rule" passes. Anyone editing this file's deny list should expect that.
+
+## Open questions
+
+Written by /loop-todos on 2026-09-10. The next run opens with these.
+
+- [ ] [SEC] The fix for this todo works but it loosens the global permission posture, so it was
+      reverted rather than shipped: `Read(**/dist/**)` and `Read(**/build/**)` would move from
+      `deny` to `ask`, with new `cat`/`Get-Content` denies added to keep whole-file dumps out. The
+      proposed file is saved at `C:	mp\settings-951-proposal.json`. Options: apply it as proposed
+      / apply only the added `cat` and `Get-Content` denies and leave the two `Read` globs denied,
+      which changes nothing for agents but tightens the dump path / leave the posture exactly as it
+      is and close this todo as won't-fix. No recommendation offered on purpose: this is a security
+      posture call, and the one signal available cuts against an autonomous change, since the
+      harness classifier blocked the edit twice for narrowing an existing deny.
