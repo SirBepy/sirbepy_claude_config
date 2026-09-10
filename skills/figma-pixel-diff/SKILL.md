@@ -94,46 +94,38 @@ between two zoom levels).
    ```
    Upscale the crops in any viewer before measuring, to check border/divider treatment by eye.
 
-2. **Find each true bounding box by thresholding**, not by eyeballing the crop box: scan for the
-   first/last row and column where a pixel differs from the background beyond a small tolerance.
-   Neither `crop` nor `sample` does this - there is no bbox-detection command in this skill today
-   (see "Not built yet" below), so this step is a short ad-hoc script per session until one exists.
-   A naive threshold over-reads by 1-2px per side from drop-shadow bleed and antialiasing; step 3
-   corrects for that.
-
-3. **Take a row/column profile** of the thresholded pixels (count of "differs from background"
-   pixels per row, and per column) to separate the true edge from that bleed: the real boundary is
-   where the profile jumps from near-zero to the component's full width/height, not the first
-   nonzero pixel. The same profile locates internal features - a divider column, a text run's left
-   edge - as a secondary jump inside the outer bounds.
-
-4. **Scale-normalize with a shared anchor.** Two screenshots at different zoom are not comparable
-   in raw pixels - this is the step that makes the rest of the comparison valid, and skipping it
-   produces numbers that look precise but are not comparable. Pick one element present in both
-   images that isn't itself the thing under question - a text label's glyph height is the reliable
-   choice, since font rendering doesn't shift with a layout bug. Measure that anchor's height in
-   both images (steps 2-3, applied to the anchor instead of the target), then:
+2. **Measure both bboxes and scale-normalize in one call** with `measure`. Give it a *rough* region
+   around the target in each image (a small margin, so the corners land on background - it does not
+   need to be pixel-tight) and, when the two screenshots are at different zoom levels, a rough
+   region around a shared anchor (a text label's glyph height is the reliable choice, since font
+   rendering doesn't shift with a layout bug) in each image too:
    ```
-   scale_factor = anchor_height_in_reference_image / anchor_height_in_other_image
+   python skills/figma-pixel-diff/scripts/figma_pixel_diff.py measure \
+     --render <render.png> --design <design.png> \
+     --render-box x0,y0,x1,y1 --design-box x0,y0,x1,y1 \
+     --anchor-render-box x0,y0,x1,y1 --anchor-design-box x0,y0,x1,y1 \
+     --reference render
    ```
-   Multiply every raw-pixel measurement in the "other" image by that factor before comparing it to
-   the reference image's numbers. Which image is the reference is a per-task call - usually
-   whichever is closer to 1:1 with CSS px (e.g. a browser screenshot at 100% zoom) - decide it and
-   state the ratio used. Never report a converted px number without also stating the anchor and
-   factor that produced it; both are per-screenshot-pair measurements, not constants this skill can
-   supply.
+   Internally this: (a) thresholds each region against its own corner-sampled background and takes
+   a row/column profile to find the true edges - a naive first-differing-pixel bbox over-reads by
+   1-2px per side from drop-shadow bleed and antialiasing, so the cutoff is a fraction of the
+   profile's max (`--row-frac`/`--col-frac`, default 0.5), not `> 0`; (b) computes
+   `scale_factor = anchor_height_in_--reference / anchor_height_in_the_other_image` and applies it
+   to the other image's target bbox. Omit both `--anchor-*-box` flags only when both screenshots are
+   already known to be at the same zoom - the output then carries a `note` instead of a
+   `scale_factor`, since raw pixels from two different zoom levels are not comparable. Which image
+   is `--reference` is a per-task call - usually whichever is closer to 1:1 with CSS px (e.g. a
+   browser screenshot at 100% zoom) - state which one and why.
 
-5. **Match the normalized delta to a real token.** Report both bboxes in the same unit plus the
-   delta, then check it against the project's own spacing/size scale. `nearest-token` above already
-   does nearest-neighbour matching, but only for colors (`--hex`, Euclidean RGB distance) - for a
-   spacing/size number, apply the same nearest-neighbour idea by hand against the project's real
-   `Spacing`/size constants (grep the theme/tokens file for the target repo) until `nearest-token`
-   gains a numeric mode.
-
-### Not built yet
-
-No script in this skill automates bbox thresholding, row/column profiling, or numeric (non-color)
-nearest-token matching - `figma_pixel_diff.py` only has `fetch`/`sample`/`crop`/`inspect`/
-`nearest-token`, and the last is color-only. Building a `measure` subcommand (threshold + profile +
-anchor scale-factor + bbox delta) and a `--value` mode on `nearest-token` (numeric distance instead
-of RGB) is a separate decision from documenting the method here.
+3. **Match the normalized delta to a real token** with `nearest-token --value` (the numeric sibling
+   of the color mode in step 5 of the Figma-fetch workflow above):
+   ```
+   python skills/figma-pixel-diff/scripts/figma_pixel_diff.py nearest-token \
+     --value <normalized width or height from step 2> --tokens <spacing-tokens.json> --threshold <N>
+   ```
+   `--tokens` is `{tokenName: number, ...}` in this mode (vs `{tokenName: "#hex", ...}` for color) -
+   build it from the project's own spacing/size scale (grep the theme/tokens file for the target
+   repo), same as the color mode's tokens file. `--threshold` has no default in `--value` mode and
+   must be passed explicitly: a Euclidean-RGB-calibrated default (30) would be meaningless against a
+   spacing scale that steps by 4, or a font-size scale that steps by 2 - pick a threshold from the
+   target scale's own step size.

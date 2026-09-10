@@ -20,8 +20,11 @@ if (!org || !user || !profile || !entriesPath || !PROJECT_LABEL) {
 
 const entries = JSON.parse(fs.readFileSync(entriesPath, 'utf8'));
 
+const dailyUrl = date =>
+  `https://app.hubstaff.com/organizations/${org}/time_entries/daily?date=${date}&date_end=${date}&filters%5Buser%5D=${user}`;
+
 (async () => {
-  const context = await launchProfileContext(profile);
+  const context = await launchProfileContext(profile, entries.length ? dailyUrl(entries[0].date) : null);
   const results = [];
   try {
     const page = context.pages()[0] || await context.newPage();
@@ -30,7 +33,7 @@ const entries = JSON.parse(fs.readFileSync(entriesPath, 'utf8'));
     for (const entry of entries) {
       const result = { ...entry, ok: false };
       try {
-        const url = `https://app.hubstaff.com/organizations/${org}/time_entries/daily?date=${entry.date}&date_end=${entry.date}&filters%5Buser%5D=${user}`;
+        const url = dailyUrl(entry.date);
         await page.goto(url, { waitUntil: 'domcontentloaded' });
         await page.waitForTimeout(1500);
 

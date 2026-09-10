@@ -1,4 +1,4 @@
-const { getChromium } = require('../_shared/playwright-resolve.cjs');
+const { getChromium, assertNoAutomationLoginBlock } = require('../_shared/playwright-resolve.cjs');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
@@ -130,13 +130,19 @@ function runFrames(framesPath) {
         baseUrl = baseUrl || `http://127.0.0.1:${started.port}`;
       }
 
+      // Resolve every frame's target up front so a known automation-blocked login host (todo 816)
+      // fails before the browser launches, not mid-capture after some frames already rendered.
+      const frameTargets = frames.map(frame => resolveFrameUrl(frame, baseUrl));
+      for (const target of frameTargets) assertNoAutomationLoginBlock(target);
+
       const chromium = getChromium();
       const browser = await chromium.launch();
       const captured = [];
       const failed = [];
 
-      for (const frame of frames) {
-        const target = resolveFrameUrl(frame, baseUrl);
+      for (let i = 0; i < frames.length; i++) {
+        const frame = frames[i];
+        const target = frameTargets[i];
         // Mobile-width frames default to 2x for retina crispness; wider frames default to 1x.
         const scale = frame.deviceScaleFactor ?? (frame.width <= 500 ? 2 : 1);
         const context = await browser.newContext({
@@ -225,6 +231,15 @@ function runPlanOrScreenshot() {
         if (step.type === 'screenshot') step.out = resolveScreenshotPath(step.out);
       }
     }
+  } catch (e) {
+    console.error(e.message);
+    process.exit(1);
+  }
+
+  // Last gate before spending a browser launch (todo 816): known-blocked login hosts fail here
+  // instead of after a launch + navigate that Google would reject anyway.
+  try {
+    assertNoAutomationLoginBlock(url);
   } catch (e) {
     console.error(e.message);
     process.exit(1);

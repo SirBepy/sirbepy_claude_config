@@ -23,7 +23,7 @@ function report(result) {
 }
 
 (async () => {
-  const context = await launchProfileContext(profile);
+  const context = await launchProfileContext(profile, weeklyUrl);
   try {
     const page = context.pages()[0] || await context.newPage();
     await page.goto(weeklyUrl, { waitUntil: 'domcontentloaded' });

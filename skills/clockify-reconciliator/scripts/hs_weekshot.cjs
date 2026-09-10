@@ -22,16 +22,19 @@ const weeks = weeksArg.split(',').map(pair => {
   return { mon, sun };
 });
 
+const weeklyUrl = (mon, sun) =>
+  `https://app.hubstaff.com/organizations/${org}/time_entries/weekly?date=${mon}&date_end=${sun}&filters%5Buser%5D=${user}&filters%5BshowWeeklycopy%5D=`;
+
 (async () => {
   fs.mkdirSync(outDir, { recursive: true });
-  const context = await launchProfileContext(profile);
+  const context = await launchProfileContext(profile, weeklyUrl(weeks[0].mon, weeks[0].sun));
   const results = [];
   try {
     const page = context.pages()[0] || await context.newPage();
     await page.setViewportSize({ width: 2300, height: 1000 });
 
     for (const { mon, sun } of weeks) {
-      const url = `https://app.hubstaff.com/organizations/${org}/time_entries/weekly?date=${mon}&date_end=${sun}&filters%5Buser%5D=${user}&filters%5BshowWeeklycopy%5D=`;
+      const url = weeklyUrl(mon, sun);
       await page.goto(url, { waitUntil: 'domcontentloaded' });
 
       const collapseToggle = page.getByText('left_panel_close', { exact: true });
