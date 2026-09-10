@@ -55,3 +55,7 @@ whether it applies is the rule most likely to be misapplied.
 - A reader can tell from the section alone whether it binds a lune CLI package.
 - `python ci/run_all.py` passes.
 - No other `code-style/*.md` file is touched.
+
+## Notes
+
+- DONE 2026-09-10 via /loop-todos cycle 1, in one edit with todo 947. code-style/luau.md:153 now opens the testing section with its own scope line: it governs code that runs inside Roblox (Studio, a live place, or a runtime package), and a standalone lune CLI with no Studio dependency is out of scope and follows the carve-out below. That is the boundary this todo asked for, stated where a reader hits it before the mandate rather than as a footnote. python ci/run_all.py exits 0. Out of scope and left alone deliberately, flagged here rather than fixed: the Project Structure single-main-pattern section carries the same implicit in-Roblox assumption and a lune-only build tool does not fit it either.

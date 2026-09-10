@@ -150,6 +150,8 @@ Mitigation: drop a `return {}` stub at `src/ServerStorage/Configs/<ServiceName>.
 
 ## Testing Roblox / Luau Code
 
+This section governs code that runs inside Roblox - Studio, a live place, or a runtime package; a standalone lune CLI with no Studio dependency is out of scope and follows the carve-out below.
+
 Use jest-lua + run-in-roblox for unit and integration tests.
 
 - Tests live under `tests/` with `tests/<package>/<Module>.spec.luau` mirroring source layout.
@@ -160,3 +162,5 @@ Use jest-lua + run-in-roblox for unit and integration tests.
 - Cosmetic Studio popup "Parent property of ReplicatedStorage is locked, current parent: Game, new parent NULL" can appear during run-in-roblox cleanup - dismiss; tests still return results.
 
 Always write tests for new code and re-run the full suite after any change. Do not claim "done" without seeing a `Suites: N passed, 0 failed | Tests: M passed, 0 failed, 0 skipped` line.
+
+Luau that runs under standalone lune with no Roblox runtime is not required to use jest-lua: use a deterministic runner, one assertion helper module, and tests runnable from a single command, the shape `roblox-trend-pipeline`'s `tests/rbxl-gen/run.luau` takes walking flat `{ name = fn }` test tables. Code that runs both inside Roblox and headless under lune should share one `*.spec.luau` per module behind a dual-runtime require guard, real `JestGlobals` in Studio and a jest-compatible shim under lune, as `head_soccer_v_fable_oneshot`'s `lune/jest-shim.luau` does.

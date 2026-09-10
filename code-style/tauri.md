@@ -126,7 +126,7 @@ Rules:
 - **One view per folder.** No shared filenames between views.
 - **Templates inline via lit-html.** No per-view `.html` partials.
 - **Static chrome in `src/index.html`.** That file stays minimal: meta tags, `<div id="app"></div>`, module script, Phosphor Icons CDN.
-- **Sub-components in the same folder.** If a view's `.ts` passes ~300 lines, extract pieces into `src/views/<view>/components/<piece>/`.
+- **Sub-components in the same folder.** If a view's `.ts` passes ~300 lines, extract pieces into a flat subfolder named for the concern (`src/views/<view>/<concern>/`, e.g. `menus/`, `widgets/`, `permission-modal/`) or sibling files sharing a name prefix (`widget-strip-*.ts`) - skip the `components/` wrapper layer, which only one of five surveyed repos (`video_editor`) actually uses. This threshold is for view files only; a non-view support module such as `state.ts` may sit past ~300 lines unsplit, as it does in `server_supervisor`.
 - **Promote to top-level `src/components/`** only when 2+ views use the same widget.
 
 ## Styling rules
