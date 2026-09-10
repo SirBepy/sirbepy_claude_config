@@ -75,6 +75,8 @@ structural: on a bare `git push` there is no pointer to forget. Prior build-watc
 
 ## Notes
 
+- **Push authorised by Joe on 2026-09-10**, answering /loop-todos' Phase 0 round with "Yes, push during the loop". That was the only remaining blocker. The loop pushes this repo to origin/master once, outside `/commit push`, launches `skills/commit/watch-build.ps1` from that bare-push path, and records the real `BUILD_RESULT` marker here before archiving. The authorisation is scoped to that session and does not carry forward to a later one.
+
 Do not fix this by deleting the poll-loop habit from prose. The reason it happened is that the
 reusable mechanism was not discoverable from where the session actually was, which is a wiring
 problem, not a discipline problem.
@@ -91,9 +93,3 @@ problem, not a discipline problem.
   sits at 6556 of a 6558-token ceiling, so there is no room for a one-line pointer without cutting
   something else. Revisit only if the ceiling moves.
 - Next run: authorise a push, do the live run, paste the marker output, archive.
-
-## Open questions
-
-Written by /mega-todos on 2026-09-04. The next run opens with these.
-
-- [ ] [TOOLING] The documentation half is shipped; all that remains is a real bare `git push` to capture a live BUILD_RESULT marker. A push needs your explicit go-ahead, which is why this is parked rather than done. Options: push now to close it out / wait for a natural future push / close it as documentation-only and skip the live proof. Recommended: push now. Low-risk repo, and it cheaply closes an item pending since 2026-08-31.

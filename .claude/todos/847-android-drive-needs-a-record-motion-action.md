@@ -66,14 +66,10 @@ where the existing scale-mismatch and keyevent-111 notes live.
 
 ## Notes
 
+- **Q parked 2026-09-04 (build record-motion now, drop it as speculative, or build it when first needed) - dev delegated to autopilot on 2026-09-10** via /loop-todos Phase 0. Autopilot takes the recommendation: build it the first time it is genuinely needed. No Android device is attached, and every Acceptance criterion here is device-verified (an mp4, a contact sheet, two strips that must differ), so writing it blind would ship a script nobody can check.
+
 - `ffmpeg` is already on PATH on this machine (`C:\Users\tecno\scoop\shims\ffmpeg.exe`).
 - Worked example with real output lives in the pomalo memory `android-animation-scale-conflation`
   and in `pomalo/.claude/todos/18`.
 - `screenrecord --time-limit` self-terminates, so it does not need the orphan handling a
   long-lived process would.
-
-## Open questions
-
-Written by /mega-todos on 2026-09-04. The next run opens with these.
-
-- [ ] [TOOLING] A record-motion action for `/android-drive` needs a real Android device attached to develop and verify against, which no agent in an unattended run has. Options: set a device up and let a future attended session build it / drop it as speculative / build it the first time it is genuinely needed. Recommended: build it the first time it is genuinely needed. It was hand-rolled four times so the recipe is known, but verifying it blind is not possible.

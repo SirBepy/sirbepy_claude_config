@@ -91,6 +91,7 @@ SELECTION for a specific reader. A draft can pass 435 and still fail this one.
 - Joe has not approved building anything yet. The discussion gates all three items above.
 - If the discussion lands on the skill, check whether it should absorb the revaire-mobile
   `feedback_colleague_message_drafts` memory's form rules so the two do not drift.
+- Archived 2026-09-10 on Joe's direct answer in /loop-todos' Phase 0 question round. Asked whether the Revaire-side DISCUSS FIRST conversation had happened; he answered 'archive this'. Nothing was built: no pre-draft skill, no Stop hook, and CLAUDE.md's outbound receipts bullet is unchanged. If recipient-aware draft content is ever wanted again, this file in done/ still carries the Bruno 200008 reproduction and the full three-part plan.
 
 ## Open questions
 

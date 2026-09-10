@@ -63,6 +63,8 @@ narrow rather than invert.
 
 ## Notes
 
+- **Q parked 2026-09-05 (amend tauri.md's sub-component rule, move the files in `windows_taskbar_widgets`, or delete the rule) - dev delegated to autopilot on 2026-09-10** via /loop-todos Phase 0. Autopilot takes the recommendation: amend the doc. The file-move half is not executable from this repo, and the `widget-strip-*` prefix already provides the grouping a subfolder would buy. The pre-amend check this todo asks for, whether any other Tauri project on this machine follows `components/<piece>/`, still runs before the wording changes.
+
 - `/code-check` classed this **3 - judgment** and filed it: a convention decision with a real fork,
   repo-wide rather than diff-local.
 - That review ran with `isolation: NOT held` (in-session, no reviewing subagent), so treat its
@@ -70,13 +72,3 @@ narrow rather than invert.
 - Relocated from `72` in `windows_taskbar_widgets` via /cleanup-todos 2026-09-05: the recommended
   fix edits `~/.claude/code-style/tauri.md`, which per root CLAUDE.md belongs in this repo's own
   backlog.
-
-## Open questions
-
-Written by /auto-do-todos on 2026-09-05. The next run opens with these.
-
-- [ ] [TOOLING] Amend tauri.md's sub-component rule to match reality, or move the files in
-      `windows_taskbar_widgets` to match the doc? - options: amend the doc / move the files /
-      leave both and delete the rule. Recommended: amend the doc, because the `widget-strip-*`
-      prefix already does the grouping a subfolder would buy, and no project on this machine was
-      found obeying the rule as written.

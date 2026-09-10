@@ -50,6 +50,7 @@ before any delete actually runs.
 
 - Not urgent/blocking - these are optional disk-space wins, not anything broken. Fine to fold into
   the next `/disk-doctor` invocation rather than proactively resurrecting this session.
+- Archived 2026-09-10 on Joe's direct answer in /loop-todos' Phase 0 question round. Offered the remaining 2026-08-29 scan candidates (Docker ~27 GB, LocalAppData/Temp ~26 GB, Gradle/pip/npm/cargo/pnpm caches ~29 GB, project build dirs ~30 GB) and he chose 'drop the remaining candidates'. Nothing was deleted by this run. The Acceptance criterion is met in the declined direction: every item has now been offered through the gate once. A future /disk-doctor scan rediscovers all of it from scratch, so no evidence is lost by archiving.
 
 ## Open questions
 

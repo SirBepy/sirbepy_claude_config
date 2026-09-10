@@ -76,11 +76,7 @@ policy is settled. Do not answer them independently and let them disagree.
 
 ## Notes
 
+- **Q parked 2026-09-04 (split the comment rule by reader, by repo org, by both, or keep the flat cap) - dev delegated to autopilot on 2026-09-10** via /loop-todos Phase 0. Autopilot's call: pick none of them. Joe asked on 2026-08-19 for this to be its own `/brainstorm` session and that gate still stands, so the todo stays live and unexecuted by any unattended run, and 399 stays gated behind it.
+
 - Filed via `/create-todo` on Joe's direct request, 2026-08-19, during the `/mega-todos` wrap-up.
 - Supersedes nothing. `399` stays live and is now gated on this; see its Notes.
-
-## Open questions
-
-Written by /mega-todos on 2026-09-04. The next run opens with these.
-
-- [ ] [TOOLING] Should the comment rule split by reader (AI vs human) and/or by repo org (client vs personal), or stay one flat cap? Options: split by org only / split by reader only / split by both / keep the flat cap and refine only the content test. Recommended: none of these yet. You asked for this to be a dedicated `/brainstorm` session on 2026-08-19 and that is still the right call. Todo 399 is deliberately gated on this answer and must not be built first.

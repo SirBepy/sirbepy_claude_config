@@ -45,10 +45,6 @@ wrong story list feeds outbound work the dev sends as his own words.
 
 ## Notes
 
+- **Q parked 2026-09-04 (does Shortcut's `search/stories` treat a literal `+` as a space, and should it be settled from a zng session) - dev delegated to autopilot on 2026-09-10** via /loop-todos Phase 0. Autopilot's call: do not hand Joe a task in another session. Attempt the two read-only calls from wherever a token is actually reachable; if none is, record both forms in `refs/shortcut-api.md` as an explicitly unverified fork so the next reader inherits the question instead of re-deriving it.
+
 - Do not hardcode a token anywhere. Read it from the environment as the existing recipes do.
-
-## Open questions
-
-Written by /mega-todos on 2026-09-04. The next run opens with these.
-
-- [ ] [SEC] Settling whether the two Shortcut query-string encoding forms are equivalent needs a live read-only `search/stories` call each way against the zirtue-corp workspace, from what is currently a personal-repo session. Options: run the two calls from a zng session and record the winner / run them from here / leave the encoding fork documented as unverified. Recommended: run them from a zng session, where the account and workspace context are already correct.
