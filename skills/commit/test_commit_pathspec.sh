@@ -47,6 +47,28 @@ check() {
   echo "PASS: $desc"
 }
 
+# --- deterministic session-marker liveness for every test below (todo 924 REOPENED) ---
+# commit-pathspec.sh's own default marker dir is the REAL hooks/.session-markers/ next to this
+# checkout, which routinely holds more than one live entry (this machine runs several concurrent
+# Claude Code sessions against ~/.claude). Every existing auto-derive assertion below assumes a
+# SOLO session, so this suite must never read that real, shared, moving-target directory - it
+# stubs COMMIT_PATHSPEC_SESSION_MARKER_DIR (the injection point added for this todo) to a private
+# one-marker scratch dir by default, and overrides it per-call only for the tests further down
+# that specifically exercise the 2+-marker path.
+make_marker_dir() {
+  local n="$1" d i
+  d=$(mktemp -d) || { echo "FAIL: mktemp -d (marker dir)"; exit 1; }
+  i=1
+  while [ "$i" -le "$n" ]; do
+    printf 'x' > "$d/session-$i"
+    i=$((i + 1))
+  done
+  printf '%s' "$d"
+}
+solo_marker_dir=$(make_marker_dir 1)
+tmp_dirs+=("$solo_marker_dir")
+export COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir"
+
 # --- clean commit end-to-end, with a REAL multi-hunk diff and NO --own-range given: proves
 # the auto-derive path (todo 924/933) against two separate hunks in one file, not a synthetic
 # single-line change ---
@@ -205,6 +227,81 @@ if ! git -C "$r8" ls-files --error-unmatch -- brand-new.txt >/dev/null 2>&1; the
 else
   echo "PASS: brand-new.txt landed in the commit"
 fi
+
+# --- session-marker liveness gate (todo 924 REOPENED): 2+ live markers make an auto-derived
+# own-range UNVERIFIED, never "clean" - same two-separate-hunks shape as the very first test
+# above (own hunk at line 3, a peer-standin hunk at line 20), the exact repro the todo recorded ---
+r9=$(new_repo); tmp_dirs+=("$r9")
+{
+  printf 'line %02d\n' $(seq 1 30)
+} > "$r9/multi.txt"
+git -C "$r9" add multi.txt
+git -C "$r9" commit -q -m "seed multi.txt"
+branch=$(git -C "$r9" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r9" rev-parse HEAD)
+sed -i '3s/.*/line 03 CHANGED/' "$r9/multi.txt"
+sed -i '20s/.*/line 20 CHANGED/' "$r9/multi.txt"
+multi_marker_dir=$(make_marker_dir 2)
+tmp_dirs+=("$multi_marker_dir")
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$multi_marker_dir" "$cp" -C "$r9" --expect-branch "$branch" --expect-sha "$sha" -m "should be unverified" -- multi.txt 2>&1); rc=$?
+check "2+ live markers: auto-derived range is UNVERIFIED, never printed clean" \
+  1 'foreign-hunk-check.*UNVERIFIED' 'foreign-hunk-check.*clean' "$out" "$rc"
+if [ "$(git -C "$r9" rev-parse HEAD)" != "$sha" ]; then
+  echo "FAIL: an UNVERIFIED foreign-hunk-check must not have committed anything"
+  fail=1
+else
+  echo "PASS: UNVERIFIED foreign-hunk-check left HEAD untouched"
+fi
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$multi_marker_dir" "$cp" -C "$r9" --expect-branch "$branch" --expect-sha "$sha" --force foreign-hunk -m "forced through despite peers" -- multi.txt 2>&1); rc=$?
+check "--force foreign-hunk proceeds past the same UNVERIFIED auto-derived range" \
+  0 'OVERRIDDEN \(--force foreign-hunk\): auto-derived own-range trusted despite 2 live session markers' 'REFUSED' "$out" "$rc"
+
+# --- the same auto-derive path, alone in the tree (1 live marker): still commits normally, no
+# extra ceremony added for the common single-session case ---
+r10=$(new_repo); tmp_dirs+=("$r10")
+{
+  printf 'line %02d\n' $(seq 1 30)
+} > "$r10/multi.txt"
+git -C "$r10" add multi.txt
+git -C "$r10" commit -q -m "seed multi.txt"
+branch=$(git -C "$r10" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r10" rev-parse HEAD)
+sed -i '3s/.*/line 03 CHANGED/' "$r10/multi.txt"
+sed -i '20s/.*/line 20 CHANGED/' "$r10/multi.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r10" --expect-branch "$branch" --expect-sha "$sha" -m "solo auto-derive still commits" -- multi.txt 2>&1); rc=$?
+check "exactly 1 live marker: auto-derived range is trusted, commits normally" \
+  0 'auto-derived own-range 1-6,17-23 \(every current hunk assumed own' 'UNVERIFIED|REFUSED' "$out" "$rc"
+if [ "$(git -C "$r10" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: solo-session commit did not land"
+  fail=1
+else
+  echo "PASS: solo-session commit landed"
+fi
+
+# --- a caller-declared --own-range is trusted unconditionally, even with 2+ live markers ---
+r11=$(new_repo); tmp_dirs+=("$r11")
+{
+  printf 'line %02d\n' $(seq 1 30)
+} > "$r11/multi.txt"
+git -C "$r11" add multi.txt
+git -C "$r11" commit -q -m "seed multi.txt"
+branch=$(git -C "$r11" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r11" rev-parse HEAD)
+sed -i '3s/.*/line 03 CHANGED/' "$r11/multi.txt"
+sed -i '20s/.*/line 20 CHANGED/' "$r11/multi.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$multi_marker_dir" "$cp" -C "$r11" --expect-branch "$branch" --expect-sha "$sha" --own-range multi.txt:1-6,17-23 -m "declared range trusted regardless of peers" -- multi.txt 2>&1); rc=$?
+check "a caller-declared --own-range is trusted under 2+ live markers, no force needed" \
+  0 'caller-declared own-range 1-6,17-23' 'UNVERIFIED|REFUSED' "$out" "$rc"
+
+# --- an untracked (brand-new) file's auto-derived range stays trusted under 2+ live markers: it
+# has no HEAD baseline, so there is no pre-existing structure for a peer's lines to hide inside ---
+r12=$(new_repo); tmp_dirs+=("$r12")
+branch=$(git -C "$r12" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r12" rev-parse HEAD)
+printf 'brand new\nsecond line\n' > "$r12/brand-new.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$multi_marker_dir" "$cp" -C "$r12" --expect-branch "$branch" --expect-sha "$sha" -m "untracked exempt from the multi-session gate" -- brand-new.txt 2>&1); rc=$?
+check "an untracked file's auto-derived range is exempt from the 2+-marker gate" \
+  0 'auto-derived own-range 1-2 \(every current hunk assumed own' 'UNVERIFIED|REFUSED' "$out" "$rc"
 
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"

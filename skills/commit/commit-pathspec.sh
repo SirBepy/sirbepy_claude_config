@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Scripts /commit step 8's fixed per-commit chain (todo 964) so an orchestrator stops
 # hand-composing it: prefilter gate, branch guard, HEAD guard, overlap-check, foreign-hunk-check
-# (own-ranges auto-derived from `git diff HEAD` when --own-range is omitted - todo 924/933, the
-# same per-hunk arithmetic SKILL.md step 8 describes doing by eye), staged-pathspec coverage
-# check, the commit, then `git rev-parse HEAD` on its own last line.
+# (own-ranges auto-derived from `git diff HEAD` when --own-range is omitted, gated on
+# session-marker liveness - todo 924 REOPENED/933, the same per-hunk arithmetic SKILL.md step 8
+# describes doing by eye), staged-pathspec coverage check, the commit, then `git rev-parse HEAD`
+# on its own last line.
 #
 # This script ADVISES AND VERIFIES, it never DECIDES: every check that SKILL.md step 8 treats as
 # a judgement call (an overlap hit, a foreign hunk, a possible half-committed move, a moved HEAD)
@@ -17,16 +18,29 @@
 #     [--force <check>[,<check>...]] -m <message> -- <file> [<file> ...]
 #
 # --own-range is OPTIONAL per file: when a file has no explicit range, this script derives it
-# from the file's own current `@@` hunk headers and treats every hunk as own (the same "1-9999"
-# assumption step 8 already made implicitly, now stated on its own printed line instead of typed
-# by hand). Give --own-range explicitly only for a genuinely mixed file (a hunk you did not
-# write) - the auto path cannot know about a hunk it was never told to exclude.
+# from the file's own current `@@` hunk headers (the same "1-9999" assumption step 8 already made
+# implicitly, now stated on its own printed line instead of typed by hand). A caller-declared
+# --own-range is ALWAYS trusted, single session or not.
+#
+# An auto-derived range for a file that already existed at HEAD is trustworthy only when this
+# session is alone in the checkout: `hooks/.session-markers/` holds one marker per live Claude
+# session sharing this checkout (see the session_marker_dir block below for the exact liveness
+# rule reused from `hooks/write-session-marker.ps1`), and one live marker (or zero) means every
+# current hunk really is this session's own. With two or more, a peer may hold uncommitted lines
+# in that same file and an auto-derived range proves nothing (todo 924 REOPENED: the check would
+# just read back the exact set it was handed) - the foreign-hunk-check step then refuses by
+# default instead of printing `clean`, same as any other judgement call below, and needs either a
+# declared --own-range or --force foreign-hunk to proceed. A brand-new (untracked) file's
+# auto-derived range stays trusted regardless of session count: it has no HEAD baseline, so there
+# is no pre-existing structure for a peer's lines to hide inside, and forcing a range declaration
+# on every new file in an almost-always-multi-session checkout would make the common case (all
+# new files, todo 924's own Notes) constantly require --force for no real safety gain.
 #
 # --force values: head-guard, overlap, foreign-hunk, coverage. Never: branch-guard, prefilter.
 #
 # Exit 0: committed, full sha printed on the last line. Exit 1: a check refused (nothing
 # committed) - the printed verdict says what to decide. Exit 2: could not run (bad args/repo/git
-# failure) - not a finding, fix and rerun.
+# failure) - not a finding to act on, fix and rerun.
 set -uo pipefail
 
 dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -208,10 +222,36 @@ else
   fi
 fi
 
+# --- session-marker liveness: whether an auto-derived own-range can be trusted at all ---
+# Reuses hooks/write-session-marker.ps1's own liveness contract verbatim (todo 924 REOPENED),
+# rather than inventing a new one: that script prunes a marker whose session is PROVABLY dead
+# (no record in ~/.claude/sessions/*.json for it, or a record whose pid no longer resolves via
+# Get-Process) every time ANY session writes ITS OWN marker - pruning happens on write, not on
+# read, and never on a schedule. That means a marker file present here was live as of the most
+# recent marker-write anywhere in this checkout; a session that has since exited without another
+# session writing a marker in between will not be pruned until that next write. That staleness
+# only INFLATES the count, which pushes this check toward refusing an auto-derived range that was
+# actually fine (annoying, safe) - it can never make a genuinely shared tree look like a solo one.
+# This script only reads the directory: it never writes or deletes a marker.
+session_marker_dir="${COMMIT_PATHSPEC_SESSION_MARKER_DIR:-$dir/../../hooks/.session-markers}"
+session_marker_count=0
+if [ -d "$session_marker_dir" ]; then
+  shopt -s nullglob
+  session_markers=("$session_marker_dir"/*)
+  shopt -u nullglob
+  session_marker_count=${#session_markers[@]}
+fi
+# Exactly one marker (this session's own) or zero (not written yet) - this session is alone, so
+# every current hunk really is its own and an auto-derived range is a true "clean" verdict. Two
+# or more - a peer shares the tree and an auto-derived range proves nothing.
+multi_session=0
+[ "$session_marker_count" -gt 1 ] && multi_session=1
+
 # --- working-tree foreign-hunk check, own-ranges derived automatically unless declared ---
 fh_files=()
 fh_own_args=()
 derive_notes=""
+unverified_files=()
 for f in "${diffable_files[@]}"; do
   if [ "${class_of[$f]}" = "untracked" ]; then
     diff_out=$(git_c diff --no-index -- /dev/null "$f" 2>/dev/null)
@@ -228,7 +268,12 @@ for f in "${diffable_files[@]}"; do
       derive_notes+="  - $f: pure deletion, no new-file lines to own, skipped for this check"$'\n'
       continue
     fi
-    derive_notes+="  - $f: auto-derived own-range $spec (every current hunk assumed own, todo 924/933)"$'\n'
+    if [ "$multi_session" -eq 1 ] && [ "${class_of[$f]}" != "untracked" ]; then
+      unverified_files+=("$f")
+      derive_notes+="  - $f: auto-derived own-range $spec, UNVERIFIED ($session_marker_count live session markers - a peer may hold lines in this file, todo 924 REOPENED)"$'\n'
+    else
+      derive_notes+="  - $f: auto-derived own-range $spec (every current hunk assumed own, todo 924/933)"$'\n'
+    fi
   fi
   fh_files+=("$f")
   fh_own_args+=(--own "$f:$spec")
@@ -247,6 +292,20 @@ else
       printf '[foreign-hunk-check] OVERRIDDEN (--force foreign-hunk):\n%s\n' "$fh_out"
     else
       printf '[foreign-hunk-check] REFUSED (judgement call - see SKILL.md step 8 and edge-cases.md "Foreign hunk inside your own hunk"):\n%s\n' "$fh_out"
+      exit 1
+    fi
+  elif [ "${#unverified_files[@]}" -gt 0 ]; then
+    # fh_rc is 0 here, meaning the check found nothing IN THE RANGES IT WAS HANDED - but for an
+    # auto-derived range under multi_session that is not evidence of anything (todo 924
+    # REOPENED): the check read back the exact hunk set it was given and structurally cannot
+    # report a foreign hunk on that file. Never call this "clean"; it was never checked. $fh_out
+    # is deliberately NOT echoed here - it holds foreign-hunk-check.sh's own per-file "clean"
+    # line for these exact unverified files, and printing that text next to a refusal would be
+    # the same laundering this fix exists to remove.
+    if has_force foreign-hunk; then
+      printf '[foreign-hunk-check] OVERRIDDEN (--force foreign-hunk): auto-derived own-range trusted despite %d live session markers for: %s\n%s\n' "$session_marker_count" "${unverified_files[*]}" "$fh_out"
+    else
+      printf '[foreign-hunk-check] UNVERIFIED, refusing (%d live session markers - a shared checkout means an auto-derived own-range cannot prove absence of a foreign hunk; declare --own-range for the file(s) below, or rerun with --force foreign-hunk to proceed anyway): %s\n' "$session_marker_count" "${unverified_files[*]}"
       exit 1
     fi
   else
