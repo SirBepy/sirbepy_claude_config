@@ -11,9 +11,12 @@
 
   After each archive, names both halves of the move for the commit pathspec - the source
   under .claude/todos/ and the destination under done/ - per ai-todos-format.md's "Archiving
-  is a two-path change" and the /commit step 8 coverage check it traces to. Only paths that
-  still exist on disk are emitted, so an untracked source (moved and gone, no delete to
-  stage) never aborts the caller's git add the way it did for todo 848.
+  is a two-path change" and the /commit step 8 coverage check it traces to. The source is
+  emitted only when git already tracked it before the move (`git ls-files --error-unmatch`,
+  checked against the index, not Test-Path against the now-gone working-tree file - todo
+  932), so an untracked source (moved and gone, no delete to stage) never aborts the
+  caller's git add the way it did for todo 848, while a tracked source's deletion always
+  rides along in the pathspec instead of landing staged and unreported.
 
   Never commits. Prints the pathspec (plus PLAN.md, which complete-todo.ps1 prunes on every
   call) so the caller's own /commit runs its real gates - prefilter, branch guard, the
@@ -28,8 +31,9 @@
   defaults the same way it does (git toplevel, else cwd).
 
 .OUTPUTS
-  A PSCustomObject with Pathspec (string[], existing paths only) and Failures (string[],
-  one line per id that could not be resolved or archived) written to the success stream.
+  A PSCustomObject with Pathspec (string[] - existing destination paths plus any source
+  path git tracked before its move) and Failures (string[], one line per id that could
+  not be resolved or archived) written to the success stream.
   Exits 1 if any item failed, so the caller cannot mistake a partial batch for a clean one.
 
 .EXAMPLE
@@ -125,7 +129,25 @@ foreach ($item in $Items) {
         continue
     }
 
-    if (Test-Path $sourcePath) { $pathspec.Add($sourcePath) }
+    # Move-Item (complete-todo.ps1:179) already ran, so the source is gone from disk -
+    # Test-Path on it is always false, which silently dropped the deletion half of every
+    # tracked move from the pathspec (todo 932). Move-Item never touches the git index,
+    # so a source that was tracked before the move is STILL tracked (index still holds
+    # the pre-move blob) even though the working-tree file is gone; `git ls-files
+    # --error-unmatch` reads the index, not the working tree, so it answers "was this
+    # tracked" correctly post-move where Test-Path cannot. An untracked source (todo 848)
+    # still exits non-zero here and stays excluded, exactly as before.
+    # Wrapped in try/catch, matching the $gitRoot resolution above: under
+    # $ErrorActionPreference = 'Stop', a native command's stderr line becomes a
+    # terminating error even when redirected, so an untracked path's expected
+    # "did not match any file(s)" line must be caught, not just redirected.
+    $sourceTracked = $false
+    try {
+        git -C $RepoRoot ls-files --error-unmatch -- $sourcePath 2>$null | Out-Null
+        $sourceTracked = ($LASTEXITCODE -eq 0)
+    }
+    catch { $sourceTracked = $false }
+    if ($sourceTracked) { $pathspec.Add($sourcePath) }
     if (Test-Path $destPath) { $pathspec.Add($destPath) }
     Write-Info "Archived $($matches_[0].Name)"
 }
