@@ -264,7 +264,12 @@ Build, in this order:
    durations at presentation time, never carry over an earlier estimate** - a stale subtotal reaching
    the dev is the same failure whether it's the target math or one day's arithmetic (2026-08-22: 8h
    stated vs 10.5h actual for a single day).
-2. **The week calendar** (Claude Conductor sessions only, best-effort). One self-contained HTML
+2. **The week calendar** (Claude Conductor sessions only, best-effort). "Best-effort" names exactly
+   one thing: what happens when the transport is genuinely unavailable. It is NOT licence to decide
+   the calendar is not worth building. Build it; the only path that skips it is a failed push after
+   both transports below have been tried, and that skip is silent because the tables are the
+   deliverable there. Judging it optional for any other reason - a short window, a simple week, a
+   sense that the tables suffice - is a scope decision the dev makes, not the run (todo 961). One self-contained HTML
    document, pushed with the `show_preview` MCP tool: `{ slug: "clockify-week", html, title }`. The
    card renders inline in the chat, and re-pushing the same slug replaces it in place, so the step 9
    proposal and the step 13 final state are ONE card, not two. If the tool is unavailable (a plain
