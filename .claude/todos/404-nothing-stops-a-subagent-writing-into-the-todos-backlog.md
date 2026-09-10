@@ -72,3 +72,39 @@ Note the finding itself was good and was kept. The channel was the problem, not 
 - Next run: do the probe FIRST. If the payload distinguishes them, ship the guard shaped like
   `hooks/todo-duplicate-guard.py` plus a test. If it does not, change the doctrine's "unresolved" to
   a settled "cannot be enforced at the hook layer" and close this out.
+
+### PROBED 2026-09-10 (/loop-todos cycle 4) - the open question is answered, the guard is not built
+
+The question this todo was stuck on is settled: **a PreToolUse hook CAN tell a subagent's write
+from the orchestrator's.** The payload carries `agent_id` and `agent_type` if and only if the call
+comes from a dispatched agent.
+
+Evidence, both halves captured the same way (temporarily instrument `hooks/todo-duplicate-guard.py`
+behind a marker file, fire a Write whose numeric id is guaranteed to collide so nothing is ever
+created, revert the hook after):
+
+- A dispatched builder's own denied Write carried `agent_id` and `agent_type`. An agent that
+  builder itself dispatched carried a DIFFERENT `agent_id` under the same `session_id`, so the
+  field discriminates at any nesting depth, not just one level down.
+- The orchestrator's own denied Write, fired from the top-level session, carried **neither key**.
+  Its full payload was exactly: `session_id`, `transcript_path`, `cwd`, `prompt_id`,
+  `permission_mode`, `effort`, `hook_event_name`, `tool_name`, `tool_use_id`.
+
+The builder that ran the first half correctly refused to ship a guard without the second, because
+without the top-level baseline an `agent_type`-gated denial might have blocked the orchestrator's
+own legitimate `/create-todo`, `/close` and `/code-check` writes. That baseline now exists.
+`refs/delegation-doctrine.md`'s paragraph has been corrected accordingly.
+
+**Remaining work, now small and fully specified:**
+
+1. A PreToolUse hook on `Write` matching `\.claude/todos/\d+-.*\.md$` that denies when `agent_id`
+   is present in the payload, with a message pointing at the "Out-of-scope findings" report channel
+   as the correct route.
+2. The `done/` and `.claims/` paths must NOT match, same path shape `todo-duplicate-guard.py`
+   already implements in `todos_target_dir` - reuse that function rather than writing a second
+   matcher.
+3. A test in `hooks/test_*.py` covering both directions: a payload carrying `agent_id` is denied, an
+   otherwise identical payload without it is allowed.
+4. Check whether any legitimate flow has a subagent write a todo before shipping. The doctrine says
+   none does, and `/mega-todos` builders commit but file findings through their report, but that is
+   a claim worth one grep rather than an assumption.

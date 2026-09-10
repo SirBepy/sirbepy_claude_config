@@ -196,12 +196,22 @@ That rejection was tested, not just theorized, and it broke: on 2026-08-19, duri
 whole-tree-baseline.md` directly, bypassing the report-back channel even though its dispatch
 carried the "never write into `.claude/todos/` - report findings" line verbatim. It got lucky on
 the id: 391 was free, so no collision happened, unlike the original todo 291 incident where the
-same bypass produced a `263-...` collision with an already-taken id in the same run. Whether a
-mechanical guard could catch this instead of a prohibition is still unresolved: no payload read by
-`hooks/_hooklib.py`'s `read_payload` (hooks/_hooklib.py:30-35) carries an `is_subagent`-shaped
-field, so it is not yet known whether a PreToolUse hook can even distinguish an orchestrator's
-write into the backlog from a subagent's. Settling that needs a deliberate nested-agent probe,
-which has not been run; this paragraph records the open question, not an answer.
+same bypass produced a `263-...` collision with an already-taken id in the same run. **A mechanical guard CAN catch this. Probed and settled 2026-09-10** (todo 404), correcting this
+paragraph's previous claim that no payload field distinguishes a subagent. The PreToolUse payload
+`hooks/_hooklib.py`'s `read_payload` returns carries `agent_id` and `agent_type` when, and only
+when, the call comes from a dispatched agent:
+
+- A dispatched builder's own denied Write carried `agent_id`/`agent_type`, and an agent IT
+  dispatched carried a DIFFERENT `agent_id` with the same `session_id`, so the field discriminates
+  at any nesting depth.
+- The orchestrator's own denied Write, fired from the top-level session, carried neither key at
+  all: just `session_id`, `transcript_path`, `cwd`, `prompt_id`, `permission_mode`, `effort`,
+  `hook_event_name`, `tool_name`, `tool_use_id`.
+
+Both halves were captured the same way, by temporarily instrumenting `hooks/todo-duplicate-guard.py`
+behind a marker file and firing a Write whose id was guaranteed to collide, so nothing was ever
+created and the hook was reverted after. Absent means orchestrator, present means subagent. What is
+NOT yet built is the guard itself; todo 404 carries the remaining work.
 
 Every dispatch instead asks for an "Out-of-scope findings" section in the report: what was found,
 and why it sits outside this dispatch's lane. The orchestrator turns each one into a properly

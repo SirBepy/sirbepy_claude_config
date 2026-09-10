@@ -44,6 +44,28 @@ def write_transcript(tmpdir: Path, name: str, user_text: str, tool_names: list) 
     return path
 
 
+def write_transcript_with_inputs(tmpdir: Path, name: str, user_text: str, tool_calls: list) -> Path:
+    """Like write_transcript, but tool_calls is [(tool_name, input_dict), ...]
+    so a send_message's `text` argument can be set (needed for the todo 782
+    decoy-phrase tests; write_transcript always sends an empty input)."""
+    entries = [{"type": "user", "message": {"content": [{"type": "text", "text": user_text}]}}]
+    for i, (tool_name, tool_input) in enumerate(tool_calls):
+        tool_use_id = f"toolu_{i}"
+        entries.append({
+            "type": "assistant",
+            "message": {"content": [{"type": "tool_use", "id": tool_use_id, "name": tool_name, "input": tool_input}]},
+        })
+        entries.append({
+            "type": "user",
+            "message": {"content": [{"type": "tool_result", "tool_use_id": tool_use_id, "content": "ok"}]},
+        })
+    path = tmpdir / name
+    with open(path, "w", encoding="utf-8") as f:
+        for e in entries:
+            f.write(json.dumps(e) + "\n")
+    return path
+
+
 def run_stop(transcript_path: Path, session_id: str, stop_hook_active: bool = False) -> tuple:
     payload = {
         "transcript_path": str(transcript_path),
@@ -174,5 +196,60 @@ with tempfile.TemporaryDirectory() as tmp:
     label = "no stray marker written for the malformed id"
     ok = not (guard.SESSION_MARKER_DIR / f"{guard.COUNTER_PREFIX}$CLAUDE_CODE_SESSION_ID").exists()
     fails += [] if _testlib.report(ok, label) else [label]
+
+    # --- todo 782: decoy send_message (present but content-free) ---
+
+    label = "the 2026-08-25 incident's own decoy shape is blocked"
+    decoy_text = (
+        "Answered inline: went through all 7 script tags... "
+        "Full breakdown is in the chat reply."
+    )
+    t = write_transcript_with_inputs(
+        tmpdir, "t7.jsonl", "explain all the script tags",
+        [("mcp__cc_conductor__send_message", {"text": decoy_text})],
+    )
+    code, out = run_stop(t, "sess-decoy1")
+    ok = code == 0 and '"decision": "block"' in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
+
+    label = "a normal short status message is NOT blocked (does not reference invisible content)"
+    t = write_transcript_with_inputs(
+        tmpdir, "t8.jsonl", "any update?",
+        [("mcp__cc_conductor__send_message", {"text": "Waiting on your answer to that quick audience check."})],
+    )
+    code, out = run_stop(t, "sess-decoy2")
+    ok = code == 0 and '"decision"' not in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
+
+    label = "a short message that uses the word 'above' without a decoy phrase is NOT blocked"
+    t = write_transcript_with_inputs(
+        tmpdir, "t9.jsonl", "did the test pass?",
+        [("mcp__cc_conductor__send_message", {"text": "Bumped the timeout above 30s and reran - green now."})],
+    )
+    code, out = run_stop(t, "sess-decoy3")
+    ok = code == 0 and '"decision"' not in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
+
+    label = "a genuinely long substantive message is NOT blocked even if it uses a decoy phrase in passing"
+    long_text = (
+        "Went through the security review end to end:\n\n"
+        + "\n".join(f"- Finding {i}: some real detail about finding {i} explained in full." for i in range(1, 15))
+        + "\n\nJoe's own note said 'see above' about the threat model section, which I addressed in finding 3."
+    )
+    ok_precondition = len(long_text) > guard.DECOY_SHORT_CHAR_THRESHOLD
+    fails += [] if _testlib.report(ok_precondition, "precondition: long_text fixture is actually over threshold") else ["precondition: long_text fixture"]
+    t = write_transcript_with_inputs(tmpdir, "t10.jsonl", "review this", [("mcp__cc_conductor__send_message", {"text": long_text})])
+    code, out = run_stop(t, "sess-decoy4")
+    ok = code == 0 and '"decision"' not in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
+
+    label = "stop_hook_active True bypasses the decoy block too (loop guard)"
+    t = write_transcript_with_inputs(
+        tmpdir, "t11.jsonl", "explain all the script tags",
+        [("mcp__cc_conductor__send_message", {"text": decoy_text})],
+    )
+    code, out = run_stop(t, "sess-decoy5", stop_hook_active=True)
+    ok = code == 0 and '"decision"' not in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
 
 sys.exit(_testlib.summarize(fails, style="count"))
