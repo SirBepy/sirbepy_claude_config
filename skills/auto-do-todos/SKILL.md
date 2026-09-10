@@ -172,8 +172,11 @@ pre-crystallized DEV questions and they feed Step 5 directly, no re-derivation.
 
 - the AUTO queue is **empty** - there is nothing to grind, so asking is the only way to make
   progress; or
-- one or more todos carry a pre-written `## Open questions` block from a previous run - the dev
-  already knows those are coming and asked for them to be opened with; or
+- one or more todos carry a pre-written `## Open questions` block whose checkboxes include at least
+  one entry with NO `Recommended:` line - that is the genuine residue Step 8 could not answer itself,
+  and the dev already knows those are coming. A block whose every entry already carries a
+  `Recommended:` line does NOT trigger the round on its own: the gate below would immediately hand
+  each one back to `/iterate-it` anyway, so stopping the run to ask them first buys nothing; or
 - the run is in **cleanout mode** (see above) - fires immediately, up front, before any todo runs.
 
 Otherwise **skip this step entirely**, grind the AUTO queue, and let Step 8 park the DEV forks for
@@ -189,8 +192,23 @@ question-free backlog can go a whole pass without asking. Adding a size trigger 
 that first cold pass, at the cost of interrupting a run that still has real AUTO work - not worth it
 for a gap that resolves itself by the next run.
 
+**Narrowed 2026-09-10 (todo 940), self-correction unaffected.** Trigger two now requires at least one
+recommendation-free entry, not just the block's existence. Step 8's `## Decided` / `## Open
+questions` split (below) means the genuine residue that lands in `## Open questions` - physical
+actions phrased as what the dev has to do, and facts only the dev holds - has no defensible
+recommendation to write in the first place, so it still trips this trigger exactly as it did before
+the narrowing. What stops tripping it is a block whose entries were already decidable, which is
+precisely the case the 2026-09-05 countoff run showed should never have reached a question round.
+
 **Shape.** Keep it quick - the dev's words are "ask me quick and then we done":
 
+- **Recommendation gate, applied to every candidate before it enters the round** - including
+  candidates Step 4 carried in from a previous run's `## Open questions` block, not just
+  freshly-triaged ones. Test: can the run write a `Recommended: **(x)**` line for it? If yes, it
+  fails the gate by construction - it is a decision, not a question. Decide it now and note the
+  decision plus the one-line reason; Step 8 writes it into the todo's `## Decided` block along with
+  everything else the run resolves without asking. Only a candidate with no defensible recommendation
+  passes the gate and reaches the round below.
 - Highest priority first, `AskUserQuestion` only, 4 per call, chain past 4.
 - **Cap the round at 8 questions (2 calls) when using the builtin `AskUserQuestion`.** When an
   uncapped equivalent is available in this session (e.g. `mcp__cc_conductor__ask_user_question`,
@@ -270,27 +288,47 @@ Attended mode) rather than falling through to Step 8. Re-triage runs at most onc
 
 ## Step 8 - Park what is left
 
-For every todo still in the backlog carrying an unresolved DEV fork, a hard-stop blocker, or a
-question that overflowed Step 5's cap, edit its file to carry (or refresh) an `## Open questions`
-section, placed after `## Acceptance`:
+Every candidate reaching this step already passed or failed Step 5's recommendation gate. Split the
+write by which:
+
+**`## Decided`** - everything the gate disqualified from the round because it carried a defensible
+`Recommended:` line. Edit the todo file to carry (or refresh) this section, placed after
+`## Acceptance`:
+
+```md
+## Decided
+
+Decided by /auto-do-todos on <YYYY-MM-DD>.
+
+- [x] [UX] <question> - decided **<x>**, because <one-line reason>.
+```
+
+**`## Open questions`** - reserved for the genuine residue only: a hard-stop blocker needing the
+dev's physical action (credential, hardware, destructive op), a fact only the dev holds (no options
+to weigh, just something only he knows), or taste with no argument either way (a real tie, not
+caution). Anything that would carry a `Recommended:` line belongs in `## Decided` above instead, per
+the gate - never here. Placed after `## Acceptance` (after `## Decided` when both sections exist):
 
 ```md
 ## Open questions
 
 Written by /auto-do-todos on <YYYY-MM-DD>. The next run opens with these.
 
-- [ ] [UX] <question> - options: <a> / <b> / <c>. Recommended: <b>, because <one line>.
-- [ ] [ARCH] <question> - options: ... Recommended: ...
+- [ ] [UX] <question> - options: <a> / <b> / <c>.
+- [ ] [SEC] <fact only the dev holds>.
+- [ ] [TOOLING] <physical action the dev has to take>.
 ```
 
 Rules:
 
-- One checkbox per question, domain-tagged, options inline, a recommendation whenever one exists.
-- A blocker needing the dev's physical action (credential, hardware, destructive op) is written the
-  same way, phrased as what he has to do, not as a choice.
-- Refresh an existing block rather than stacking a second one; drop questions the run answered.
-- This section is this skill's own addition to `close/ai-todos-format.md`'s shape. It is greppable
-  on purpose - Step 4 reads it back on the next run.
+- One checkbox per item in each section, domain-tagged when the item is a choice or a decision.
+- A blocker needing the dev's physical action is phrased as what he has to do, not as a choice, and
+  never carries a `Recommended:` line - there is nothing to recommend.
+- Refresh an existing block of either kind rather than stacking a second one; drop an item from
+  `## Open questions` once it moves to `## Decided` or gets answered.
+- Both sections are this skill's own addition to `close/ai-todos-format.md`'s shape. `## Open
+  questions` is greppable on purpose - Step 4's scan and Step 5's trigger both read it back on the
+  next run. `## Decided` is a record, not a trigger - nothing re-reads it to fire a question round.
 - Never write git instructions into a todo, per the contract's off-limits rule.
 
 ## Step 9 - Wrap-up verification and summary

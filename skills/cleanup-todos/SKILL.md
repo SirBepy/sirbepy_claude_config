@@ -68,6 +68,27 @@ other todo, never added out-of-band.
 The old rule deep-passed only the 40 lowest ids, which silently starved the NEWEST half of any
 backlog past 40 - exactly the half most likely to still be wrong. Chunking replaces that.
 
+**Skill-dependency carve-out, independent of size.** A todo whose re-verification can only be done by
+INVOKING a slash command cannot be delegated: subagents cannot invoke skills. The main agent performs
+that todo's deep pass itself, inline, pulling it out of its chunk before dispatch, even inside an
+otherwise-chunked large backlog. This applies above the threshold below exactly as it does under it.
+Reading a skill's `SKILL.md` is not invoking it, and that is what most re-verification actually needs,
+so this carve-out should pull out very few todos.
+
+**Small-backlog branch.** When the full pre-dedupe set from Step 1 is at or under `INLINE_MAX` (4)
+todos, skip the chunk/dispatch machinery below entirely: the main agent performs the deep pass
+itself, inline, over every todo in the set - the same `still_valid` re-verification depth and the
+same `worth` rubric a dispatched chunk would use - producing one
+`complexity,worth,still_valid,relocate_dest` CSV row per todo straight into Step 5's DataFile. The
+reference-point check immediately below still applies unchanged (a 2-todo backlog behind trunk still
+needs to cite `origin/<trunk>`, not the working copy); only the per-chunk dispatch-prompt requirement
+and the "Fan-out liveness and session budget" / "Interrupted fan-out" sections are moot, since nothing
+is dispatched. This is a branch on WHO does Step 4's work, not an exemption from what it covers: a
+2-todo backlog still gets dedupe (already done in Step 2), real re-verification against the reference
+point, and worth-scoring - just performed by the orchestrator instead of a subagent, because the
+orchestrator already read every todo in Step 1 and a dispatch would buy back zero context per
+CLAUDE.md's context-weight axis. Above `INLINE_MAX`, proceed to chunking and dispatch as below.
+
 **Reference-point check, before dispatch.** Resolve trunk (repo's own convention, e.g.
 `GIT_FLOW.md`; default `develop` then `main`), then compute and PRINT
 `git rev-list --left-right --count HEAD...origin/<trunk>`. The dispatch cannot proceed without this
@@ -372,7 +393,8 @@ into the closing summary as still-pending, for confirmation on a later run.
   archived on Claude's judgement without a confirm gate - see the origin rule at the top.
 - No per-todo subagent dispatch for the deep tier - one batched call per CHUNK, capped at
   `DEEP_MAX_CHUNKS` chunks; overflow gets the shallow, content-blind pass instead of an unbounded
-  fan-out or a second verifier tier.
+  fan-out or a second verifier tier. The small-backlog inline branch (Step 4, `INLINE_MAX`) is not an
+  exception to this - it is zero dispatches for the whole set, not one dispatch per todo.
 - No plain deletion, ever. Every removal lands in `done/` with a Notes line stating the reason.
 
 ## Notes
@@ -382,6 +404,14 @@ into the closing summary as still-pending, for confirmation on a later run.
 - `DEEP_CHUNK_SIZE = 30`, `DEEP_MAX_CHUNKS = 6` - 180 todos of deep coverage per run, chunked by
   ascending id over the full pre-dedupe set. Overflow gets the shallow pass (Step 4). Constants, not
   flags; tune here.
+- `INLINE_MAX = 4` - at or under this many todos in the full pre-dedupe set, Step 4 skips
+  chunking/dispatch and does the deep pass inline in the orchestrator instead (todo 942). The real
+  criterion is "the orchestrator already read the whole set into context, so a dispatch buys back
+  zero tokens" (CLAUDE.md's context-weight axis) - todo count is the cheap proxy for that. 4 was
+  picked over the observed 2-todo case to leave a little headroom for a handful-sized backlog while
+  staying well clear of `DEEP_CHUNK_SIZE`, so a backlog large enough to want a chunk's parallelism and
+  preamble discipline never qualifies for the inline branch by accident. Constant, not a flag; tune
+  here.
 - `worth` is scored fresh every deep run and overwritten in the marker. Comparing a todo's old and
   new score across runs is not supported - the marker holds one value, the current one.
 - Known residual, not fixed here: Step 4's deep-tier `still_valid` check overlaps with
