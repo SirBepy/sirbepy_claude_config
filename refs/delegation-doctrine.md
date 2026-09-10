@@ -53,6 +53,22 @@ A skill adopting this file inherits this clause; it does not need its own copy.
 
 ## Dispatch discipline
 
+**Builder scope caps effort, not a parameter.** The `Agent` tool exposes `description`, `isolation`,
+`model`, `prompt`, `run_in_background`, and `subagent_type` - no `effort` field (checked against the
+live tool schema, 2026-09-10). A builder inherits the orchestrator's own effort at dispatch time, and
+CLAUDE.md's "tune `effort` freely" cannot be executed for a subagent call: there is no knob to turn.
+The only lever that actually exists is dispatch SCOPE - keep a builder small enough that even
+inherited max effort converges before the output cap, and split any dispatch that would create more
+than roughly six files into smaller ones. Open every builder prompt with an instruction to start
+writing files immediately (one file per `Write` call) and keep each response short, rather than
+reasoning at length before the first tool call. The failure this guards against already happened
+(todo 965, 2026-09-05, Head Soccer build session `706da5d5`): a task-1.1 dispatch burned its whole
+output budget on thinking and produced zero tool calls (`output_tokens: 64000`,
+`thinking_tokens: 64000`, `stop_reason: max_tokens`); the retry only succeeded once the task was
+split into three smaller dispatches whose prompts opened with the write-first instruction above.
+Treat that exact signature - a report (or a quiet dispatch) with `stop_reason: max_tokens` and no
+file changes on disk - as a failed dispatch needing a scope split, never a same-scope retry.
+
 **Scout before builder.** For anything non-obvious, dispatch a read-only scout first and have it
 return a condensed SPEC PACK, not a narrative: exact contracts (signatures, types, payload
 shapes), `file:line` pointers, and the specific gotchas a builder would otherwise trip on. The

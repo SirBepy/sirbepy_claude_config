@@ -93,16 +93,34 @@ Skip confirmation if dev passed explicit flags.
 The exact report format also lives in `templates.md` (read once, at round 1, alongside the
 subagent prompt template).
 
-Do NOT call `AskUserQuestion` in the same turn as this report. Bundling a tool call with the report text makes the harness swallow the report - the dev ends up with a bare picker and no convergence summary (this has happened before, 2026-07-12). The report is the deliverable; it must always render as the turn's final message.
+**Attended session (a dev is present to read it).** Do NOT call `AskUserQuestion` in the same turn as
+this report. Bundling a tool call with the report text makes the harness swallow the report - the dev
+ends up with a bare picker and no convergence summary (this has happened before, 2026-07-12). The
+report must render as the turn's final message: the point is that the dev actually reads the
+converged decision before anything else lands on top of it, not merely that some hosts happen to
+swallow the preceding text - a Conductor session delivers the report through its own `send_message`
+bubble, which a question card cannot swallow, but the same-turn continuation still denies the dev the
+beat to react before more work ships, so the rule holds there too, for the attention reason rather
+than the rendering one.
 
 This holds even when the dev already pre-authorized next steps ("go ahead and implement it"). That authorization changes what happens on the FOLLOWING turn, never whether a tool call chains onto this one - continuing straight into `Read`/`Edit`/implementation calls in the same turn as the report is the exact failure this rule guards against (sc-54844, 2026-08-11: the report rendered fine, but the turn then continued straight into implementation tool calls anyway).
 
+**Unattended invocation (no dev in the loop - e.g. `/autopilot`'s bounded iterate-it step).** The
+final-message rule does NOT apply here, and must not be applied here: there is no dev to read a
+stopped turn, so ending the turn on the report would stall the caller's run with nobody left to send
+the next message, not protect anyone's attention. `/autopilot`'s own "Nested-question suppression
+contract" already governs this exact case (always ship on cap/floor, per its section 5) - return the
+report with the ship/floor decision and let the caller's turn continue past it in the same turn to
+act on that decision. An invocation counts as unattended exactly when the invoking context carries
+its own documented auto-decision contract (autopilot's suppression rules are the only one today);
+absent that, default to the attended behavior above.
+
 Close the report's SUMMARY block with a single plain-text line offering the next move, not a
-tool call. Detail follows below the rule, so this line sits mid-report, not last:
+tool call, in the attended case. Detail follows below the rule, so this line sits mid-report, not last:
 
 > Ship it, run another manual round, or park it?
 
-If the dev replies, act on it the following turn - that's when `AskUserQuestion` is safe to use (e.g. to pick which lift to apply next).
+If the dev replies, act on it the following turn - that's when `AskUserQuestion` is safe to use (e.g. to pick which lift to apply next). In the unattended case, skip this line entirely: the caller's own contract already states the next move, and the report's job is to hand the decision back inline, never to prompt anyone.
 
 ## Hard rules
 

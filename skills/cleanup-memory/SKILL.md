@@ -218,7 +218,10 @@ an already-ordered index a true no-op.
 ## Step 7 - Post-apply summary
 
 Deliver as the turn's FINAL message, no tool call after it (same swallow risk as Step 5 - this
-message is the report the dev is meant to read). Short and auditable, not a re-run of the audit:
+message is the report the dev is meant to read). **Attended runs only:** under a caller that carries
+its own auto-decision contract there is nobody reading, so stopping the turn here strands that
+caller with no one left to prompt it - print the report and let its turn continue. Same split
+`/iterate-it`'s Output section documents. Short and auditable, not a re-run of the audit:
 
 - What moved: dedupe merges (loser -> keeper, folded-detail note), drops, re-indexed orphans,
   link fixes.

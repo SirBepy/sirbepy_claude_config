@@ -147,7 +147,7 @@ Every subagent dispatch passes `model: 'sonnet'` explicitly. Never default-inher
   - a sonnet agent failed the exact task twice, or Joe explicitly asks; or
   - a sonnet report **smells wrong** - suspiciously clean, contradicts other evidence, zero findings on a big diff (silent misses never look like failures, so judgment is the trigger here); or
   - it's the FINAL verify/judge pass on a **high-stakes diff** (security-touching, data-loss-capable, DB migrations): one solo top-tier verifier is allowed by default.
-- Tune `effort` freely (low for mechanical chores, higher for review/verification) - the cheap knob; model tier is the expensive one.
+- The `Agent` tool takes no `effort` parameter (checked 2026-09-10), so scope is the only knob: a builder given too much at once can spend its whole output budget thinking and return nothing. Split the dispatch instead. Model tier stays the expensive knob.
 
 ### Full-orchestrator mode
 

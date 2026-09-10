@@ -24,3 +24,7 @@ The `Agent` tool schema exposed in that session had no `effort` parameter (only 
 
 - The pasted builder block carries the working-style paragraph.
 - Autopilot's SKILL.md names the failure mode and the scope-split remedy.
+
+## Notes
+
+- DONE 2026-09-10 via /loop-todos cycle 2, and the premise was re-checked against the live tool schema rather than the todo text: the Agent tool exposes description, isolation, model, prompt, run_in_background and subagent_type, with NO effort field. So a rule saying "pass a lower effort" was unimplementable, and the fix had to be about the knob that exists. refs/delegation-doctrine.md:12-27 gains a Builder scope caps effort, not a parameter block stating the schema fact, the remedy (split the dispatch, roughly six files, instruct write-first), and the failure signature to watch for: stop_reason max_tokens with zero tool calls and no changes on disk, which reads identically to a dead agent and must be treated as a dispatch to split rather than retry. skills/autopilot/SKILL.md carries the same paragraph tied to its existing liveness machinery. Orchestrator follow-up applied on top: global CLAUDE.md line 150 said "Tune effort freely - the cheap knob", which was simply false, so it now records that the parameter does not exist and points at scope instead. Budget after that edit: 6831 of 7000, headroom 169. python ci/run_all.py exits 0.

@@ -43,7 +43,10 @@ Show the classification before touching anything, as a clear standalone report. 
 
 - **Do NOT wrap it in, or precede it with, an `AskUserQuestion` call** - same-turn AUQ erases prior text for Joe's client; see `/rate-it`'s house pattern for why.
 - Emit the report as the turn's **FINAL message with no tool call after it**, then stop and wait for
-  Joe's plain-text reply.
+  Joe's plain-text reply. **Attended runs only.** Under an unattended caller (`/auto-do-todos`,
+  `/mega-todos`, or any invocation with its own auto-decision contract) there is nobody to reply, so
+  stopping here strands that caller mid-run: print the report and let its turn continue. Same split
+  `/iterate-it`'s Output section documents.
 
 The report has four parts:
 

@@ -254,9 +254,16 @@ the run repeat against the real `.claude/todos/`.
 
 ## Step 6 - Report
 
-Deliver as the turn's FINAL message - nothing may follow it in the same turn, since a same-turn
-`AskUserQuestion` would swallow the preceding text in this harness, same reasoning as
-`/batch-todos` step 4.
+**Attended run.** Deliver as the turn's FINAL message - nothing may follow it in the same turn,
+since a same-turn `AskUserQuestion` would swallow the preceding text in this harness, same reasoning
+as `/batch-todos` step 4. On a host where a question card cannot swallow the report, the rule still
+holds for a different reason: the dev needs the beat to react before more work ships.
+
+**Unattended run** (`/auto-do-todos` Step 2, `/mega-todos`, or any caller with its own auto-decision
+contract). The final-message rule does NOT apply and must not be applied: nobody is reading, so
+ending the turn here strands the caller mid-run with no one left to send the next message. Print the
+report and let the caller's turn continue past it. Same split `/iterate-it`'s Output section
+documents; see it for the full reasoning.
 
 Contents, in order:
 
