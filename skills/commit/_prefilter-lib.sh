@@ -5,9 +5,11 @@ repo=""
 git_c() { if [ -n "$repo" ]; then git -C "$repo" "$@"; else git "$@"; fi; }
 
 # A function's `shift` can't reach the caller's $@, so the trimmed list comes back via
-# PREFILTER_ARGS; caller restores with `set -- "${PREFILTER_ARGS[@]}"`.
+# PREFILTER_ARGS; caller restores with `set -- "${PREFILTER_ARGS[@]}"`. `-C` is accepted
+# alongside `--repo` because overlap-check.sh and foreign-hunk-check.sh's own usage comments
+# document both, and commit-pathspec.sh calls them with `-C` (todo 912).
 parse_repo_arg() {
-  if [ "${1:-}" = "--repo" ]; then repo="$2"; shift 2; fi
+  if [ "${1:-}" = "-C" ] || [ "${1:-}" = "--repo" ]; then repo="$2"; shift 2; fi
   PREFILTER_ARGS=("$@")
 }
 

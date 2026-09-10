@@ -13,11 +13,15 @@
 # split it, see edge-cases.md). Exit 2 could not run.
 set -uo pipefail
 
-repo=""
+script_dir=$(cd "$(dirname "$0")" && pwd)
+# shellcheck disable=SC1091
+. "$script_dir/_prefilter-lib.sh" || { printf 'ERROR: missing prefilter lib: %s/_prefilter-lib.sh\n' "$script_dir"; exit 1; }
+parse_repo_arg "$@"
+set -- "${PREFILTER_ARGS[@]}"
+
 declare -A own_ranges
 while [ $# -gt 0 ]; do
   case "$1" in
-    -C|--repo) repo="${2:-}"; shift 2 ;;
     --own)
       spec="${2:-}"; shift 2
       key="${spec%%:*}"
@@ -26,7 +30,6 @@ while [ $# -gt 0 ]; do
     *) break ;;
   esac
 done
-git_c() { if [ -n "$repo" ]; then git -C "$repo" "$@"; else git "$@"; fi; }
 
 if [ $# -eq 0 ]; then
   printf 'ERROR: no files given\n'

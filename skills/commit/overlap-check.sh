@@ -10,16 +10,19 @@
 # Exit 1 hit against a non-own sha: "<file>:<a>-<end> <short-sha> <subject>". Exit 2: could not run.
 set -uo pipefail
 
-repo=""
+script_dir=$(cd "$(dirname "$0")" && pwd)
+# shellcheck disable=SC1091
+. "$script_dir/_prefilter-lib.sh" || { printf 'ERROR: missing prefilter lib: %s/_prefilter-lib.sh\n' "$script_dir"; exit 1; }
+parse_repo_arg "$@"
+set -- "${PREFILTER_ARGS[@]}"
+
 own=()
 while [ $# -gt 0 ]; do
   case "$1" in
-    -C|--repo) repo="${2:-}"; shift 2 ;;
     --own) IFS=',' read -r -a own <<<"${2:-}"; shift 2 ;;
     *) break ;;
   esac
 done
-git_c() { if [ -n "$repo" ]; then git -C "$repo" "$@"; else git "$@"; fi; }
 is_own() {
   local s="$1" o
   for o in "${own[@]:-}"; do [ -n "$o" ] && [ "$o" = "$s" ] && return 0; done

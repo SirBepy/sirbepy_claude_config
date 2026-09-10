@@ -17,24 +17,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _cilib import tracked_files  # noqa: E402
+
 TEST_GLOB = "test_*.py"
 TIMEOUT_SECONDS = 120
-
-
-def _tracked_hook_files(root: Path):
-    """Returns the set of `hooks/*` paths git has in its index, or None if
-    git could not be queried (non-repo checkout, git missing).
-    """
-    try:
-        result = subprocess.run(
-            ["git", "-C", str(root), "ls-files", "hooks"],
-            capture_output=True, text=True, timeout=30,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    if result.returncode != 0:
-        return None
-    return {line.strip() for line in result.stdout.splitlines() if line.strip()}
 
 
 def discover(root: Path) -> list:
@@ -43,7 +30,7 @@ def discover(root: Path) -> list:
         p for p in hooks_dir.glob(TEST_GLOB)
         if "__pycache__" not in p.parts
     )
-    tracked = _tracked_hook_files(root)
+    tracked = tracked_files(root, "hooks")
     if tracked is None:
         return candidates
     return [p for p in candidates if p.relative_to(root).as_posix() in tracked]

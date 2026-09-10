@@ -14,6 +14,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from _cilib import tracked_files
+
 CHECKS = (
     ("hook self-tests", "run_hook_tests.py"),
     ("tool self-tests", "run_tool_tests.py"),
@@ -111,15 +113,7 @@ def check_prefilter_suites(root: Path) -> tuple:
     print("\n=== prefilter self-tests (skills/commit/test_*.sh) ===", flush=True)
     skill_dir = root / "skills" / "commit"
     candidates = sorted(skill_dir.glob("test_*.sh")) if skill_dir.is_dir() else []
-    try:
-        tracked_result = subprocess.run(
-            ["git", "-C", str(root), "ls-files", "skills/commit"],
-            capture_output=True, text=True, timeout=30,
-        )
-        tracked = {line.strip() for line in tracked_result.stdout.splitlines() if line.strip()} \
-            if tracked_result.returncode == 0 else None
-    except (OSError, subprocess.TimeoutExpired):
-        tracked = None
+    tracked = tracked_files(root, "skills/commit")
     if tracked is not None:
         candidates = [p for p in candidates if p.relative_to(root).as_posix() in tracked]
 
