@@ -372,6 +372,12 @@ The 2026-08-13 lesson stands and got two more data points:
 Measure against a real corpus BEFORE wiring anything, and prefer inverting the problem (require an
 explicit marker on the legitimate case) over detecting the violation.
 
+**The corpus harness is a permanent tool now, not something to rebuild** (todo 466). Extract with
+`tools/extract_corpus.py`, measure a candidate rule with `tools/measure_corpus.py`. They live in
+`tools/`, deliberately NOT in `ci/`, and must never join `run_all.py`'s CHECKS tuple: a run takes
+minutes and reads Joe's whole transcript history, which is the opposite of what a per-commit check
+should do. Every measurement quoted above was produced by an ad-hoc rebuild of this same harness.
+
 The 2026-08-19 run added a fourth guard on the same principle: `hooks/todo-duplicate-guard.py` (363)
 is advisory with an override path rather than a hard block, precisely because "is this todo a
 duplicate" is a judgment call and this repo has already killed three guess-based hooks in one day.
