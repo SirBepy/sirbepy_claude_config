@@ -44,8 +44,15 @@ Removed 2026-09-04 (todo 876) - see `/autopilot`'s own "Sidebar badge" section f
 
 The Workflow tool spawns dozens of billed agents and requires the dev's explicit request. Typing
 `/mega-todos` IS that request; no separate confirmation is needed. But if the Workflow tool is
-unavailable in this session, do NOT silently fall back to sequential dispatch pretending to be this
-skill - say so and offer `/auto-do-todos` instead.
+**unavailable in this session** (not offered at all), do NOT silently fall back to sequential
+dispatch pretending to be this skill - say so and offer `/auto-do-todos` instead.
+
+That is a different failure from Workflow being **available but structurally unusable for a given
+dispatch** - a Workflow script has no filesystem access, so a preamble-bearing `agent()` call can
+only be built with `-Compact -AsJsLiteral` (see "Which vehicle carries the preamble" under the
+injected commit block); never respond to that constraint by silently switching the whole run to the
+Agent tool and reporting it as a deviation after the fact (as happened 2026-09-05) - it is the
+documented path, not an exception to invent mid-run.
 
 ## Order of operations
 
@@ -207,6 +214,9 @@ Author the script inline. Shape:
   barrier that runs `cargo check` or `pytest` cannot be a step in it. Return the workflow between
   batches and run the barrier in the MAIN THREAD, which is where Step E already has to archive from
   anyway. Do not spend a whole subagent per barrier just to run three commands.
+- Every `agent()` call's `prompt` has to carry the canonical preamble (below), and it must be
+  `-Compact -AsJsLiteral` output - never the full block. See "Which vehicle carries the preamble"
+  under the injected commit block for why and how.
 
 **Verify ladder** (settled with the dev 2026-08-10; generalised 2026-08-12; thread ownership made
 explicit 2026-08-25 per todo 405).
@@ -290,6 +300,48 @@ Prefer `skills/mega-todos/build-dispatch.ps1` over hand-pasting either block: it
 and `refs/builder-preamble.md` off disk and emits the finished prompt from `-Owned`, `-OffLimits`,
 `-Task`, `-CommitMessage` and `-ExpectedBranch`, which is what closes the drift risk (`bdb0323`)
 retyping created.
+
+### Which vehicle carries the preamble, and in which shape (todos 938, 949)
+
+**Default (no switches): full inline text, for the Agent/Task tool.** ~12KB, byte-exact,
+straightforward. Fine for a small run.
+
+**`-Compact`: a short pointer prompt, for the Agent/Task tool on a wider run.** The full block costs
+the orchestrator roughly two copies of its size per dispatch - once reading the script's output,
+once retyping it into the `Agent` tool's `prompt` field, since a tool argument has to be authored by
+the calling model and therefore has to be in its context first. That "retype" half is structural:
+no tool here accepts a file-path prompt instead of a literal string, so it cannot be designed away.
+What CAN be cut is having the orchestrator hold the ~12KB at all. `-Compact` inlines only the three
+guard markers (short, fixed, never escaped) plus the genuinely per-dispatch specifics (owned files,
+off-limits, task, commit message - measured at ~6% of the full block's bytes), and tells the BUILDER
+to read `refs/builder-preamble.md` and this file's commit block itself, with the placeholder
+substitutions spelled out. Measured 2026-09-10 on a representative dispatch: 12,271 bytes full vs
+1,533 bytes compact, an 87.5% cut, and the reduction is real, not hidden - the ~11KB that dropped out
+of the orchestrator's context is a Read call inside the builder's own fresh context, which does not
+burden the orchestrator's context the way a retyped copy does. Proven against one real dispatch
+(Explore agent, read-only drill): it read both pointed-to files, correctly resolved every
+placeholder (OFF_LIMITS, FILES, PREFIX, the conditional GLOBAL_EDIT_BAN deletion), and did not
+improvise past what the drill's override told it to do.
+
+**`-Compact -AsJsLiteral`: the only shape safe to paste into a Workflow script's `agent(...)` call.**
+A Workflow script is plain JavaScript with no filesystem access (so `agent()` cannot take a path
+instead of a prompt string - that route is closed, not merely undocumented) and prompt text has to
+live in a JS string literal. The full ~12KB block, hand-escaped, is the todo-938 incident: ~60
+backticks that terminate a template literal, and Windows paths whose backslashes are silently-
+consumed JS escapes (`\t` becomes a tab) unless doubled - by hand, across 8KB, a single missed
+backslash corrupts the preamble without failing loudly. Escaping the FULL block mechanically (rather
+than by hand) is possible but still produces an unreviewable wall of text; escaping the ~1.5KB
+`-Compact` output is a few dozen bytes and stays reviewable. `-AsJsLiteral` doubles backslashes then
+escapes backtick and `${`, in that order (each new backslash must not itself get re-doubled).
+Verified 2026-09-10: pasted the escaped output into a real `.mjs` file inside a template literal,
+`node --check` parsed it clean, and evaluating it reproduced the pre-escape `-Compact` text
+byte-for-byte.
+
+**Never paste the full (non-`-Compact`) block into a Workflow script by hand or via escaping** - that
+is the exact failure 938 documents. If a run is Workflow-authored and needs the preamble in an
+`agent()` call, generate it with `-Compact -AsJsLiteral` every time; if that is somehow still
+infeasible for a given lane, dispatch that lane with the Agent tool directly instead and say so in
+the run's summary - never silently fall back for the whole run.
 
 The opening two lines below are load-bearing, not decoration: `hooks/dispatch-preamble-guard.py`
 hard-requires the literal staging sentence somewhere in the prompt, and this skill's whole point is
