@@ -49,7 +49,11 @@ with "start writing files immediately, one file per Write call, keep each respon
    - Cadence: the main loop runs `/commit` between chunks, since subagents stage but never commit.
      Invoke and read the skill in full only for this run's first commit; every commit after that
      follows `/commit`'s procedure directly (session marker already written, prefilters, pathspec
-     form, branch/overlap checks all still apply) without re-invoking the skill file.
+     form, branch/overlap checks all still apply) without re-invoking the skill file. Run that
+     procedure through `bash ~/.claude/skills/commit/commit-pathspec.sh -m "<message>" -- <files>`
+     rather than by hand: an unattended run repeats the same eight-step chain dozens of times, which
+     is exactly where a step gets silently skipped. It refuses on every judgement call instead of
+     deciding, so a refusal is a real finding to record, never something to `--force` past reflexively.
 
 3. **Tiered uncertainty resolution.**
    - Trivial / one clearly-correct answer -> decide, no log, no iterate-it.
