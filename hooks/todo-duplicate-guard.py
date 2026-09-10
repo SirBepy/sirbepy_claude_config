@@ -45,7 +45,14 @@ OVERRIDE_MARKER = "<!-- duplicate-checked -->"
 # Todo 834: matches the bare marker AND `<!-- duplicate-checked: reason -->`,
 # since inlining the reason next to the marker is the natural move and the
 # strict equality match gave no signal that FORM, not content, was rejected.
-OVERRIDE_MARKER_RE = re.compile(r"<!--\s*duplicate-checked\b[^\n>]*-->")
+# Todos 925/930: dropped `\n` from the negated class so a reason that wraps
+# onto a second line still matches - `>` stays excluded so the marker can't
+# swallow past its own close into unrelated content, and `-->` still
+# terminates the match since an HTML comment cannot nest.
+OVERRIDE_MARKER_RE = re.compile(r"<!--\s*duplicate-checked\b[^>]*-->", re.DOTALL)
+# Loose detector for "an override marker was attempted but is malformed" -
+# used only to pick the right rejection message, never to allow a write.
+MALFORMED_MARKER_HINT = "duplicate-checked"
 
 # A token in more than this share of the backlog's titles+goals carries no signal.
 COMMON_TOKEN_RATIO = 0.25
@@ -301,6 +308,20 @@ def main() -> None:
         allow(warning)
 
     hit_lines = "; ".join(f"{f.name} (shares: {', '.join(m)})" for f, m in hits[:5])
+    if MALFORMED_MARKER_HINT in content:
+        # Todos 925/930: the author clearly attempted an override marker (the
+        # phrase is present) but it did not match - say so explicitly instead
+        # of the generic rejection, which is byte-identical to "no marker at
+        # all" and gives no signal that FORM, not content, is the problem.
+        deny(
+            f"[todo-duplicate-guard] Found `{MALFORMED_MARKER_HINT}` in this file's content, but "
+            "not as a well-formed override marker - it must be its own HTML comment starting with "
+            f"`<!-- {MALFORMED_MARKER_HINT}` and closed with `-->` on the same or a later line, "
+            f"e.g. `<!-- {MALFORMED_MARKER_HINT}: the two hits are different surfaces -->`. "
+            f"Possible duplicate of existing todo(s): {hit_lines}. Fix the marker's HTML-comment "
+            "syntax to proceed, or if it is not actually distinct, resolve per ai-todos-format.md's "
+            "Content-duplicate guard instead."
+        )
     deny(
         f"[todo-duplicate-guard] Possible duplicate of existing todo(s): {hit_lines}. "
         "Per ai-todos-format.md's Content-duplicate guard, read the hit(s) in full and "

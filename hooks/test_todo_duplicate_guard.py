@@ -220,6 +220,23 @@ def check_integration() -> list:
             '<!-- duplicate-checked: the "verify" hits are a different surface, not this one -->'
         )
 
+        # Todos 925/930: a reason that wraps onto a second line, the way every
+        # other comment in a todo file does, must still be recognised.
+        new_dup_wrapped_reason_path = todos_dir / "136-v2-verify-screen-adds-a-fifth-debit-card-form.md"
+        new_dup_wrapped_reason_content = (
+            "# v2 verify screen adds a fifth debit card form\n\nGoal: same as 130.\n\n"
+            "<!-- duplicate-checked: a reason long enough that it wraps\n"
+            "     onto a second line like every other comment here -->"
+        )
+
+        # Todos 925/930: `duplicate-checked` present but not a well-formed HTML
+        # comment (never closed) must still block, with a distinguishable message.
+        new_dup_malformed_marker_path = todos_dir / "137-v2-verify-screen-adds-a-sixth-debit-card-form.md"
+        new_dup_malformed_marker_content = (
+            "# v2 verify screen adds a sixth debit card form\n\nGoal: same as 130.\n\n"
+            "<!-- duplicate-checked: forgot to close this comment"
+        )
+
         cases = [
             (
                 {"tool_name": "Write", "tool_input": {"file_path": str(new_dup_path), "content": new_dup_content}},
@@ -246,6 +263,22 @@ def check_integration() -> list:
                 {"tool_name": "Write", "tool_input": {"file_path": str(new_dup_reason_path), "content": new_dup_reason_content}},
                 0,
                 "override marker with an inline reason after a colon also bypasses a real hit",
+            ),
+            (
+                {
+                    "tool_name": "Write",
+                    "tool_input": {"file_path": str(new_dup_wrapped_reason_path), "content": new_dup_wrapped_reason_content},
+                },
+                0,
+                "override marker whose reason wraps onto a second line also bypasses a real hit",
+            ),
+            (
+                {
+                    "tool_name": "Write",
+                    "tool_input": {"file_path": str(new_dup_malformed_marker_path), "content": new_dup_malformed_marker_content},
+                },
+                2,
+                "duplicate-checked present but malformed (unclosed comment) still blocks",
             ),
             (
                 {
@@ -298,6 +331,25 @@ def check_integration() -> list:
             print(f"[{'PASS' if ok else 'FAIL'}] integration: {label} -> exit={proc.returncode} stderr={proc.stderr.strip()!r}")
             if not ok:
                 fails.append(label)
+
+        # Todos 925/930: a malformed marker must get a DIFFERENT message than
+        # a plain absent-marker rejection, not the byte-identical generic one.
+        malformed_proc = run_hook({
+            "tool_name": "Write",
+            "tool_input": {"file_path": str(new_dup_malformed_marker_path), "content": new_dup_malformed_marker_content},
+        })
+        absent_proc = run_hook({
+            "tool_name": "Write", "tool_input": {"file_path": str(new_dup_path), "content": new_dup_content},
+        })
+        label = "malformed-marker rejection names the marker as the problem, distinct from the absent-marker message"
+        ok = (
+            "not as a well-formed override marker" in malformed_proc.stderr
+            and "not as a well-formed override marker" not in absent_proc.stderr
+            and malformed_proc.stderr != absent_proc.stderr
+        )
+        print(f"[{'PASS' if ok else 'FAIL'}] integration: {label} -> malformed={malformed_proc.stderr.strip()!r} absent={absent_proc.stderr.strip()!r}")
+        if not ok:
+            fails.append(label)
 
     return fails
 

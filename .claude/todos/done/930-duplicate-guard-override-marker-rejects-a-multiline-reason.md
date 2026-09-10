@@ -73,3 +73,4 @@ Two independent changes; do both, they fix different halves.
 
 - Filed from a `windows_taskbar_widgets` session per root `CLAUDE.md`'s rule that a finding about
   the global `~/.claude` tree belongs in this repo's backlog. Not executed there.
+- DONE 2026-09-10 via /loop-todos cycle 1, in the same edit as todo 925 - the triage pass found these two describe the identical defect at the identical line, hooks/todo-duplicate-guard.py OVERRIDE_MARKER_RE. Both halves this file asked for shipped: the regex now allows a wrapped reason, and a malformed marker produces a distinct message naming the marker as the problem rather than the generic duplicate rejection. 930 contributed the second-recurrence evidence and the explicit ask for a test file; the test file already existed and gained three new cases. See done/925-duplicate-guard-marker-must-be-on-one-line.md for the full verification record.
