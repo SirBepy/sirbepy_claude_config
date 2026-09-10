@@ -44,6 +44,20 @@ $ErrorActionPreference = 'Stop'
 function Write-Info($msg) { Write-Host $msg }
 function Write-Fail($msg) { Write-Error $msg }
 
+# PS 5.1 + $ErrorActionPreference = 'Stop' turns ANY stderr line from a native command
+# redirected with `2>&1` into a terminating NativeCommandError, even when the exit code is 0
+# and even when the message is git's ordinary, expected output (todo 975, reproduced
+# 2026-09-11: `git worktree remove` on a worktree with an untracked file writes exactly one
+# expected "use --force" line to stderr, which killed this script before its own --force
+# fallback below could run). Every native call in this script goes through this helper instead:
+# no `2>&1`, so stderr goes straight to the real console stream and is never turned into a
+# PowerShell error object; `$LASTEXITCODE` right after the call is the only success signal.
+function Invoke-NativeCapture {
+    param([Parameter(Mandatory = $true)][scriptblock]$Command)
+    $output = & $Command
+    return [PSCustomObject]@{ Output = $output; ExitCode = $LASTEXITCODE }
+}
+
 # --- Resolve and validate before touching anything ---
 
 if (-not (Test-Path $RepoRoot)) {
@@ -63,8 +77,9 @@ if ($resolvedWorktree -ieq $resolvedRoot) {
 
 # Refusal: only ever act on a path git itself already knows is a worktree - guards
 # against pointing this at an arbitrary directory that happens to contain reparse points.
-$worktreeList = & git -C $resolvedRoot worktree list --porcelain 2>&1
-if ($LASTEXITCODE -ne 0) {
+$listResult = Invoke-NativeCapture { & git -C $resolvedRoot worktree list --porcelain }
+$worktreeList = $listResult.Output
+if ($listResult.ExitCode -ne 0) {
     Write-Fail "'git worktree list' failed in '$resolvedRoot': $worktreeList"
 }
 $registeredPaths = $worktreeList | Where-Object { $_ -match '^worktree\s+(.+)$' } | ForEach-Object {
@@ -100,11 +115,12 @@ foreach ($rp in $reparsePoints) {
     # rmdir is directory-only; a symlinked FILE matches the ReparsePoint filter but survives it,
     # and would then be followed by git worktree remove.
     if ($rp.PSIsContainer) {
-        & cmd /c rmdir "$($rp.FullName)" 2>&1 | ForEach-Object { Write-Info "  $_" }
+        $unlinkResult = Invoke-NativeCapture { & cmd /c rmdir "$($rp.FullName)" }
     }
     else {
-        & cmd /c del /f /q "$($rp.FullName)" 2>&1 | ForEach-Object { Write-Info "  $_" }
+        $unlinkResult = Invoke-NativeCapture { & cmd /c del /f /q "$($rp.FullName)" }
     }
+    $unlinkResult.Output | ForEach-Object { Write-Info "  $_" }
     if (Test-Path -LiteralPath $rp.FullName) {
         Write-Fail "Reparse point '$($rp.FullName)' survived unlinking - refusing to continue, removal could follow it into the target."
     }
@@ -112,19 +128,23 @@ foreach ($rp in $reparsePoints) {
 
 # --- Step 3: git worktree remove, with fallbacks for stubborn/long-path cases ---
 
-& git -C $resolvedRoot worktree remove $resolvedWorktree 2>&1 | ForEach-Object { Write-Info $_ }
+$plainResult = Invoke-NativeCapture { & git -C $resolvedRoot worktree remove $resolvedWorktree }
+$plainResult.Output | ForEach-Object { Write-Info $_ }
 $removed = -not (Test-Path $resolvedWorktree)
 
 if (-not $removed) {
     Write-Info "Plain remove did not finish - retrying with --force."
-    & git -C $resolvedRoot worktree remove --force $resolvedWorktree 2>&1 | ForEach-Object { Write-Info $_ }
+    $forceResult = Invoke-NativeCapture { & git -C $resolvedRoot worktree remove --force $resolvedWorktree }
+    $forceResult.Output | ForEach-Object { Write-Info $_ }
     $removed = -not (Test-Path $resolvedWorktree)
 }
 
 if (-not $removed) {
     Write-Info "--force did not finish (likely a long-path failure) - falling back to rmdir /S /Q + prune."
-    & cmd /c rmdir /S /Q "$resolvedWorktree" 2>&1 | ForEach-Object { Write-Info "  $_" }
-    & git -C $resolvedRoot worktree prune 2>&1 | ForEach-Object { Write-Info $_ }
+    $rmdirResult = Invoke-NativeCapture { & cmd /c rmdir /S /Q "$resolvedWorktree" }
+    $rmdirResult.Output | ForEach-Object { Write-Info "  $_" }
+    $pruneResult = Invoke-NativeCapture { & git -C $resolvedRoot worktree prune }
+    $pruneResult.Output | ForEach-Object { Write-Info $_ }
     $removed = -not (Test-Path $resolvedWorktree)
 }
 
