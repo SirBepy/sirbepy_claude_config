@@ -60,3 +60,4 @@ wonders why nothing happened.
 
 - Do not batch this with other description edits. 842 already did the mechanical sweep; what is left
   here is a single judgement call that needs the skill read in full.
+- Fixed 2026-09-11 (/loop-todos): the description was the lie, not the body. Evidence: skills/ticket/SKILL.md:217 and skills/ticket/linear.md:6-10 both name /ticket as the write entrypoint, and hooks/linear-create-guard.py blocks any issueCreate lacking a ground-check marker that nothing in /linear ever writes, so /linear's own create recipe could not have worked standalone. Description rewritten to its real read-only scope and the stale 'Triggers on /linear only' clause dropped. disable-model-invocation deliberately left unset: the chain-caller test's slash-only precondition does not fire, and no file invokes /linear via the Skill tool.

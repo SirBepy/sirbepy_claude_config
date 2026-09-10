@@ -1,6 +1,6 @@
 ---
 name: linear
-description: Triggers on /linear only. Query and create Linear tickets via the GraphQL API - search, list, look up, or file issues.
+description: Query Linear via GraphQL - search, list, look up tickets, projects, sprints. Filing or editing issues goes through /ticket.
 argument-hint: "<ticket-id or query>"
 ---
 
