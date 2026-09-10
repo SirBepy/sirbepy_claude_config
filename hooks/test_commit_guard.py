@@ -18,6 +18,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import _testlib
@@ -274,6 +275,27 @@ with tempfile.TemporaryDirectory() as tmp:
         cwd=str(repo),
     )
     if not _testlib.report(got == 2, f"{label} (got exit={got})"):
+        fails.append(label)
+
+# --- todo 917: an expired legacy marker is pruned on the next commit attempt ---
+# even one that itself gets denied, since pruning happens before the
+# allow/deny decision, not conditional on it.
+
+with tempfile.TemporaryDirectory() as tmp:
+    tmpdir = Path(tmp)
+    guard.MARKER_DIR = tmpdir
+    guard.SESSION_MARKER_DIR = tmpdir / ".session-markers"
+    guard.SESSION_MARKER_DIR.mkdir(parents=True)
+
+    expired_marker = tmpdir / ".commit-marker-long-dead"
+    expired_marker.touch()
+    old = time.time() - guard.FRESHNESS_SECONDS - 30
+    os.utime(expired_marker, (old, old))
+
+    label = "a commit attempt (even a denied one) prunes an already-expired legacy marker"
+    got = run_main("git commit -m 'x'", session_id="sess-prune")
+    pruned_ok = not expired_marker.exists()
+    if not _testlib.report(got == 2 and pruned_ok, f"{label} (deny exit={got}, pruned={pruned_ok})"):
         fails.append(label)
 
 sys.exit(_testlib.summarize(fails, style="count"))

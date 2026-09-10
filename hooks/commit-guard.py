@@ -36,6 +36,16 @@ can't be invoked at all fails open, same philosophy as the rest of this file.
 Decided (todo 868): a pathspec-less commit stays fail-open, deliberately -
 resolving it would mean reading the shared git index to guess a pathspec,
 which can hold another concurrent session's staged work.
+
+Marker pruning (todo 917): every attempted `git commit` is already the
+moment this guard touches MARKER_DIR, so it is also the opportunistic point
+where any legacy `.commit-marker-*` older than FRESHNESS_SECONDS gets swept
+- see `_marker_pruning.py` for why that's provably safe (such a marker is
+already permanently unreachable to `consume_fresh_marker`, not merely
+stale). Session markers are pruned separately, at write time, in
+`write-session-marker.ps1` - see that file for the liveness rule. A failure
+in the pruning helper is swallowed locally so a bug there can never affect
+this guard's own allow/deny decision.
 """
 
 import os
@@ -54,6 +64,13 @@ try:
 except Exception as e:
     sys.stderr.write(f"[commit-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
+
+try:
+    from _marker_pruning import prune_expired_markers
+except Exception:
+    # Cleanup is best-effort and must never block a commit on its own account
+    # (see the docstring paragraph above); a broken import just disables it.
+    prune_expired_markers = None
 
 MARKER_DIR = _HOOKS_DIR
 MARKER_GLOB = ".commit-marker*"
@@ -194,6 +211,22 @@ def legacy_session_marker_path(session_id: str) -> Path:
     return MARKER_DIR / f"{LEGACY_SESSION_MARKER_PREFIX}{session_id}"
 
 
+def _prune_expired_legacy_markers() -> None:
+    """Best-effort sweep of `.commit-marker-*` files already too old for
+    `consume_fresh_marker` to ever pick up (todo 917). Never allowed to
+    affect this guard's allow/deny outcome - see module docstring.
+    """
+    if prune_expired_markers is None:
+        return
+    try:
+        prune_expired_markers(
+            MARKER_DIR, MARKER_GLOB, FRESHNESS_SECONDS,
+            exclude_prefix=LEGACY_SESSION_MARKER_PREFIX,
+        )
+    except Exception:
+        pass
+
+
 def _deny_prefilter_failure() -> None:
     deny(
         "[commit-guard] This commit's own prefilter-gate re-check just failed "
@@ -212,6 +245,8 @@ def main() -> None:
 
     if not is_git_commit_invocation(command):
         sys.exit(0)
+
+    _prune_expired_legacy_markers()
 
     if os.environ.get(OVERRIDE_ENV):
         sys.exit(0)
