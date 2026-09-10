@@ -74,6 +74,24 @@ session's own subfolder for Phase 4's screenshot count, and the zero-writes flag
 
 **Visual-work check.** If any file changed this session matches `.css`/`.scss`/`.less`, or is otherwise a user-facing visual/layout change, and the zero-screenshots flag above is true, add "show Joe a live screenshot of the visual change" to the unfinished-commitments list below. CLAUDE.md's UI & visual changes section already requires this; a green headless/e2e test pass is not a substitute, since it cannot detect "this looks wrong" (2026-08-01: an AUQ card-height CSS fix shipped on a passing Playwright regression test alone, never shown live).
 
+**Orphaned-probe check (todo 968).** If this project has any file under a `verify/`, `e2e/`,
+`tests/`, `test/`, `__tests__/`, `cypress/`, `playwright/`, or `spec(s)/` directory, run
+`python ~/.claude/tools/dead-probe-check.py --root <project root> --against HEAD` (uncommitted
+changes), and if `git rev-parse --abbrev-ref --symbolic-full-name @{u}` resolves, also run it
+`--against @{u}..HEAD` (this session's unpushed commits). It greps removed `title=`/`aria-label=`
+(colon-truncated) and `id=`/`data-testid=`/`name=` (exact) literals against those directories for
+a selector a deleted or renamed UI surface left dangling - no browser, seconds not minutes. Exists
+because `/e2e` is deliberately opt-in per CLAUDE.md's testing floor, so nothing else re-checks a
+tracked probe after the surface it drives changes; the incident (five commits shipped "verified"
+on a dead `title^="Projects:"` selector, caught only because the dev happened to run `/e2e` by
+hand) is in the todo file. Exits 0 always - it never blocks - but any finding it prints is a real
+warning, not noise: it was measured against 143 real commits before being wired in and produced
+exactly one hit, the one real incident, zero false positives (a bare-word version of the same idea
+measured 9 false positives to 1 true positive on the same corpus and was rejected for that). Add
+any finding to the unfinished-commitments list below exactly like a visual-work item, so it goes
+through the same finish-it-first/close-anyway/full-auto handling rather than getting silently
+dropped if nobody reads the raw script output.
+
 Scan the full session for dev-stated commitments: explicit multi-part asks ("we need to do X, Y, Z"), a numbered plan the dev agreed to, or any request with more than one part, plus the visual-work item above if it triggered. For each, check whether it actually got done by the time `/close` was invoked.
 
 This is distinct from Phase 1 step 5 (Claude's own unexecuted "want me to...?" offers) - this catches things the dev asked for, not things Claude proposed unprompted.
