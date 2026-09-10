@@ -373,7 +373,10 @@ surface it directly in the response instead of filing a todo.
 **Which repo's backlog, not just whether it's a todo.** Allocate by the files the todo's own
 Approach/Acceptance would change, never by which session surfaced it. A finding hit while working
 in repo A but whose fix touches repo B's files goes in repo B's `.claude/todos/`, full stop - even
-if that means filing into a backlog this session never otherwise touches. Work on `~/.claude`
+if that means filing into a backlog this session never otherwise touches. Filing into that other
+repo's backlog is `/create-todo`'s "Cross-repo filing" flow (`create-todo/SKILL.md`) - it owns id
+reservation, the destination content-duplicate guard, and the exclude self-heal against the
+target repo in one invocation; do not hand-execute the sequence. Work on `~/.claude`
 itself (a skill, a hook, a global rule, `CLAUDE.md`) always lands in
 `C:\Users\tecno\.claude\.claude\todos\`, never in the project session that spotted it (CLAUDE.md
 states the same rule; this is where every writer actually reads it). If Approach/Acceptance names

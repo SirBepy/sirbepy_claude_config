@@ -236,7 +236,7 @@ than vanishing silently.
 
 Merge findings from Steps 0-4, minus anything Step 4a applied or dropped.
 
-**If the project has a repo root for `.claude/todos/`:** write each finding as a `.md` file there, per `~/.claude/skills/close/ai-todos-format.md` (filename/id rules, git-policy self-heal; create the folder if missing). Format:
+**If the project has a repo root for `.claude/todos/`:** write each finding as a `.md` file there, per `~/.claude/skills/close/ai-todos-format.md` (filename/id rules, git-policy self-heal; create the folder if missing). A finding whose fix lives in a DIFFERENT repo, typically one about the global `~/.claude` tree hit from a project session, is filed into THAT repo's backlog instead, per root `CLAUDE.md`'s allocation rule: use `skills/create-todo/SKILL.md`'s "Cross-repo filing" flow, which carries the destination-side duplicate guard, id reservation and exclude self-heal. Format:
 
 ```markdown
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->

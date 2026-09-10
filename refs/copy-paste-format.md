@@ -45,6 +45,15 @@ Keep responses tight enough to read in one pass without scrolling:
 If the task genuinely requires a long response (a full file, a long command), that is fine - strip all prose padding around it.
 - A drafted teammate-facing message (the kind placed in a blockquote for Joe to copy and paste, e.g. a Slack message) should read as short lines or short paragraphs separated by blank lines, not one dense paragraph, even when it already fits the 2-4 sentence cap above. Scoped only to that copyable message content - it does not govern Claude's own prose replies to Joe, which `snippets/terse-replies.md` already covers.
 
+## Team status updates
+
+Scoped to a status update Claude drafts for Joe to forward to coworkers (a deploy/release/fix landing), not a general teammate message.
+
+- Lead with the outcome or decision, not the mechanism. Cut the technical play-by-play (DNS/TTL/propagation, how it was done) - say what changed, not how it happened.
+- Account for send time: if Joe won't forward it right away, write the end state as of when he sends it ("live"), not the in-progress state at draft time ("propagira se, kroz ~sat").
+- Prefer the English term the team already uses over a translated one ("live", not "ziva") - a specific case of the "English tech terms left as-is" rule under Language matching, worth naming because the correction landed on exactly that word.
+- Blockquote form, recipient language, and short-lines formatting are already covered above (Language matching, Message length) - this section only adds what the update should say, not how it's formatted.
+
 ## Windows path escaping gotcha
 
 Markdown (CommonMark/GFM) treats a backslash before ASCII punctuation as an escape and consumes the backslash - a blockquote is raw markdown, so it renders this way too. `\.` becomes `.`, `\_`/`\-`/`\(` become `_`/`-`/`(`, and even `\\` collapses to `\`. Any Windows path with a dot-directory (`.for_bepy`, `.claude`, `.git`, `.env`, `.vscode`, `.cursor`) loses its separator: `C:\Users\tecno\revaire-mobile\.for_bepy\aab` pastes as `...revaire-mobile.for_bepy\aab`. Confirmed 2026-08-12.

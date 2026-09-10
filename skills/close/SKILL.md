@@ -180,6 +180,12 @@ Run in this order:
    does `post_message` to ask directly, folding the answer (or "asked, no reply yet") plus the
    sweep's timestamp into that todo's Notes instead of filing it as plain unstarted work.
 
+   An item whose fix lives in a DIFFERENT repo (most often a finding about the global `~/.claude`
+   tree surfaced from a project session) is filed into THAT repo's backlog, per root `CLAUDE.md`'s
+   allocation rule. Follow `skills/create-todo/SKILL.md`'s "Cross-repo filing" flow rather than
+   hand-rolling it: the destination gets the same content-duplicate guard, the same atomic id
+   reservation, and the same `.git/info/exclude` self-heal a local file gets.
+
    Write a separate `.md` file per item from:
    - Phase 0 (unfinished dev commitments where the dev chose "close anyway") - tag `**Type:** task`,
      `**Origin:** dev` (the dev asked for it; Claude just didn't finish it in time).
