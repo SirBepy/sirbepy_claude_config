@@ -84,11 +84,33 @@ Before filtering, scan the resolved scope for any `SKILL.md` files. For each, re
 
 If scope has no `SKILL.md` files, skip this step.
 
-## Filter to code files
+## Filter the scope
 
-After resolving, filter to code files only. Drop: `.md`, `.json`, `.toml`, `.yaml`, `.yml`, `.gitignore`, anything under `.for_bepy/`, `.claude/todos/`, or `memory/`.
+After resolving, split the scope into three groups:
 
-If the filtered list is empty (and Step 0 produced no findings): print "No code files in scope." and stop.
+- **Prose artifact** - any file literally named `SKILL.md` (filename-keyed: the narrowest detection
+  that needs no repo-root hardcoding and no new config). Keep it in scope for Steps 0 and 4 only.
+  Print `Skipping Steps 1-3 for [file]: prose, not code.` and do not run those steps on it. This is
+  deliberately NOT "review every `.md`": a README, `CLAUDE.md` edit, or a `refs/`/`code-style/` doc
+  has no written FAIL/WARN checklist the way a skill file does, so widening the branch to any
+  markdown file would turn Step 4 into an opinion pass with nothing to quote against. Only the
+  filename match qualifies; drop everything else per the next bullet.
+- **Code** - everything not covered by the two other groups. Runs Steps 1-4 as normal.
+- **Dropped** - `.json`, `.toml`, `.yaml`, `.yml`, `.gitignore`, any `.md` that is not `SKILL.md`,
+  anything under `.for_bepy/`, `.claude/todos/`, or `memory/`.
+
+If both the prose-artifact and code groups are empty (and Step 0 produced no findings): print
+"No code files in scope." and stop.
+
+**What counts as a finding on a `SKILL.md` (Step 4 only, since Steps 1-3 don't run on it):** a rule
+from `skills/bepy-skill-creator/SKILL.md`'s FAIL/WARN checklist is violated - missing frontmatter,
+no `argument-hint` despite taking args, an un-pinned `model:` on a dispatch, a step telling a
+subagent to write into a doc section that the doc it names never defines (the class of bug fixed in
+commit `2aa34b2`: a skill instructed writing to a `## Decisions` heading `close/ai-todos-format.md`
+never has) - or a breach of a `CLAUDE.md`/`RULE.md` rule the skill's own instructions would commit if
+followed. It does NOT mean sentence-level wording, tone, redundancy the checklist doesn't call out,
+or "this paragraph could be tighter" - those stay unwritten-rule observations per Step 4 item 5,
+printed inline, never filed as a todo.
 
 ## Step 1 - Size check
 
@@ -140,6 +162,9 @@ that breaks a rule the repo spent a page explaining.
    - the lint/format config covering the scope (`eslint.config.js`, `.prettierrc`, `ruff.toml`,
      `.editorconfig`) - the machine-checkable subset, and the place to confirm real budget numbers
      instead of guessing them
+   - for any `SKILL.md` in the prose-artifact group, `skills/bepy-skill-creator/SKILL.md`'s
+     FAIL/WARN validation checklist is the binding doc - read it and quote directly from its
+     checklist rows instead of treating a skill file as an undocumented-convention gap
 2. **Delegate when a doc is expensive to read.** If the docs sit under a package whose own
    `CLAUDE.md` is large (it gets re-injected on every Read in that tree), dispatch ONE subagent
    (`model: 'sonnet'`, read-only, "report findings, edit nothing") that reads the docs plus
