@@ -12,7 +12,8 @@ an unresolved $VAR, ../.. or a drive root; rm -rf on a system directory;
 Remove-Item -Recurse -Force on a drive root/home; a raw write to /dev/<x>;
 mkfs/dd of=|if=/dev/<x>; Clear-Disk/Format-Volume/format <drive>:; DROP
 TABLE/DATABASE/SCHEMA and TRUNCATE TABLE run through a real SQL client/ORM/
-inline-script driver; chmod 777/a+rwx; package publish with no --dry-run/-n;
+inline-script driver; chmod 777/a+rwx; package publish with no --dry-run/-n
+(except wally, which has no such flag and lives at MIDDLE instead - todo 945);
 git push --force (or a short flag bundle containing f) without
 --force-with-lease. Pipe-to-shell (curl/wget/iwr piped into a shell) also
 measured 0 hits once quoted spans are masked before matching; its one raw
@@ -101,21 +102,32 @@ inline now live in sibling modules - _destructive_guard_shared.py (tokenizing
 primitives), _destructive_guard_fs.py (filesystem/device), _destructive_guard_
 sql.py (SQL), _destructive_guard_git.py (git force/reset, plus the two SHARED
 pattern matchers) and _destructive_guard_peers.py (shared-checkout peer
-probing) - imported below. match_shared_checkout_hit() itself and the
-publish/pipe-to-shell/diskpart/disk-doctor matchers, which don't belong to any
-of the four named concerns, stay here with the dispatcher.
+probing) - imported below, once, with a single retry on ImportError (todo
+923; see _import_with_retry's docstring). match_shared_checkout_hit() itself
+and the publish/pipe-to-shell/diskpart/disk-doctor matchers, which don't
+belong to any of the four named concerns, stay here with the dispatcher.
 """
 
 import os
 import re
 import sys
+import time
 from pathlib import Path
 
 _HOOKS_DIR = Path(__file__).resolve().parent
 if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
-try:
+# todo 923: a sibling _destructive_guard_*.py can be mid-write from another
+# session's edit for a fraction of a second. A reader mid-file raises
+# ImportError, and the real incident showed that error naming a symbol the
+# failing import never even references (blamed GIT_STASH_ANCHOR_RE while only
+# _hooklib's import had failed) - a symbol grep during that window finds the
+# name nowhere and reads as permanent breakage, not a transient partial read.
+IMPORT_RETRY_DELAY_S = 0.15
+
+
+def _import_guard_modules():
     from _hooklib import read_payload, deny as _lib_deny, ask as _lib_ask
     from _destructive_guard_shared import verb_segments
     from _destructive_guard_fs import (
@@ -135,6 +147,48 @@ try:
         match_git_stash_push,
     )
     from _destructive_guard_peers import fetch_peer_count, is_main_checkout, stash_swept_files
+    return (
+        read_payload, _lib_deny, _lib_ask, verb_segments,
+        match_chmod_777, match_device_write, match_disk_wipe_win, match_mkfs_dd, match_remove_item, match_rm_rf,
+        match_sql_drop, match_sql_delete_no_where, match_sql_truncate,
+        match_git_clean_force, match_git_positional_ref, match_git_push_force, match_git_reset_hard, match_git_stash_push,
+        fetch_peer_count, is_main_checkout, stash_swept_files,
+    )
+
+
+def _import_with_retry(import_fn, retries: int = 1, delay_s: float = IMPORT_RETRY_DELAY_S):
+    """Retry ImportError only, once, after a short sleep: a half-written
+    sibling module clears within well under a second, a genuinely broken one
+    still fails after the retry. Every OTHER exception type propagates on the
+    first attempt with no retry, so real breakage (a syntax error, a raised
+    exception at import time) is never masked as "probably transient".
+    """
+    last_err = None
+    for attempt in range(retries + 1):
+        try:
+            return import_fn()
+        except ImportError as e:
+            last_err = e
+            if attempt < retries:
+                time.sleep(delay_s)
+    raise last_err
+
+
+try:
+    (
+        read_payload, _lib_deny, _lib_ask, verb_segments,
+        match_chmod_777, match_device_write, match_disk_wipe_win, match_mkfs_dd, match_remove_item, match_rm_rf,
+        match_sql_drop, match_sql_delete_no_where, match_sql_truncate,
+        match_git_clean_force, match_git_positional_ref, match_git_push_force, match_git_reset_hard, match_git_stash_push,
+        fetch_peer_count, is_main_checkout, stash_swept_files,
+    ) = _import_with_retry(_import_guard_modules)
+except ImportError as e:
+    sys.stderr.write(
+        f"[destructive-command-guard] FATAL: cannot import a shared hook module, even after retrying once ({e}); "
+        "a sibling _destructive_guard_*.py module may have been mid-write from another session's edit and is "
+        "still broken, or this is genuine breakage - blocking to avoid silently disabling this guard.\n"
+    )
+    sys.exit(2)
 except Exception as e:
     sys.stderr.write(f"[destructive-command-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -171,6 +225,12 @@ MSIEXEC_UNINSTALL_FLAG_RE = re.compile(r"/x\{|/uninstall\b", re.IGNORECASE)
 
 PUBLISH_ANCHOR_RE = re.compile(r"^((npm|yarn|pnpm|bun)\s+publish|cargo\s+publish|gem\s+push|twine\s+upload|wally\s+publish)\b")
 DRYRUN_RE = re.compile(r"--dry-run\b|(?<!\S)-n(?!\S)")
+# wally has no --dry-run/-n flag at all (todo 945: wally 0.3.2 errors on
+# `wally publish --dry-run` with "wasn't expected, or isn't valid in this
+# context"), so demanding one is an unreachable remedy that leaves an
+# approved publish with no path forward. Excluded from the CORE dry-run
+# rule below and handled at MIDDLE instead, with a remedy that exists.
+NO_DRYRUN_PUBLISH_RE = re.compile(r"^wally\s+publish\b")
 
 SQUOTE_RE = re.compile(r"'[^']*'")
 DQUOTE_RE = re.compile(r'"(?:[^"\\]|\\.)*"')
@@ -186,8 +246,25 @@ def mask_quotes(command: str) -> str:
 
 def match_publish_no_dryrun(command: str):
     for seg in verb_segments(command):
-        if PUBLISH_ANCHOR_RE.match(seg) and not DRYRUN_RE.search(seg):
+        if PUBLISH_ANCHOR_RE.match(seg) and not NO_DRYRUN_PUBLISH_RE.match(seg) and not DRYRUN_RE.search(seg):
             return "package publish with no --dry-run/-n ships to a public registry irreversibly; add --dry-run/-n first"
+    return None
+
+
+def match_publish_no_preflight(command: str):
+    """MIDDLE-tier counterpart to match_publish_no_dryrun for publishers with
+    no dry-run flag to demand (todo 945). Still an irreversible publish, so
+    still gated, just via ask/deny-per-profile instead of an unconditional
+    CORE deny naming a flag that doesn't exist. `wally package --output
+    <file>` builds the exact upload artifact without uploading, so it's
+    named as the real pre-flight equivalent.
+    """
+    for seg in verb_segments(command):
+        if NO_DRYRUN_PUBLISH_RE.match(seg):
+            return (
+                "wally publish ships to a public registry irreversibly and wally has no --dry-run flag; "
+                "run `wally package --output <file>` first to build the exact upload artifact without uploading"
+            )
     return None
 
 
@@ -280,6 +357,7 @@ MIDDLE_CHECKS = (
     match_sql_delete_no_where,
     match_diskpart,
     match_disk_doctor_delete,
+    match_publish_no_preflight,
 )
 
 
