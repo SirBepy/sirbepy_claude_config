@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=5, reconfirm-count=2, content-hash=60ea96ee -->
+<!-- cleanup: last-checked 2026-09-10, complexity=EASY, worth=7, reconfirm-count=3, content-hash=60ea96ee -->
 # Check for Google's WebDriver-login block before launching an automated browser for a Google sign-in
 
 **Type:** skill-improvement

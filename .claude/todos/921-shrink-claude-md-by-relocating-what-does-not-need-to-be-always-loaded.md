@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=HARD, worth=7, reconfirm-count=1, content-hash=3c17c8f3 -->
 <!-- duplicate-checked: no existing todo covers auditing CLAUDE.md's own contents for relocation. The nearby hits are about individual rules being added to it, not about what belongs in it at all. -->
 # Audit CLAUDE.md and relocate everything that does not need to be always-loaded
 

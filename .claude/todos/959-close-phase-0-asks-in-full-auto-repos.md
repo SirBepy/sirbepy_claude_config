@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=EASY, worth=9, reconfirm-count=1, content-hash=c783a4ff -->
 <!-- duplicate-checked: grepped this backlog and done/ for "Phase 0", "close", "AskUserQuestion", "full-auto" - 954 is about code-style/tauri.md's layout rule, unrelated. Nothing covers close/SKILL.md's Phase 0 ask step. -->
 # /close Phase 0 asks a question that full-auto repos forbid
 

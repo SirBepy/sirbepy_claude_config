@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=EASY, worth=8, reconfirm-count=1, content-hash=e1b83633 -->
 <!-- duplicate-checked: grep for "preview" and "node -e" across ~/.claude/.claude/todos/ found no open item on this -->
 # /preview's documented `node -e` one-liners are a parse error in PowerShell 5.1
 

@@ -74,3 +74,4 @@ trade-off into a default, and leaving exactly one copy behind recreates that con
   trigger-not-now todo in the first place.
 - `810` proposes the fixture harness that would make step 3's proof cheap. Doing `810` first would
   make this materially safer.
+- Archived by /cleanup-todos Pass A on 2026-09-10 on worth: scored 3 of 10, matching the todo's own self-assessment ("roughly a 3"). Still accurate as a description - skills/commit/overlap-check.sh:7,17,22 keeps its own -C/--repo alias and ${2:-} handling instead of sourcing _prefilter-lib.sh - but the todo itself frames this as a deliberate leftover rather than a defect, and nothing has misfired because of it. Consolidating two shells of arg parsing that both work is churn against a script every commit in every repo depends on.

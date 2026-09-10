@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=EASY, worth=9, reconfirm-count=1, content-hash=01d4da1d -->
 # claim-todo.ps1 and complete-todo.ps1 disagree on zero-padded ids, so claims are never released
 
 **Type:** skill-improvement

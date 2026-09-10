@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=EASY, worth=6, reconfirm-count=1, content-hash=93f506a3 -->
 <!-- duplicate-checked: done/908 introduced the command-position anchoring this regressed on, and done/780 is the original guard. Neither covers the wrapper-prefix gap the anchoring opened. -->
 # cargo-test-pipe-guard misses a filter run behind env/nohup/time
 

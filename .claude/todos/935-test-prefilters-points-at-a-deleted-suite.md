@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=EASY, worth=5, reconfirm-count=1, content-hash=865913af -->
 <!-- duplicate-checked: done/922 removed the cap and deleted the suite; done/903 wrote the arithmetic test that was deleted. Neither covers the stale pointer or the coverage that went with it. -->
 # test_prefilters.sh points at a suite that no longer exists
 

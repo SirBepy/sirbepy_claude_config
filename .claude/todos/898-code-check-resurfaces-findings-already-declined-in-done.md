@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=EASY, worth=7, reconfirm-count=1, content-hash=6ecad984 -->
 <!-- duplicate-checked: 450 is about WHEN code-check fires, this is about it re-proposing findings already resolved as declined. Different failure. -->
 # 898 - /code-check re-surfaces findings that were already declined
 

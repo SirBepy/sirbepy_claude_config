@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=EASY, worth=7, reconfirm-count=1, content-hash=0b5b212c -->
 <!-- duplicate-checked: done/855 built archive-batch.ps1 and done/919 added its id-derivation assertion. Neither touches what .Pathspec omits. This is the caller-side gap both left. -->
 # archive-batch.ps1's .Pathspec omits the deletion half, so every caller hand-builds it
 

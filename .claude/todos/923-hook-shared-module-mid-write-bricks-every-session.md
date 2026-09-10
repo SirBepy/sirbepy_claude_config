@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=EASY, worth=9, reconfirm-count=1, content-hash=36a469d5 -->
 <!-- duplicate-checked: 267 and 311 are about blocking shell command CHAINING, 316 is about hook TEST files duplicating a loader harness. None concern a runtime import failure or fail-closed blast radius. Shared vocabulary only. -->
 # Editing a hook's shared module bricks Bash AND PowerShell for every live session
 

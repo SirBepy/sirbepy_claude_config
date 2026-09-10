@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-09-01, complexity=HARD, worth=5, reconfirm-count=3, content-hash=388b488c -->
+<!-- cleanup: last-checked 2026-09-10, complexity=HARD, worth=6, reconfirm-count=4, content-hash=388b488c -->
 <!-- duplicate-checked -->
 # Six of ~30 hook events are wired, and all 41 hooks use exit codes only
 

@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-09-01, complexity=EASY, worth=7, reconfirm-count=3, content-hash=af3408dd -->
+<!-- cleanup: last-checked 2026-09-10, complexity=EASY, worth=5, reconfirm-count=4, content-hash=af3408dd -->
 <!-- duplicate-checked -->
 # Custom output styles get no per-turn reminder, so Silent will fade
 

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=EASY, worth=8, reconfirm-count=1, content-hash=224719ac -->
 <!-- duplicate-checked: grepped this backlog and done/ for "PowerShell", "BOM", "Set-Content" and "secret". The existing rule covers writing file content OUT through the shell; this is the inbound direction (file content INTO a native command) and is not covered by it. -->
 # Extend the Shell Commands rule to cover file content going INTO a native command
 

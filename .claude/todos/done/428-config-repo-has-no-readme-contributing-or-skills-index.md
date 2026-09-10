@@ -97,3 +97,4 @@ Do not hand-write the skills index. A stale index is worse than none: it gets tr
 lines and already carries a Structure section plus a skills table for the Universal skills. The
 real gap is smaller than the Context section implies: no CONTRIBUTING-equivalent, and no complete
 or generated skills index.
+- Archived by /cleanup-todos Pass A on 2026-09-10 on worth, not on a dead premise: scored 4 of 10 (churn) by the triage pass. Most of what it asked for already landed - README.md is 125 lines with Structure and Skills sections, which the todo's own 2026-09-01 note already recorded as narrowing the premise. What is left is a CONTRIBUTING.md and a generated skills index, both pure self-documentation for a solo repo with no cited incident of anyone being confused by their absence, and a generated index is one more artifact to keep in sync with 87 skills. Reopen by moving this file back out of done/ if a second person ever works in this repo.

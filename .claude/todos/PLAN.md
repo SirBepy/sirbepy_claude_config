@@ -207,7 +207,6 @@ its once-per-session sentinel is a single boolean, not per-file state.
 ### Phase 7 - evaluations. "No" is an acceptable outcome for several of these.
 
 - [ ] 440 [P] - config-protection guard. Gated on 427's signal.
-- [ ] 428 [P] - repo README, CONTRIBUTING, generated skills index
 
 ### The three tips that matter
 

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=HARD, worth=6, reconfirm-count=1, content-hash=511f2aac -->
 <!-- duplicate-checked: todo 910 covers the Python hooks/_hooklib.py regressions. This is a different tree with no shared-lib convention at all, which is why the duplication has nowhere to go. -->
 # CI scripts and commit shell prefilters have no shared lib, so both duplicated
 

@@ -72,4 +72,5 @@ Either way, state the decision where the next reader hits it, and make the two a
 - Do not answer this todo independently. Whatever 403 settles about who the rule is for and which
   repos it binds determines whether docstrings and comment-based help belong in the rule at all. 403
   may close this one outright.
+- Archived by /cleanup-todos Pass A on 2026-09-10: premise no longer holds. Todo 922 retired the comment cap outright on 2026-09-05 - skills/commit/comment-noise.sh now opens with "demoted, todo 922: no longer a cap, never blocks a commit", skills/commit/SKILL.md step 5a says it stopped gating commits, and global CLAUDE.md records "No numeric cap (retired 2026-09-05, todo 922)". This todo asked why the cap never covered Python docstrings or PowerShell comment-based help; with nothing enforced for any comment style, that gap has no subject left. The policy half stays open as todo 403, which 399 was gated on anyway.
 

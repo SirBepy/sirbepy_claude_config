@@ -56,3 +56,4 @@ home, not because anything is broken.
   someone is already in `hooks/_testlib.py` for another reason.
 - Care warranted: `hooks/_testlib.py` is imported by every guard suite, so a mistake here fails the
   whole CI run rather than one file. That is the opposite risk profile from the change's size.
+- Archived by /cleanup-todos Pass A on 2026-09-10 on worth: scored 4 of 10, which matches the estimate the todo made of itself ("roughly a 4"). The premise is still true - hooks/_testlib.py exposes run_cases but no run_guard_main, and test_commit_guard.py:90, test_pr_guard.py:80, test_flutter_workdir_guard.py:46 and test_package_manager_guard.py:122 each still define a local run_main. It is a behaviour-neutral DRY tidy of four small test harnesses that all currently pass, with no failure behind it. Reopen if a fifth suite needs the same harness, which is the point where the duplication starts costing something.

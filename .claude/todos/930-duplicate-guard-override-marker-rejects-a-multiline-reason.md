@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=EASY, worth=6, reconfirm-count=1, content-hash=04457edf -->
 <!-- duplicate-checked: todo 834 widened this same regex for the INLINE-reason case and is done; this is the wrapped-reason case that survived it -->
 # `todo-duplicate-guard`'s override marker still rejects a wrapped reason
 

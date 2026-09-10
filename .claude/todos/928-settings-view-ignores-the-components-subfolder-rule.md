@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=EASY, worth=6, reconfirm-count=1, content-hash=d8e9998a -->
 <!-- duplicate-checked -->
 <!-- Not a duplicate of done/334: that one narrowed tauri.md's 300-LINE rule to exclude colocated
      Rust test modules. This is the separate SUB-COMPONENT FOLDER rule in the same doc. -->

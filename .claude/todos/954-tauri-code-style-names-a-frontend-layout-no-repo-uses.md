@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=HARD, worth=7, reconfirm-count=1, content-hash=8a15e740 -->
 <!-- duplicate-checked: grepped this backlog and done/ for "tauri.md", "code-style", "components/" and "view extraction" - no existing todo covers the frontend-extraction layout rule in code-style/tauri.md. -->
 # code-style/tauri.md names a frontend extraction layout no repo actually uses
 

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=HARD, worth=7, reconfirm-count=1, content-hash=370f5e42 -->
 <!-- duplicate-checked: the hit, done/365, is about marker writes landing on MALFORMED PATHS and leaving a handful of strays; that was fixed. This one is about correctly-formed markers accumulating by VOLUME (266 of them) because nothing prunes them. Different cause, different fix. -->
 # hooks/ accumulates commit markers and session markers forever
 

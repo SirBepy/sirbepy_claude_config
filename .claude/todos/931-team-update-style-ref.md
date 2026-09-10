@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=EASY, worth=7, reconfirm-count=1, content-hash=3f183856 -->
 <!-- duplicate-checked: the guard's four hits all touch copy-paste-format.md but none covers status-update conciseness - 507 (done) is newline density, 305 (done) is per-person language override, 262 is Windows-path markdown escaping, 870 is a Clockify overlap check. Shared vocabulary only. -->
 # Add a "team status updates" rule to the global copy-paste-format ref
 

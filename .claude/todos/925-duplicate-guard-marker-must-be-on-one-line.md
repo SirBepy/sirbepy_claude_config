@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-09-10, complexity=EASY, worth=6, reconfirm-count=1, content-hash=6efdf653 -->
 <!-- duplicate-checked: grepped this backlog and done/ for "duplicate-guard", "duplicate-checked" and "OVERRIDE_MARKER" before filing. -->
 # The duplicate-guard's override marker silently requires one line, and its error message doesn't say so
 
