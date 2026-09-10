@@ -102,6 +102,21 @@ CASES = [
     ),
     ("ls 2>/dev/null", False, "476: 2>/dev/null stays allowed (todo 257)"),
     ("Get-Command Set-Content", False, "476: naming a cmdlet is not using it (todo 289)"),
+    # todo 956: sed/perl in-place edits write with no redirect operator at all.
+    ("sed -i 's/a/b/' file.txt", True, "956: bare sed -i blocked"),
+    ("sed -i.bak 's/a/b/' file.txt", True, "956: sed -i.bak (GNU suffix) blocked"),
+    ("sed -i '' 's/a/b/' file.txt", True, "956: sed -i '' (BSD empty-suffix form) blocked"),
+    ("perl -pi -e 's/a/b/' file.txt", True, "956: perl -pi (bundled short flags) blocked"),
+    ("perl -i -pe 's/a/b/' file.txt", True, "956: perl -i blocked"),
+    ("sed --in-place 's/a/b/' file.txt", True, "956: GNU long-form --in-place blocked"),
+    ("cat file | sed -i 's/a/b/' -", True, "956: sed -i after a pipe still blocked"),
+    ("ed file.txt", True, "956: ed has no in-place flag; any scripted invocation blocked"),
+    ("sed -n '1,50p' file.txt", False, "956: regression guard - the documented sed READ carve-out stays allowed"),
+    ("sed 's/a/b/' file.txt", False, "956: bare sed with no -i writes to stdout, not the file - allowed"),
+    ("grep -i foo file.txt", False, "956: grep -i is case-insensitivity, unrelated to sed/perl -i"),
+    ("cat file.txt", False, "956: cat still allowed"),
+    ('echo "use sed -i carefully"', False, "956: mention in prose, quoted, not an invocation"),
+    ("sed -f script.sed input-independent.txt", False, "956: a filename merely containing '-i...' is not a flag"),
 ]
 
 

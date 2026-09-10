@@ -51,6 +51,15 @@ except Exception as e:
     sys.stderr.write(f"[cargo-test-pipe-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
 
+try:
+    # todo 934: reuse destructive-command-guard's own wrapper list (env/nohup/
+    # nice/time/command/xargs/sh -c) rather than a second copy. Import only -
+    # _destructive_guard_shared.py is owned by another lane right now.
+    from _destructive_guard_shared import LEADING_WRAPPER_RE
+except Exception as e:
+    sys.stderr.write(f"[cargo-test-pipe-guard] FATAL: cannot import _destructive_guard_shared ({e}); blocking to avoid silently disabling this guard.\n")
+    sys.exit(2)
+
 # cargo subcommands long/hang-prone enough that a buffering filter hides a
 # hung run from a live one (todo 877). Kept as a list, not an inline regex
 # literal, so appending another subcommand later is a one-line change.
@@ -73,20 +82,22 @@ LINE_BUFFERED_RE = re.compile(r"--line-buffered\b", re.IGNORECASE)
 STATEMENT_SPLIT_RE = re.compile(r"&&|\|\||;|\n")
 
 # Same leading-prefix shapes destructive-command-guard.py's own
-# verb_segments() strips (a different lane's module, not imported - this is
-# a two-regex local echo, not worth a cross-file dependency): a filter still
-# anchors on `sudo tail` / `FOO=bar tail` right after a pipe.
+# verb_segments() strips: a filter still anchors on `sudo tail` /
+# `FOO=bar tail` / `env FOO=bar tail` / `nohup tail` right after a pipe.
+# LEADING_WRAPPER_RE (env/nohup/nice/time/command/xargs/sh -c) is imported
+# from _destructive_guard_shared.py rather than re-defined (todo 934: a
+# local-only sudo/env pair had let `env FOO=BAR tail`/`nohup tail` slip past).
 LEADING_SUDO_RE = re.compile(r"^\s*sudo\s+", re.IGNORECASE)
 LEADING_ENV_RE = re.compile(r"^\s*[A-Za-z_][A-Za-z0-9_]*=\S*\s+")
 
 
 def _strip_leading_prefix(seg: str) -> str:
-    s = seg
+    s = seg.lstrip()
     while True:
-        m = LEADING_SUDO_RE.match(s) or LEADING_ENV_RE.match(s)
+        m = LEADING_SUDO_RE.match(s) or LEADING_ENV_RE.match(s) or LEADING_WRAPPER_RE.match(s)
         if not m:
-            return s.lstrip()
-        s = s[m.end():]
+            return s
+        s = s[m.end():].lstrip()
 
 
 def deny(filter_name: str, subcommand: str) -> None:

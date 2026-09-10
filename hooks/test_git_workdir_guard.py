@@ -107,4 +107,14 @@ with tempfile.TemporaryDirectory() as tmp:
     code, err = run_main("git push", cwd=str(repo_b), project_dir=str(repo_a), override="1")
     fails += [] if (code == 0 and err == "") else ["bypass env var allows a wrong-root push"]
 
+    # todo 966: a linked worktree of the session's own project shares its
+    # git-common-dir despite a different --show-toplevel, so no bypass needed.
+    wt = tmpdir / "repo_a-wt"
+    subprocess.run(
+        ["git", "worktree", "add", str(wt), "-b", "scratch"],
+        cwd=repo_a, check=True, capture_output=True, text=True,
+    )
+    code, err = run_main("git commit -m x", cwd=str(wt), project_dir=str(repo_a))
+    fails += [] if (code == 0 and err == "") else ["a deliberate linked worktree of the session's own repo is allowed"]
+
 sys.exit(_testlib.summarize(fails))

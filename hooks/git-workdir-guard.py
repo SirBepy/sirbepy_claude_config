@@ -33,7 +33,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, strip_quotes, basename, git_repo_root
+    from _hooklib import read_payload, deny, allow_with_warning, strip_quotes, basename, git_repo_root, git_common_dir
 except Exception as e:
     sys.stderr.write(f"[git-workdir-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -148,6 +148,18 @@ def main() -> None:
 
     if norm(shell_root) == norm(harness_root):
         sys.exit(0)
+
+    # A linked worktree's own toplevel differs from the main checkout's, but
+    # both share one git-common-dir (todo 966). Compared only after the
+    # cheaper toplevel check misses, since common-dir needs a second git call.
+    shell_common = git_common_dir(effective_cwd)
+    harness_common = git_common_dir(os.environ.get("CLAUDE_PROJECT_DIR") or "")
+    if shell_common and harness_common and norm(shell_common) == norm(harness_common):
+        allow_with_warning(
+            f"[git-workdir-guard] shell cwd '{shell_root}' is a linked worktree of this "
+            f"session's project '{harness_root}' (shared git-common-dir '{shell_common}') - "
+            f"allowing without {OVERRIDE_ENV}."
+        )
 
     deny(
         "[git-workdir-guard] Blocked: this git write command's shell is inside "

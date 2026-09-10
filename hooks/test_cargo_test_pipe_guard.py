@@ -77,6 +77,12 @@ CASES = [
         False,
         "todo 881: commit message quoting the piped-cargo-test example doesn't block the commit",
     ),
+    # todo 934: _strip_leading_prefix only stripped sudo/VAR=val, so a filter
+    # behind env/nohup/etc slipped past the todo-908 anchoring.
+    ("cargo test | env FOO=BAR tail -40", True, "todo 934 repro: filter behind env is now blocked"),
+    ("cargo test 2>&1 | nohup tail -f", True, "todo 934: filter behind nohup is now blocked"),
+    ("cargo test | env FOO=BAR nohup tail -40", True, "todo 934: stacked env + nohup wrappers still caught"),
+    ("cargo test | xargs echo tail", False, "todo 908 regression guard: tail as an xargs argument, not the filter itself, still passes"),
 ]
 
 

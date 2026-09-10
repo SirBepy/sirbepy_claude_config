@@ -179,6 +179,45 @@ def git_repo_root(path) -> str | None:
     return proc.stdout.strip() or None
 
 
+def git_common_dir(path) -> str | None:
+    """Absolute git common dir (the MAIN checkout's `.git`) containing
+    `path`, or None if `path` doesn't exist, isn't inside a repo, or git
+    fails/times out. In a linked worktree this resolves to the main
+    checkout's `.git`, distinct from the worktree's own `--git-dir`
+    (`<main>/.git/worktrees/<name>`); in the main checkout itself it is the
+    same directory `git_repo_root` resolves to, one level deeper. Verified
+    empirically (2026-09-10): a linked worktree prints an absolute path
+    here, the main checkout prints a bare relative `.git`, so the relative
+    case is joined onto `path` before resolving. Used to tell a session's
+    own linked worktree apart from an unrelated repo without matching on
+    directory names (todo 966).
+    """
+    path = str(path)
+    if not path or not os.path.isdir(path):
+        return None
+    try:
+        proc = subprocess.run(
+            ["git", "-C", path, "rev-parse", "--git-common-dir"],
+            capture_output=True,
+            text=True,
+            timeout=GIT_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    out = proc.stdout.strip()
+    if not out:
+        return None
+    common = Path(out)
+    if not common.is_absolute():
+        common = Path(path) / common
+    try:
+        return str(common.resolve())
+    except OSError:
+        return str(common)
+
+
 def oldest_fresh_marker(
     marker_dir: Path,
     glob_pattern: str,

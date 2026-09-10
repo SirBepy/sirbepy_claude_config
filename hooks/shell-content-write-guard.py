@@ -50,6 +50,31 @@ MARKER_HINTS = (".commit-marker", ".pr-marker", ".session-markers")
 
 CONTENT_CMDLET_RE = re.compile(r"\b(Set-Content|Out-File|Add-Content)\b", re.IGNORECASE)
 TEE_RE = re.compile(r"\btee\b\s+(?:-a\s+)?(\S+)", re.IGNORECASE)
+
+# todo 956: sed/perl in-place edits go straight to disk with no redirect
+# operator at all, so REDIRECT_RE below never sees them; caught separately.
+# `sed -i`/`perl -i` are lowercase-only real flags (perl's `-I` is an unrelated
+# include-path option, so the `i` below is deliberately NOT re.IGNORECASE).
+# GNU's long form is matched on its own; the short-cluster form covers a bare
+# `-i`, a glued GNU suffix (`-i.bak`), and perl's very common bundled
+# `-pi`/`-npi` order-independent of other single-letter flags. Anchored to a
+# token boundary (preceded by start-of-segment or whitespace, a single `-`
+# never `--`) so it does not fire inside `--ignore-case`/`--interactive` or a
+# filename like `input-independent.txt` that merely contains "-i...".
+INPLACE_CMD_RE = re.compile(r"\b(sed|perl)\b", re.IGNORECASE)
+INPLACE_LONG_RE = re.compile(r"--in-place(?:=\S+)?(?=\s|$)")
+INPLACE_SHORT_RE = re.compile(r"(?:(?<=\s)|^)-(?!-)[a-zA-Z]*i[a-zA-Z]*(?:\.\S+)?(?=\s|$)")
+# `ed` has no in-place flag - any scripted invocation (the only kind a
+# non-interactive Bash/PowerShell call can make) edits and writes the file
+# directly from within the editor, so bare invocation is enough to block.
+ED_CMD_RE = re.compile(r"\bed\b", re.IGNORECASE)
+
+# Deliberate decision (todo 956 Approach step 3): unlike the narrow git-blob-
+# redirect carve-out above (todo 792, reading immutable already-committed
+# bytes), an in-place edit MUTATES whatever file it targets, so there is no
+# outside-repo exemption here - a target outside the repo is still a live
+# edit through the shell, which is exactly the mechanism the global ban
+# covers, not a repo-scoped one.
 # `=>`, `->`, `!>`, `<>` are operators, never redirects, regardless of shell dialect
 # (Dart/JS arrows, comparisons); `>=` is the trailing-side twin, so a lone `>` right
 # before `=` is excluded too (todo 476).
@@ -103,6 +128,20 @@ def _statement_before(masked: str, idx: int) -> str:
     bounds = [m.end() for m in STATEMENT_BOUNDARY_RE.finditer(masked[:idx])]
     start = bounds[-1] if bounds else 0
     return masked[start:idx]
+
+
+def _statement_after(masked: str, idx: int) -> str:
+    """The rest of the current statement starting at `idx`, up to the next
+    boundary char - the same scoping `_statement_before` gives the git-blob
+    carve-out, mirrored forward so an in-place flag is only matched against
+    ITS OWN sed/perl invocation, never a later chained command (todo 956)."""
+    m = STATEMENT_BOUNDARY_RE.search(masked, idx)
+    end = m.start() if m else len(masked)
+    return masked[idx:end]
+
+
+def _has_inplace_flag(segment: str) -> bool:
+    return bool(INPLACE_LONG_RE.search(segment) or INPLACE_SHORT_RE.search(segment))
 
 
 def _repo_root(cwd: str) -> Path | None:
@@ -195,6 +234,14 @@ def _check_masked(masked: str, cwd: str) -> str | None:
     tee = TEE_RE.search(masked)
     if tee and clean_target(tee.group(1)).lower() not in NULL_TARGETS:
         return "`tee` writes file content through the shell."
+
+    for m in INPLACE_CMD_RE.finditer(masked):
+        if is_command_position(masked, m.start()) and _has_inplace_flag(_statement_after(masked, m.end())):
+            return f"`{m.group(1)} -i` (in-place edit) writes file content through the shell."
+
+    for m in ED_CMD_RE.finditer(masked):
+        if is_command_position(masked, m.start()):
+            return "`ed` edits and writes the file directly through the shell."
 
     for m in REDIRECT_RE.finditer(masked):
         fd, op, amp, target = m.groups()
