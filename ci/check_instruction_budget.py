@@ -12,10 +12,13 @@ import sys
 from pathlib import Path
 
 # This is a RATCHET, not a target: lower it whenever CLAUDE.md shrinks, never
-# raise it without the dev's explicit say-so. Raised from 6558 on the dev's
+# raise it without the dev's explicit say-so. Raised to 7000 on the dev's
 # explicit say-so, 2026-09-04, because headroom had reached 1 token and was
-# blocking queued rules; todo 921 is the paired commitment to cut it back down.
-CEILING_TOKENS = 7000
+# blocking queued rules; todo 921 was the paired commitment to cut it back down,
+# and did, on 2026-09-10: two rule bodies moved to refs/ leaving the file at
+# 6345, so the ceiling returns to its pre-raise value rather than banking the
+# slack as permanent room to grow into.
+CEILING_TOKENS = 6558
 
 GATED_FILE = "CLAUDE.md"
 
