@@ -19,6 +19,13 @@ list, restart the app and retry first - MCP tools register at session start, so 
 than the tool won't see it yet. If it's still missing after a restart, stop and say so - do not
 fall back to `spawn_chat` + `close_session`, do not write a handoff file, and do not close.
 
+This restart advice is about `respawn` specifically, because it lives in Conductor's own
+generated per-session MCP config and can genuinely appear after a Conductor update. It does NOT
+generalize to any other missing MCP tool (Roblox Studio, figma, a project's `.mcp.json` server,
+etc.) - see `~/.claude/refs/conductor-mcp-constraint.md`: `--strict-mcp-config` makes Conductor's
+generated config the only MCP source a chat ever sees, so a non-conductor tool that isn't there
+cannot be made to appear by restarting, respawning, or editing config.
+
 `respawn` does both halves in one call, so there is no ordering to get wrong and no separate
 `close_session`. It also stamps `successor_of` on the new chat, which is what makes the app move
 Joe onto the successor in place - same window, same sidebar slot, composer draft intact. The

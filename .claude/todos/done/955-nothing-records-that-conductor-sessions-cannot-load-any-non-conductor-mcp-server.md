@@ -92,7 +92,7 @@ the existing MCP-adjacent line rather than adding a new always-loaded bullet.
   `approval_prompt` down again.
 - Or: run Claude Code in a plain terminal, where no `--strict-mcp-config` is passed and a project
   `.mcp.json` loads normally. **VERIFIED 2026-09-05**: `claude mcp list` from that repo's root
-  returned `Roblox_Studio: cmd.exe /c %LOCALAPPDATA%\Roblox\mcp.bat - ✔ Connected`, alongside
+  returned `Roblox_Studio: cmd.exe /c %LOCALAPPDATA%\Roblox\mcp.bat - âś” Connected`, alongside
   `mobbin` and `plugin:figma:figma` both reporting `! Needs authentication` - which is itself a live
   corroboration of the exact failure Conductor's todo 867 was defending against.
 
@@ -109,3 +109,4 @@ Full investigation trail, including the falsified attempt-1 diagnosis (a "pendin
 `.claude.json`, which was the wrong file all along), is in
 `C:\Users\tecno\Desktop\Projects\head_soccer_v_fable_oneshot\.for_bepy\mcp-respawn-log.md`.
 That file is git-excluded and lives in a project repo, which is why the durable half is here.
+- DONE 2026-09-10 via /loop-todos cycle 2. Recorded in all three places it needed to be. New refs/conductor-mcp-constraint.md holds the fact, the mechanism and the receipts. skills/respawn/SKILL.md:22-26 scopes its own restart advice: that advice is about the respawn tool specifically, because respawn lives in Conductor own generated per-session config and CAN genuinely appear after an update, and it explicitly does not generalise to any other missing MCP tool. The always-loaded half was added by the orchestrator rather than left to a follow-up, and folded into the existing restart bullet rather than added as a new one, which is what made it affordable: CLAUDE.md line 22 now carries the carve-out that a MISSING MCP tool is the exception no restart fixes, since Conductor spawns every chat with --strict-mcp-config so its generated config is the only MCP source that chat will ever see. Budget after: 6887 of 7000, headroom 113. The spawn.rs line numbers were re-verified rather than trusted: .arg("--mcp-config") at line 119 and .arg("--strict-mcp-config") at line 123, both inside the mcp_config_path block that opens at 116. python ci/run_all.py exits 0.
