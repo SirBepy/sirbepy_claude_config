@@ -72,7 +72,12 @@ file changes on disk - as a failed dispatch needing a scope split, never a same-
 **Scout before builder.** For anything non-obvious, dispatch a read-only scout first and have it
 return a condensed SPEC PACK, not a narrative: exact contracts (signatures, types, payload
 shapes), `file:line` pointers, and the specific gotchas a builder would otherwise trip on. The
-spec pack is what the builder prompt embeds, so the builder never has to re-derive the map.
+spec pack is what the builder prompt embeds, so the builder never has to re-derive the map. When
+the spec pack must outlive the session (a successor, a builder fan-out), the dispatch also names
+an output file under `docs/research/` for the scout to write with the Write tool, allowing that
+single file inside an otherwise `READ-ONLY DISPATCH`: a report living only in context is gone at
+the next respawn boundary, so anything a successor needs has to already be on disk before then
+(2026-09-05, head_soccer_v_fable_oneshot).
 
 **Todo-to-dispatch fidelity.** When a dispatch is built from a todo file, enumerate that todo's
 Approach and Acceptance items before writing the prompt, then confirm each one appears in the

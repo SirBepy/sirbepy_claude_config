@@ -51,3 +51,7 @@ rediscover them.
 - The three files above carry the additions, `python ci/run_all.py` passes.
 - A dry read of a fresh greenfield dispatch prompt written from the doctrine names the output
   file for the scout without the orchestrator improvising it.
+
+## Notes
+
+- Recorded 2026-09-11. Three gaps, each confirmed empty by grep before writing and each filled with one sentence carrying its reason rather than just the rule. delegation-doctrine gained the scout spec-pack-to-disk instruction, including the carve-out that a single named output file is allowed inside an otherwise read-only dispatch. brainstorm gained the respawn boundary at plan-commit time for a multi-phase greenfield build. respawn gained the note that a handoff prompt may open with an autopilot invocation, since nothing else carries the intended mode across. The shared reason in all three: design context is large and is discarded at the boundary, so whatever the build session needs must already be on disk.

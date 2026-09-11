@@ -64,7 +64,9 @@ Run `/close --skip-review --dont-close`'s Phases 0, 1, 3, and 4 exactly as writt
 ## Phase 4 - Compose the handoff prompt
 
 This is respawn's own addition on top of /close. Joe reads this message, so lead with what he'd
-want to see at a glance and put the depth underneath.
+want to see at a glance and put the depth underneath. Handing off a build phase after a design
+session, the prompt may open with `/autopilot` instead of plain prose, since the successor starts
+fresh with only this message and nothing else carries the intended mode forward.
 
 ```
 We're continuing <one line: the original ask, not the last subtask>.
