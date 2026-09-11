@@ -349,10 +349,11 @@ else
   echo "PASS: archive shape - the destination add landed"
 fi
 
-# --- archive shape, forgotten source half: naming only the destination must NOT silently make
-# the deleted source disappear from view - it stays an uncommitted, unstaged deletion in the
-# working tree afterwards, which is the exact failure this todo's wrapper exists to prevent by
-# always deriving both halves itself ---
+# --- archive shape, forgotten source half (todo 983): naming only the destination must now be
+# CAUGHT by the coverage check, not silently commit while the source rides along as an invisible
+# unstaged delete. This replaces the old assertion that it "still commits" (that was the exact
+# defect todo 983 fixes) - the coverage check now widens to unstaged deletions and matches by
+# basename across directories, so it sees the source half and refuses before ever committing ---
 r14=$(new_repo); tmp_dirs+=("$r14")
 mkdir -p "$r14/todos" "$r14/todos/done"
 printf 'the archived todo\n' > "$r14/todos/978-example.md"
@@ -363,19 +364,86 @@ sha=$(git -C "$r14" rev-parse HEAD)
 mv "$r14/todos/978-example.md" "$r14/todos/done/978-example.md"
 out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r14" --expect-branch "$branch" --expect-sha "$sha" \
   -m "destination only, forgot the source" -- todos/done/978-example.md 2>&1); rc=$?
-check "archive shape: destination-only pathspec still commits (nothing forces the caller here)" \
-  0 '' 'REFUSED' "$out" "$rc"
+check "archive shape: destination-only pathspec is caught by the coverage check, names the source" \
+  1 'coverage-check.*REFUSED.*todos/978-example\.md' '' "$out" "$rc"
+if [ "$(git -C "$r14" rev-parse HEAD)" != "$sha" ]; then
+  echo "FAIL: a refused coverage-check must not have committed anything"
+  fail=1
+else
+  echo "PASS: refused coverage-check left HEAD untouched"
+fi
 if git -C "$r14" ls-files --error-unmatch -- todos/978-example.md >/dev/null 2>&1; then
   echo "PASS: forgotten-source case - source deletion left uncommitted and visible in git status, not silently dropped"
 else
   echo "FAIL: forgotten-source case - source path vanished from the index entirely (should still be tracked, just deleted on disk)"
   fail=1
 fi
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r14" --expect-branch "$branch" --expect-sha "$sha" \
+  --force coverage -m "destination only, forced through" -- todos/done/978-example.md 2>&1); rc=$?
+check "--force coverage proceeds past the same forgotten-source hit" \
+  0 'OVERRIDDEN \(--force coverage\).*todos/978-example\.md' 'REFUSED' "$out" "$rc"
 if [ -z "$(git -C "$r14" status --porcelain -- todos/978-example.md)" ]; then
-  echo "FAIL: forgotten-source case - git status shows nothing for the un-pathspec'd deletion (it should show as a pending unstaged delete)"
+  echo "FAIL: forgotten-source case - git status shows nothing for the un-pathspec'd deletion after forcing through (it should show as a pending unstaged delete)"
   fail=1
 else
-  echo "PASS: forgotten-source case - git status still shows the pending unstaged delete, confirming a caller-side omission is not swallowed"
+  echo "PASS: forgotten-source case - git status still shows the pending unstaged delete after forcing through, confirming --force coverage does not silently fix it for the caller either"
+fi
+
+# --- unrelated STAGED deletion (todo 983 regression guard): another session's own staged delete,
+# unrelated directory AND unrelated basename to anything in THIS pathspec, must stay a
+# non-blocking warning - refusing here would brick /commit for every concurrent session sharing
+# this checkout, which is the exact regression the coverage check must never introduce ---
+r17=$(new_repo); tmp_dirs+=("$r17")
+mkdir -p "$r17/peer-dir"
+printf 'peer content\n' > "$r17/peer-dir/unrelated-peer-file.txt"
+printf 'my content\n' > "$r17/mine.txt"
+git -C "$r17" add peer-dir/unrelated-peer-file.txt mine.txt
+git -C "$r17" commit -q -m "seed peer file + mine.txt"
+branch=$(git -C "$r17" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r17" rev-parse HEAD)
+git -C "$r17" rm -q peer-dir/unrelated-peer-file.txt
+printf 'my content EDITED\n' > "$r17/mine.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r17" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "edit mine.txt, unrelated staged delete alongside it" -- mine.txt 2>&1); rc=$?
+check "an unrelated STAGED deletion (different dir, different basename) only warns, never refuses" \
+  0 'coverage-check.*warning, non-blocking.*peer-dir/unrelated-peer-file\.txt' 'coverage-check.*REFUSED' "$out" "$rc"
+if [ "$(git -C "$r17" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: the unrelated-staged-deletion case did not commit mine.txt"
+  fail=1
+else
+  echo "PASS: the unrelated-staged-deletion case committed mine.txt despite the peer's staged delete"
+fi
+
+# --- unrelated UNSTAGED deletion (todo 983 regression guard): another session's raw filesystem
+# delete of a tracked file it never staged - unrelated directory AND unrelated basename - must
+# also stay a non-blocking warning. This is the exact new READ path this todo adds (unstaged
+# `git diff --name-status`), so it is the case most likely for a careless fix to turn into a
+# refusal by accident ---
+r18=$(new_repo); tmp_dirs+=("$r18")
+mkdir -p "$r18/other-peer-dir"
+printf 'peer content\n' > "$r18/other-peer-dir/leftover.txt"
+printf 'my content\n' > "$r18/mine.txt"
+git -C "$r18" add other-peer-dir/leftover.txt mine.txt
+git -C "$r18" commit -q -m "seed peer leftover + mine.txt"
+branch=$(git -C "$r18" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r18" rev-parse HEAD)
+rm "$r18/other-peer-dir/leftover.txt"
+printf 'my content EDITED\n' > "$r18/mine.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r18" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "edit mine.txt, unrelated unstaged delete alongside it" -- mine.txt 2>&1); rc=$?
+check "an unrelated UNSTAGED deletion (different dir, different basename) only warns, never refuses" \
+  0 'coverage-check.*warning, non-blocking.*other-peer-dir/leftover\.txt' 'coverage-check.*REFUSED' "$out" "$rc"
+if [ "$(git -C "$r18" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: the unrelated-unstaged-deletion case did not commit mine.txt"
+  fail=1
+else
+  echo "PASS: the unrelated-unstaged-deletion case committed mine.txt despite the peer's unstaged delete"
+fi
+if ! git -C "$r18" ls-files --error-unmatch -- other-peer-dir/leftover.txt >/dev/null 2>&1; then
+  echo "FAIL: the peer's unrelated unstaged delete must not have been touched by this commit at all"
+  fail=1
+else
+  echo "PASS: the peer's unrelated unstaged delete is untouched (still tracked, just missing on disk, exactly as the peer left it)"
 fi
 
 # --- --own-since fixture: seed, then two "own" commits touching the same file, mirroring a

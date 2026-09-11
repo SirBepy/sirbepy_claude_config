@@ -366,26 +366,52 @@ else
   fi
 fi
 
-# --- staged-pathspec coverage check: a half-committed move stages an add and a delete, and
-# naming only the destination silently commits the copy while the delete rides along unreported
-# ---
+# --- pathspec coverage check: a half-committed move leaves an add and a delete apart, and naming
+# only the destination silently commits the copy while the delete rides along unreported (todo
+# 495/964) - or, todo 983, never even rides along, because an archival move (complete-todo.ps1's
+# raw filesystem Move-Item) never touches the index at all. That source deletion is invisible to
+# `git diff --cached` (nothing was ever staged) AND falls outside the old same-directory heuristic
+# (.claude/todos/<id>-*.md -> .claude/todos/done/<id>-*.md are different directories), so it needs
+# both a wider read (unstaged working-tree deletions, not only staged ones) and a second match
+# rule (same basename, any directory) alongside the original directory-match rule that git's own
+# rename detection already fed correctly for years.
 declare -A in_pathspec
 for f in "${files[@]}"; do in_pathspec["$f"]=1; done
 coverage_move=()
 coverage_other=()
+declare -A move_seen other_seen
 check_coverage_hit() {
-  local p="$1" pd d f
+  # $1: a path NOT in the pathspec that showed up as a delete (or the old half of a rename) in
+  # either diff below. Matched against $files directly, not against the diff's own "add" side -
+  # an archival destination is frequently still untracked (not yet `git add`-ed when this check
+  # runs), so it would never appear as an "A" in any git diff for this check to pair it against.
+  #   - same directory as a pathspec file: git's own rename detection already paired an old path
+  #     with a differently-named new path (e.g. src/old.txt -> src/new.txt) via R-status, so a
+  #     directory match is sufficient signal there (todo 495/964's original heuristic, unchanged).
+  #   - same basename as a pathspec file, regardless of directory (todo 983): the archival shape,
+  #     where <id>-<slug>.md is identical on both sides and only the directory differs.
+  local p="$1" pd pb d f
   [ -n "${in_pathspec[$p]:-}" ] && return
   pd=$(dirname -- "$p")
+  pb=$(basename -- "$p")
   for f in "${files[@]}"; do
     d=$(dirname -- "$f")
-    if [ "$d" = "$pd" ]; then
-      coverage_move+=("$p")
+    if [ "$d" = "$pd" ] || [ "$(basename -- "$f")" = "$pb" ]; then
+      if [ -z "${move_seen[$p]:-}" ]; then
+        move_seen["$p"]=1
+        coverage_move+=("$p")
+      fi
       return
     fi
   done
-  coverage_other+=("$p")
+  if [ -z "${other_seen[$p]:-}" ]; then
+    other_seen["$p"]=1
+    coverage_other+=("$p")
+  fi
 }
+
+# Staged half: `git diff --cached --name-status` - a `git mv`/`git rm`/`git add` already sitting
+# in the index. Unchanged from before todo 983.
 staged=$(git_c diff --cached --name-status)
 while IFS=$'\t' read -r status path rest; do
   [ -z "$path" ] && continue
@@ -397,16 +423,31 @@ while IFS=$'\t' read -r status path rest; do
   fi
 done <<<"$staged"
 
+# Unstaged half (todo 983): `git diff --name-status` with no `--cached` diffs the index against
+# the working tree, so a tracked file that a raw filesystem move deleted from disk but never
+# staged (`deleted-unstaged` in classify_path above) shows up here as a plain `D` - the ONLY place
+# it shows up anywhere in git, since `--cached` never saw it. Only D and the old side of an R are
+# read: an untracked destination add is already known directly from $files and never appears in
+# this diff at all (untracked files are invisible to `git diff` without `--others`).
+unstaged=$(git_c diff --name-status)
+while IFS=$'\t' read -r status path rest; do
+  [ -z "$path" ] && continue
+  case "$status" in
+    D*) check_coverage_hit "$path" ;;
+    R*) check_coverage_hit "$path" ;;
+  esac
+done <<<"$unstaged"
+
 if [ "${#coverage_move[@]}" -gt 0 ]; then
   if has_force coverage; then
-    printf '[coverage-check] OVERRIDDEN (--force coverage): staged path(s) sharing a directory with the pathspec are not in it: %s\n' "${coverage_move[*]}"
+    printf '[coverage-check] OVERRIDDEN (--force coverage): path(s) matching the pathspec by directory or basename are not in it: %s\n' "${coverage_move[*]}"
   else
-    printf '[coverage-check] REFUSED: staged path(s) sharing a directory with the pathspec are not in it (possible half-committed move) - widen the pathspec, or rerun with --force coverage if deliberately leaving it behind: %s\n' "${coverage_move[*]}"
+    printf '[coverage-check] REFUSED: path(s) matching the pathspec by directory or basename are not in it (possible half-committed move) - widen the pathspec, or rerun with --force coverage if deliberately leaving it behind: %s\n' "${coverage_move[*]}"
     exit 1
   fi
 fi
 if [ "${#coverage_other[@]}" -gt 0 ]; then
-  printf '[coverage-check] warning, non-blocking (unrelated directory, likely another session'"'"'s own staged work): %s\n' "${coverage_other[*]}"
+  printf '[coverage-check] warning, non-blocking (unrelated path, staged or unstaged - likely another session'"'"'s own work): %s\n' "${coverage_other[*]}"
 fi
 if [ "${#coverage_move[@]}" -eq 0 ] && [ "${#coverage_other[@]}" -eq 0 ]; then
   printf '[coverage-check] clean\n'
