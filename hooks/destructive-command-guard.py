@@ -278,6 +278,53 @@ PUBLISH_NO_DRYRUN_TOOLS = (
     ),
 )
 
+# Help-invocation exemption (todo 982 step 2). A segment carrying a bare
+# --help/-h token short-circuits to the tool's own help output instead of
+# reaching the real publish/push path - reproduced directly on this machine
+# 2026-09-11 for every installed anchor: `npm|pnpm|bun|cargo|yarn|wally
+# publish --help` and each tool's own `-h` alias all printed only usage text
+# and exited 0, never a network call. gem and twine aren't installed here to
+# reproduce locally, but both build their CLI on OptionParser/argparse, which
+# auto-registers -h/--help as this same short-circuit by default, so the
+# same exemption applies to their anchors too.
+#
+# The other real-world shape named in todo 982 - `npm help publish`,
+# `gem help push` (the tool name followed by a bare "help" verb, THEN the
+# real verb) - needs no code change: PUBLISH_DRYRUN_TOOLS/PUBLISH_NO_DRYRUN_
+# TOOLS anchor on "<tool> <verb>" at the start of the segment, and "help"
+# sitting where the verb is expected already fails that match today. Verified
+# directly (npm/pnpm/bun/cargo/yarn/wally, all installed) and locked in below
+# as regression cases so a future anchor-table edit can't quietly widen past
+# it.
+#
+# Scope: this predicate is only wired into the two publish tables below,
+# which are the anchors this file itself owns. It is NOT wired into
+# match_diskpart/match_disk_doctor_delete (also in this file, but a help
+# exemption there needs its own per-tool verification this dispatch didn't
+# do), and it does NOT reach the CORE_CHECKS/MIDDLE_CHECKS anchors that live
+# in the off-limits sibling modules (_destructive_guard_fs.py's rm_rf/
+# remove_item/chmod_777/mkfs_dd/disk_wipe_win, _destructive_guard_sql.py's
+# DROP/TRUNCATE/DELETE-no-WHERE, _destructive_guard_git.py's push --force) -
+# those anchors' own loops would need the same "skip a help segment" check
+# added inside files this dispatch was not permitted to touch. Data point 3
+# in todo 982 (a Remove-Item anchor pulling a token out of an unrelated
+# argument) is a different bug in kind - it is not a help invocation at all,
+# it is the anchor associating the wrong token with the command - and stays
+# out of scope per todo 982 step 5, deferred with steps 3 and 5.
+#
+# Checked per-segment (verb_segments already splits on ; && || | and
+# newlines), never against the whole command string: a compound like
+# `npm publish && cargo publish --help` still denies the npm half, because
+# --help sits in cargo's own segment, not npm's. Keying off the raw command
+# string instead would have been the exact over-match this todo exists to
+# fix, reproduced in the opposite direction.
+HELP_FLAG_RE = re.compile(r"(?<!\S)(?:--help|-h)(?!\S)", re.IGNORECASE)
+
+
+def is_help_invocation(seg: str) -> bool:
+    return bool(HELP_FLAG_RE.search(seg))
+
+
 SQUOTE_RE = re.compile(r"'[^']*'")
 DQUOTE_RE = re.compile(r'"(?:[^"\\]|\\.)*"')
 PIPE_TO_SHELL_RE = re.compile(
@@ -292,6 +339,8 @@ def mask_quotes(command: str) -> str:
 
 def match_publish_no_dryrun(command: str):
     for seg in verb_segments(command):
+        if is_help_invocation(seg):
+            continue
         for anchor_re, flag_re, flag_text in PUBLISH_DRYRUN_TOOLS:
             if anchor_re.match(seg) and not flag_re.search(seg):
                 return f"package publish with no {flag_text} ships to a public registry irreversibly; add {flag_text} first"
@@ -307,6 +356,8 @@ def match_publish_no_preflight(command: str):
     PUBLISH_NO_DRYRUN_TOOLS instead.
     """
     for seg in verb_segments(command):
+        if is_help_invocation(seg):
+            continue
         for anchor_re, message in PUBLISH_NO_DRYRUN_TOOLS:
             if anchor_re.match(seg):
                 return message

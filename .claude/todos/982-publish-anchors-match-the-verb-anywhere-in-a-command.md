@@ -90,3 +90,39 @@ This settles Approach step 5 before anyone starts: the over-match lives in how t
 tokens with a command, not in the publish table. Any fix scoped only to publish anchors leaves the
 destructive-path anchors matching the same way. It also shows the failure is not limited to a verb
 appearing in argument text; a bare slash-prefixed word anywhere in the command reads as a path.
+
+### Approach step 2 DONE, steps 3 and 5 deliberately NOT, 2026-09-11
+
+The help-invocation exemption shipped. The rest was withheld on purpose: steps 3 and 5 change how a
+CORE safety guard associates tokens with a command, and the direction of that change is "fire less",
+which is not a call an unattended run should make. Step 2 is different in kind, and that is why it
+was taken: a command carrying a help flag does not execute the destructive action, so exempting it
+cannot let a real destructive command through.
+
+**Shipped.** `is_help_invocation()` in `hooks/destructive-command-guard.py`, applied per
+`verb_segments()` segment inside `match_publish_no_dryrun` and `match_publish_no_preflight`. Handles
+`--help`, `-h`, and the swapped `<tool> help <verb>` form. That last one needed no code: the anchors
+are anchored at the verb position, so `npm help publish` never matched in the first place. It is now
+covered by regression tests so a future anchor-table edit cannot silently break it.
+
+**Scoped per segment, not per command string**, which is the trap this todo is itself about,
+reproduced in the opposite direction. A help flag in one segment must not excuse an anchor hit in
+another. Both compound cases are tested and both still block.
+
+Suite went 148 to 174 cases. Verified independently by the orchestrator across 15 invocations: five
+tools' help forms allowed, `-h` allowed, the swapped `help` form allowed, four bare destructive forms
+still caught, both compound traps still caught, and a real preflight still allowed.
+
+### What is left
+
+- **Step 3, the real one.** A verb inside quoted text or a heredoc body still matches. Two of this
+  todo's three data points are that shape, including the one where a `Remove-Item` call was refused
+  because the token `/loop-todos` appeared in an unrelated argument several hundred characters away.
+- **Step 5.** The exemption covers the publish anchors only. `match_rm_rf`, `match_remove_item`,
+  `match_chmod_777`, `match_mkfs_dd`, `match_disk_wipe_win`, the SQL matchers and the git
+  force-push/reset matchers live in sibling `_destructive_guard_{fs,sql,git}.py` modules that were
+  outside the dispatch's lane. `match_diskpart` and `match_disk_doctor_delete` live in the main file
+  but were left alone too: whether a help flag is meaningful for those tools was not verified.
+- Data point 3 already settles the question step 5 poses: the over-match is in the matching layer,
+  not in the publish table, so the eventual fix belongs there rather than repeated per anchor family.
+
