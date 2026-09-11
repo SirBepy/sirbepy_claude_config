@@ -14,7 +14,7 @@
 #
 # Usage:
 #   commit-pathspec.sh [-C|--repo <repo>] --expect-branch <b> --expect-sha <sha>
-#     [--own <sha,sha,...>] [--own-range <file>:<a>-<b>[,<a>-<b>...]]...
+#     [--own <sha,sha,...>] [--own-since <sha>] [--own-range <file>:<a>-<b>[,<a>-<b>...]]...
 #     [--force <check>[,<check>...]] -m <message> -- <file> [<file> ...]
 #
 # --own-range is OPTIONAL per file: when a file has no explicit range, this script derives it
@@ -36,6 +36,20 @@
 # on every new file in an almost-always-multi-session checkout would make the common case (all
 # new files, todo 924's own Notes) constantly require --force for no real safety gain.
 #
+# --own-since <sha> resolves to `git log --format=%H <sha>..HEAD` and merges that sha list into
+# --own (todo 978) - the retyped `git log --format=%H <session-start>..HEAD` substitution every
+# caller previously rebuilt by hand before each call. It ALSO changes the foreign-hunk-check
+# baseline for every file that has no explicit --own-range: the auto-derive diffs against <sha>
+# instead of HEAD, so the derived range covers everything this session's own commits (sha..HEAD)
+# plus its current working-tree changes to that file, not only the currently-uncommitted delta.
+# That range is TRUSTED regardless of live session-marker count, the same as a caller-declared
+# --own-range, because it traces to a concrete, git-verifiable commit list (git answered "what did
+# sha..HEAD touch", not "what is currently sitting uncommitted") rather than the assumption the
+# marker gate exists to police in the first place: that whatever is uncommitted right now must be
+# this session's own. A file that also has an explicit --own-range keeps using that declared
+# range instead - --own-since only fills the gap for files that would otherwise fall back to the
+# HEAD-relative auto-derive.
+#
 # --force values: head-guard, overlap, foreign-hunk, coverage. Never: branch-guard, prefilter.
 #
 # Exit 0: committed, full sha printed on the last line. Exit 1: a check refused (nothing
@@ -49,6 +63,7 @@ repo_in=""
 expect_branch=""
 expect_sha=""
 own_shas=""
+own_since=""
 declare -A explicit_ranges
 force_list=""
 message=""
@@ -60,6 +75,7 @@ while [ $# -gt 0 ]; do
     --expect-branch) expect_branch="${2:-}"; shift 2 ;;
     --expect-sha) expect_sha="${2:-}"; shift 2 ;;
     --own) own_shas="${2:-}"; shift 2 ;;
+    --own-since) own_since="${2:-}"; shift 2 ;;
     --own-range)
       spec="${2:-}"; shift 2
       key="${spec%%:*}"
@@ -100,6 +116,25 @@ if ! git -C "$repo_check" rev-parse --show-toplevel >/dev/null 2>&1; then
 fi
 repo_root=$(git -C "$repo_check" rev-parse --show-toplevel)
 git_c() { git -C "$repo_root" "$@"; }
+
+# --own-since resolution: a shorthand for "every commit since <sha> is mine" (todo 978). Merged
+# into own_shas so overlap-check.sh's own-commit exclusion sees no difference between a hand-typed
+# --own and a resolved --own-since; the foreign-hunk auto-derive baseline switch lives further
+# down, where the per-file diff is actually taken.
+if [ -n "$own_since" ]; then
+  if ! git_c rev-parse --verify "${own_since}^{commit}" >/dev/null 2>&1; then
+    printf 'ERROR: --own-since %s does not resolve to a commit in %s\n' "$own_since" "$repo_root"
+    exit 2
+  fi
+  since_shas=$(git_c log --format=%H "${own_since}..HEAD" | tr '\n' ',' | sed 's/,$//')
+  if [ -n "$since_shas" ]; then
+    since_count=$(printf '%s' "$since_shas" | tr ',' '\n' | grep -c .)
+    if [ -n "$own_shas" ]; then own_shas="$own_shas,$since_shas"; else own_shas="$since_shas"; fi
+    printf '[own-since] resolved %s..HEAD to %d commit(s): %s\n' "$own_since" "$since_count" "$since_shas"
+  else
+    printf '[own-since] resolved %s..HEAD to 0 commit(s) (HEAD is at or behind %s)\n' "$own_since" "$own_since"
+  fi
+fi
 
 # Per-hunk `@@ -a,b +c,d @@` -> own range c-(c+d-1), the exact hand conversion SKILL.md step 8
 # describes; a pure-deletion hunk (+c,0) contributes no new-file lines and is skipped, matching
@@ -236,10 +271,19 @@ fi
 session_marker_dir="${COMMIT_PATHSPEC_SESSION_MARKER_DIR:-$dir/../../hooks/.session-markers}"
 session_marker_count=0
 if [ -d "$session_marker_dir" ]; then
+  # Count ONLY bare session-id markers. write-session-marker.ps1 names its file exactly
+  # <session-id>, a UUID, but other tooling drops differently-named files in this same
+  # directory: a silent-turns-<id> counter, and precompact-backup.py's per-session backups
+  # (todo 426). Globbing everything counted those as live peers, so a session genuinely
+  # alone in the tree could be refused an auto-derived range by its own leftovers.
   shopt -s nullglob
-  session_markers=("$session_marker_dir"/*)
+  for marker_path in "$session_marker_dir"/*; do
+    case "${marker_path##*/}" in
+      [0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])
+        session_marker_count=$((session_marker_count + 1)) ;;
+    esac
+  done
   shopt -u nullglob
-  session_marker_count=${#session_markers[@]}
 fi
 # Exactly one marker (this session's own) or zero (not written yet) - this session is alone, so
 # every current hunk really is its own and an auto-derived range is a true "clean" verdict. Two
@@ -255,6 +299,10 @@ unverified_files=()
 for f in "${diffable_files[@]}"; do
   if [ "${class_of[$f]}" = "untracked" ]; then
     diff_out=$(git_c diff --no-index -- /dev/null "$f" 2>/dev/null)
+  elif [ -n "$own_since" ]; then
+    # --own-since baseline (todo 978): everything this session's own commits (own_since..HEAD)
+    # plus its current working tree changed for this file, not only the uncommitted delta.
+    diff_out=$(git_c diff "$own_since" -- "$f")
   else
     diff_out=$(git_c diff HEAD -- "$f")
   fi
@@ -268,7 +316,12 @@ for f in "${diffable_files[@]}"; do
       derive_notes+="  - $f: pure deletion, no new-file lines to own, skipped for this check"$'\n'
       continue
     fi
-    if [ "$multi_session" -eq 1 ] && [ "${class_of[$f]}" != "untracked" ]; then
+    if [ -n "$own_since" ] && [ "${class_of[$f]}" != "untracked" ]; then
+      # Traces to a concrete, git-verifiable commit list (own_since..HEAD), not an assumption
+      # that whatever is currently uncommitted must be mine - the same trust level as a
+      # caller-declared --own-range (todo 978). Bypasses the multi-session gate below.
+      derive_notes+="  - $f: auto-derived own-range $spec (derived since $own_since, trusted - own commit history, todo 978)"$'\n'
+    elif [ "$multi_session" -eq 1 ] && [ "${class_of[$f]}" != "untracked" ]; then
       unverified_files+=("$f")
       derive_notes+="  - $f: auto-derived own-range $spec, UNVERIFIED ($session_marker_count live session markers - a peer may hold lines in this file, todo 924 REOPENED)"$'\n'
     else

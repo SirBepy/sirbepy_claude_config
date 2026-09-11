@@ -60,9 +60,15 @@ make_marker_dir() {
   d=$(mktemp -d) || { echo "FAIL: mktemp -d (marker dir)"; exit 1; }
   i=1
   while [ "$i" -le "$n" ]; do
-    printf 'x' > "$d/session-$i"
+    # UUID-shaped on purpose: the count filter in commit-pathspec.sh only recognises a bare
+    # session-id marker, so a fake named session-$i would be skipped and every multi-session
+    # assertion here would pass for the wrong reason.
+    printf 'x' > "$d/$(printf '%08d' "$i")-0000-4000-8000-000000000000"
     i=$((i + 1))
   done
+  # A non-marker file the filter must IGNORE, in every marker dir this suite builds: proves the
+  # count is not just globbing the directory (todo 426 put precompact backups in here).
+  printf 'x' > "$d/precompact-00000000-0000-4000-8000-000000000000.json"
   printf '%s' "$d"
 }
 solo_marker_dir=$(make_marker_dir 1)
@@ -302,6 +308,177 @@ printf 'brand new\nsecond line\n' > "$r12/brand-new.txt"
 out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$multi_marker_dir" "$cp" -C "$r12" --expect-branch "$branch" --expect-sha "$sha" -m "untracked exempt from the multi-session gate" -- brand-new.txt 2>&1); rc=$?
 check "an untracked file's auto-derived range is exempt from the 2+-marker gate" \
   0 'auto-derived own-range 1-2 \(every current hunk assumed own' 'UNVERIFIED|REFUSED' "$out" "$rc"
+
+# --- archive shape (todo 978): a pathspec carrying a DELETED source path AND an ADDED
+# destination path together, in different directories (mirrors .claude/todos/<id>-*.md moving to
+# .claude/todos/done/<id>-*.md) - the exact shape the coverage-check's same-directory heuristic
+# cannot see (source and destination sit in different directories, so a caller who forgot the
+# source half would fall into the non-blocking coverage_other warning, not coverage_move) and the
+# shape a raw filesystem move (no `git rm`) leaves as a tracked-but-missing, never-staged file
+# (deleted-unstaged) rather than the deleted-staged case r2 above already covers ---
+r13=$(new_repo); tmp_dirs+=("$r13")
+mkdir -p "$r13/todos" "$r13/todos/done"
+printf 'the archived todo\n' > "$r13/todos/978-example.md"
+git -C "$r13" add todos/978-example.md
+git -C "$r13" commit -q -m "seed todos/978-example.md"
+branch=$(git -C "$r13" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r13" rev-parse HEAD)
+# A raw move, not `git mv` - matches complete-todo.ps1's Move-Item, which never touches the
+# index. The source stays tracked (still in the index) but is gone from disk: deleted-unstaged.
+mv "$r13/todos/978-example.md" "$r13/todos/done/978-example.md"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r13" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "archive todo 978" -- todos/978-example.md todos/done/978-example.md 2>&1); rc=$?
+check "archive shape: deleted source + added destination together commits cleanly" \
+  0 'todos/978-example\.md: deleted-unstaged' 'REFUSED|ERROR' "$out" "$rc"
+if [ -n "$(git -C "$r13" status --porcelain)" ]; then
+  echo "FAIL: archive shape - working tree not clean after the commit: $(git -C "$r13" status --porcelain)"
+  fail=1
+else
+  echo "PASS: archive shape - working tree clean after the commit"
+fi
+if git -C "$r13" ls-files --error-unmatch -- todos/978-example.md >/dev/null 2>&1; then
+  echo "FAIL: archive shape - the source deletion did not land (still tracked)"
+  fail=1
+else
+  echo "PASS: archive shape - the source deletion landed"
+fi
+if ! git -C "$r13" ls-files --error-unmatch -- todos/done/978-example.md >/dev/null 2>&1; then
+  echo "FAIL: archive shape - the destination add did not land"
+  fail=1
+else
+  echo "PASS: archive shape - the destination add landed"
+fi
+
+# --- archive shape, forgotten source half: naming only the destination must NOT silently make
+# the deleted source disappear from view - it stays an uncommitted, unstaged deletion in the
+# working tree afterwards, which is the exact failure this todo's wrapper exists to prevent by
+# always deriving both halves itself ---
+r14=$(new_repo); tmp_dirs+=("$r14")
+mkdir -p "$r14/todos" "$r14/todos/done"
+printf 'the archived todo\n' > "$r14/todos/978-example.md"
+git -C "$r14" add todos/978-example.md
+git -C "$r14" commit -q -m "seed todos/978-example.md"
+branch=$(git -C "$r14" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r14" rev-parse HEAD)
+mv "$r14/todos/978-example.md" "$r14/todos/done/978-example.md"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r14" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "destination only, forgot the source" -- todos/done/978-example.md 2>&1); rc=$?
+check "archive shape: destination-only pathspec still commits (nothing forces the caller here)" \
+  0 '' 'REFUSED' "$out" "$rc"
+if git -C "$r14" ls-files --error-unmatch -- todos/978-example.md >/dev/null 2>&1; then
+  echo "PASS: forgotten-source case - source deletion left uncommitted and visible in git status, not silently dropped"
+else
+  echo "FAIL: forgotten-source case - source path vanished from the index entirely (should still be tracked, just deleted on disk)"
+  fail=1
+fi
+if [ -z "$(git -C "$r14" status --porcelain -- todos/978-example.md)" ]; then
+  echo "FAIL: forgotten-source case - git status shows nothing for the un-pathspec'd deletion (it should show as a pending unstaged delete)"
+  fail=1
+else
+  echo "PASS: forgotten-source case - git status still shows the pending unstaged delete, confirming a caller-side omission is not swallowed"
+fi
+
+# --- --own-since fixture: seed, then two "own" commits touching the same file, mirroring a
+# session that committed twice before reaching for commit-pathspec.sh a third time. A fresh
+# instance is built per scenario below rather than reusing one repo across several committing
+# calls, so an earlier scenario's real commit never drifts the next scenario's --expect-sha.
+make_own_since_fixture() {
+  local d
+  d=$(new_repo)
+  printf 'seed\n' > "$d/own-since.txt"
+  git -C "$d" add own-since.txt
+  git -C "$d" commit -q -m "seed own-since.txt"
+  printf '%s' "$d"
+}
+
+# --- --own-since: resolves <sha>..HEAD into the same sha list --own accepts, removing the
+# retyped `git log --format=%H <session-start>..HEAD` substitution (todo 978) ---
+r15=$(make_own_since_fixture); tmp_dirs+=("$r15")
+since_sha=$(git -C "$r15" rev-parse HEAD)
+branch=$(git -C "$r15" rev-parse --abbrev-ref HEAD)
+printf 'seed\ncommit one\n' > "$r15/own-since.txt"
+git -C "$r15" commit -q -am "own commit one"
+commit_one=$(git -C "$r15" rev-parse HEAD)
+printf 'seed\ncommit one\ncommit two\n' > "$r15/own-since.txt"
+git -C "$r15" commit -q -am "own commit two"
+sha=$(git -C "$r15" rev-parse HEAD)
+commit_two=$(git -C "$r15" rev-parse HEAD)
+printf 'seed\ncommit one\ncommit two\nworking tree edit\n' > "$r15/own-since.txt"
+# `git log --format=%H a..b` lists newest first, so commit two (== HEAD) precedes commit one.
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r15" --expect-branch "$branch" --expect-sha "$sha" \
+  --own-since "$since_sha" -m "own-since resolves the sha list" -- own-since.txt 2>&1); rc=$?
+check "--own-since resolves <sha>..HEAD to the 2 commits actually made since it" \
+  0 "own-since. resolved $since_sha..HEAD to 2 commit\(s\): $commit_two,$commit_one" 'REFUSED' "$out" "$rc"
+
+# --- --own-since: an invalid ref is a usage error (exit 2), not a silent no-op - a fresh fixture
+# so an earlier scenario's real commit can never be mistaken for one this call made ---
+r15b=$(make_own_since_fixture); tmp_dirs+=("$r15b")
+since_sha_b=$(git -C "$r15b" rev-parse HEAD)
+branch_b=$(git -C "$r15b" rev-parse --abbrev-ref HEAD)
+printf 'seed\ncommit one\n' > "$r15b/own-since.txt"
+git -C "$r15b" commit -q -am "own commit one"
+printf 'seed\ncommit one\ncommit two\n' > "$r15b/own-since.txt"
+git -C "$r15b" commit -q -am "own commit two"
+sha_b=$(git -C "$r15b" rev-parse HEAD)
+printf 'seed\ncommit one\ncommit two\nworking tree edit\n' > "$r15b/own-since.txt"
+out=$("$cp" -C "$r15b" --expect-branch "$branch_b" --expect-sha "$sha_b" \
+  --own-since "not-a-real-sha" -m "should not run" -- own-since.txt 2>&1); rc=$?
+check "--own-since with an unresolvable ref exits 2, not silently ignored" \
+  2 'does not resolve to a commit' '' "$out" "$rc"
+if [ "$(git -C "$r15b" rev-parse HEAD)" != "$sha_b" ]; then
+  echo "FAIL: an ERROR exit from bad --own-since must not have committed anything"
+  fail=1
+else
+  echo "PASS: bad --own-since left HEAD untouched"
+fi
+
+# --- --own-since: the foreign-hunk own-range for a file changed across the SINCE commits plus
+# the current working tree is derived from that wider baseline and TRUSTED regardless of live
+# session-marker count (todo 978) - stronger evidence than the HEAD-only auto-derive, which the
+# same 2+-marker dir makes UNVERIFIED (proven above by r9). This is the interaction the todo asks
+# to be resolved and documented: --own-since satisfies the gate the way a declared --own-range
+# does, because the range traces to a concrete, git-verifiable commit list rather than "whatever
+# is uncommitted right now" - a fresh fixture again, since this scenario also commits ---
+r15c=$(make_own_since_fixture); tmp_dirs+=("$r15c")
+since_sha_c=$(git -C "$r15c" rev-parse HEAD)
+branch_c=$(git -C "$r15c" rev-parse --abbrev-ref HEAD)
+printf 'seed\ncommit one\n' > "$r15c/own-since.txt"
+git -C "$r15c" commit -q -am "own commit one"
+printf 'seed\ncommit one\ncommit two\n' > "$r15c/own-since.txt"
+git -C "$r15c" commit -q -am "own commit two"
+sha_c=$(git -C "$r15c" rev-parse HEAD)
+printf 'seed\ncommit one\ncommit two\nworking tree edit\n' > "$r15c/own-since.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$multi_marker_dir" "$cp" -C "$r15c" --expect-branch "$branch_c" --expect-sha "$sha_c" \
+  --own-since "$since_sha_c" -m "own-since bypasses the multi-session gate" -- own-since.txt 2>&1); rc=$?
+check "--own-since's wider baseline is trusted under 2+ live markers, no --force needed" \
+  0 'derived since '"$since_sha_c"', trusted - own commit history, todo 978' 'UNVERIFIED|REFUSED' "$out" "$rc"
+new_head=$(git -C "$r15c" rev-parse HEAD)
+if [ "$new_head" = "$sha_c" ]; then
+  echo "FAIL: --own-since commit under 2+ markers did not land"
+  fail=1
+else
+  echo "PASS: --own-since commit under 2+ markers landed"
+fi
+
+# --- --own-since: the plain --own form is unchanged - passing an (unrelated, unreachable) sha
+# via --own alongside the ordinary HEAD-relative auto-derive still produces the exact same
+# auto-derive verdict as the very first test in this suite, proving --own-since's new merge logic
+# never runs when --own-since itself is absent ---
+r16=$(new_repo); tmp_dirs+=("$r16")
+{
+  printf 'line %02d\n' $(seq 1 30)
+} > "$r16/multi.txt"
+git -C "$r16" add multi.txt
+git -C "$r16" commit -q -m "seed multi.txt"
+branch=$(git -C "$r16" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r16" rev-parse HEAD)
+sed -i '3s/.*/line 03 CHANGED/' "$r16/multi.txt"
+sed -i '20s/.*/line 20 CHANGED/' "$r16/multi.txt"
+unrelated_sha=$(git -C "$r16" rev-parse HEAD)
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r16" --expect-branch "$branch" --expect-sha "$sha" \
+  --own "$unrelated_sha" -m "edit two hunks, plain --own untouched" -- multi.txt 2>&1); rc=$?
+check "plain --own (no --own-since) still leaves the HEAD-relative auto-derive unchanged" \
+  0 'auto-derived own-range 1-6,17-23 \(every current hunk assumed own' 'derived since|UNVERIFIED|REFUSED' "$out" "$rc"
 
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
