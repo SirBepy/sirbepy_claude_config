@@ -94,3 +94,37 @@ Do not wire events speculatively. Three events with a reason beat ten wired beca
 
 `PermissionRequest` auto-allow is the one item here with real blast radius: a too-broad allowlist
 silently removes a confirmation the dev relies on. Start smaller than feels useful.
+
+### ADVANCED, not finished, 2026-09-11 (/loop-todos cycle 2)
+
+**Stale premises in the Context above, corrected against the live tree. Do not cite them as written.**
+
+- "PostToolUse lives only in the untracked `settings.local.json`" is wrong. `settings.json` (tracked)
+  wires `PostToolUse` with four matcher blocks: `Edit|Write|MultiEdit`, `Bash|PowerShell` twice, and
+  `Read`.
+- "6 of ~30 events wired" is wrong. The real count before this pass was **7**: Notification,
+  PostToolUse, PreToolUse, SessionEnd, SessionStart, Stop, UserPromptSubmit. It is **8** now.
+- `PreCompact` genuinely was unwired. That part held.
+
+**Done: `PreCompact`.** `hooks/precompact-backup.py`, wired in `settings.json`, with
+`hooks/test_precompact_backup.py` (22 cases) discovered by CI. It writes one file per session into
+`hooks/.session-markers/`, overwritten rather than appended, self-pruning on a 7-day window, and that
+directory is already gitignored so it cannot pollute any session's `git status`. It captures only
+structural fields plus the 50 most recent file PATHS touched, never transcript text, tool output or
+free text, because any of those can carry a pasted credential. Every path exits 0, including its own
+error paths, so it can never block a compaction.
+
+**Deliberately NOT done, and why. This is the remaining work.**
+
+- **`PermissionRequest` is not wired.** It changes what every concurrent session on this machine is
+  allowed to do. That is the dev's call, not an unattended run's. Nothing was built for it.
+- **The Stop-hook JSON-control-field conversion is untouched.** It means editing a hook other live
+  sessions are running, and it was not needed to prove the event-wiring point.
+
+**Follow-on defect this created, already fixed, worth knowing about.** Writing into
+`hooks/.session-markers/` collided with todo 924's commit gate, which counts files in that directory
+to detect a shared checkout and was globbing every file in it. Backups would have been counted as
+live peer sessions, so a session alone in the tree would have started refusing its own commits. The
+count now matches only bare session-id (UUID) filenames. A pre-existing `silent-turns-<id>` file was
+being miscounted the same way. Anything else that writes into that directory must keep a prefix.
+
