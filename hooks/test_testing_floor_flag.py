@@ -1,0 +1,198 @@
+"""Self-test for testing-floor-flag.py and the shared helpers it uses from
+_testing_floor_lib.py (todo 427).
+
+Fully deterministic: every case runs the real hook as a subprocess, but
+points TESTING_FLOOR_STATE_DIR at a private tmp directory via env var (the
+injection point _testing_floor_lib.py defines) so nothing here ever touches
+this checkout's real hooks/.testing-floor-pending/.
+
+Run directly: python hooks/test_testing_floor_flag.py
+"""
+
+import json
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+import _testlib
+
+_HOOKS_DIR = Path(__file__).resolve().parent
+_HOOK_PATH = _HOOKS_DIR / "testing-floor-flag.py"
+lib = _testlib.load_module("testing_floor_lib_for_flag_test", _HOOKS_DIR / "_testing_floor_lib.py")
+
+# (path, expect_source, label)
+IS_SOURCE_CASES = [
+    ("src/main.py", True, "plain .py source"),
+    ("hooks/testing-floor-guard.py", True, "hook code itself counts as source"),
+    ("README.md", False, ".md excluded"),
+    ("CLAUDE.md", False, ".md excluded, repo-root file"),
+    ("package.json", False, ".json excluded (config-shaped)"),
+    ("Cargo.toml", False, ".toml excluded (config-shaped)"),
+    (".claude/todos/427-thing.md", False, "todos dir segment excluded"),
+    ("skills/commit/SKILL.md", False, "skills dir segment excluded (and .md)"),
+    ("skills/commit/commit-pathspec.sh", False, "skills dir segment excludes even a .sh"),
+    ("refs/process-hygiene.md", False, "refs dir segment excluded"),
+    ("lib/widget.dart", True, "flutter source"),
+    ("src/app.rs", True, "rust source"),
+    ("node_modules/pkg/index.js", False, "node_modules excluded despite .js"),
+    ("notes.txt", False, "unrecognised/config-shaped extension defaults OFF"),
+    ("data/schema.unknownext", False, "unknown extension defaults OFF (allowlist bias)"),
+    ("windows\\style\\path\\main.py", True, "windows-style backslash path, source"),
+    ("windows\\style\\.claude\\todos\\1-x.md", False, "windows-style backslash path, todos segment"),
+]
+
+
+def check_is_source(case) -> bool:
+    path, expect, label = case
+    got = lib.is_source_file(path)
+    ok = got == expect
+    print(f"[{'PASS' if ok else 'FAIL'}] is_source_file: {label}: {path!r} -> {got}")
+    return ok
+
+
+def run_hook(payload: dict, state_dir: Path) -> subprocess.CompletedProcess:
+    env = dict(os.environ)
+    env["TESTING_FLOOR_STATE_DIR"] = str(state_dir)
+    return subprocess.run(
+        [sys.executable, str(_HOOK_PATH)],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+
+def integration_checks() -> list:
+    fails = []
+    with tempfile.TemporaryDirectory(prefix="testing-floor-flag-test-") as tmp:
+        tmp_path = Path(tmp)
+
+        # Case 1: source-file Write, real session -> flag file created, attempts=0.
+        state_dir = tmp_path / "state1"
+        session_id = "sess-source-write"
+        payload = {
+            "session_id": session_id,
+            "cwd": str(tmp_path),
+            "tool_name": "Write",
+            "tool_input": {"file_path": str(tmp_path / "src" / "app.py"), "content": "x"},
+        }
+        proc = run_hook(payload, state_dir)
+        flag_path = state_dir / session_id
+        ok = proc.returncode == 0 and flag_path.is_file()
+        if ok:
+            state = json.loads(flag_path.read_text(encoding="utf-8"))
+            ok = state.get("attempts") == 0 and "root" in state
+        print(f"[{'PASS' if ok else 'FAIL'}] integration: source-file Write creates flag with attempts=0 -> exit={proc.returncode} exists={flag_path.is_file()}")
+        if not ok:
+            fails.append("source-file Write creates flag")
+
+        # Case 2: non-source (.md) Write, same session dir -> no flag file.
+        state_dir2 = tmp_path / "state2"
+        session_id2 = "sess-md-write"
+        payload2 = {
+            "session_id": session_id2,
+            "cwd": str(tmp_path),
+            "tool_name": "Write",
+            "tool_input": {"file_path": str(tmp_path / "NOTES.md"), "content": "x"},
+        }
+        proc2 = run_hook(payload2, state_dir2)
+        flag_path2 = state_dir2 / session_id2
+        ok2 = proc2.returncode == 0 and not flag_path2.exists()
+        print(f"[{'PASS' if ok2 else 'FAIL'}] integration: .md Write does not create a flag -> exit={proc2.returncode} exists={flag_path2.exists()}")
+        if not ok2:
+            fails.append(".md Write does not create a flag")
+
+        # Case 3: agent_id present on an otherwise-qualifying source Write -> no flag.
+        state_dir3 = tmp_path / "state3"
+        session_id3 = "sess-agent"
+        payload3 = {
+            "session_id": session_id3,
+            "cwd": str(tmp_path),
+            "agent_id": "aaaeae68dcacc2c9d",
+            "agent_type": "general-purpose",
+            "tool_name": "Write",
+            "tool_input": {"file_path": str(tmp_path / "src" / "app.py"), "content": "x"},
+        }
+        proc3 = run_hook(payload3, state_dir3)
+        flag_path3 = state_dir3 / session_id3
+        ok3 = proc3.returncode == 0 and not flag_path3.exists()
+        print(f"[{'PASS' if ok3 else 'FAIL'}] integration: subagent source-file Write does not create a flag -> exit={proc3.returncode} exists={flag_path3.exists()}")
+        if not ok3:
+            fails.append("subagent Write does not create a flag")
+
+        # Case 4: non-edit tool (Read) on a source file -> no flag.
+        state_dir4 = tmp_path / "state4"
+        session_id4 = "sess-read"
+        payload4 = {
+            "session_id": session_id4,
+            "cwd": str(tmp_path),
+            "tool_name": "Read",
+            "tool_input": {"file_path": str(tmp_path / "src" / "app.py")},
+        }
+        proc4 = run_hook(payload4, state_dir4)
+        flag_path4 = state_dir4 / session_id4
+        ok4 = proc4.returncode == 0 and not flag_path4.exists()
+        print(f"[{'PASS' if ok4 else 'FAIL'}] integration: Read (non-edit tool) does not create a flag -> exit={proc4.returncode} exists={flag_path4.exists()}")
+        if not ok4:
+            fails.append("Read does not create a flag")
+
+        # Case 5: missing session_id -> no flag anywhere, no crash.
+        state_dir5 = tmp_path / "state5"
+        payload5 = {
+            "cwd": str(tmp_path),
+            "tool_name": "Write",
+            "tool_input": {"file_path": str(tmp_path / "src" / "app.py"), "content": "x"},
+        }
+        proc5 = run_hook(payload5, state_dir5)
+        ok5 = proc5.returncode == 0 and (not state_dir5.exists() or not any(state_dir5.iterdir()))
+        print(f"[{'PASS' if ok5 else 'FAIL'}] integration: missing session_id does not crash or write anything -> exit={proc5.returncode}")
+        if not ok5:
+            fails.append("missing session_id safe")
+
+        # Case 6: a stale flag (attempts=5, leftover from a prior failing
+        # cycle) gets RESET to attempts=0 by a fresh source edit - a new fix
+        # attempt must not inherit the old retry budget.
+        state_dir6 = tmp_path / "state6"
+        session_id6 = "sess-reset"
+        flag_path6 = state_dir6 / session_id6
+        flag_path6.parent.mkdir(parents=True)
+        flag_path6.write_text(json.dumps({"attempts": 5, "root": "stale"}), encoding="utf-8")
+        payload6 = {
+            "session_id": session_id6,
+            "cwd": str(tmp_path),
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(tmp_path / "src" / "app.py"), "new_string": "x"},
+        }
+        proc6 = run_hook(payload6, state_dir6)
+        ok6 = proc6.returncode == 0 and flag_path6.is_file()
+        if ok6:
+            state6 = json.loads(flag_path6.read_text(encoding="utf-8"))
+            ok6 = state6.get("attempts") == 0
+        print(f"[{'PASS' if ok6 else 'FAIL'}] integration: a fresh edit resets a stale attempts counter to 0 -> exit={proc6.returncode}")
+        if not ok6:
+            fails.append("fresh edit resets stale attempts")
+
+        # Case 7: malformed stdin -> exits 0, does not crash.
+        proc7 = subprocess.run(
+            [sys.executable, str(_HOOK_PATH)],
+            input="not valid json {{{",
+            capture_output=True,
+            text=True,
+        )
+        ok7 = proc7.returncode == 0
+        print(f"[{'PASS' if ok7 else 'FAIL'}] integration: malformed stdin still exits 0 -> exit={proc7.returncode} stderr={proc7.stderr.strip()!r}")
+        if not ok7:
+            fails.append("malformed stdin exits 0")
+
+    return fails
+
+
+def run() -> int:
+    fails = _testlib.run_cases(IS_SOURCE_CASES, check_is_source) + integration_checks()
+    return _testlib.summarize(fails)
+
+
+if __name__ == "__main__":
+    sys.exit(run())

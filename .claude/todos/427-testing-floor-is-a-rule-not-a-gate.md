@@ -84,3 +84,59 @@ before the check-running logic, not after.
 
 Do not run e2e or Playwright from this hook. CLAUDE.md explicitly keeps slow suites out of the floor,
 and a Stop hook is the worst possible place to violate that.
+
+### BUILT but deliberately NOT WIRED, 2026-09-11 (/loop-todos cycle 4)
+
+The gate exists, is tested, and is switched off. Wiring it is the one step left, and it was withheld
+on purpose: this is a `Stop` hook, so if it is wrong every concurrent session on the machine loses
+the ability to end a turn at once. There were four live sessions and the dev was away, so nobody
+could switch it back off. The artifact is safe to sit unwired; switching it on wants a human watching
+the first few turns.
+
+**Shipped, all under `hooks/`, none referenced from `settings.json`:**
+
+- `_testing_floor_lib.py` - shared helper, fully injectable: stack detection, source-file classifier,
+  state read and write, escape-hatch resolvers, subagent detection.
+- `testing-floor-flag.py` - the `PostToolUse` activation-gate writer.
+- `testing-floor-guard.py` - the `Stop` blocking gate.
+- `test_testing_floor_flag.py` (17 unit, 7 integration) and `test_testing_floor_guard.py` (14 unit,
+  5 subprocess, 2 real-detection). Both green, both discovered by CI, which went 34 suites to 37.
+
+**Escape hatch, built first, before any blocking logic existed.** Set `CLAUDE_TESTING_FLOOR_SKIP` to
+any truthy value, or create `hooks/.testing-floor-skip`, and the hook exits 0 unconditionally. It is
+checked before any state is read, so a stuck session is freed without a `settings.json` edit and
+without knowing a phrase it has never seen.
+
+**Activation gate, built second.** The flag file is written only when the turn's own
+Edit/Write/MultiEdit/NotebookEdit touched a path the source classifier recognises. A read-only turn,
+a markdown-only turn, or a turn that only searched never reaches the blocking logic at all.
+
+**Subagent exclusion** reuses `agent-todo-write-guard.py`'s own `is_agent_call` by import rather than
+reinventing the `agent_id` check. A builder has its own verify floor and is not the target.
+
+**Both directions exercised against a real, unstubbed check**, not only the happy path: a genuinely
+failing `ci/run_all.py` blocks the turn, a genuinely passing one allows it and clears the flag.
+
+**Fail-open** is a single boundary in `main()`; every unexpected exception exits 0, proven by four
+subprocess cases including fault injection.
+
+### The remaining work
+
+1. **Wire it**, when the dev is present. The exact block, to be MERGED into the existing
+   `PostToolUse` and `Stop` arrays rather than replacing them:
+
+   - `PostToolUse`, matcher `Edit|Write|MultiEdit|NotebookEdit`, command
+     `python "C:\Users\tecno\.claude\hooks\testing-floor-flag.py"`.
+   - `Stop`, no matcher, command
+     `python "C:\Users\tecno\.claude\hooks\testing-floor-guard.py"`.
+
+2. **Confirm the real retry cap.** This todo's own Approach step 1 asked for the harness's true
+   ceiling on consecutive `Stop` blocks to be established empirically. It could not be: measuring it
+   requires the hook to be live. The docs and the harvested reference implementation disagree (8 vs
+   25), so the cap defaults to a conservative 3, under either candidate. Confirm it when wiring.
+
+3. **Two design tradeoffs worth the dev's eyes**, both deliberate and documented in the code: the
+   Node concurrency cap is enforced as a post-run orphan sweep rather than by injecting a
+   `--maxWorkers` flag into an unknown test script, and a Roblox or Luau project is detected but
+   never executed, because a hook cannot invoke the `/jest-lua` skill; it reports and passes through.
+
