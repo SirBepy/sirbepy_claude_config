@@ -34,6 +34,61 @@ ALLOWED_KEYS = {
 
 REQUIRED_KEYS = ("name", "description")
 
+# `description` loads into the system prompt every session regardless of whether the skill ever
+# runs, so its length is a per-session token tax (todo 976). Budget matches
+# skills/bepy-skill-creator/SKILL.md's own "Description budget gate".
+DESCRIPTION_BUDGET_WORDS = 25
+DESCRIPTION_BUDGET_CHARS = 120
+
+
+# Every over-budget description NOT being trimmed right now, dated and closed. Grandfathered so this
+# gate does not break every unrelated session's commit today; each still needs its own trim-or-exempt
+# decision. Never add a newly-introduced skill here to dodge the budget: this is debt to pay down,
+# not an escape hatch. The trailing comment on an entry records which parent flow calls it, which is
+# still useful context when deciding how to trim it.
+#
+# This absorbed a separate CHAIN_CALLEE_EXEMPT set on 2026-09-11, hours after both were added. That
+# set exempted skills invoked by a parent flow, on the theory that their descriptions do no routing
+# work. Measured against the tree, all 16 were still model-invocable, so their descriptions sit in
+# the fleet-wide listing and cost every session in every project exactly like any other. The
+# exemption's own rationale said as much without noticing: those skills cannot carry
+# `disable-model-invocation: true` precisely BECAUSE the caller needs to find them in the listing.
+# Being called by a parent and being routed on your own description are not mutually exclusive.
+#
+# The one sound automatic exemption is `disable-model-invocation: true`, applied live from the file
+# in check_description_budget below. A skill that never enters the listing genuinely costs nothing.
+LEGACY_OVER_BUDGET_DEBT = frozenset({
+    "android-drive",
+    "apply-styleguide",   # step run by bepy-project-setup-web
+    "batch-todos",        # invoked by auto-do-todos, mega-todos
+    "brainstorm",
+    "cleanup-todos",      # invoked by auto-do-todos, mega-todos
+    "code-check",         # invoked via Skill tool by close
+    "context-left",
+    "favicon",            # step run by bepy-project-setup-web
+    "figma-pixel-diff",
+    "flutter-e2e",
+    "generate",
+    "github-pages-init",  # step run by bepy-project-setup-web
+    "impeccable",
+    "init-claude-md",     # step run by bepy-project-setup-web
+    "inject-widgets",     # step run by bepy-project-setup-web
+    "iterate-it",         # invoked by autopilot, auto-do-todos, batch-todos, cleanup-memory,
+                           # cleanup-todos, delegate, loop-todos, mega-todos, rate-it-and-commit
+    "meta-tags",          # step run by bepy-project-setup-web
+    "portfolio-data",     # step run by bepy-project-setup-web
+    "preview",
+    "pwa",                # step run by bepy-project-setup-web
+    "rate-it",            # invoked by rate-it-and-commit
+    "rate-it-and-commit",
+    "screenshot",         # invoked by portfolio-data
+    "sleep-when-done",    # invoked by autopilot's --sleep step
+    "supervised-run",
+    "supply-chain-audit",
+    "ticket",
+    "update-workflow",    # step run by bepy-project-setup-web; also referenced by github-pages-init
+})
+
 TOP_LEVEL_KEY = re.compile(r"^([A-Za-z][A-Za-z0-9_-]*):(.*)$")
 
 # Matches body prose like "Requires the `respawn` MCP tool" (skills/respawn/SKILL.md:17).
@@ -129,7 +184,44 @@ def check_skill(root: Path, path: Path) -> list[str]:
                 f"{rel}:{seen['name'][1]}: name '{nameval}' does not match containing directory '{dirname}'"
             )
 
+    if "description" in seen and seen["description"][0]:
+        problems.extend(check_description_budget(rel, path, seen))
+
     return problems
+
+
+def check_description_budget(rel: str, path: Path, seen: dict) -> list[str]:
+    """FAIL when a model-routed description breaches the budget (todo 976).
+
+    Exempt automatically if `disable-model-invocation: true` is set - that skill never enters the
+    fleet-wide listing, so its description does zero per-session routing work regardless of length.
+    Otherwise exempt only via the single closed, dated debt set above - never by ad hoc reasoning
+    here, and never by adding a newly-written skill to that set.
+    """
+    dmi = seen.get("disable-model-invocation", ("", 0))[0].strip().lower() == "true"
+    if dmi:
+        return []
+
+    name = path.parent.name
+    if name in LEGACY_OVER_BUDGET_DEBT:
+        return []
+
+    desc_value, lineno = seen["description"]
+    desc = desc_value.strip()
+    if len(desc) >= 2 and desc[0] == desc[-1] and desc[0] in ("'", '"'):
+        desc = desc[1:-1]
+
+    words = len(desc.split())
+    chars = len(desc)
+    if words <= DESCRIPTION_BUDGET_WORDS and chars <= DESCRIPTION_BUDGET_CHARS:
+        return []
+
+    return [
+        f"{rel}:{lineno}: description is {words}w/{chars}c, budget is "
+        f"{DESCRIPTION_BUDGET_WORDS}w/{DESCRIPTION_BUDGET_CHARS}c - trim it, add "
+        f"'disable-model-invocation: true' if it's slash-only, or add '{name}' to "
+        f"LEGACY_OVER_BUDGET_DEBT in this file with a stated reason"
+    ]
 
 
 def find_required_mcp_tools(root: Path, path: Path) -> list[str]:

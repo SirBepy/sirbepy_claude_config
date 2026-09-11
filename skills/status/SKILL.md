@@ -1,6 +1,6 @@
 ---
 name: status
-description: Triggers on /status, or on asking where in-flight work is at ("still going?", "how far along"). Reports per-item liveness against real tree progress. Read-only. Not context-window size, that is /context-left.
+description: Triggers on /status, or asking how far along in-flight work is. Read-only per-item liveness vs tree progress.
 argument-hint: "[--deep]"
 allowed-tools: Bash, PowerShell, Grep, Glob, Read, TaskStop
 ---

@@ -1,6 +1,6 @@
 ---
 name: linear
-description: Query Linear via GraphQL - search, list, look up tickets, projects, sprints. Filing or editing issues goes through /ticket.
+description: Query Linear via GraphQL - search, list, look up tickets, projects, sprints. Writes go through /ticket.
 argument-hint: "<ticket-id or query>"
 ---
 

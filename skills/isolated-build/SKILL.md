@@ -1,6 +1,6 @@
 ---
 name: isolated-build
-description: Build in a scratch git worktree with its own dev server while the main checkout stays untouched, then land the work onto the main branch without losing files or fighting worktree removal.
+description: Build in a scratch worktree with a dev server, then land onto main without losing files or worktree-removal trouble.
 argument-hint: "[start <name>|land]"
 ---
 
