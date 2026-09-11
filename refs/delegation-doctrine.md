@@ -219,6 +219,25 @@ and so is a subagent's own `.claims/` write, since the path match requires the f
 in `.claude/todos/` with no further segment. The report-back channel is still the sanctioned route,
 not a fallback: the guard stops the bypass, it does not carry the finding anywhere.
 
+**In-hook detection is the only mechanism, and that is settled by experiment, not preference**
+(2026-09-11, todo 434, Claude Code 2.1.261). The obvious alternative is to hang a hook off a named
+agent type via `agents/<name>.md` frontmatter. It does not work:
+
+- A frontmatter `hooks:` block is **inert** for an `Agent`-tool dispatch. Probed in a scratch
+  project with a harmless always-exit-0 marker hook: the agent type itself loaded and ran
+  (`subagent_stats` confirmed it), yet the run produced zero `hook_started`/`hook_response` events
+  and no marker. The positive control matters: the identical hook wired through that scratch
+  project's own `settings.json` DID fire and DID write its marker, so the instrument was working
+  and the silence is a real negative.
+- A frontmatter `permissionMode:` is partially honoured, in the useless direction.
+  `bypassPermissions` genuinely takes effect (a Write denied for a plain agent succeeded for one
+  carrying that value, same outer mode, single variable changed). `plan` showed no observable
+  effect at all. Every value that works only LOOSENS; nothing tightens.
+
+So a named agent type cannot carry a restriction. A guard that should apply to dispatched work only
+stays globally wired and early-returns on the payload, the way `agent-todo-write-guard.py` does.
+Re-probe before trusting this if the CLI version has moved on; the finding is version-scoped.
+
 Every dispatch instead asks for an "Out-of-scope findings" section in the report: what was found,
 and why it sits outside this dispatch's lane. The orchestrator turns each one into a properly
 allocated todo after the fan-out returns, per the reporting requirement named above.

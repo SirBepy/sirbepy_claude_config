@@ -202,7 +202,6 @@ its once-per-session sentinel is a single boolean, not per-file state.
 - [ ] 450 - the post-write TRIGGER half only. **Gated on 427's source-file-edited signal**; build
       it once, not twice. Full flaw list and the rejected `claude -p` alternative are in the todo.
 - [ ] 426 - PreCompact, PermissionRequest, generic PostToolUse; the unused JSON control fields
-- [ ] 434 - per-agent hooks, which could make the delegation ban list real instead of prose
 
 ### Phase 7 - evaluations. "No" is an acceptable outcome for several of these.
 
