@@ -140,3 +140,31 @@ subprocess cases including fault injection.
    `--maxWorkers` flag into an unknown test script, and a Roblox or Luau project is detected but
    never executed, because a hook cannot invoke the `/jest-lua` skill; it reports and passes through.
 
+4. **`detect_stack()` runs only ONE stack, so the gate cannot enforce the floor it exists for.**
+   Found 2026-09-12 by an independent `/code-check` reviewer that did not write the code, and
+   reproduced rather than argued: a scratch directory holding both `Cargo.toml` and `package.json`,
+   the exact Tauri shape `skills/test/SKILL.md` names, makes `hooks/_testing_floor_lib.py:166`
+   return only `('rust', ...)`. The Node half is never run.
+
+   `skills/test/SKILL.md` Step 1 is explicit: "A repo can match more than one row (a Tauri app
+   matches Rust *and* Node); run every row it matches." `detect_stack()` instead returns a single
+   `(label, argv)` tuple and stops at the first hit in a fixed priority order. The module's own
+   docstring claims it "mirrors skills/test/SKILL.md's own table (same rows, same precedence)", but
+   `/test` has no precedence concept when several rows match, so the docstring overclaims a parity
+   the code does not have.
+
+   This matters more here than in an ordinary helper: CLAUDE.md's testing floor says "every FAST
+   check the project HAS", and this hook exists specifically to enforce that floor at Stop time. A
+   floor gate that silently checks one of two stacks would pass a turn that broke the other.
+
+   Fix: have `detect_stack()` return a LIST of matches and have `run_checks()` run each and
+   aggregate (`ok = all(...)`, summaries joined). That is a real API decision, not a one-liner, since
+   it changes the return shape of `detect_stack`, `run_stack_check` and `run_checks` and raises the
+   question of what a combined Roblox-plus-Node message should say. If single-stack is instead a
+   deliberate simplification for an unwired prototype, narrow the docstring to say first-match only,
+   rather than leaving it claiming parity.
+
+   No existing test would catch this: both suites build single-stack or stubbed fixtures only. The
+   regression test to add is a temp dir with two stack markers and distinguishable injected results,
+   asserting the summary names BOTH. It fails today and passes after the fix.
+

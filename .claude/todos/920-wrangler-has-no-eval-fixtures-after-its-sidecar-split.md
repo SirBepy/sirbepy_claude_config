@@ -46,3 +46,9 @@ the run, and say in the report what it cost.
 - A recorded before/after showing each fixture degrading when its own sidecar is cut.
 - `python ci/run_all.py` passes. The fixtures themselves are not added to `ci/run_all.py`'s CHECKS,
   since they cost money and network.
+
+- **NOT attempted 2026-09-12 by a /loop-todos run, deliberately.** The Acceptance above already
+  records that these fixtures cost real money and network on every execution, which is why they are
+  kept out of `ci/run_all.py`'s CHECKS. An unattended run spending money without the dev present is
+  the same class of decision as changing a permission posture, so this was parked rather than
+  autopiloted. Nothing is blocked; it needs an attended run that accepts the cost.
