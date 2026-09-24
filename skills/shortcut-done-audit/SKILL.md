@@ -99,6 +99,14 @@ Group by verdict, most actionable first (`DONE` → `SUPERSEDED` → `PARTIALLY 
 
 Report-only, no mutations, no comments — matches the pattern in `zirtue-release-backfill`.
 
+For each ticket, also note whether a one-off e2e script for it still sits on disk in zng-app:
+
+```bash
+ls C:/Users/tecno/Desktop/Projects/zng-app/e2e/*${id}*.js 2>/dev/null
+```
+
+Those scripts are gitignored, so `git ls-files` and `git grep` never see them: a plain `ls` is the only way to find one. Report the hit alongside the verdict; step 7 decides what happens to it.
+
 ### 7. Apply actions (only after Joe confirms, per ticket)
 
 Once Joe responds with what he wants done (may be informal, e.g. "move X and Y to Testing, close Z as won't-do with comment '...'"), apply directly — no need for a formal multi-gate AskUserQuestion flow like the release-backfill skill, since findings are already ticket-scoped and Joe is confirming inline. Do ask a quick AskUserQuestion only when the target state is genuinely ambiguous (e.g. "close it" could mean `Complete` or `Won't do` — those have different semantic meaning and Joe should pick, don't default silently).
@@ -121,10 +129,23 @@ curl -s -X POST "https://api.app.shortcut.com/api/v3/stories/<id>/comments" \
 
 Only post a comment when Joe gives the exact text or explicitly says to post one — never draft-and-post in the same step (per [[feedback_dont_post_drafts]]).
 
+### 7b. Delete the ticket's one-off e2e script, once the ticket can no longer come back
+
+Applies only to a ticket Joe has just confirmed into `Complete` or `Won't do` in step 7, and only to a script step 6 reported on disk. A ticket moved to `Testing`, or left where it was, keeps its script: the whole point of keeping these around is that a live ticket can bounce back.
+
+Ask per ticket before deleting, the same bar as any other mutation here, then delete with the `/delete` skill's platform rule (`Remove-Item` on Windows).
+
+Two things to say in that ask, because they decide whether the deletion is reversible:
+
+- A script tracked in git before `3e47963` is recoverable forever with `git show 3e47963~1:e2e/<file>`. Check with `git log --oneline -1 -- e2e/<file>`: output means recoverable.
+- A script created after the ignore patterns landed has **no git history at all** and is gone for good. Say so explicitly in the ask rather than letting Joe find out after.
+
+This rule reaches only scripts whose filename carries the ticket id. Ones named for a subject rather than a ticket (`verify-amp-a.js`, `check-v2-gate.js`) have no owning ticket to close and are swept by hand instead; 14 such files were deleted on 2026-09-24.
+
 ## What this skill never does
 
 - Never mutates a ticket (state or comment) without Joe's explicit per-ticket go-ahead.
 - Never posts a comment Joe didn't give exact text for or explicitly ask to post.
 - Never includes `custom_fields` in a PUT unless intentionally updating a field (would wipe the rest of the array).
 - Never treats a commit-message ID prefix as proof of scope match without reading the actual diff.
-- Never edits code or commits in any repo — read-only investigation only.
+- Never edits code or commits in any repo. Investigation is read-only; step 7b's deletion of a closed ticket's gitignored one-off script is the single exception, and it still needs Joe's per-ticket go-ahead.
