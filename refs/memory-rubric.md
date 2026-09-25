@@ -63,8 +63,23 @@ system, `feedback` for a rule about how to work.
 
 ## Index ordering (MEMORY.md only)
 
-MEMORY.md truncates at 200 lines; anything past that boundary is silently dropped. The vault has
-no such cap, so this section governs the native per-project index only.
+MEMORY.md truncates at **24.4KB of bytes, not at a line count**; anything past that offset is
+silently dropped. Measured 2026-09-25 on a 150-line index that cut at line 134, nowhere near the
+200 lines this file previously claimed. Lines are the wrong unit because a chained entry
+(`[a](x.md) + [b](y.md) + [c](z.md)`) can run 500 bytes while a short one runs 90, so an index
+breaches on bytes long before it looks long.
+
+`skills/cleanup-memory/reachability.mjs` derives its line cap from that byte budget by default;
+never pass `--line-cap` unless a host genuinely has a different rule, because a line cap above the
+real cut makes the script report `orphan-file: 0` on a corpus that is dropping files.
+
+The vault has no such cap, so this section governs the native per-project index only.
+
+**Ordering is the lever, not length.** Truncation is not preventable for long: encoding tricks buy
+a few hundred bytes against an index that grows every session. What IS controllable is which
+entries sit below the cut. Behavioural rules that apply every turn belong above it; task-specific
+references (a tool's quota rules, a harness flag, a one-tool workflow) are cheap to lose because a
+session doing that task will look them up anyway.
 
 Keep the index in three ordered blocks, top to bottom:
 

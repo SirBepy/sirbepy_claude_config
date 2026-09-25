@@ -35,8 +35,17 @@ Read every file's frontmatter (`name`, `description`, `metadata.type`) and full 
   separators and colons with `-` (e.g. `C:\Users\foo\bar` -> `C--Users-foo-bar`).
   Derive it from the primary working directory shown in the session environment -
   never assume a hardcoded root.
-- **MEMORY.md line count**: the harness silently truncates at 200 lines, dropping
-  everything after. Warn at 175, flag critical at 195+.
+- **MEMORY.md byte size**: the harness silently truncates at **24.4KB, a byte cap, not a
+  line count**. Warn at 22KB, flag critical at 24KB+. Report the byte size AND the line
+  the cut lands on, which `reachability.mjs` now prints. The old "200 lines" rule here was
+  wrong and hid a live failure: on 2026-09-25 a 150-line index was dropping 31 files from
+  line 134 while every check reported clean, because both this step and the script were
+  measuring lines.
+- **What to do when it breaches**: reorder before you compress. Shortening entries buys a
+  few hundred bytes against an index that grows every session, so it is a stopgap. Moving
+  task-specific entries below the cut and behavioural rules above it costs nothing, deletes
+  nothing, and decides which memories a session actually gets. See `refs/memory-rubric.md`
+  "Index ordering".
 - **Index entry length**: flag any MEMORY.md bullet over ~150 chars - detail
   belongs in the linked topic file, not the index.
 - **T0 axiom candidates**: flag entries meeting ALL 3: (1) Claude defaults wrong
@@ -63,8 +72,12 @@ one still fails to reach a session, which is the only thing this check is trying
 step uses the 132 reading - the script's `loaded-window, direct-link-only` output - on purpose.
 The other two readings the script prints are context only, never the reported figure.)
 
-- A file with no direct link inside MEMORY.md's first 200 lines: `orphan-file`.
-- A `MEMORY.md` line (within the first 200) whose linked file doesn't exist: `orphan-index-entry`.
+- A file with no direct link inside MEMORY.md's loaded window: `orphan-file`.
+- A `MEMORY.md` line (within that window) whose linked file doesn't exist: `orphan-index-entry`.
+
+The window ends at the **24.4KB byte cap**, which `reachability.mjs` derives itself. Invoke it with
+no cap flag; passing `--line-cap` above the real cut is what made this check report `orphan-file: 0`
+on a corpus dropping 31 files.
 
 Both are mechanical - no subagent needed, no judgment call - and both are deterministic: the same
 corpus produces the same two counts on every run. Report the counts of both (`orphan-file: N`,

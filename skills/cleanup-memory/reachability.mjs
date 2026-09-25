@@ -1,8 +1,14 @@
 #!/usr/bin/env node
 // Reachability checker for /cleanup-memory Step 2 - one script so orphan
 // counts are deterministic instead of reinvented per run (see SKILL.md).
-// Usage: node reachability.mjs <memory-dir> [--line-cap=200]
+// Usage: node reachability.mjs <memory-dir> [--byte-cap=N] [--line-cap=N]
 // Resolves [[token]]/(file.md) links against a target's frontmatter `name:` OR basename.
+//
+// The loaded window is bounded by BYTES, not lines. A hardcoded 200-line default
+// reported orphan-file: 0 on a 27.7KB index that was really dropping 31 files from
+// line 134 on (2026-09-25), because the byte ceiling binds first on any index whose
+// lines are long. The line cap is now derived from the byte cap; --line-cap still
+// overrides it for a host with a genuinely different rule.
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
@@ -10,15 +16,33 @@ import { join, basename } from 'node:path';
 function parseArgs(argv) {
   const dir = argv[2];
   if (!dir) {
-    console.error('usage: node reachability.mjs <memory-dir> [--line-cap=N]');
+    console.error('usage: node reachability.mjs <memory-dir> [--byte-cap=N] [--line-cap=N]');
     process.exit(2);
   }
-  let lineCap = 200;
+  let lineCap = null;
+  let byteCap = Math.floor(24.4 * 1024);
   for (const arg of argv.slice(3)) {
-    const m = /^--line-cap=(\d+)$/.exec(arg);
-    if (m) lineCap = Number(m[1]);
+    const l = /^--line-cap=(\d+)$/.exec(arg);
+    if (l) lineCap = Number(l[1]);
+    const b = /^--byte-cap=(\d+)$/.exec(arg);
+    if (b) byteCap = Number(b[1]);
   }
-  return { dir, lineCap };
+  return { dir, lineCap, byteCap };
+}
+
+// The harness stops reading at a byte offset, so the effective line cap is wherever
+// the running total crosses it. Counts the real terminator width: on a CRLF file a
+// one-byte-per-line assumption undercounts by a byte per line, which is a ~150-byte
+// error on a 150-line index and enough to put the cut on the wrong line.
+function lineCapFromBytes(text, byteCap) {
+  const eol = text.includes('\r\n') ? 2 : 1;
+  let acc = 0;
+  const lines = text.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i += 1) {
+    acc += Buffer.byteLength(lines[i], 'utf8') + eol;
+    if (acc > byteCap) return i;
+  }
+  return lines.length;
 }
 
 function frontmatterName(text) {
@@ -79,10 +103,14 @@ function resolveLink(raw, targets) {
 }
 
 function main() {
-  const { dir, lineCap } = parseArgs(process.argv);
+  const { dir, lineCap: lineCapArg, byteCap } = parseArgs(process.argv);
   const memoryMdPath = join(dir, 'MEMORY.md');
   const memoryMdFull = readFileSync(memoryMdPath, 'utf8');
   const memoryMdLines = memoryMdFull.split(/\r?\n/);
+  const derivedCap = lineCapFromBytes(memoryMdFull, byteCap);
+  const lineCap = lineCapArg ?? derivedCap;
+  const capSource = lineCapArg === null ? `derived from --byte-cap=${byteCap}` : 'explicit --line-cap';
+  const indexBytes = Buffer.byteLength(memoryMdFull, 'utf8');
   const memoryMdLoaded = memoryMdLines.slice(0, lineCap).join('\n');
 
   const { live, demoted } = collectFiles(dir);
@@ -144,7 +172,11 @@ function main() {
 
   const lines = [];
   lines.push(`memory dir: ${dir}`);
-  lines.push(`line cap: ${lineCap}`);
+  lines.push(`index size: ${indexBytes} bytes across ${memoryMdLines.length} lines`);
+  lines.push(`line cap: ${lineCap} (${capSource})`);
+  if (lineCap < memoryMdLines.length) {
+    lines.push(`  TRUNCATING: lines ${lineCap + 1}-${memoryMdLines.length} never reach a session`);
+  }
   lines.push(`live files: ${live.length}`);
   lines.push(`demoted files (excluded from all readings): ${demoted.length}`);
   if (demoted.length) demoted.forEach((f) => lines.push(`  ${f}`));
