@@ -536,6 +536,16 @@
             "statusMessage": "Checking question card for Croatian text"
           }
         ]
+      },
+      {
+        "matcher": "^(mcp__cc_conductor__show_preview|([A-Za-z0-9_]+__)?show_preview)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\preview-html-guard.py\"",
+            "statusMessage": "Checking show_preview html for accidental entity-escaping"
+          }
+        ]
       }
     ],
     "SessionEnd": [
