@@ -56,6 +56,21 @@ Exit conditions:
 - **Cap**: round count == `--polish-max` → done, report whatever the best-scoring proposal is.
 - **Backslide**: if a Polish round scores below `--threshold`, the polishing introduced a regression. Revert to prior proposal, count the round, continue.
 
+### Progress checklist
+
+In an attended Conductor run (`write_plan` exists and no caller owns the checklist - see Output),
+declare the whole checklist before round 1, one row per possible round up to the caps: `Explore
+round 1` ... `Explore round <explore-max>`, then `Polish round 1` ... `Polish round <polish-max>`,
+all `pending`. Joe wants to see the remaining budget ahead, not rows appearing one at a time.
+
+- Mark the current round `active` before dispatching its sub.
+- After the main audit, mark it `done` with a one-line `detail`:
+  `<angle> · <score>/10 (audit <a>) · <MARKER>: <what changed>` (append `, reverted` on a Backslide).
+- On exit, mark every unreached row `skipped` in the same call that completes the last round - an
+  early Explore exit skips the rest of Explore, a floor hit skips the rest of Polish.
+
+The checklist is progress only. The final verdict never lives in it - that is the report card.
+
 ### Per-round flow
 
 For each round (regardless of phase):
@@ -78,20 +93,42 @@ The exact prompt to send each sub lives in `templates.md`, next to this file. Re
 round 1 - every subsequent round reuses the same template with `<R>`, `<phase>`, and the
 hypothesis text swapped in.
 
-## Cost warning
+## Cost
 
-Each round ≈ 25-50k tokens (depends on how much code-reading the sub does). Worst case 9 rounds × 50k ≈ 450k tokens. Typical 4-6 rounds total ≈ 150-250k.
-
-Mention cost before round 1:
-
-> "iterate-it: Explore up to 6 rounds + Polish up to 3 rounds, 1 sub each. ≈ 150-450k tokens total. Confirm or pass `--explore-max=N` / `--polish-max=N` to tighten."
-
-Skip confirmation if dev passed explicit flags.
+Each round ≈ 25-50k tokens; typical 4-6 rounds ≈ 150-250k, worst case 9 rounds ≈ 450k. No
+up-front estimate or confirmation - Joe dropped it 2026-09-29. Start round 1 directly. Sum each
+sub's reported token usage as the run goes; it lands in the report card's Run stats.
 
 ## Output (final report)
 
-The exact report format also lives in `templates.md` (read once, at round 1, alongside the
-subagent prompt template).
+Three shapes, picked by where the run is:
+
+- **Attended Conductor run** (`show_preview` exists, no caller skill owns the turn): the report card
+  below. This is the default whenever Joe invoked `/iterate-it` himself in Conductor.
+- **Unattended** (see below) or **nested inside another skill with its own checklist**: the text
+  report in `templates.md`, and no `write_plan` calls - each call replaces the whole checklist, so
+  iterate-it would wipe the caller's.
+- **No Conductor** (plain CLI, no `show_preview`): the text report in `templates.md`.
+
+### The report card
+
+**Rendered by a script, not hand-written HTML.** `skills/iterate-it/scripts/render_report.cjs`
+always produces the same layout from a run JSON file. Its header comment holds the exact JSON shape.
+What is open and what is collapsed is fixed in the script, per Joe (2026-09-29): open are the score,
+the one-line answer, `Ended: <phase> round <n>` with its reason, the final solution bullets, and the
+MAIN DISSENT banner when main audit and sub differ by ≥2. Collapsed are the score chart, round by
+round, biggest remaining risk, rejected ideas, and run stats. Promoting a collapsed item to open
+is an edit to the script, not a per-run call.
+
+1. Write the run JSON with the Write tool to `C:\tmp\iterate-it\<topic-slug>.json`.
+   `ended.round` counts within its phase, matching the checklist rows. Include every round's
+   highest-risk assumption and synthesized proposal; nothing from the run is dropped, it is only
+   collapsed.
+2. `node C:\Users\tecno\.claude\skills\iterate-it\scripts\render_report.cjs --run <json> --out <same path>.html`
+3. Read the HTML back and push it with `show_preview`: slug `iterate-it-<topic-slug>` (per-topic, so
+   two runs in one chat don't replace each other's card), title `iterate-it: <topic>`.
+4. Send one short bubble: `<score>/10 - <answer>`, the MAIN DISSENT line if there is one, then the
+   next-move line below. The card lands inline in the chat, so don't restate its contents.
 
 **Attended session (a dev is present to read it).** Do NOT call `AskUserQuestion` in the same turn as
 this report. Bundling a tool call with the report text makes the harness swallow the report - the dev
@@ -115,8 +152,8 @@ act on that decision. An invocation counts as unattended exactly when the invoki
 its own documented auto-decision contract (autopilot's suppression rules are the only one today);
 absent that, default to the attended behavior above.
 
-Close the report's SUMMARY block with a single plain-text line offering the next move, not a
-tool call, in the attended case. Detail follows below the rule, so this line sits mid-report, not last:
+In the attended case, the next move is a single plain-text line, not a tool call. It ends the card
+run's bubble. In the text report it closes the SUMMARY block, and detail follows below the rule:
 
 > Ship it, run another manual round, or park it?
 
@@ -128,9 +165,8 @@ If the dev replies, act on it the following turn - that's when `AskUserQuestion`
 - **Always rotate angles in Explore.** Same angle twice in a row = groupthink risk.
 - **Always main-audit each round.** It's the only check against sub sycophancy.
 - **Never extend past `--explore-max + --polish-max`.** If the dev wants more, re-invoke with the final proposal as the new P1.
-- **Cost transparency is non-negotiable.** Always estimate total tokens before round 1 unless dev opted out via explicit flags.
 - **Don't let subs read this file.** They access /rate-it's flaw-hunt rules, not the orchestration. Keeps them focused.
 
 ## Example invocation
 
-`/iterate-it <hypothesis>` estimates cost, runs Explore then Polish rounds per the algorithm above, and reports convergence (or `unconverged` if the round caps are hit first).
+`/iterate-it <hypothesis>` runs Explore then Polish rounds per the algorithm above, and reports convergence (or `unconverged` if the round caps are hit first).

@@ -38,7 +38,10 @@ ANGLE FOR YOU: <skeptic | steelman | alternative-lens | shippability | misdiagno
 <one-paragraph angle-specific brief>
 ```
 
-## Final report template
+## Text report template
+
+For unattended, nested, and no-Conductor runs only. An attended Conductor run uses the report card
+instead (SKILL.md "The report card"), and this template does not apply there.
 
 Two blocks, in this order. The dev reads the first and stops; everything he might want
 later goes below the rule. Never open with round counts or phase names - that is process
@@ -62,6 +65,10 @@ Scores: <s1> → <s2> → ... (main audit: <a1> → <a2> → ...), entered Polis
 - P2 → P3: ...
 
 Rejected, never re-propose: <thing killed in round X>; <thing killed in round Y>
+
+Biggest remaining risk: <the last round's highest-risk assumption>
+
+Subagent tokens: ~<N>k
 
 [If main audit deviates ≥ 2 from sub:]
 **MAIN DISSENT:** main scored <X>, sub <Y>. <one paragraph why>. Weigh the verdict accordingly.
