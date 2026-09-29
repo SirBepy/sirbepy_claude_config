@@ -343,6 +343,16 @@
         "hooks": [
           {
             "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\client-push-gate.py\"",
+            "statusMessage": "Checking client-repo push clearance"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
             "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\pr-guard.py\"",
             "statusMessage": "Checking pr-guard marker"
           }
