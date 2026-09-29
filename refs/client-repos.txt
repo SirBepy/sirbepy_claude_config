@@ -1,0 +1,11 @@
+# Client repos: the only source of truth for snippets/client-repo.md's higher testing floor.
+# One `owner/repo` origin slug per line, matched case-insensitively against `git remote get-url origin`.
+# Keyed by origin rather than folder, so a second checkout or linked worktree of a listed repo counts too.
+# A repo missing from this list is personal, whoever owns it.
+
+zirtue-corp/zng-app
+zirtue-corp/zng-admin
+zirtue-corp/zng-biller
+zirtue-corp/zng-api
+Revaire-Inc/revaire-mobile
+Revaire-Inc/revaire-server

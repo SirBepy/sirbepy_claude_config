@@ -4,13 +4,12 @@ Client work is tested harder than personal work, because a regression there land
 
 ## Which repos this covers
 
-A repo is a **client repo** when it has a remote and `origin` is NOT under `github.com/SirBepy/`. That is the same owner check `/commit` step 8 and `hooks/gh-account-switch.sh` already use, so client repos need nothing added to their own files: detection is mechanical, never a guess about who owns the code, and no marker ever goes into a client repo's `CLAUDE.md`.
-
-No remote, or `origin` under `SirBepy`: personal, this file does not apply.
+A repo is a **client repo** when its `origin` slug (`owner/repo`) is listed in `~/.claude/refs/client-repos.txt`. Keyed by origin rather than folder, so a second checkout or linked worktree of a listed repo counts too. Nothing is ever added to a client repo's own files. Check any repo with `python C:/Users/tecno/.claude/hooks/_client_repo.py is-client <path>`; a repo not on the list is personal, whoever owns it.
 
 ## What changes in a client repo
 
 1. **Every behaviour change ships with a test that fails without it.** Write the test alongside the change, not after. A change that cannot be tested by Claude (native UI, hardware, visual judgement) says so explicitly in the commit report instead of shipping silently untested.
-2. **Before every commit:** `/commit` step 6b runs `/test` (the full fast floor: unit, typecheck, lint, build) and `/code-check` on the commit's own diff. A `/code-check` finding about the change itself gets fixed before the commit lands; a finding about older, untouched code goes to the backlog as usual.
-3. **Before every push:** `/commit`'s pre-push step runs `/e2e`. A red run blocks the push. It sits at push rather than commit because auto-commit fires nearly every turn and e2e is slow.
-4. **Fold correction rounds.** A tweak to Claude's own just-made, unpushed commit that belongs to the same logical change is folded into it, small tweaks included, rather than stacked as a new commit. The mechanics and the safe/unsafe checks are in `snippets/auto-commit.md`'s client-repo fold rule.
+2. **Before every commit:** `/commit` step 6b runs `/test` (the full fast floor: unit, typecheck, lint, build) and the test-coverage check.
+3. **Before every push:** `/commit`'s pre-push gate runs `/code-check` over everything the push ships (`@{u}..HEAD`) and then `/e2e`. A `/code-check` finding about lines the push changes gets fixed first; a finding about untouched code goes to the backlog. Both sit at push rather than commit because auto-commit fires nearly every turn, and a review per commit mostly re-reviews work that gets folded anyway.
+4. **The push is hook-enforced.** `hooks/client-push-gate.py` blocks any `git push` in a client repo until HEAD is cleared with `python C:/Users/tecno/.claude/hooks/_client_repo.py mark <repo> --reason "<why>"`. Clear it only after both checks pass. When a check cannot pass (flaky spec, backend down, no e2e path), ask Joe through `ask_user_question` whether to push anyway, and mark with a reason naming the failure only on his yes. Pushes Joe runs in his own terminal are outside the hook.
+5. **Fold correction rounds.** A tweak to Claude's own just-made, unpushed commit that belongs to the same logical change is folded into it, small tweaks included, rather than stacked as a new commit. The mechanics and the safe/unsafe checks are in `snippets/auto-commit.md`'s client-repo fold rule.
