@@ -43,6 +43,8 @@ Do **not** fold (make a new commit on top instead) when:
 
 When it's genuinely unclear whether feedback is categorically-wrong-redo-it or an ordinary small tweak, ask.
 
+**Client repos fold tweaks too** (client repo per `snippets/client-repo.md`). There, the small-tweak case above folds instead of fixing forward, as long as the tweak belongs to the same logical change as Claude's own commit at HEAD. Case A's `<captured-sha>` requirement and safe/unsafe checks still decide whether a fold is possible; anything Case A marks unsafe fixes forward as usual. An additive new ask still gets its own commit, and a commit-message-only nit still never amends.
+
 ### Self-discovered: a file belongs in the commit you just made
 
 Different trigger from the correction round above - no user feedback involved. You commit, then notice, before touching anything else, that a file you didn't stage genuinely belongs in that same commit: same logical change, e.g. a lockfile that only went dirty because of the commit you just made.

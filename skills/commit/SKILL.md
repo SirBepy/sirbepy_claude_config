@@ -45,7 +45,11 @@ The marker is keyed to this session and is never consumed, so every later commit
    - Python: any `test_*.py` or `*_test.py` files anywhere in the repo (`Get-ChildItem -Recurse -Filter "test_*.py"`, plus `*_test.py`). If found, run each with `python <file>`.
    - Node: a root `package.json` with a `"test"` script. If found, run the project's package manager `test` command.
    - A `tests/` directory containing a runner config (`pytest.ini`, `jest.config.*`, etc). If found, run the matching runner.
-   Apply step 6's own baseline comparison and failure treatment to whichever runner matched above - same identity comparison, same required evidence, same unattended-aborts-without-asking rule. If none of these are found, say so explicitly ("no test suite detected") rather than passing silently. Slow e2e suites (Playwright, etc) are out of scope here - those stay opt-in per the floor in `CLAUDE.md`.
+   Apply step 6's own baseline comparison and failure treatment to whichever runner matched above - same identity comparison, same required evidence, same unattended-aborts-without-asking rule. If none of these are found, say so explicitly ("no test suite detected") rather than passing silently. Slow e2e suites (Playwright, etc) are out of scope here - those stay opt-in per the floor in `CLAUDE.md`, except before a client-repo push (see the Pre-push client e2e gate).
+6b. **Client-repo gate** - only when the repo is a client repo per `~/.claude/snippets/client-repo.md` (has a remote, and `origin` is not under `github.com/SirBepy/`). Personal repos skip this step silently.
+   - **`/test`** runs in place of step 6a's detection, since it also covers typecheck, lint and build. Step 6's baseline comparison applies to its failures unchanged. A repo with a project `run-tests` skill (step 6) still runs `/test` afterwards for the checks that skill does not cover.
+   - **Test coverage check:** if the pathspec changes non-test source files and touches no test file, stop and write the test that fails without the change, or state in the commit report why the change is untestable by Claude.
+   - **`/code-check`** against this commit's own diff. A finding about lines this commit changes gets fixed now and the gate reruns; a finding about untouched code goes to the backlog as the skill already does. Unattended runs follow the same rule, fixing where they can and recording what they could not in the run summary.
 7. **Submodule check:** run `git submodule status` (no flags). For each submodule whose sha is prefixed with `+` (modified) or `-` (uninitialized/not checked out), handle it before committing the parent:
    - If prefixed with `-`: warn the user, do not auto-commit an uninitialized submodule.
    - If prefixed with `+` (dirty pointer — submodule has new commits not yet staged in parent): this is fine, include `<submodule-path>` in step 8's commit pathspec and the pointer bump lands with the parent commit.
@@ -121,11 +125,15 @@ Runs only for `/commit push`, `/commit pushbump`, and `/commit pushnbump`, right
 5. No dev turns since the reference point, or all addressed: proceed silently, no added output.
 6. Any unaddressed turn: stop before `git push`, quote the message verbatim, and ask whether to address it now or push anyway.
 
+## Pre-push client e2e gate
+
+Runs right after the Pre-push transcript check, for the same three push modes, only in a client repo per `~/.claude/snippets/client-repo.md`. Run `/e2e` against what this push ships (the commits in `@{u}..HEAD`). A red run blocks the push: report the failing specs and stop. A stack with no scripted e2e path gets `/e2e`'s own drive-it-by-hand fallback, not a skip.
+
 ## `/commit push`
 
 Same as `/commit` but also runs `git push` after committing.
 
-**Push rule:** if the commit step failed, do not push. If there was nothing to commit, don't stop there either - check `git rev-list --count @{u}..HEAD` (if `@{u}` doesn't resolve, say so and offer `git push -u origin <branch>` instead of silently doing nothing). Zero ahead: say "nothing to commit, nothing to push" and stop. One or more ahead: run the **Pre-push transcript check** above, then push those existing commits and report how many.
+**Push rule:** if the commit step failed, do not push. If there was nothing to commit, don't stop there either - check `git rev-list --count @{u}..HEAD` (if `@{u}` doesn't resolve, say so and offer `git push -u origin <branch>` instead of silently doing nothing). Zero ahead: say "nothing to commit, nothing to push" and stop. One or more ahead: run the **Pre-push transcript check** and **Pre-push client e2e gate** above, then push those existing commits and report how many.
 
 After a successful push, run the **Build watch** (see `skills/commit/build-watch.md`).
 
@@ -133,7 +141,7 @@ After a successful push, run the **Build watch** (see `skills/commit/build-watch
 
 Same as `/commit v` but also runs `git push` after committing.
 
-Same push rule as `/commit push` above, including the **Pre-push transcript check**.
+Same push rule as `/commit push` above, including the **Pre-push transcript check** and **Pre-push client e2e gate**.
 
 After a successful push, run the **Build watch** (see `skills/commit/build-watch.md`).
 
@@ -152,7 +160,7 @@ Order:
 2. Bump the patch version (same procedure as `/commit v`).
 3. Commit ONLY the version files, by pathspec: `git commit -m "<message>" -- <version-file> ...`.
 4. Message: `VERSION: <new-version>` — where `<new-version>` is the full version string after bumping. If a build number field (e.g. `"build"` in `package.json` or `tauri.conf.json`) exists alongside the version, append it: `VERSION: 1.0.1+21`.
-5. Run the **Pre-push transcript check** above, then `git push`.
+5. Run the **Pre-push transcript check** and **Pre-push client e2e gate** above, then `git push`.
 
 Do not push if either commit step failed. Otherwise same push rule as `/commit push` above - a clean-tree branch that's still ahead of its upstream still gets pushed, it just won't happen here since the version commit always produces new changes.
 
