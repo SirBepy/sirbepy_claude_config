@@ -28,6 +28,12 @@ design, and carries no authorisation of its own, so it is not a credential.
 The allow row matches only the exact 39-char literal, so a longer or
 differently-shaped value assigned to `apiKey` still trips the scanner.
 
+The Windows Common-Controls v6 `publicKeyToken` (`6595b64144ccf1df`) is allowed
+too: it is Microsoft's published assembly key token, present in every Windows app
+manifest that opts into Common Controls v6, and grants nothing. Allowed by Joe
+2026-10-01 after it blocked a cueline manifest commit (cueline todo 29). Exact
+16-char literal only.
+
 1. **Mechanical prefilter**, `skills/commit/secret-scan.sh`, same two-mode
    shape as `em-dash.sh`:
 
