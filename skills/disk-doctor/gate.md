@@ -1,7 +1,7 @@
 # disk-doctor: confirmation gates
 
-Two independent gates, shared by `windows.md` and `macos.md`. Neither is optional and neither
-substitutes for the other.
+Shared by `windows.md` and `macos.md`: the delete gate (never optional) and the rule for
+platform-file edits (no gate).
 
 ## Delete-confirmation gate (required before ANY delete/uninstall runs)
 
@@ -32,20 +32,10 @@ git-clean-f/SQL-delete/diskpart checks. What it still does NOT cover is an ordin
 `Remove-Item` - that only trips when it targets a drive root or a home reference, deliberately, since
 `settings.json` runs `defaultMode: auto` and a broader match would prompt on routine scratch cleanup.
 
-## Platform-file edit confirmation gate
+## Platform-file edits: no confirmation
 
-Required before either platform file is edited with a new SCAN LOG / KNOWN-SAFE / NEVER-TOUCH entry.
-
-Output this exact format and wait for explicit YES before writing anything:
-
-```
-## PLATFORM-FILE-EDIT -- reply YES to apply
-+ [SECTION-NAME] exact line to be added
-```
-
-- `SECTION-NAME` must be one of: `SCAN LOG`, `KNOWN-SAFE`, `NEVER-TOUCH`
-- Claude resolves the section name to the matching header in the platform file being edited and appends the line there
-- The `## PLATFORM-FILE-EDIT` sentinel line is required and must be reproduced verbatim
-- Only lines beginning with `+` are written to the platform file
-- No prose above or below the block
-- A single gate block may contain multiple `+` lines targeting different sections
+Joe, 2026-10-05: the old "reply YES to apply" block was never read, so SCAN LOG / KNOWN-SAFE /
+NEVER-TOUCH additions are written straight into the platform file at the end of a `/disk-doctor`
+run, without asking. Name what was added in one line of the final summary, and commit it with the
+rest of the run. This covers only those three sections. Every delete still goes through the
+delete-confirmation gate above.

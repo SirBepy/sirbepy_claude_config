@@ -51,7 +51,7 @@ Hard cap: 3 dirs max regardless of how many exceed the threshold. Skip `~/Librar
 
 ## Self-improvement (only when invoked as /disk-doctor)
 
-At END of scan, propose any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCAN LOG entry using the confirmation gate in `gate.md` (in this skill folder). Only edit this file when invoked as `/disk-doctor`. No silent/auto edits, no edits when triggered indirectly.
+At END of scan, append any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCAN LOG entry directly, per `gate.md`'s platform-file edit rule (in this skill folder). Only edit this file when invoked as `/disk-doctor`, never when triggered indirectly.
 
 ---
 

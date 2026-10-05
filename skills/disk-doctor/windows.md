@@ -143,7 +143,7 @@ Hard cap: 3 dirs max regardless of how many exceed the threshold.
 
 ## Self-improvement (only when invoked as /disk-doctor)
 
-At END of scan, propose any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCAN LOG entry using the confirmation gate in `gate.md` (in this skill folder). Only edit this file when invoked as `/disk-doctor`. No silent/auto edits, no edits when triggered indirectly.
+At END of scan, append any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCAN LOG entry directly, per `gate.md`'s platform-file edit rule (in this skill folder). Only edit this file when invoked as `/disk-doctor`, never when triggered indirectly.
 
 ---
 
@@ -169,6 +169,7 @@ At END of scan, propose any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SC
 - Stale-project `node_modules` - `npm i` / `pnpm i` rebuilds. Build artifacts (`build/`, `.dart_tool/`, `dist/`, `.next/`, `target/`, `venv/`, `.venv/`) - regenerate. The build-artifact sweep step above is the biggest single win found so far (150G+ on 2026-07-19) - always run it, don't skip as optional.
 - Windows Update leftovers / `Windows.old` / Delivery Optimization - via `cleanmgr` or Storage Sense, not manual delete.
 - `.for_bepy/screenshots/` subfolders and loose legacy files older than 30 days - throwaway per-chat verification shots; `/close` stopped deleting these (todo 324), so they only clear here. Report per-repo, oldest first; never touch `.portfolio-data/` (portfolio keepers, separate scope).
+- `C:\tmp\pw-*` (Playwright browser profiles from Claude verification runs) and `C:\tmp\*-target` / `LocalAppData\Temp\*-target` (Rust scratch CARGO_TARGET_DIRs from Claude sessions) - throwaway, rebuilt on the next run; confirm no cargo/node process holds them first.
 
 ## KNOWN HARD (judgment call, not a routine safe-delete)
 
@@ -184,3 +185,4 @@ Cap: 5 entries max. When at cap, drop the entry with the earliest date field bef
 - 2026-09-04: `C:\Users\tecno\.screenpipe` no longer exists - Joe deleted Screenpipe and its capture
   database deliberately. Do not go looking for that 27G on a future scan, and do not treat its
   absence as a mystery.
+- 2026-10-05: C: free 262.7/930.5G at start, 344.1G after. Deleted (each approved per item): revaire-mobile build + .dart_tool + 2 worktree builds 19.3G, C:\tmp Rust scratch targets 17.0G, LocalAppData\Temp items older than 2 days (incl. a 6G cueline-e2e-target), pip cache 9.85G, 20 C:\tmp\pw-* Playwright profiles 5.5G+, pnpm store prune, 499 stale .for_bepy screenshots. Root cause of Rust on C:: CARGO_TARGET_DIR overrides ~/.cargo/config.toml's D: target-dir, and cueline's e2e build defaulted to os.tmpdir() while builder-preamble told subagents to use $env:TEMP; both now point at D:\cargo-target\<name> (cueline 734fafb, ~/.claude 0adfa20). The Temp block here counts only top-level $env:TEMP files (0.4G) while LocalAppData\Temp was 14.5G recursively, so size it with Get-DirGB. Kept / judgment: Docker vhdx 27.5G, ~/.cache huggingface 19G + whisper 2.9G, Android AVDs 19.3G, idle venvs 10.9G, ollama 11G, games.
