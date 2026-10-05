@@ -25,7 +25,9 @@ entries) and delete that target too, even though it lives in the main checkout. 
 baseline is taken before you edit, never recovered by rewinding a shared tree.
 
 If getting an uncontended build means pointing a scratch output dir outside the repo (e.g.
-`CARGO_TARGET_DIR`), put it under `$env:TEMP` or a gitignored in-repo path, never a bare drive-root
+`CARGO_TARGET_DIR`), put it under `D:\cargo-target\<name>`, the HDD the global
+`~/.cargo/config.toml` already builds into. Not `$env:TEMP` or an in-repo path: both sit on the C:
+SSD, and a 2026-10-05 disk scan found 23 GB of these scratch targets there. Never a bare drive-root
 child like `C:\tmp\<name>` or `D:\<name>` - the removal guard refuses to delete any drive-root child
 as a protected system path, so that location can never be reclaimed by you OR the orchestrator later
 (observed twice: a 7.4 GB and a 14 GB leak, both stuck). Remove the scratch dir yourself before
