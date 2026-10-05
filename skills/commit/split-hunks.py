@@ -21,14 +21,15 @@ commits" section, fixed together):
   GIT_INDEX_FILE, and lands it with `git update-ref HEAD <new> <base>` - a
   compare-and-swap that refuses outright if HEAD moved underneath it.
 
-Design note: `git commit-tree` + `git update-ref` are a different subcommand
-token than `git commit`, so hooks/commit-guard.py's token-aware detector
-(`_commit_subcommand_index`, matching the literal word "commit") never fires
-for this path - its marker gate AND its prefilter re-check are both bypassed.
-Rather than add a hook exemption (off limits to edit from here, and a wider
-surface than this one script needs), `commit` mode below runs
-prefilter-gate.sh itself over the declared pathspec before creating the
-commit object, so a flagged diff still can't land through this route.
+Design note: commit-guard.py now also gates a *raw shell* `git commit-tree`
+and a branch-moving `git update-ref` (todo 1085), but that only covers a
+command string the hook actually reads. This script's own `commit` mode
+builds both calls via Python `subprocess`, never as a literal
+`python ... split-hunks.py commit ...` substring the hook could match - so
+its marker gate still never fires for this path, by construction, not by
+gap. `commit` mode below runs prefilter-gate.sh itself over the declared
+pathspec before creating the commit object, so a flagged diff still can't
+land through this route either way.
 
 Usage:
   split-hunks.py stage <path> --match <substring> [--repo <dir>]

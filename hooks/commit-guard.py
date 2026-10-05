@@ -4,6 +4,15 @@ Fires on every Bash/PowerShell call. Detects a `git commit` subcommand via
 token-aware parsing (not string search) so it can't be fooled by "commit" in
 a message/path or tripped by `commit-graph`.
 
+Also gates `git commit-tree` and a `git update-ref` that moves a branch
+pointer (HEAD or refs/heads/*), since that pair lands a commit without ever
+using the literal word "commit" (todo 1085) - see `is_commit_landing_invocation`.
+This only catches a raw shell command that spells those calls out directly;
+`skills/commit/split-hunks.py commit` builds the same kind of commit via its
+own `subprocess` calls, invisible to this hook (it only sees the
+`python ... split-hunks.py commit ...` command string), so it runs
+prefilter-gate.sh itself instead - see that script's module docstring.
+
 Two marker styles are honoured:
 - Session marker (`.session-markers/<session_id>`): written ONCE per
   session, never consumed, matched by exact session id from the hook
@@ -101,8 +110,8 @@ def _tokenize(command: str) -> list[str] | None:
         return None
 
 
-def _commit_subcommand_index(tokens: list[str]) -> int | None:
-    """Index of the `commit` token in a `git commit` invocation, walking past
+def _subcommand_index(tokens: list[str], name: str) -> int | None:
+    """Index of the `name` token in a `git <name>` invocation, walking past
     global flags (skipping their values for flags like -C), or None."""
     for i, tok in enumerate(tokens):
         if tok != "git":
@@ -113,9 +122,15 @@ def _commit_subcommand_index(tokens: list[str]) -> int | None:
                 j += 2
             else:
                 j += 1
-        if j < len(tokens) and tokens[j] == "commit":
+        if j < len(tokens) and tokens[j] == name:
             return j
     return None
+
+
+def _commit_subcommand_index(tokens: list[str]) -> int | None:
+    """Index of the `commit` token in a `git commit` invocation, walking past
+    global flags (skipping their values for flags like -C), or None."""
+    return _subcommand_index(tokens, "commit")
 
 
 def is_git_commit_invocation(command: str) -> bool:
@@ -129,6 +144,64 @@ def is_git_commit_invocation(command: str) -> bool:
     if tokens is None:
         return False
     return _commit_subcommand_index(tokens) is not None
+
+
+# update-ref flags that consume a following token as their value, so it
+# isn't mistaken for the ref being updated (e.g. `-m <reason>`).
+_UPDATE_REF_VALUE_FLAGS = {"-m"}
+
+
+def _is_commit_tree_invocation(tokens: list[str]) -> bool:
+    """True if `tokens` contains a `git commit-tree` call. This alone
+    creates a new commit object (no ref moves yet), but it's the exact
+    primitive split-hunks.py's design note (todo 1085) names as the one that
+    slips past `is_git_commit_invocation`'s literal "commit" match."""
+    return _subcommand_index(tokens, "commit-tree") is not None
+
+
+def _is_branch_update_ref_invocation(tokens: list[str]) -> bool:
+    """True if `tokens` contains a `git update-ref` call whose target ref is
+    `HEAD` or `refs/heads/*` - the half of the commit-tree + update-ref pair
+    that actually lands a commit by moving a branch pointer. An update-ref
+    to any other ref (notes, tags-as-refs, etc.) or a `--stdin`-fed call
+    with no positional ref argument is left alone - it's not a commit."""
+    idx = _subcommand_index(tokens, "update-ref")
+    if idx is None:
+        return False
+    k = idx + 1
+    while k < len(tokens) and tokens[k].startswith("-"):
+        if tokens[k] in _UPDATE_REF_VALUE_FLAGS:
+            k += 2
+        else:
+            k += 1
+    if k >= len(tokens):
+        return False
+    ref = tokens[k]
+    return ref == "HEAD" or ref.startswith("refs/heads/")
+
+
+def is_commit_landing_invocation(command: str) -> bool:
+    """True if `command` contains any shell-visible git call that lands a
+    commit: plain `git commit`, `git commit-tree` (todo 1085 - the same
+    token-aware tokenize/walk `is_git_commit_invocation` uses, extended to
+    the commit-tree + update-ref route `split-hunks.py commit` documents as
+    bypassing the literal "commit" match), or a `git update-ref` that moves
+    a branch pointer (HEAD or refs/heads/*). This is the gate `main()` acts
+    on; `is_git_commit_invocation` itself stays `git commit`-only since
+    `extract_commit_pathspec`'s `--`-pathspec resolution only makes sense
+    for that form - commit-tree/update-ref have no equivalent pathspec, so
+    callers landing a commit that way still get the marker gate but not the
+    prefilter re-check (split-hunks.py runs that gate itself; see its
+    module docstring).
+    """
+    tokens = _tokenize(command)
+    if tokens is None:
+        return False
+    return (
+        _commit_subcommand_index(tokens) is not None
+        or _is_commit_tree_invocation(tokens)
+        or _is_branch_update_ref_invocation(tokens)
+    )
 
 
 def extract_commit_pathspec(tokens: list[str]) -> list[str] | None:
@@ -243,7 +316,7 @@ def main() -> None:
     payload = read_payload()
     command = (payload.get("tool_input") or {}).get("command", "") or ""
 
-    if not is_git_commit_invocation(command):
+    if not is_commit_landing_invocation(command):
         sys.exit(0)
 
     _prune_expired_legacy_markers()

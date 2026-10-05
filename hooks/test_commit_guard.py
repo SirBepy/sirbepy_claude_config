@@ -51,6 +51,37 @@ def check_invocation(case) -> bool:
 
 fails = _testlib.run_cases(INVOCATION_CASES, check_invocation)
 
+# --- is_commit_landing_invocation: also catches the commit-tree + update-ref
+# path split-hunks.py's own design note (todo 1085) flags as a bypass: a raw
+# shell command landing a commit this way must gate the same as `git commit`.
+
+LANDING_CASES = [
+    (
+        "git commit-tree deadbeef -p HEAD -m 'x' && git update-ref refs/heads/master new old",
+        True,
+        "commit-tree + update-ref to a branch ref lands a commit, must gate",
+    ),
+    ("git commit-tree deadbeef -p HEAD -m 'x'", True, "commit-tree alone still creates a commit object"),
+    ("git update-ref refs/heads/feature new old", True, "update-ref straight to a branch ref"),
+    ("git update-ref HEAD new old", True, "update-ref straight to HEAD"),
+    ("git commit -m 'x'", True, "plain git commit still matches via this entrypoint too"),
+    ("git update-ref --stdin", False, "update-ref --stdin reads refs from input, no branch positional here"),
+    ("git update-ref refs/notes/commits new old", False, "update-ref to a non-branch ref is unrelated"),
+    ("git log", False, "unrelated read-only git subcommand"),
+    ("git update-ref -d refs/heads/old-branch", True, "deleting a branch ref still mutates history pointers"),
+]
+
+
+def check_landing(case) -> bool:
+    command, expected, label = case
+    got = guard.is_commit_landing_invocation(command)
+    ok = got == expected
+    print(f"{'PASS' if ok else 'FAIL'}: {label} (expected {expected}, got {got})")
+    return ok
+
+
+fails += _testlib.run_cases(LANDING_CASES, check_landing)
+
 # --- extract_commit_pathspec: `--` pathspec resolution, chain-operator aware ---
 
 PATHSPEC_CASES = [
@@ -113,6 +144,19 @@ with tempfile.TemporaryDirectory() as tmp:
     if not _testlib.report(got == 0, f"{label} (got exit={got})"):
         fails.append(label)
 
+    label = "a raw commit-tree + update-ref landing with no marker is blocked (todo 1085)"
+    got = run_main(
+        "git commit-tree deadbeef -p HEAD -m 'x' && git update-ref refs/heads/master new old",
+        session_id="sess-1b",
+    )
+    if not _testlib.report(got == 2, f"{label} (got exit={got})"):
+        fails.append(label)
+
+    label = "a read-only update-ref to a non-branch ref needs no marker"
+    got = run_main("git update-ref refs/notes/commits new old", session_id="sess-1c")
+    if not _testlib.report(got == 0, f"{label} (got exit={got})"):
+        fails.append(label)
+
     # Legacy per-commit marker: consumed on use.
     legacy_marker = tmpdir / ".commit-marker-abc123"
     legacy_marker.touch()
@@ -142,6 +186,14 @@ with tempfile.TemporaryDirectory() as tmp:
     label = "a different session id does not see another session's marker"
     got = run_main("git commit -m 'x'", session_id="sess-4")
     if not _testlib.report(got == 2, f"{label} (got exit={got})"):
+        fails.append(label)
+
+    label = "a marked session's commit-tree + update-ref landing is allowed (split-hunks.py's own route stays unblocked)"
+    got = run_main(
+        "git commit-tree deadbeef -p HEAD -m 'x' && git update-ref refs/heads/master new old",
+        session_id=session_id,
+    )
+    if not _testlib.report(got == 0, f"{label} (got exit={got})"):
         fails.append(label)
 
     # Legacy session marker fallback (pre todo-341 split location).

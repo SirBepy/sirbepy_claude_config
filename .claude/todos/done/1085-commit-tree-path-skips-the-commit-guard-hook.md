@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=7, reconfirm-count=1, content-hash=91f5f83a -->
 <!-- duplicate-checked: hits (222, 256, 420, 70, 806) cover push, lint-staged, guard timing, cherry-pick and foreign hunks; none covers a commit landed via commit-tree + update-ref -->
 # split-hunks.py's commit-tree path skips the commit-guard hook
 
@@ -31,3 +32,7 @@ marker gate is still bypassed, and any other script that uses commit-tree gets n
 
 - A raw `git commit-tree` + `git update-ref HEAD` from a session with no marker is blocked.
 - `split-hunks.py commit` from a marked session still lands, verified in a scratch repo.
+
+## Notes
+
+- Done in loop-todos cycle 2 (2026-10-06): commit-guard gates a raw shell git commit-tree and a branch-moving git update-ref (HEAD or refs/heads/*) on the session marker, via is_commit_landing_invocation; split-hunks.py's own subprocess route stays unmatched by construction and runs prefilter-gate itself (docstring updated). 44 guard tests + 17 split-hunks tests pass; spot-checked echo/grep mentions do not match.
