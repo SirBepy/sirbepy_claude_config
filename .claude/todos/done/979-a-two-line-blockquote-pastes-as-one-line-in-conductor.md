@@ -56,3 +56,7 @@ LINES will collapse, and the "Placeholders" and "Language matching" sections giv
 - The ref and the root bullet both say lines inside a blockquote collapse, and name the fenced
   code block as the multi-line escape.
 - `python ci/run_all.py` still passes (token budget included).
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.

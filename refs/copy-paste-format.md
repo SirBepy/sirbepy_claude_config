@@ -18,9 +18,21 @@ Replace `<PROJECT_ID>` with your Firebase project id:
 
 ## Sequential commands
 
-Multiple commands meant to run together can be batched in one blockquote:
+A blockquote is one markdown paragraph: a single newline inside it is a soft line break and
+renders as a space, so two commands on two separate lines paste as ONE line, concatenated.
+Confirmed 2026-09-10 (countoff session): `gcloud auth login` and `gsutil cors set ...` given as
+two lines in one blockquote pasted as `gcloud auth login gsutil cors set ...` and errored.
+
+Multiple commands meant to run together are safe to batch in one blockquote ONLY when joined onto
+a single line with `&&` or `;`:
 
 > flutter clean && flutter pub get && flutter run
+
+Two (or more) commands that must run as separate steps but still travel together - an interactive
+login followed by a second command, anything that cannot be chained with `&&`/`;` - go in a
+**fenced code block** instead, one command per line (the same escape the Windows-path gotcha below
+already uses). A fenced code block is not parsed as a markdown paragraph, so its line breaks survive
+the paste.
 
 Separate blockquotes only when the steps are genuinely independent or Joe needs to pause between them.
 

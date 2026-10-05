@@ -104,3 +104,7 @@ and still produce a contended result.
 - The rejected hook option is recorded with its reason, so the next reader does not re-propose it.
 - Re-reading the chosen file makes it obvious what to run when a suite comes back red in a
   checkout with live peers.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.

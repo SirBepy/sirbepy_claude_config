@@ -60,3 +60,7 @@ reflex; it just does not name cost claims.
 
 - The rule exists in a file the dev owns and that loads every session.
 - It names the distinction explicitly: context footprint versus billed cost.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.

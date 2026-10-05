@@ -74,3 +74,4 @@ not proof of solitude.
 Related, same session: the `reference_output_styles_mechanics` memory's restart claim was corrected
 the same day, and `feedback_read_the_artifact_not_the_summary` records the behavioural half of this
 finding. This todo is only the `CLAUDE.md` rule half.
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.

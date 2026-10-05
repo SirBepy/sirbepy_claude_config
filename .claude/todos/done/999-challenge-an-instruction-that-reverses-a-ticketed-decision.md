@@ -82,3 +82,4 @@ Why a rule rather than a one-off correction:
 Open and unresolved as of filing: bea5f50 is pushed with the two-second revert in place. Whether
 that gets fixed, and whether sc-55729 is re-opened for it, is Joe's call and is not part of this
 todo. This todo is only about the rule.
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.

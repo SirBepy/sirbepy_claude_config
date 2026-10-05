@@ -95,6 +95,30 @@ Rule for every ADD/UPDATE that touches the index: insert or move the entry's lin
 its own block, never to the end of the whole file. This keeps fresh writes out of the truncation
 zone between `/cleanup-memory` runs, which perform the full canonical re-sort.
 
+## Receipts beyond memory writes
+
+The same evidence-before-verdict discipline this rubric enforces for memory also governs two
+claim shapes `CLAUDE.md`'s Execution Discipline UNVERIFIED rule does not spell out by name. Both
+extend that rule rather than replace it; this section is their only full write-up, kept here
+because `CLAUDE.md` had no token headroom to carry the extra prose (ratchet ceiling,
+`ci/check_instruction_budget.py`) and this file already loads every session.
+
+- **A third-party artifact (repo, skill, plugin, package) being judged for adopt/reject.** A
+  `WebFetch` of a README or landing page answers through a small summarizing model, so its output
+  is a paraphrase, not the artifact. 2026-09-25: Claude judged
+  `github.com/ayghri/i-have-adhd` from one such summary and said "take nothing from it"; reading
+  `SKILL.md` verbatim via `raw.githubusercontent.com` reversed the verdict and two of its rules
+  were adopted (`03e79a5`). The receipt that satisfies a verdict here is the artifact's own
+  load-bearing files, read directly (`raw.githubusercontent.com`, or a trees-API listing for which
+  files exist) - never a fetched summary.
+- **A token count volunteered as a per-turn or per-request COST**, not asked for. 2026-09-28,
+  `claude_usage_in_taskbar` session `7099dea0`: Claude measured MCP tool schemas by character count
+  and presented it as a recurring bill across two question cards before the dev pushed back; the
+  figure was off by roughly 10x because the schemas were deferred behind `ToolSearch` and what
+  wasn't deferred was cache-read from turn 2 on. Before stating a token count as a bill, check
+  whether that content is cached or deferred - a raw character or word count alone is a
+  context-footprint figure, not a bill.
+
 ## Anti-patterns this rubric exists to prevent
 
 - **Bloat.** Volume degrades retrieval. More entries is not more memory.
