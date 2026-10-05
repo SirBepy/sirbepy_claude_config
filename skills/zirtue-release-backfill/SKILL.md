@@ -59,9 +59,10 @@ Never re-derive:
   - `Oneday` - value_id `69247286-4a0c-4fcf-a3c4-85f8bf6af1ea`
   - `V1.0`, `V1.1`, `V2.0` - legacy placeholders
 - Repos (sibling paths):
-  - `C:/Users/tecno/Desktop/Projects/zng-app` - Flutter web consumer app. Tag format: `v1.0.0+N` (build) + `Release-M-D-YYYY` (deploy, unpadded, e.g. `Release-7-16-2026`). Shortcut label: `FE 1.0.0+N`.
-  - `C:/Users/tecno/Desktop/Projects/zng-admin` - Flutter web admin. Tags `v1.0.0+N` + `Release-M-D-YYYY` (unpadded). Shortcut label: `Admin 1.0.0+N`.
-  - `C:/Users/tecno/Desktop/Projects/zng-api` - NestJS backend. Tags `v1.0.X`. Shortcut label: `API 1.0.X`. Dev does author API commits; not currently included in the discovery/shipped-detection loops below (steps 3-4 scan zng-app and zng-admin only).
+  - `C:/Users/tecno/Desktop/Projects/zng-app` - Flutter web consumer app. Tag format: `v<major>.<minor>.<patch>+N` (build, e.g. `v1.0.0+46`, `v1.1.0+1`) + `Release-M-D-YYYY` (deploy, unpadded, e.g. `Release-7-16-2026`). Shortcut label: `FE <major>.<minor>.<patch>+N`.
+  - `C:/Users/tecno/Desktop/Projects/zng-admin` - Flutter web admin. Tags `v<major>.<minor>.<patch>+N` + `Release-M-D-YYYY` (unpadded). Shortcut label: `Admin <major>.<minor>.<patch>+N`. Past incident (2026-09-30): this repo jumped from tag `v1.0.0+9` to `v1.0.0+11` with no `+10` tag, and the Release enum had `Admin 1.0.0+10` but not `+11` - the dev had to add the missing enum value by hand mid-run. The build number is never assumed contiguous; always use the tag that actually contains the SHA, and run the enum-completeness check in step 4c before proposing anything.
+  - `C:/Users/tecno/Desktop/Projects/zng-api` - NestJS backend. Tags `v<major>.<minor>.<patch>`. Shortcut label: `API <major>.<minor>.<patch>`. Dev does author API commits; not currently included in the discovery/shipped-detection loops below (steps 3-4 scan zng-app and zng-admin only).
+  - `C:/Users/tecno/Desktop/Projects/zng-biller` - Flutter web biller portal. **Never deployed as of 2026-09-30**: it has no version tags at all, only milestone tags (`scaffold-complete`, `auth-complete`, `team-complete`, or similar non-version strings). Treat any repo matching this shape - zero tags matching `v\d+\.\d+\.\d+` - as never-deployed: its Ready for deploy tickets are reported in their own bucket (step 8) and never proposed for Release or Gate D, regardless of what step 3's git-author scan finds. Re-check this condition per run rather than hardcoding zng-biller by name - the day it ships its first version tag, this stops applying.
 
 ## CRITICAL: Shortcut PUT semantics
 
@@ -168,16 +169,22 @@ For each ID in the discovery list:
       git -C <repo> branch -a --contains <sha>
       ```
 
-   c. **Find the first version tag containing each SHA** (chronological order):
+   c. **Find the newest version tag containing each SHA:**
 
       ```bash
       git -C <repo> tag --contains <sha> --sort=creatordate
       ```
 
-      First matching `v1.0.0+N` (app/admin) or `v1.0.X` (api) tag wins. Map:
-      - `v1.0.0+N` on `zng-app` → `FE 1.0.0+N`
-      - `v1.0.0+N` on `zng-admin` → `Admin 1.0.0+N`
-      - `v1.0.X` on `zng-api` → `API 1.0.X`
+      This lists every containing tag oldest-first; take the **last** line
+      (newest), not the first - the dev confirmed 2026-09-30 that Release
+      means the newest containing tag, since a commit can ship, then still be
+      contained by every later tag too. Only consider tags matching
+      `v\d+\.\d+\.\d+(\+\d+)?` - a repo with zero such tags is never-deployed
+      (see the zng-biller note under Repos) and contributes no proposal at
+      all. Map the matched tag generically, never hardcoding a version:
+      - `v<ver>+N` on `zng-app` → `FE <ver>+N`
+      - `v<ver>+N` on `zng-admin` → `Admin <ver>+N`
+      - `v<ver>` on `zng-api` → `API <ver>`
 
 5. **Shipped vs partially-shipped vs not shipped:**
    - **Every** discovered SHA has a containing version tag → **shipped**. Include this ticket in Release categorization (step 6) **regardless of its literal Shortcut state**. This is what catches a ticket stuck in `Testing`/`Backlog`/`PR Review` after it already deployed - the exact miss on 54761/54776.
@@ -185,11 +192,40 @@ For each ID in the discovery list:
    - **None** tagged (commit exists but unreleased, or no commit at all) → **not shipped**. Only include it in this run if the dev explicitly passed a `state` arg that matches this ticket's literal state (an intentional narrower audit of in-flight work); otherwise exclude it - it's legitimately still in progress.
 6. **If the dev passed a `state` arg**, additionally filter the shipped set down to tickets whose literal `workflow_state_id` matches that state. No `state` arg = no extra filter, every shipped ticket is in scope.
 
+### Step 4b. Ready for deploy with no commit (new discovery pass)
+
+Not "step 4.5" - that number is already used elsewhere in this doc (steps 6 and 8)
+to mean step 4's existing shipped/partially-shipped/not-shipped item. This is a
+separate pass, run alongside step 4, before moving on to step 5.
+
+Step 3's discovery is a git-author commit scan, so it can never see a ticket that
+shipped under someone else's commit or an epic-level commit with no id in the
+subject - the 2026-09-30 run hit 22 of these across 146 tickets. Before leaving
+step 4, cross-reference separately:
+
+1. Query Shortcut directly for every story the dev owns (or has ever owned - check
+   history) currently in literal state `Ready for deploy`, independent of step 3's
+   git-author list.
+2. Any ID in that set NOT already covered by step 3's discovery goes into a new
+   **"Ready for deploy, no commit"** bucket - do not let it silently vanish.
+3. For each ticket in this bucket, dispatch a read-only `general-purpose` sonnet
+   agent (batch ~4 tickets/agent, parallel waves): locate the described behavior in
+   the relevant repo's code, run `git log -S '<distinctive string from the ticket>'`
+   to find the introducing commit, then apply step 4.4c's newest-containing-tag
+   lookup to propose a Release. The agent reports its trace per ticket (file:line
+   or commit found, proposed tag) - it never writes to Shortcut.
+4. This bucket is **never auto-closed**. Every ticket in it goes through Gate D2
+   regardless of its proposed confidence - a trace-based Release is inherently
+   lower-certainty than a direct commit match, and Gate D2 already asks for every
+   non-routine close.
+5. If an agent finds no trace at all, the ticket stays `needs-human` (step 6) and
+   is reported, never guessed.
+
 ### 5. Categorize by Release value
 
-For every ticket that passed step 4 eligibility:
+For every ticket that passed step 4 eligibility (including the Step 4b bucket):
 
-- Concrete release (matches `^(FE|Admin) 1\.0\.0\+\d+$` or `^API 1\.0\.\d+$`) - **already set**, but still check other fields (step 7). If its literal state isn't `Complete`, it's also a **stale-but-shipped** candidate for Gate D (step 9).
+- Concrete release (matches `^(FE|Admin|API) \d+\.\d+\.\d+(\+\d+)?$`) - **already set**, but still check other fields (step 7). If its literal state isn't `Complete`, it's also a **stale-but-shipped** candidate for Gate D (step 9).
 - Empty / `Next release` / `TBD` / `Oneday` / `V1.x` - **needs Release backfill** (steps 6 + 7).
 
 The REJECTED flag from step 4.3 carries through unchanged - it doesn't affect Release categorization, only Gate D eligibility.
@@ -197,6 +233,15 @@ The REJECTED flag from step 4.3 carries through unchanged - it doesn't affect Re
 ### 6. Resolve Release for unset tickets
 
 For each ticket needing Release backfill, reuse the merge-SHA / tag lookup already done in step 4.4 - do not redo it.
+
+**Enum-completeness check (run once, before step 8's report, not per ticket at apply time).**
+Fetch the Release custom field's enum once (`reference.md`'s REST quick reference). Collect the
+full set of distinct proposed Release labels across every ticket resolved so far (steps 4.4, 6,
+Step 4b). Diff that set against the enum's existing values. If any proposed label is missing,
+list every missing label in one `AskUserQuestion` ("Add these Release values in Shortcut UI before
+continuing: <list>. Skip the affected tickets for now, or wait while you add them?") instead of
+discovering it ticket-by-ticket during step 10's apply loop - that is what cost the dev a mid-run UI
+detour on 2026-09-30 (`Admin 1.0.0+11` was missing). Never invent a value via the API either way.
 
 **Confidence:**
 - `high` - single repo, unambiguous SHA from `^<id>:` prefix, one matching version tag.
@@ -232,6 +277,8 @@ Print a markdown table grouped by:
 5. Release already set and state fine, but missing other fields
 6. **Partially-shipped** - some but not all discovered SHAs are tagged. Release flagged "partial"; never proposed for Gate D.
 7. `post-latest-tag` / `unmerged` / `needs-human` (no Release update; may still get other-field fills)
+8. **Ready for deploy, no commit** (Step 4b) - traced via subagent, not a direct commit match. Always Gate D2, never Gate D1, regardless of confidence. Show the trace summary (file:line or commit found) per ticket.
+9. **Never-deployed repo** (e.g. zng-biller while it carries no version tags) - reported only, no Release proposal, no Gate D of any kind.
 
 For each row include: Story ID, Title, Literal Shortcut state, Current Release, Proposed Release, Rejected (Y + date/actor, or N), Missing fields, Proposed defaults, Estimate to set (★ if >2, requires confirmation).
 
@@ -254,11 +301,12 @@ The only fully-legal path is `... -> Testing -> Ready for deploy` (QA's forward 
 - **Gate D1 - Routine closes (default ON, opt-out only).** A ticket qualifies for D1 only if ALL of:
   - literal `workflow_state_id` is `Ready for deploy` (`500018659`) right now, AND
   - not REJECTED (step 4.3), AND
+  - not from the Step 4b no-commit discovery pass, AND
   - `high`-confidence shipped, or stale-but-shipped (Release already concretely set), or `medium`/`low`-confidence with its Release update approved in Gate A.
 
   If the invocation contained a move-to-Complete opt-out (step 1), skip every D1 move and note "state moves skipped (dev opt-out)" in the final summary - no question asked. Otherwise every D1 ticket moves during apply; the step 8 report must list the full D1 set with "These will be moved to Complete (say 'don't move to completed' to skip)." before any gate is answered.
 
-- **Gate D2 - Non-routine closes (always asks, never default-on).** Every other ticket that would otherwise close: literal state is anything besides `Ready for deploy` (`Testing`, `Backlog`, `To Do`, `In Progress`, `PR Review`, `Blocked`, `On hold`), OR the ticket is REJECTED even though its literal state happens to be `Ready for deploy`. One AskUserQuestion batch listing every D2 candidate with its literal state and, if REJECTED, the rejection date/actor:
+- **Gate D2 - Non-routine closes (always asks, never default-on).** Every other ticket that would otherwise close: literal state is anything besides `Ready for deploy` (`Testing`, `Backlog`, `To Do`, `In Progress`, `PR Review`, `Blocked`, `On hold`), OR the ticket is REJECTED even though its literal state happens to be `Ready for deploy`, OR the ticket came from the Step 4b no-commit discovery pass even though its literal state happens to be `Ready for deploy` - a traced-not-matched Release is lower-certainty than a direct commit match and never skips the ask. One AskUserQuestion batch listing every D2 candidate with its literal state and, if REJECTED, the rejection date/actor, and if Step 4b, the trace summary:
   - "Move all listed tickets to Complete"
   - "Move specific story IDs"
   - "Skip - leave all D2 tickets in their current state"
@@ -266,6 +314,7 @@ The only fully-legal path is `... -> Testing -> Ready for deploy` (QA's forward 
   The move-to-Complete opt-out (step 1) still suppresses D2, but D2 is never implied by silence elsewhere - no answer means no move.
 
 - `partially-shipped` tickets (step 4.5) never enter Gate D, D1 or D2 - they aren't shipped yet.
+- Tickets in a never-deployed repo (zng-biller today, or any repo with zero version tags) never enter Gate D, D1 or D2 - they are reported only.
 - Release backfill (Gate A) is independent of Gate D - a REJECTED ticket still gets its Release value backfilled if approved; only the state move is withheld.
 - This skill never writes `500018659` (`Ready for deploy`) - that transition is QA's alone (see Fixed identity & constants). It only ever writes `500018258` (`Complete`); unchanged by this fix.
 - Never silently skip moves because Gate A/B/C were answered. If the run ends with shipped, non-rejected, D1-eligible tickets left pre-`Complete`, the summary must say which ones and why (opt-out, confidence guard, or apply error).
@@ -307,6 +356,8 @@ Report:
 - K2 tickets moved to Complete via Gate D2 (confirmed non-routine)
 - R tickets REJECTED - Release backfilled if approved, state left alone
 - P tickets partially-shipped - reported only, no state move
+- B tickets from the Step 4b no-commit discovery pass - traced and reported, Release backfilled only via Gate D2 approval
+- V tickets in a never-deployed repo (zero version tags) - reported only, no Release proposal, no state move
 - L flagged for manual review (unresolved / multi-repo / post-latest-tag)
 
 Include the story URLs for everything updated so the dev can spot-check.

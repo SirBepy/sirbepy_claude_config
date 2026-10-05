@@ -149,6 +149,82 @@ def check_prefilter_suites(root: Path) -> tuple:
     return True, ""
 
 
+def discover_skill_tests(root: Path) -> list:
+    """Finds test_*.sh / test_*.py living beside a script anywhere under
+    skills/, outside skills/commit (todo 991).
+
+    skills/commit stays excluded here because check_prefilter_suites already
+    runs its three test_*.sh suites with its own bash-specific handling;
+    folding that directory into this generic glob too would run the same
+    suites twice. Tracked-only, same rule as every other discovery in this
+    file (todo 805): an untracked test file is not yet part of the committed
+    contract this gate protects.
+
+    Population at authoring time (counted via `git ls-files skills/` filtered
+    to .ps1/.sh/.py/.mjs, 2026-10-05): about 150 executable scripts live
+    under skills/, and the handful that already have coverage mostly use a
+    different, already-working convention - a tools/test_<name>.py that
+    drives the script by subprocess with its path overridable via an env var
+    (e.g. tools/test_close_safe_remove_worktree.py, tools/test_build_dispatch.py,
+    tools/test_reachability.py). Those are already discovered by
+    run_tool_tests.py and must not be found twice here. Zero scripts outside
+    skills/commit currently use the sibling test_*.{sh,py} convention this
+    function generalizes - that is why it finds nothing today. It exists so
+    the next skill author who writes a sibling test (the skills/commit shape)
+    gets picked up without a second hardcoded directory ever being added.
+    """
+    skills_dir = root / "skills"
+    if not skills_dir.is_dir():
+        return []
+    candidates = sorted(
+        p for p in skills_dir.rglob("test_*.*")
+        if p.suffix in (".sh", ".py")
+        and "__pycache__" not in p.parts
+        and p.relative_to(skills_dir).parts[0] != "commit"
+    )
+    tracked = tracked_files(root, "skills")
+    if tracked is not None:
+        candidates = [p for p in candidates if p.relative_to(root).as_posix() in tracked]
+    return candidates
+
+
+def check_skill_tests(root: Path) -> tuple:
+    """Runs every discover_skill_tests() suite (todo 991). A no-op pass today
+    (see discover_skill_tests' population note) - its job is making sure the
+    next sibling test someone writes under skills/ is not silently inert,
+    which is exactly what todo 991 found already happened once (skills/close's
+    safe-remove-worktree.ps1 had no discovery path for weeks).
+    """
+    print("\n=== skill-script self-tests (skills/**/test_*.{sh,py}, excl. commit) ===", flush=True)
+    tests = discover_skill_tests(root)
+    if not tests:
+        print("OK: 0 skill-script test suites discovered outside skills/commit")
+        return True, ""
+    fails = []
+    details = []
+    for test_path in tests:
+        rel = test_path.relative_to(root)
+        runner = [_bash_exe(), rel.as_posix()] if test_path.suffix == ".sh" else [sys.executable, str(rel)]
+        try:
+            proc = subprocess.run(
+                runner, cwd=str(root), capture_output=True,
+                text=True, encoding="utf-8", errors="replace", timeout=120,
+            )
+            ok, out, err = proc.returncode == 0, proc.stdout, proc.stderr
+        except (OSError, subprocess.TimeoutExpired) as e:
+            ok, out, err = False, "", f"could not run {rel}: {e!r}"
+        print(f"{'PASS' if ok else 'FAIL'} {rel.as_posix()}")
+        if not ok:
+            fails.append(rel.as_posix())
+            details.append(f"--- {rel.as_posix()} ---\n{out}\n{err}")
+    if fails:
+        detail = "\n".join(details)
+        print(f"FAIL: {len(fails)} of {len(tests)} skill-script test suites failed")
+        return False, detail
+    print(f"OK: {len(tests)}/{len(tests)} skill-script test suites passed")
+    return True, ""
+
+
 def main() -> int:
     ci_dir = Path(__file__).resolve().parent
     parser = argparse.ArgumentParser()
@@ -162,13 +238,16 @@ def main() -> int:
         ok, detail = run_check(label, ci_dir / name, root)
         if not ok:
             failed.append((label, detail))
-    total = len(CHECKS) + 2
+    total = len(CHECKS) + 3
     ok, detail = check_hook_imports(root)
     if not ok:
         failed.append(("hook import smoke", detail))
     ok, detail = check_prefilter_suites(root)
     if not ok:
         failed.append(("prefilter self-tests", detail))
+    ok, detail = check_skill_tests(root)
+    if not ok:
+        failed.append(("skill-script self-tests", detail))
 
     print("\n" + "=" * 48)
     if failed:

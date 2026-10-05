@@ -74,3 +74,4 @@ runner than the `.sh` and `.py` suites. Say which way it goes rather than leavin
 - Suite discovery here is TRACKED-FILE based. An untracked `test_*.py` is silently not run, which
   cost a wrong suite count during the 2026-09-11 run. Whatever is wired, check it against a staged
   file, not just a written one.
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.

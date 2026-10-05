@@ -62,3 +62,4 @@ In `C:\Users\tecno\.claude\skills\zirtue-release-backfill\SKILL.md`:
 - `git log -E --grep='\b<id>\b'` silently matches nothing (git's ERE has no `\b`); use `-F --grep <id>`
   and filter the digits boundary afterwards. Claude hit this in the hand-run; the skill's own step 3
   uses shell `grep -oE` on piped output, which is fine.
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.

@@ -210,18 +210,15 @@ per the global subagent-model rule; never inherit.
    - **Claude Conductor specifically:** Conductor mandates `report_turn_status`
      as the literal last action of every turn (a Stop hook blocks the turn
      otherwise), so "no tool call after it" is unsatisfiable there as written.
-     Which fix applies depends on an unverified fact - whether Conductor's
-     card parser reads raw assistant text or only `send_message` payloads -
-     that cannot be confirmed from outside a live Conductor session:
-     - If the parser reads raw assistant text: the "no tool call after it"
-       rule is exempt for `report_turn_status` only, since that call is
-       harness-mandated and carries no user-visible text - emit the markers
-       as plain text same as elsewhere, then call `report_turn_status`.
-     - If the parser only reads `send_message` payloads: emit the three
-       marker lines as the body of a `send_message` call instead of raw
-       assistant text.
-     Do not do both - the rendered inline preview from this step plus a
-     rendered card is a duplicate wall of text for the dev.
+     Conductor's card parser reads raw assistant text, not `send_message`
+     payloads - `detectPrPreviewToken`
+     (`src/shared/chat/chat-classifiers.ts:58-80` in claude_usage_in_taskbar),
+     called from the `assistant` branch of `chat-transforms.ts`, gated only on
+     the message being finalized (settled 2026-10-02, pinned by
+     `tests/chat-transforms.test.mjs`). So `report_turn_status` is exempt from
+     the "no tool call after it" rule - it is harness-mandated and carries no
+     user-visible text: emit the markers as plain text same as elsewhere, then
+     call `report_turn_status`.
 
 See `skills/create-pr/drafting-rules.md` for the auto-tier rubric, the
 secret-scan check, the visual-scan rules, and the Slack-announcement-block

@@ -62,3 +62,4 @@ hand because the skill has no template for it.
 - Evidence: `C:\Users\tecno\Desktop\Projects\fibo\.for_bepy\audit\` (RUBRIC.md, VERIFY.md,
   reports/, verify/, REPORT.md, partition.mjs). `partition.mjs` slices a tree into ~5k-line file
   lists. It is generic and could ship with the skill too.
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.

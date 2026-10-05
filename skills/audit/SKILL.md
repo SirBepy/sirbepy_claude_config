@@ -42,8 +42,8 @@ produces findings with line numbers. Aim for 10-25 files or ~5k lines per slice.
 
 Write `.for_bepy/audit/RUBRIC.md` (or the project's scratch equivalent) once, then have every
 dispatch read it. This keeps each dispatch prompt short and guarantees one shared severity scale and
-one report shape across 25 agents. Copy `rubric-template.md` from this skill's directory and fill in
-the project-specific context section at the bottom.
+one report shape across 25 agents. Copy `rubric-template.md` from this skill's directory, append the
+matching stack pack from `lenses/` (or none), and fill in the project context section.
 
 The rubric's non-negotiables:
 
@@ -95,8 +95,9 @@ launched. It stops three agents spending output on the same non-constant-time co
 **This is the phase that separates an audit from a pile of model output.** A subagent's report is a
 claim, not a finding.
 
-For **every CRITICAL and HIGH**, read the cited lines yourself before it goes in the report. Follow
-each link of a multi-step chain separately. Then classify:
+For **every CRITICAL and HIGH**, read the cited lines yourself before it goes in the report, or hand
+a batch to a refuter dispatch built from `verify-template.md` (its verdicts match the list below).
+Follow each link of a multi-step chain separately. Then classify:
 
 - **Confirmed** - you read the lines and the claim holds. Say so and keep the severity.
 - **Confirmed but narrower** - the mechanism is real, the impact is smaller than claimed. Rewrite the
@@ -114,8 +115,8 @@ it fixed before the audit finishes.
 
 ## Phase 5 - The report
 
-One markdown file. Findings ranked by severity, then by whether the dev would hit it in a normal
-day. Each finding keeps: where (`path:line`), what, why it matters with a concrete trigger, the
+One markdown file, written by the orchestrator itself, never a dispatch. Findings ranked by severity,
+then by whether the dev would hit it in a normal day. Each finding keeps: where (`path:line`), what, why it matters with a concrete trigger, the
 proposed fix, confidence, effort, lens.
 
 Three sections the report must have:

@@ -31,7 +31,7 @@ curl -s "https://api.app.shortcut.com/api/v3/custom-fields/68f8e559-4a18-4a6e-be
 
 - **Cross-repo fix (zng-app + zng-admin).** Status `multi-repo`. Ask dev which release is primary; Shortcut only allows one Release value per ticket.
 - **No commit found.** Status `needs-human`. Don't guess from title alone unless dev opts in.
-- **Tag naming drift.** If you see tags that don't match `v1.0.0+N` or `v1.0.X`, flag and stop. Update this skill before proceeding.
+- **Tag naming drift.** If you see tags that don't match `v<major>.<minor>.<patch>+N` (app/admin) or `v<major>.<minor>.<patch>` (api), flag and stop. Update this skill before proceeding. A repo with zero tags matching that shape at all (zng-biller as of 2026-09-30) is not drift - it's never-deployed; see the Repos section in SKILL.md.
 - **Enum value missing.** Do not create new enum values via API. Stop with a clear message: "Release enum lacks `<label>`. Add it in Shortcut UI, then re-run."
 - **Repo working tree dirty.** `git fetch` still works but never `checkout` anything. This skill only reads tags / log.
 - **Estimate already set on ticket.** Never overwrite. Only fill if currently `None`.

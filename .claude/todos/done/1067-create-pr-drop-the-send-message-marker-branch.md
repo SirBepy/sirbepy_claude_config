@@ -36,3 +36,7 @@ evidence, since a Conductor update could change it.
 
 - Step 4 has a single instruction for Conductor, citing the claude_usage_in_taskbar test above.
 - `python ci/run_all.py` green in `~/.claude`.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.
