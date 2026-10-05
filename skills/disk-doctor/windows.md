@@ -25,7 +25,9 @@ function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0
 
 **Dispatch, don't run inline.** Send the scan commands for this round to a `general-purpose` subagent,
 `model: sonnet`, prompted to run the listed PowerShell blocks and return only a digested summary
-(dirs/caches over ~1GB with sizes) - never raw robocopy table dumps into the main thread. One subagent
+(dirs/caches over ~1GB with sizes, PLUS the newest file mtime inside each candidate over 1GB -
+`(Get-ChildItem $path -Recurse -File -Force -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1).LastWriteTime` - so delete cards can quote last-use
+evidence without a second round) - never raw robocopy table dumps into the main thread. One subagent
 call per round (initial sweep, then a separate one per drill-down round) keeps the back-and-forth
 Joe-steered without a monolithic report. Paste the canonical preamble from `refs/builder-preamble.md`
 into the dispatch prompt (it's read-only, so the `READ-ONLY DISPATCH` opt-out applies) -
@@ -47,8 +49,16 @@ function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0
 Get-ChildItem $env:LOCALAPPDATA -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object { [PSCustomObject]@{ GB=(Get-DirGB $_.FullName); Dir=$_.Name } } | Sort-Object GB -Descending | Select-Object -First 12
 ```
 ```powershell
-# Temp + Recycle Bin
-[PSCustomObject]@{ TempGB=[math]::Round((Get-ChildItem $env:TEMP -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum/1GB,2); RecycleGB=[math]::Round((((New-Object -ComObject Shell.Application).Namespace(0xA).Items() | Measure-Object Size -Sum).Sum)/1GB,2) }
+# Temp + Recycle Bin - TempGB is recursive (Get-DirGB), not top-level-only: a non-recursive
+# Get-ChildItem -File undercounted this by ~35x on 2026-10-05 (0.4G vs 14.5G), missing subfolder
+# contents like build scratch dirs. TempOver2DaysGB is the slice the 2026-10-05 run actually
+# deleted - top-level items only, since that's the delete command's own granularity.
+function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0 /W:0; $l=@($o|Where-Object{$_ -match '^\s*Bytes :'})[0]; if($l -and $l -match 'Bytes :\s+(\d+)'){[math]::Round([int64]$Matches[1]/1GB,2)}else{0} }
+[PSCustomObject]@{
+  TempGB=(Get-DirGB $env:TEMP)
+  TempOver2DaysGB=[math]::Round(((Get-ChildItem $env:TEMP -Force -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-2) } | ForEach-Object { if ($_.PSIsContainer) { (Get-DirGB $_.FullName)*1GB } else { $_.Length } }) | Measure-Object -Sum).Sum/1GB,2)
+  RecycleGB=[math]::Round((((New-Object -ComObject Shell.Application).Namespace(0xA).Items() | Measure-Object Size -Sum).Sum)/1GB,2)
+}
 ```
 ```powershell
 # Stale node_modules (depth-capped to keep it fast)
@@ -163,7 +173,7 @@ At END of scan, append any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCA
 - Gradle cache `~/.gradle\caches` (~16G here, the biggest single win) - re-downloads on next build.
 - npm cache - `npm cache clean --force` (~4G). pnpm store - `pnpm store prune`. cargo registry `~/.cargo\registry` - re-downloads. pip cache - `pip cache purge`.
 - Docker: `docker system prune -a` (images/build cache; LocalAppData\Docker was ~15G here) - re-pulls. Confirm no needed images first.
-- `$env:TEMP\*` and `$env:LOCALAPPDATA\Temp\*` - temp files, regenerate. `Get-ChildItem $env:TEMP -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue` (in-use files skip).
+- `$env:TEMP\*` and `$env:LOCALAPPDATA\Temp\*` - temp files, regenerate. Age-filtered so items an app still has open are skipped by design, not just by `-ErrorAction SilentlyContinue`: `Get-ChildItem $env:TEMP -Force -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-2) } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue`.
 - Recycle Bin - `Clear-RecycleBin -Force`.
 - Browser caches under `$env:LOCALAPPDATA\<Browser>\User Data\*\Cache` - regenerate.
 - Stale-project `node_modules` - `npm i` / `pnpm i` rebuilds. Build artifacts (`build/`, `.dart_tool/`, `dist/`, `.next/`, `target/`, `venv/`, `.venv/`) - regenerate. The build-artifact sweep step above is the biggest single win found so far (150G+ on 2026-07-19) - always run it, don't skip as optional.

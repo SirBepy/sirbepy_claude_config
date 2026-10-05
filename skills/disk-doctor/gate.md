@@ -16,6 +16,12 @@ similar item minutes earlier.
   ranked report into a single question.
 - The question must name the exact path(s), size, and the exact command about to run - Joe is
   approving that specific command, not a category.
+- The question must also name (a) what created the item - which tool, app, or session type, and
+  how that was determined (a known cache/build-artifact pattern, a path convention, a grep hit),
+  and (b) last-use evidence - the newest file mtime under it, or "unknown" if that wasn't checked.
+  "Nothing references it" needs a receipt (a grep result, a process list), not an assertion. This
+  is the information Joe actually asks for before approving (2026-10-05: 4 of 7 cards stalled on
+  "what's it from?" / "are we still using it?" and needed a second round to answer).
 - NEVER-TOUCH entries (below, in the platform file) are never offered as an option, regardless of
   anything Joe says in the same conversation - if Joe asks for one anyway, say why it's off the
   table instead of asking.

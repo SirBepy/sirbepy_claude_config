@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=9, reconfirm-count=1, content-hash=dabe3539 -->
 <!-- duplicate-checked: hits are done todos on scan scope (03, Program Files), subagent delegation (217), and a past cleanup resume (838); none covers the Temp block's non-recursive sizing -->
 # disk-doctor's Temp scan block counts only top-level files, under-reporting Temp by ~35x
 
@@ -23,3 +24,7 @@ The Windows scan reports the real size of `LocalAppData\Temp`, so that a multi-G
 
 - Run the edited block: its TempGB is within a rounding difference of `Get-DirGB "$env:LOCALAPPDATA\Temp"` run separately.
 - The Recycle Bin half of the block still reports the same value as before.
+
+## Notes
+
+- Done in loop-todos cycle 2 (2026-10-06): Temp block sizes with recursive Get-DirGB (live check 0.09 GB old vs 1.22 GB new, matches LOCALAPPDATA\Temp), adds TempOver2DaysGB, and the KNOWN-SAFE Temp delete is age-filtered to >2 days.

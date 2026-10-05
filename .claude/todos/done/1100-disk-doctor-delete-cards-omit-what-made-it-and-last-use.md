@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=8, reconfirm-count=1, content-hash=00318df4 -->
 <!-- duplicate-checked: hits are done todos on verifying deletes (04), the Docker vhdx (06), mechanical delete-gate enforcement (835); none covers what the card text must say -->
 # disk-doctor delete cards omit what created each item and whether it is still in use
 
@@ -24,3 +25,7 @@ The delete gate's bullets live in `skills/disk-doctor/gate.md` ("Delete-confirma
 
 - A dry run of the card text for a cache dir (for example pip) includes the producer, the newest file date, and whether anything reads it at runtime.
 - The existing gate rules are unchanged: one question per item, the exact command named, NEVER-TOUCH items never offered.
+
+## Notes
+
+- Done in loop-todos cycle 2 (2026-10-06): gate.md requires each delete card to name what created the item and last-use evidence (newest mtime or unknown), with a receipt for 'nothing references it'; windows.md scan returns newest mtime per >1GB candidate.
