@@ -73,8 +73,8 @@ def main() -> None:
 
     deny(
         f"[client-push-gate] {slug} is a client repo and HEAD {sha[:7]} has not been "
-        "cleared for push. Run /code-check over @{u}..HEAD and /e2e first (snippets/"
-        "client-repo.md), then: python C:/Users/tecno/.claude/hooks/_client_repo.py mark "
+        "cleared for push. Follow /commit's Push pipeline (skills/commit/SKILL.md) in order; "
+        "this hook checks its client gate: /code-check over @{u}..HEAD and /e2e, then: python C:/Users/tecno/.claude/hooks/_client_repo.py mark "
         f"\"{root}\" --reason \"code-check + e2e passed\". If a check cannot pass, ask Joe "
         "through the ask_user_question tool whether to push anyway, and mark with a reason "
         "naming the failure only if he says yes."

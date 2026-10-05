@@ -114,6 +114,17 @@ Commit message follows the normal style - no need to mention the version bump.
 
 If no `package.json` exists, skip the version step and commit normally.
 
+## Push pipeline
+
+The full ordered sequence for `/commit push`, `/commit pushbump` and `/commit pushnbump`. This list is the ONLY place the whole sequence is enumerated: `CLAUDE.md`, snippets and memories point here instead of restating it, because every restated copy has drifted the moment a step was added (the todo sweep reached this file while two summaries still listed only `/code-check` + `/e2e`). Adding, removing or reordering a push step means editing this list in the same commit. When describing what a push will run, read this list, never a summary of it.
+
+1. **Commit** - steps 1-8 above, including step 6b's client-repo gate (`/test` plus the test-coverage check) when the repo is a client repo. `pushbump` adds the version bump; `pushnbump` adds kit sync and a separate version commit.
+2. **Pre-push todo sweep** - fold small backlog todos sitting in the files the push already touches.
+3. **Pre-push transcript check** - stop on any dev message since the last push that was never addressed.
+4. **Pre-push client gate** - client repos only: `/code-check` over `@{u}..HEAD`, then `/e2e`, then mark HEAD cleared.
+5. **`git push`**.
+6. **Build watch** - `skills/commit/build-watch.md`.
+
 ## Pre-push todo sweep
 
 Runs first for `/commit push`, `/commit pushbump`, and `/commit pushnbump`, before the transcript check and client gate below - it can change what the push ships, so both of those must see the final range. Catches a small backlog todo sitting in the exact files the push already touches, while folding it in is still free.
@@ -145,7 +156,7 @@ Runs right after the Pre-push transcript check, for the same three push modes, o
 
 ## `/commit push`
 
-Same as `/commit` but also runs `git push` after committing.
+Same as `/commit` but also runs `git push` after committing, following the **Push pipeline** above in order.
 
 **Push rule:** if the commit step failed, do not push. If there was nothing to commit, don't stop there either - check `git rev-list --count @{u}..HEAD` (if `@{u}` doesn't resolve, say so and offer `git push -u origin <branch>` instead of silently doing nothing). Zero ahead: say "nothing to commit, nothing to push" and stop. One or more ahead: run the **Pre-push todo sweep**, **Pre-push transcript check** and **Pre-push client gate** above, then push those existing commits and report how many.
 
