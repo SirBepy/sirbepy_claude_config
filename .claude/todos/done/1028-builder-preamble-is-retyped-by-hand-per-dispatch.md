@@ -78,3 +78,4 @@ confirm it is accepted, rather than reasoning that the markers are present.
   the fix is a different hook and a different contract; file separately if it recurs.
 
 - Supporting evidence folded from archived duplicate 1006 (/cleanup-todos 2026-10-05): reading `refs/builder-preamble.md` in the same turn, right before drafting a dispatch, fixed preamble compliance on one run, which argues for a composer that reads the file rather than relying on memory.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane L6; 1028 tested by tools/test_build_dispatch.py (RED: unknown -NoCommitBlock, GREEN 13/13), and auto-do-todos now points at the composer.

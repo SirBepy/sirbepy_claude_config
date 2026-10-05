@@ -71,3 +71,4 @@ findings".
 - `refs/builder-preamble.md`'s existing "Out-of-scope findings" section is the precedent for a
   builder handing structured non-code output back to the orchestrator, so option 1 adds a sibling to
   something that already works rather than inventing a mechanism.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane L6; 1028 tested by tools/test_build_dispatch.py (RED: unknown -NoCommitBlock, GREEN 13/13), and auto-do-todos now points at the composer.

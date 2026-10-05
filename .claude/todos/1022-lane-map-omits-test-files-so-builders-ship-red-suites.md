@@ -62,5 +62,7 @@ fix.
 
 ## Notes
 
+- /loop-todos 2026-10-05: Step C test-file grep and destination-module ownership shipped in skills/mega-todos/SKILL.md. Only Acceptance item 3 remains: prove it on a real /mega-todos dry run that the owned set picks up the moved file's static-analysis test.
+
 Both repairs were cheap this time because the orchestrator was watching a barrier. In a run where the
 barrier is the FINAL one, the same miss ships a red suite.

@@ -69,3 +69,4 @@ correctly; the one without it did not.
 Related but separate: 1018 (the todo-write-guard blocking builder decision notes). Both were found on
 the same run and both are instructions in `mega-todos/SKILL.md` that a hook or classifier refuses;
 worth fixing in one pass even though the fixes differ.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane L6; 1028 tested by tools/test_build_dispatch.py (RED: unknown -NoCommitBlock, GREEN 13/13), and auto-do-todos now points at the composer.

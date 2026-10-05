@@ -39,19 +39,35 @@ stays the single source of truth. See SKILL.md's own note that in `barrier`
 mode <STAGING_LINE>'s "Leave all changes unstaged..." variant is simply true
 (the builder genuinely never commits), unlike `per-builder` mode where the
 same line would be a lie the injected block immediately overrides.
+
+-NoCommitBlock (todo 1028) is the generalization: any orchestrator other
+than /mega-todos itself - /loop-todos, /auto-do-todos, an ad-hoc dispatch -
+gets a compliant preamble-based prompt from -Owned/-OffLimits/-Task alone,
+with no -CommitMessage/-ExpectedBranch and no read of
+skills/mega-todos/SKILL.md at all. Chosen over teaching -CommitMode a third
+value, because "no commit block" is not a third commit PROCEDURE, it is the
+absence of one - conflating it with PerBuilder/Barrier would make a generic
+caller pick between two mega-todos-specific git procedures it has no use
+for. The staging line then falls back to the doctrine's plain default
+(refs/builder-preamble.md's own two <STAGING_LINE> variants); -SharedIndex
+picks the "leave unstaged" one for a repo sharing a git index with
+concurrent sessions, the same condition that file's placeholder table
+documents.
 #>
 param(
     [Parameter(Mandatory)] [string[]] $Owned,
     [Parameter(Mandatory)] [string] $OffLimits,
     [Parameter(Mandatory)] [string] $Task,
-    [Parameter(Mandatory)] [string] $CommitMessage,
-    [Parameter(Mandatory)] [string] $ExpectedBranch,
+    [string] $CommitMessage = '',
+    [string] $ExpectedBranch = '',
     [string] $WorkingDir = (Get-Location).Path,
     [string[]] $NewFiles = @(),
     [string] $VerifyFloor = '',
     [string] $Extra = '',
     [switch] $Compact,
     [switch] $AsJsLiteral,
+    [switch] $NoCommitBlock,
+    [switch] $SharedIndex,
     [ValidateSet('PerBuilder', 'Barrier')] [string] $CommitMode = 'PerBuilder'
 )
 
@@ -69,9 +85,17 @@ foreach ($entry in $Owned) {
     }
 }
 
+# A generic caller passing -NoCommitBlock never commits via mega-todos' own
+# procedure, so -CommitMessage/-ExpectedBranch have nothing to fill - only
+# require them for the one mode that still substitutes them into the
+# injected block.
+if (-not $NoCommitBlock -and $CommitMode -eq 'PerBuilder' -and (-not $CommitMessage -or -not $ExpectedBranch)) {
+    throw "-CommitMessage and -ExpectedBranch are required unless -NoCommitBlock is set (todo 1028: " +
+          "a dispatch that never commits its own work passes -NoCommitBlock instead of a commit message/branch)."
+}
+
 $repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $preamblePath = Join-Path $repoRoot 'refs\builder-preamble.md'
-$skillPath = Join-Path $repoRoot 'skills\mega-todos\SKILL.md'
 
 # A fenced block is delimited by two lines that are exactly ``` - both source
 # files carry exactly one, so the first pair is the whole block.
@@ -89,9 +113,6 @@ function Get-FirstFencedBlock([string[]]$Lines, [string]$SourcePath) {
 $preambleLines = Get-Content -Path $preamblePath
 $preambleBlock = Get-FirstFencedBlock -Lines $preambleLines -SourcePath $preamblePath
 
-$skillLines = Get-Content -Path $skillPath
-$commitBlock = Get-FirstFencedBlock -Lines $skillLines -SourcePath $skillPath
-
 # The GLOBAL_EDIT_BAN substitute text lives only in the placeholder table,
 # not the fenced block - read it from there instead of hardcoding a copy.
 $banRow = $preambleLines | Where-Object { $_ -match '^\|\s*`<GLOBAL_EDIT_BAN>`' } | Select-Object -First 1
@@ -106,15 +127,6 @@ $normalizedWorkingDir = $WorkingDir.TrimEnd('\', '/')
 $normalizedRepoRoot = $repoRoot.TrimEnd('\', '/')
 $inClaudeDir = $normalizedWorkingDir -ieq $normalizedRepoRoot
 
-# Per-builder mode can't use <STAGING_LINE> truthfully since the builder
-# commits - fill it with the commit block's own opening sentence instead of
-# inventing a paraphrase (builder-preamble.md's own note on this case). This
-# paragraph IS marker 1 (contains "Stage your changes but do NOT commit"),
-# so both output shapes inline it verbatim rather than pointing at it.
-$commitParas = $commitBlock -split "`n`n", 2
-$stagingLine = $commitParas[0]
-$commitRest = $commitParas[1]
-
 # -replace's replacement side treats a bare `$` as a backreference token;
 # escape it so a literal path or task string can't be misread as one.
 function Protect([string]$Text) { $Text -replace '\$', '$$$$' }
@@ -127,17 +139,44 @@ $ownedList = ($Owned | ForEach-Object {
     if ($NewFiles -contains $_) { "  $_ (NEW)" } else { "  $_" }
 }) -join "`n"
 
-# Barrier mode overrides the staging line with the placeholder table's other
-# <STAGING_LINE> variant (refs/builder-preamble.md) - truthful here since a
-# barrier builder genuinely never touches git - and needs steps 2 and 3
-# pulled out of the same on-disk commit block, verbatim, never re-typed.
-if ($CommitMode -eq 'Barrier') {
-    $stagingLine = 'Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.'
+if ($NoCommitBlock) {
+    # Todo 1028: a caller outside /mega-todos has no injected commit block to
+    # borrow a staging line from, so it gets the doctrine's plain default -
+    # the same two <STAGING_LINE> variants refs/builder-preamble.md's own
+    # placeholder table documents, chosen by -SharedIndex.
+    $stagingLine = if ($SharedIndex) {
+        'Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.'
+    } else {
+        'Stage your changes but do NOT commit. The main agent will run /commit after your report-back.'
+    }
+} else {
+    $skillPath = Join-Path $repoRoot 'skills\mega-todos\SKILL.md'
+    $skillLines = Get-Content -Path $skillPath
+    $commitBlock = Get-FirstFencedBlock -Lines $skillLines -SourcePath $skillPath
 
-    $barrierStepsPattern = '(?ms)^2\.\s.*?(?=^4\.\s)'
-    $barrierStepsMatch = [regex]::Match($commitRest, $barrierStepsPattern)
-    if (-not $barrierStepsMatch.Success) { throw "Could not extract steps 2-3 from the commit block in $skillPath" }
-    $barrierSteps = $barrierStepsMatch.Value.TrimEnd() -replace '<FILES>', (Protect $filesArg)
+    # Per-builder mode can't use <STAGING_LINE> truthfully since the builder
+    # commits - fill it with the commit block's own opening sentence instead
+    # of inventing a paraphrase (builder-preamble.md's own note on this
+    # case). This paragraph IS marker 1 (contains "Stage your changes but do
+    # NOT commit"), so both output shapes inline it verbatim rather than
+    # pointing at it.
+    $commitParas = $commitBlock -split "`n`n", 2
+    $stagingLine = $commitParas[0]
+    $commitRest = $commitParas[1]
+
+    # Barrier mode overrides the staging line with the placeholder table's
+    # other <STAGING_LINE> variant (refs/builder-preamble.md) - truthful here
+    # since a barrier builder genuinely never touches git - and needs steps
+    # 2 and 3 pulled out of the same on-disk commit block, verbatim, never
+    # re-typed.
+    if ($CommitMode -eq 'Barrier') {
+        $stagingLine = 'Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.'
+
+        $barrierStepsPattern = '(?ms)^2\.\s.*?(?=^4\.\s)'
+        $barrierStepsMatch = [regex]::Match($commitRest, $barrierStepsPattern)
+        if (-not $barrierStepsMatch.Success) { throw "Could not extract steps 2-3 from the commit block in $skillPath" }
+        $barrierSteps = $barrierStepsMatch.Value.TrimEnd() -replace '<FILES>', (Protect $filesArg)
+    }
 }
 
 if ($Compact) {
@@ -178,8 +217,9 @@ $Task
     if ($VerifyFloor) { $final += "`n`n## VERIFY FLOOR`n`n$VerifyFloor" }
     if ($Extra) { $final += "`n`n$Extra" }
 
-    if ($CommitMode -eq 'Barrier') {
-        $final += @"
+    if (-not $NoCommitBlock) {
+        if ($CommitMode -eq 'Barrier') {
+            $final += @"
 
 
 # YOUR VERIFY FLOOR - COMMIT_MODE IS BARRIER, YOU DO NOT COMMIT
@@ -194,8 +234,8 @@ Do NOT run steps 1, 4, 5, or 6 of that block: no commit marker, no `git add`, no
 `git commit`. Report your finished paths in your report-back without touching git further; the
 main thread commits them by pathspec at the next barrier.
 "@
-    } else {
-        $final += @"
+        } else {
+            $final += @"
 
 
 # COMMITTING IS PART OF YOUR JOB
@@ -206,6 +246,7 @@ and follow it VERBATIM, applying:
   FILES -> $filesArg
   PREFIX: <title> -> $CommitMessage
 "@
+        }
     }
 } else {
     $prompt = $preambleBlock `
@@ -225,8 +266,9 @@ and follow it VERBATIM, applying:
     if ($VerifyFloor) { $sections += "## VERIFY FLOOR`n`n$VerifyFloor" }
     if ($Extra) { $sections += $Extra }
 
-    if ($CommitMode -eq 'Barrier') {
-        $barrierSection = @"
+    if (-not $NoCommitBlock) {
+        if ($CommitMode -eq 'Barrier') {
+            $barrierSection = @"
 # YOUR VERIFY FLOOR - COMMIT_MODE IS BARRIER, YOU DO NOT COMMIT
 
 This run's COMMIT_MODE is barrier. Per the "### Barrier COMMIT_MODE" section of ${skillPath}: you
@@ -236,12 +278,13 @@ without touching git further; the main thread commits them by pathspec at the ne
 
 $barrierSteps
 "@
-        $sections += $barrierSection
-    } else {
-        $commitRest = $commitRest -replace '<EXPECTED_BRANCH>', (Protect $ExpectedBranch)
-        $commitRest = $commitRest -replace '<FILES>', (Protect $filesArg)
-        $commitRest = $commitRest -replace '<PREFIX>: <title>', (Protect $CommitMessage)
-        $sections += "# COMMITTING IS PART OF YOUR JOB`n`n$commitRest"
+            $sections += $barrierSection
+        } else {
+            $commitRest = $commitRest -replace '<EXPECTED_BRANCH>', (Protect $ExpectedBranch)
+            $commitRest = $commitRest -replace '<FILES>', (Protect $filesArg)
+            $commitRest = $commitRest -replace '<PREFIX>: <title>', (Protect $CommitMessage)
+            $sections += "# COMMITTING IS PART OF YOUR JOB`n`n$commitRest"
+        }
     }
 
     $final = ($sections -join "`n`n")

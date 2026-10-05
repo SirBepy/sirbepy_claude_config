@@ -86,14 +86,34 @@ All three conditions must hold together, mirroring `/commit` step 1a's real gate
 proxy for it. `GIT_FLOW.md` alone is harmless on a feature branch, and treating it as sufficient
 bricks the skill in every repo that documents its git flow, which is most of them.
 
-**`COMMIT_MODE` default is `per-builder`** (the injected commit block below). It switches to
-**`barrier`** when the hooksPath check above fires: `lint-staged@16` stashes unstaged changes before
-running its tasks, and with N agents holding uncommitted work in one tree that stash/restore cycle
-can swallow another agent's in-flight edits - not theoretical, 6 of 19 commits hit this race on
-2026-08-11. In `barrier` mode, builders never touch git - they leave every change unstaged - and the
-main thread commits by pathspec at each barrier instead. `git commit -m "..." -- <pathspec>` builds
-a TEMPORARY index for that one command, so the hook only ever sees the pathspec's files and never
-the shared index; a pathspec commit of files lint-staged doesn't match is a complete no-op for it.
+**`COMMIT_MODE` default is `barrier`** (todo 1021, overriding the earlier `per-builder` default).
+`barrier`'s own per-builder commit marker write
+(`Set-Content -Path ".../hooks/.commit-marker-*"`) is the auto-mode classifier's **Self-Modification**
+category, and the denial is intermittent, not absolute: on a 2026-09-25 10-lane run, one builder
+routed around it with a different tool and committed anyway (a silent classifier bypass), one
+stopped and reported correctly, and one retried the same call before each of its three commits and
+never hit the denial at all. An intermittent denial is worse than a hard one - a wide run can get
+most of the way through before it bites. `barrier` mode removes the classifier from the builder path
+entirely: builders never touch git, so they never attempt the marker write; the main thread writes
+it instead, and the main thread's own session is not subject to the same classifier (confirmed
+unaffected by the same run). Switch to `per-builder` only when a run is a single builder/lane with no
+multi-agent marker contention, or when the hooksPath check below ALSO fires, for the lint-staged
+reason it already documents.
+
+**Still switches to (or stays on) `barrier` when the hooksPath check above fires**: `lint-staged@16`
+stashes unstaged changes before running its tasks, and with N agents holding uncommitted work in one
+tree that stash/restore cycle can swallow another agent's in-flight edits - not theoretical, 6 of 19
+commits hit this race on 2026-08-11. In `barrier` mode, builders never touch git - they leave every
+change unstaged - and the main thread commits by pathspec at each barrier instead. `git commit -m
+"..." -- <pathspec>` builds a TEMPORARY index for that one command, so the hook only ever sees the
+pathspec's files and never the shared index; a pathspec commit of files lint-staged doesn't match is
+a complete no-op for it.
+
+**A denied tool call is a stop, not an obstacle to route around.** If `per-builder` mode is in use
+and its marker write (or any other required call) comes back denied, STOP and report it in your
+report-back uncommitted; do not retry it through a different tool (`node -e fs.writeFileSync`, a
+Python one-liner, `Add-Content`) to get the same effect by another route - that is a silent
+classifier bypass, not a fix.
 
 Also confirm the working tree is clean of other people's uncommitted work (`git status`). A wide
 parallel run over a dirty shared tree is how another session's work gets swept into a pathspec.
@@ -153,6 +173,17 @@ replacement over the same material returned cleanly.
 **Then the main thread re-checks the union of returned paths itself, in one batch, before any
 dispatch.** One `ls` over the whole set costs nothing and does not depend on the scout cooperating.
 This is the actual gate; the scout's own marking is the cheap first pass.
+
+**The scout also closes the test-coverage gap, not just the write-set (todo 1022).** For every file
+a todo's fix will touch, grep `tests/` and any e2e directory for that file's basename AND for the
+symbols the fix moves or renames - one grep per file, cheap. Any hit joins that todo's owned set: a
+test that `readFileSync`s a source path by name and regexes its contents is exactly as exposed to
+the fix as the source file itself, and a pure file-move or rename breaks that kind of test even
+though it preserves behavior (two barrier repairs on one run, 2026-09-25: a split moved markup a
+static-analysis test asserted on, and a share-a-helper todo needed an export the scout never listed
+as owned). Separately: **a dedupe/share-a-helper todo owns its DESTINATION module too**, not just its
+call sites - if the destination belongs to another todo's lane, that is a lane-merge signal (the two
+run sequentially in one lane), never a reason to let either builder duplicate the helper instead.
 
 The main thread then partitions into **lanes** by the transitive closure of file overlap:
 
@@ -368,6 +399,12 @@ when the kill lands loses everything even if the diff was finished - confirmed t
    agents do not steal each other's):
    Set-Content -Path "C:\Users\tecno\.claude\hooks\.commit-marker-$([guid]::NewGuid().ToString('N'))" -Value "x"
 
+   **A DENIED call is a STOP, not an obstacle to route around.** If this write comes back denied
+   (auto-mode's classifier reads it as Self-Modification; the denial is intermittent, not reliable
+   either way), do not retry it through a different tool - no `node -e fs.writeFileSync`, no Python
+   one-liner, no `Add-Content` - to get the same write by another route. Stop here, leave your work
+   uncommitted, and report the denial in your report-back; the main thread commits it instead.
+
 2. Run `git status`, then `git diff -- <FILES>` (the working-tree diff check from `/commit` step 8).
    Account for every hunk shown. An unrecognised hunk - one you did not write this session - is a
    STOP: drop that path from `<FILES>`, name it in your report-back, and continue with the rest of
@@ -420,8 +457,13 @@ HARD RULES, no exceptions:
 - NEVER `git stash`, `git reset`, `git checkout`, or `git revert` on ANY path. To see clean state,
   use `git show HEAD:<file>`.
 - NEVER bump a version. Plain commit only, no `v` / `bump` / `push` variant. Do not push.
-- Do NOT touch `.claude/todos/PLAN.md` or move anything into `.claude/todos/done/`. The orchestrator
-  archives todos in a barrier; editing PLAN.md from a parallel agent clobbers other agents' edits.
+- NEVER write under `.claude/todos/` AT ALL, not just `PLAN.md`/`done/` - `hooks/agent-todo-write-guard.py`
+  hard-blocks every Write/Edit a dispatched agent makes there (todo 1018). This includes a
+  decide-or-won't-fix ending for the todo you were dispatched from: put that decision in a
+  `## Decisions made` section of your report-back instead of trying to write it into the todo file.
+  The orchestrator applies it from its own session, where the guard never fires, and archives todos
+  in a barrier; editing `PLAN.md` or `done/` from a parallel agent clobbers other agents' edits even
+  if the write were not blocked outright.
 - One purpose per commit. Prefix from: FEAT, FIX, REFACTOR, CHORE, DOCS, TEST, STYLE, DATA.
 - No commit body unless something genuinely needs explaining. Never add AI attribution.
 ```
@@ -521,11 +563,16 @@ Then the wrap-up, per `/auto-do-todos` Step 9: `/code-check START_SHA..HEAD`, th
 floor, e2e if runnable. Park every unresolved DEV fork into its todo's `## Open questions` block per
 `/auto-do-todos` Step 8. Also drain every builder's "Out-of-scope findings" section gathered during
 Step D: file each as a properly allocated todo, `**Origin:** ai`, per `refs/delegation-doctrine.md`'s
-"Out-of-scope findings" section - never the builder itself.
+"Out-of-scope findings" section - never the builder itself. Alongside it, drain every builder's
+`## Decisions made` section (todo 1018): this is the one channel for a decide-or-won't-fix ending,
+since the hook blocks the builder from writing it itself - write it into that todo's own file
+directly from the orchestrator's session before deciding that todo's Step E ending, never skipped
+just because the report read clean otherwise.
 
 **Summary must report:** todos completed with shas, todos parked and why, every Step B exclusion with
 its own reason (never a bare count), the lane map and actual achieved parallelism, every fork
-auto-decided and what it picked, barrier failures and how they were repaired, final ctx% used, and
+auto-decided and what it picked, every decision drained from a builder's `## Decisions made` section
+and which todo it was applied to, barrier failures and how they were repaired, final ctx% used, and
 the verification result.
 
 ## Notes
