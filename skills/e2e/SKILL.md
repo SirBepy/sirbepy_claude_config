@@ -1,7 +1,6 @@
 ---
 name: e2e
-description: Runs a project's browser/app-driven end-to-end suite by delegating to /flutter-e2e or /jest-lua, or render-and-diffs a built screenshot against a design tile for fidelity checking.
-disable-model-invocation: true
+description: Runs a project's e2e suite via /flutter-e2e or /jest-lua, or render-diffs a built screenshot against a design tile.
 argument-hint: "[flow description | test-plan.md path] | diff --built <png> --built-width N --design <png> --design-width N"
 ---
 

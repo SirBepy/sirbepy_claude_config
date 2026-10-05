@@ -1,7 +1,6 @@
 ---
 name: close
 description: Session retrospective, code-health review, persist, close terminal.
-disable-model-invocation: true
 argument-hint: "[--dont-close] [--skip-review] [--light] [/commit ...] [/sleep-when-done]"
 ---
 

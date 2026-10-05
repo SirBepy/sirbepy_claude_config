@@ -23,32 +23,33 @@ _HOOK_PATH = _HOOKS_DIR / "flagged-skill-mention.py"
 ZWSP = "​"
 
 # Real repro payload from todo 332: a Conductor peer posting to the repo
-# coordination channel, reporting (not invoking) /close mid-paragraph.
+# coordination channel, reporting (not invoking) /handoff mid-paragraph.
 PEER_PAYLOAD = (
     f"{ZWSP}[daemon-meta]{ZWSP}[repo-channel] Hold sign-off until review lands: "
-    "Go ahead, no conflict. I'm in /close and will not commit anything."
+    "Go ahead, no conflict. I'm in /handoff and will not commit anything."
 )
 
-# (prompt, expect_fire, label)
+# (prompt, expect_fire, label). Every skill named here must carry disable-model-invocation:
+# the hook only fires on flagged skills, so an unflagged one silently turns a must-fire case red.
 CASES = [
-    (PEER_PAYLOAD, False, "todo 332 repro: peer/daemon envelope, /close mid-sentence"),
+    (PEER_PAYLOAD, False, "todo 332 repro: peer/daemon envelope, /handoff mid-sentence"),
     ("[SYSTEM NOTIFICATION] background task finished, see /autopilot log", False,
      "existing guard: [SYSTEM NOTIFICATION prefix, must not regress"),
-    ("[some-other-channel][sub-tag] status update, ran /close overnight", False,
+    ("[some-other-channel][sub-tag] status update, ran /handoff overnight", False,
      "shape generalization: unrecognised bracketed envelope still skipped"),
-    ("/close --dont-close", True, "genuine Joe prompt: /close typed directly, must fire"),
+    ("/handoff --light", True, "genuine Joe prompt: /handoff typed directly, must fire"),
     ("/autopilot then /create-pr when done", True,
      "genuine Joe prompt: two flagged skills named in one prompt, both fire"),
-    ("please look into this, /close is what I want to run", True,
+    ("please look into this, /handoff is what I want to run", True,
      "genuine Joe prompt: skill name mid-sentence, position not penalised"),
-    ("[todo item] /close is what I want to run", False,
+    ("[todo item] /handoff is what I want to run", False,
      "documents the accepted tradeoff: a Joe prompt opening with [tag] reads as an envelope too"),
     ("lets finish off all of the todos!!!\n/auto-do-todos \nbut first go thru them",
      True, "todo 342: real corpus case, invocation on line 2 starting that line, must fire"),
-    ("explain the plan first\nI think we should probably use /close when done",
+    ("explain the plan first\nI think we should probably use /handoff when done",
      True, "todo 891: mid-sentence mention on a non-first line now fires, position not checked"),
-    ("/e2e\nand then when youre done just /commit and then /close up",
-     True, "todo 891 repro: /close mid-line on the last line, must fire"),
+    ("/e2e\nand then when youre done just /commit and then /handoff up",
+     True, "todo 891 repro: /handoff mid-line on the last line, must fire"),
     ("I closed the laptop, did a review of the pickup truck listing, no slash anywhere",
      False, "false-positive regression: bare skill-like words in prose, no leading slash, must not fire"),
 ]
@@ -76,7 +77,7 @@ def check_wording() -> bool:
     """
     proc = subprocess.run(
         [sys.executable, str(_HOOK_PATH)],
-        input=json.dumps({"prompt": "/close --dont-close"}),
+        input=json.dumps({"prompt": "/handoff --light"}),
         capture_output=True,
         text=True,
     )
