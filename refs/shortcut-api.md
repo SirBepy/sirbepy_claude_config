@@ -54,6 +54,20 @@ curl -s "https://api.app.shortcut.com/api/v3/stories/<id>" -H "Shortcut-Token: $
 
 Full story JSON includes `comments[]`, `description`, `workflow_state_id`, `blocked`/`blocker`, `story_links`, `branches`, `pull_requests`, `commits`. Read `comments[]` in full, chronological order: a comment can silently reverse, narrow, or add scope the description never mentions (see `/ticket`'s Pickup flow). For provenance-checking a claim attributed to Shortcut (e.g. a todo's "per PM decision" citation), the comment thread is often the only place that backing actually lives.
 
+## Fetching a story's history
+
+```bash
+curl -s "https://api.app.shortcut.com/api/v3/stories/<id>/history" -H "Shortcut-Token: $TOKEN"
+```
+
+Returns real workflow-state transitions with timestamps and the member who made each one, verified
+live 2026-09-25 against story 55411 (HTTP 200, 4 entries). Response shape: a top-level list, each
+entry `{changed_at, actions[]}`, each action carrying `entity_type` and a `changes` map keyed by
+field name with `{old, new}` (e.g. `workflow_state_id: {old: 500018254, new: 500018257}`). Use this
+instead of inferring board-lag from `moved_at` plus git timestamps: on 55411 the history proved a
+To Do -> Testing -> To Do bounce 2 seconds after a QA comment, which guessing from commit dates
+cannot produce.
+
 ## Searching stories
 
 ```bash

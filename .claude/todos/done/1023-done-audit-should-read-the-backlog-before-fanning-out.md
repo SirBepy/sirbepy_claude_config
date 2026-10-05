@@ -60,3 +60,4 @@ The same run produced todo 1019 (the skill's dispatch prompt asserting no story-
 exists, when it does). Both are cheap edits to the same two files, so whoever picks one should take
 the other. Related: [[1010-shortcut-done-audit-7b-deletes-a-script-without-sweeping-the-backlog]],
 the other half of this skill's backlog blind spot.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane E2. Procedure-doc change to a live-tracker skill, untestable beyond ci/run_all.py.

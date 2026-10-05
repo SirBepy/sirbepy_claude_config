@@ -179,3 +179,5 @@ again regardless of what any session is called.
 Worth keeping from the peer's report, and independent of the misdiagnosis: **nothing warns the
 sender.** Every `post_message` returned `ok: true` and looked normal from its side; it only learned
 its messages were injecting a skill into another session because that session told it.
+
+- /loop-todos 2026-10-05: step 4 (wording) confirmed already shipped (test check_wording passes). Steps 1-3 still need a raw UserPromptSubmit payload captured during a LIVE peer relay landing on the session itself, which a builder subagent cannot manufacture; left open.

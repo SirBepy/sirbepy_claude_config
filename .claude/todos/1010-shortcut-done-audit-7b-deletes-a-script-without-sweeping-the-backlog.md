@@ -59,3 +59,7 @@ the backlog for what is left.
 - Confirmed deletions leave a dated note with a working recovery command in each affected todo.
 - Verified on a real case, not reasoned: pick a ticket with a script and a referencing todo, run
   the step, and confirm the note landed and the recovery command actually returns the file.
+
+## Notes
+
+- /loop-todos 2026-10-05: step 7b backlog sweep, AC-vs-mention split and recovery note shipped in skills/shortcut-done-audit/SKILL.md (same commit as 1019/1023/1051). Only the live-verification Acceptance bullet remains: run 7b once on a real ticket and confirm the note lands and the `git show <commit>~1:<path>` recovery returns the file.

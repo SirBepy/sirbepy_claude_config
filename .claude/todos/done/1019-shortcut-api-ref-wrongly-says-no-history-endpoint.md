@@ -37,3 +37,8 @@ commit timestamps cannot produce that.
 
 Found while running `/shortcut-done-audit` in zng-app; a sonnet investigation subagent tried the
 endpoint despite the prompt saying it did not exist.
+
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane E2. Procedure-doc change to a live-tracker skill, untestable beyond ci/run_all.py.

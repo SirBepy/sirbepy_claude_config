@@ -46,3 +46,4 @@ In `C:\Users\tecno\.claude\skills\shortcut-done-audit\SKILL.md`, Args section:
 
 - The follow-on manual backfill in that session also surfaced gaps in `/zirtue-release-backfill`
   itself, filed separately as 1052.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane E2. Procedure-doc change to a live-tracker skill, untestable beyond ci/run_all.py.

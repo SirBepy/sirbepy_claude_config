@@ -25,6 +25,9 @@ argument-hint: "[states]"
 - `states` (optional) — comma-separated Shortcut state names to scan. Default: `Backlog,To Do,In Progress`.
 - **ID mode:** if the arg is purely numeric, or a space/comma-separated list of numerics (e.g. `/shortcut-done-audit 54987` or `54987,54990`), treat it as explicit ticket ID(s) instead of state names. Jump straight to step 2b, skip the state-scan search (step 2) and the dispatch-volume gate (step 4).
 - If Joe passes an unknown state name, ask via AskUserQuestion listing the actual state names from `ENG - Core Workflow` (workflow id `500018252`) rather than guessing.
+- **Free-text mode:** an arg that is neither a known state name nor purely numeric is free text, never silently treat it as "no arg" and fall back to the default `Backlog,To Do,In Progress` scan (that produced a wasted 3-agent, ~300k-token run on `we just did a new version FE 1.1.0+1`).
+  - If the text matches a version/release/deploy shape (regex over `v?\d+\.\d+\.\d+\+\d+`, or the words "release", "version", "deploy", "shipped"), stop and tell Joe that closing out `Ready for deploy` tickets for a release is `/zirtue-release-backfill`'s job, and offer to run this audit against `Ready for deploy` instead.
+  - Otherwise ask via AskUserQuestion which states to scan, listing the `ENG - Core Workflow` state names.
 
 ## Required tools
 
@@ -82,6 +85,18 @@ If no prefix match, also try a broad `--grep "$id"` per repo to catch bundled re
 
 Tickets with **zero** signal from both commit-grep and branches/PRs: skip, no investigation needed, they're genuinely not started.
 
+### 3b. Check the backlog for prior art
+
+For each candidate ticket from step 3, grep the target repo's `.claude/todos/*.md` and
+`.claude/todos/done/*.md` (keep `done/` in the sweep: an archived-done hit is the strongest signal
+that a "new" finding is stale) for the ticket id. Report any hits alongside the candidate list: this
+is a cheap check against paying full dispatch cost to re-derive a finding that's already filed
+(measured: 580k subagent tokens across 5 tickets, 3 of 4 actionable findings already had a todo).
+
+A hit is not a reason to skip the ticket: feed it into that ticket's dispatch prompt per
+`investigation-prompt.md` so the subagent confirms, extends, or contradicts it rather than assuming
+the ticket is handled.
+
 ### 4. Dispatch-volume gate
 
 Count how many tickets have signal from step 3 and need investigation. This is the actual cost driver, cap it here, not after the fact:
@@ -96,6 +111,10 @@ Read `skills/shortcut-done-audit/investigation-prompt.md` now — it has the exa
 ### 6. Synthesize the report
 
 Group by verdict, most actionable first (`DONE` → `SUPERSEDED` → `PARTIALLY DONE` → `MISMATCH` → `UNCLEAR`). For each ticket: one-paragraph summary, the concrete blocking detail if any (unanswered comment, missing per-button payload, unmerged branch, etc.), and a suggested next Shortcut state, but do not apply anything yet. ID mode with a single ticket: skip the group-by-verdict synthesis, report one verdict directly.
+
+For each finding, also state whether step 3b already had a todo for it. Separate the report into
+findings that extend/confirm an existing todo (name its id) versus genuinely new ones, presenting
+a known finding as new overstates the run.
 
 Report-only, no mutations, no comments — matches the pattern in `zirtue-release-backfill`.
 
@@ -133,12 +152,24 @@ Only post a comment when Joe gives the exact text or explicitly says to post one
 
 Applies only to a ticket Joe has just confirmed into `Complete` or `Won't do` in step 7, and only to a script step 6 reported on disk. A ticket moved to `Testing`, or left where it was, keeps its script: the whole point of keeping these around is that a live ticket can bounce back.
 
+Before the delete prompt, grep the target repo's `.claude/todos/` (excluding `done/`) for the
+script's basename. List any hits in the same per-ticket ask, so Joe sees "deleting this also orphans
+todos 37, 151" before answering rather than after. Distinguish a hit where the filename sits in the
+todo's acceptance criteria (deletion makes it unverifiable as written, flag this louder) from a
+passing mention elsewhere in the todo.
+
 Ask per ticket before deleting, the same bar as any other mutation here, then delete with the `/delete` skill's platform rule (`Remove-Item` on Windows).
 
 Two things to say in that ask, because they decide whether the deletion is reversible:
 
 - A script tracked in git before `3e47963` is recoverable forever with `git show 3e47963~1:e2e/<file>`. Check with `git log --oneline -1 -- e2e/<file>`: output means recoverable.
 - A script created after the ignore patterns landed has **no git history at all** and is gone for good. Say so explicitly in the ask rather than letting Joe find out after.
+
+On confirm, delete the script, then append a dated note to each orphaned todo found above, naming
+the deleted file and the exact recovery command (`git show <commit>~1:<path>`, or "unrecoverable, no
+git history" if the script predates `3e47963`). Append these notes yourself (the orchestrator), never
+via a dispatched Agent: `hooks/agent-todo-write-guard.py` blocks any dispatched agent from writing
+under `.claude/todos/`.
 
 This rule reaches only scripts whose filename carries the ticket id. Ones named for a subject rather than a ticket (`verify-amp-a.js`, `check-v2-gate.js`) have no owning ticket to close and are swept by hand instead; 14 such files were deleted on 2026-09-24.
 
