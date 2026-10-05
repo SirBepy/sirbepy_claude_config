@@ -67,3 +67,7 @@ In `SKILL.md` step 4a, make the read produce evidence rather than asking for goo
 - A run's output names the clockify memory files it read, so a skip is visible in the transcript.
 - A proposed day spanning 11:30 or 18:30 has the meal gaps cut without the dev asking, on a run where
   nobody re-read the memory by hand.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane F1: skills/clockify-reconciliator/SKILL.md. Docs-only procedure change, untestable by Claude beyond ci/run_all.py (drives live Clockify/HubStaff/Shortcut APIs).

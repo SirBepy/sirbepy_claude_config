@@ -49,3 +49,4 @@ Related to [[1008-clockify-week-remaining-on-a-partial-window-needs-a-sanctioned
 (also a step 9/9a presentation-transparency gap, found in the same session) - different fix, same
 root cause: the skill gathers more evidence than it currently shows the dev, so he has to ask for
 things that were already checked.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane F1: skills/clockify-reconciliator/SKILL.md. Docs-only procedure change, untestable by Claude beyond ci/run_all.py (drives live Clockify/HubStaff/Shortcut APIs).

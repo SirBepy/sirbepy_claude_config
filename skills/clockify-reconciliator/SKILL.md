@@ -158,10 +158,19 @@ never build a plan, or report "nothing to reconcile", off a stale response.
 
 ### 4a. Memory check
 
-Before identifying targets, read `feedback_clockify_*.md` memory files for the resolved project and
-apply them: default every new/edited entry to `billable: false` (Cinnamon convention, not the actual
-billing signal); never add net-new hours to a day that already has entries except the two confirmed
-cases in "Rules" below.
+Glob the project's memory dir for `feedback_clockify_*.md` and `reference_clockify_*.md` - no
+filename list hardcoded here, the set grows - and read every hit before identifying targets.
+**The recalled `MEMORY.md` index line is a pointer to these files, not a substitute for them -
+reading the index line does not satisfy this step.** Print one line naming the files actually read,
+in the run's output, right after step 1's resolved-var line: a silent skip and a silent success
+otherwise look identical (2026-09-25: zero of seven files were opened, the run worked off the index
+line alone, and the meal-gap rule in one of them - see step 7 - went unapplied with no symptom in
+that run's own entries).
+
+Apply what's found. At minimum, two rules live in `SKILL.md` itself so they're never missed even if
+a file read fails: default every new/edited entry to `billable: false` (Cinnamon convention, not the
+actual billing signal); never add net-new hours to a day that already has entries except the two
+confirmed cases in "Rules" below.
 
 **Overlap is scoped to `clockify_project_id`, not the whole day.** Two entries in the SAME project
 must never overlap - check same-project same-day entries before creating anything and shrink/shift
@@ -198,6 +207,29 @@ For each repo in config: `git -C <repo> log --all --author="<user_id or name>" -
 
 Then run one more pass per repo covering the first 4 hours after the window's END, same command and same `--all`, only the dates differing: `--since="<end>" --until="<end> + 4h"`. For a single-day lookback that is `<day+1> 00:00:00` to `<day+1> 04:00:00`; for a multi-day range it is the same 4 hours past the range's final midnight. Flag hits as "late-night spillover from <last day in window>" and split them across the boundary by each commit's real wall-clock minutes on its own calendar day. Never drop them, never fold the whole session onto one side.
 
+**`git log` only ever sees commits - real work with nothing committed yet is invisible to it,
+`--all` or not.** Alongside the log pass, run `git status --short -C <repo>` per configured repo.
+Any modified/untracked files: note a candidate gap distinct from a commit-backed one - list the
+files (or just a count for a noisy repo) and the oldest/newest mtime in the dirty set as a rough
+time-bound hypothesis, the same way a zero-entry day's boundaries get inferred from commit
+clustering (step 6a). Surface it in step 9 labeled "uncommitted, file mtimes" rather than a sha -
+weaker evidence than a commit, and it should read that way to the dev. Never skip a repo just
+because its `git log` pass came back empty - that emptiness is exactly what hides this class of gap.
+A repo with a clean tree and no commits still produces nothing, so this isn't a prompt on every run
+(2026-09-24, zng-admin: ~11 modified/new files with mtimes 15:26-16:54 never showed up in the first
+proposed plan because nothing checked the working tree, only `git log`).
+
+`git status` still misses two classes of real work: something staged in a separate worktree the
+main checkout's status can't see, and work with zero file diff at all (ticket triage, comment
+replies, screenshot verification). When a window's commits and dirty-tree findings together still
+look thin against what the dev describes, sweep this session's own AI chat transcripts
+(`~/.claude-personal/projects/<sanitized-cwd>/*.jsonl` for each configured repo's cwd) for session
+start/end times overlapping the window, and read whatever todo/handoff files those sessions
+reference - that is the only trail either of the other two sources leave (2026-09-30, zng-app: a
+Reconstruction run's git-only first pass undercounted a full afternoon, 40min proposed vs ~6h real,
+until a transcript sweep found worktree work and ticket-only activity neither git command could
+see).
+
 ### 6a. Gap detection (mandatory in every mode, including plain Reconciliation)
 
 Diff the commits just read (whole window, not just around existing targets) against the entries that
@@ -213,12 +245,30 @@ start/end times; infer them from commit-gap clustering the same way (first chunk
 first commit cluster, last chunk ends shortly after the last commit) and present the plan for the
 normal step 9 approval.
 
+**Second evidence source once the dev confirms a gap is real work (not a break):** before writing
+it from the dev's verbal description alone, check the Shortcut activity feed for that window
+(`POST https://app.shortcut.com/backend/api/private/permission/activity`, cookie auth per the
+`reference_shortcut_activity_feed_auth` memory - the same private-endpoint pattern
+`/shortcut-priorities` already uses) filtered to the dev's own `member_id`. Ticket updates/comments
+inside the window upgrade the description from a generic paraphrase of the dev's statement to
+something specific - name the actual tickets/epics touched ("Triage email-gate and impersonation
+tickets, reply to LLC epic comments") rather than "testing and reviewing code". No hits there: fall
+back to the dev's own description, same as today - this is strictly additive, it never blocks or
+delays filling a gap the dev already confirmed. Worth the same check for a GitHub PR/issue search
+(`gh api search/issues`) on a repo that actually uses a PR review flow - none of the repos configured
+today do (commits land straight on `develop`), so this stays undone until one does.
+
 ### 7. Build proposals
 
 For each target:
 
 - Collect ALL dev commits for that calendar day across all configured repos (don't filter by the entry's time window).
 - If duration > 3h, plan split into 1-3h chunks (prefer 1h or 2h). Respect original start + end total.
+- **Meal-gap check** (from the `feedback_clockify_meal_breaks_and_unattended_work_next_day` memory
+  file, read per step 4a - named here so it's enforced at the point blocks actually get laid out,
+  not just by having been read several steps earlier): cut an 11:30-12:00 lunch gap and an
+  18:30-19:30 dinner gap out of any contiguous block that spans them, unless real activity (a
+  commit, a stated meeting) places the dev at the keyboard through the gap.
 - Distribute the day's commits across chunks by rough chronology: earliest commits → earliest chunks. Assume the dev worked on things in the order committed, even if the commit timestamp falls outside the chunk (e.g. commit at 18:00 can describe the 15:00-17:00 chunk if it represents that chunk's work in the dev's workflow).
 - Round every chunk boundary (start and end, including the overall entry's original start/end) to the nearest 5-minute mark (:00/:05/:10/.../:55), seconds always :00. Round the shared boundary between adjacent chunks once and reuse that value as both the earlier chunk's end and the later chunk's start, so rounding never introduces a gap or overlap. Do this before presenting the plan in step 9, not after approval.
 - Draft a description of the actual work delivered, phrased the way a person would summarize their
@@ -231,6 +281,18 @@ For each target:
 - If a matched commit subject hits `ticket_regex`, strip the matched ticket prefix from the description body (don't repeat it in the text) and append ` (53794)` using just the captured number, once, at the end only. Never leave the ticket number both leading the body and trailing in parens.
 - **Never use the same description verbatim on two chunks.** If all commits land in one chunk leaving others empty, split the description on semicolons: assign the pre-semicolon part to the first chunk and the post-semicolon part(s) to the remaining chunk(s). If there are more chunks than semicolon-delimited parts, the last non-ticket part fills the extras.
 - If a day has zero commits at all across all repos, ask the dev what was done before proposing.
+- **A block starting between roughly 00:00 and 06:00 local is a placement decision, not a
+  mechanical one** - unlike a late-evening block (e.g. `22:00-00:00`), which renders untouched with
+  no question asked. Flag it for step 9's `AskUserQuestion` instead of silently rendering it at its
+  real small-hours time: keep it at the real hour, or move it into that day's daytime hours (the dev
+  names the slot). Neither can be defaulted silently - the skill has no way to know whether the true
+  hour matters to whoever reads this Clockify project, keeping it forces step 9a's calendar crop
+  down to 01:00 (a multi-hour empty band paid for one short block), and moving it without asking
+  invents a time the evidence doesn't support. The commit still counts on its own calendar day
+  either way (step 6's late-night-spillover split is unchanged); whichever boundary results still
+  lands on a 5-minute mark. One data point so far (2026-09-25: dev rejected a rendered `01:45-02:25`
+  block in favor of `13:30-14:15`) - if a second run confirms the dev always wants these moved,
+  replace this question with that default and record both data points here first.
 
 ### 7a. Dual-bound sanity check (mandatory before presenting)
 
@@ -286,9 +348,18 @@ that this step now runs by default.
 
 ### 9. Present plan
 
+State a one-line per-repo commit count first, in the config's `repos:` order, sourced directly from
+step 6's already-gathered list (no extra fetch): `Commits checked: zng-app 6, zng-admin 1,
+zng-biller 3, zng-api 0`. A repo with zero commits still prints `0` - that's the proof it was swept,
+never a reason to drop it from the line (2026-09-30: the dev asked "are you sure you checked zng
+admin and zng biller?" after a sweep that had already checked both, because nothing surfaced it).
+
 Show a table: date, start-end, duration, proposed split, proposed description(s). Precede it with
 the step 9a hero-card-plus-timeline preview (its column headers carry the day-by-day totals, so
-there is no separate day-summary table to print here). Use AskUserQuestion:
+there is no separate day-summary table to print here). If step 7 flagged a post-midnight block,
+resolve its placement (real small-hours time vs a dev-named daytime slot) as its own
+`AskUserQuestion` before the apply/some/cancel question below, not folded into it. Use
+AskUserQuestion:
 
 - Apply all
 - Apply some (pick which by index)
@@ -369,6 +440,18 @@ same way). `today`, `yesterday`, an explicit single-day range, or a `past-N-days
 window that doesn't start on Monday all fail this gate - none of them saw the rest of the week, so a
 target/remaining figure computed from them is a guess dressed as a fact (2026-09-03: a `today`-only
 fetch reported "19h 40m to go this week" with Mon/Tue/Wed/Fri/Sat/Sun unchecked).
+
+**Narrow-window default widening:** if the window resolved in step 3 is narrower than the current
+Mon-00:00-to-now work week (`today`, `yesterday`, an explicit single day, or any range not starting
+Monday) and the config sets `weekly_target_hours`, run one additional real fetch for the full Mon
+00:00-to-now range before rendering - existing entries only, bucketed by `clockify_project_id` the
+same as step 4, summed for real, never assumed on an unfetched day, confirmed not stale per step 4's
+integrity check. Feed that widened set into `--entries` so the visual (and the gate above) cover the
+whole week by default. The WRITE scope (step 10) still stays at exactly the window the dev named -
+this fetch is presentation-only and is never grounds for writing outside it. This is the default now,
+not an exception the dev has to ask for: reproduced four times (2026-09-24, 09-25, 09-30, 10-02) with
+the dev rejecting every narrow single-window card and asking for the full week each time, so showing
+the narrow card first and widening only on request wastes a proposal/preview/reject cycle every time.
 
 Two honesty rules the visual must not break: never draw a project the run cannot actually see (a
 different workspace or API key), and never let the ring or a rounded block duration hide the real

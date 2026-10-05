@@ -82,3 +82,4 @@ projecting/guessing from the partial window already in hand - that's exactly the
   todo per the global no-unprompted-global-edits rule) - but the next session touching this skill
   should treat this as ready to implement, not still open for debate.
 - **Reproduced a fourth time, 2026-10-02, zng-app, `/clockify-reconciliator` for "yesterday".** The run rendered a Thursday-only card although it had already fetched the whole week; the dev: "you did a bad bad thing... you didnt show me the whole week in the preview... why?". Re-rendering from the existing week fetch fixed it in one step. Four occurrences now, still ready to implement as the default.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane F1: skills/clockify-reconciliator/SKILL.md. Docs-only procedure change, untestable by Claude beyond ci/run_all.py (drives live Clockify/HubStaff/Shortcut APIs).

@@ -79,3 +79,4 @@ In `SKILL.md` step 6, alongside the `git log` pass per configured repo, add a li
   todo's Approach to include a transcript sweep per configured repo (session start/end times
   overlapping the window, cross-referenced against any todo files the session wrote), not just
   `git status --short` - the latter is necessary but no longer sufficient.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane F1: skills/clockify-reconciliator/SKILL.md. Docs-only procedure change, untestable by Claude beyond ci/run_all.py (drives live Clockify/HubStaff/Shortcut APIs).

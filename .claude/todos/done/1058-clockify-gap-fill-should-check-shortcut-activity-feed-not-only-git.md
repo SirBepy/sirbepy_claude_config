@@ -65,3 +65,4 @@ commits land straight on `develop` - but this may not hold for every configured 
 Related: [[1057-clockify-plan-should-state-per-repo-commit-counts-up-front]] (also found this
 session, same theme of surfacing evidence the skill can gather but currently doesn't show/use by
 default).
+- Completed by /loop-todos cycle 1 (2026-10-05), lane F1: skills/clockify-reconciliator/SKILL.md. Docs-only procedure change, untestable by Claude beyond ci/run_all.py (drives live Clockify/HubStaff/Shortcut APIs).

@@ -67,3 +67,7 @@ unchanged) and both boundaries still land on a 5-minute mark.
   not turn into a prompt on every evening block.
 - If a second run confirms the dev always wants these moved into the afternoon, replace the question
   with that default and record the two data points here before doing it.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane F1: skills/clockify-reconciliator/SKILL.md. Docs-only procedure change, untestable by Claude beyond ci/run_all.py (drives live Clockify/HubStaff/Shortcut APIs).
