@@ -88,3 +88,4 @@ next such guarantee.
   counting turns the rules elsewhere told the session to keep silent.
 - Adjacent but distinct: todo 453 asks which file owns Joe's chat-tone rules. If that gets resolved
   by consolidating into one file, this exception's wording should land in the same place.
+- Completed by /loop-todos cycle 1 (2026-10-05), test-first (RED against HEAD, then GREEN).

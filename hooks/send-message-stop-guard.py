@@ -59,7 +59,12 @@ SILENT_TURN_THRESHOLD = 3
 
 # A turn only counts as Conductor-tracked if it called one of these; a relay
 # turn stays exempt only while its calls are a subset of this same set.
-RELAY_SAFE_SUFFIXES = {"report_turn_status", "read_messages", "list_peers"}
+# post_message is in scope (todo 1032): a peer reply is still "pure peer
+# chatter" by the exception's own test ("changes nothing about your own
+# work"), not "no reply sent" - a relay turn that also edits or runs a
+# command stays outside this set, since tool names can't tell whether a
+# turn's own work actually changed.
+RELAY_SAFE_SUFFIXES = {"report_turn_status", "read_messages", "list_peers", "post_message"}
 
 # Same envelope characters flagged-skill-mention.py strips - built from
 # codepoints, never pasted literally, so no invisible bytes ride in this file.

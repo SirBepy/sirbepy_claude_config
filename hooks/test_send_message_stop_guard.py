@@ -166,6 +166,20 @@ with tempfile.TemporaryDirectory() as tmp:
     ok = code == 0 and '"decision": "block"' in out
     fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
 
+    # --- todo 1032: a relay turn that replies to the peer via post_message is still exempt ---
+
+    label = "a relay turn that also calls post_message (peer reply) stays exempt, 3rd streak position"
+    t_relay_reply = write_transcript(
+        tmpdir, "t4c.jsonl", DAEMON_RELAY,
+        ["mcp__cc_conductor__report_turn_status", "mcp__cc_conductor__post_message"],
+    )
+    t_silent3 = write_transcript(tmpdir, "t4d.jsonl", "keep building", ["mcp__cc_conductor__report_turn_status"])
+    run_stop(t_silent3, "sess-relay-reply")
+    run_stop(t_silent3, "sess-relay-reply")
+    code, out = run_stop(t_relay_reply, "sess-relay-reply")
+    ok = code == 0 and '"decision"' not in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
+
     # --- near-miss: relay input that ALSO produced new information must not be exempt ---
 
     label = "relay input plus a non-safe tool call gets no exemption and still trips the streak"
