@@ -88,7 +88,11 @@ function buildTargets(files) {
 
 function extractLinks(text) {
   const links = [];
-  const parenRe = /\[[^\]]*\]\(([^)]+\.md)\)/g;
+  // Label tolerates one level of nested [..] (e.g. "#[cfg(test)]", "[hidden]") by
+  // treating a balanced bracket pair as a single token in the label's alternation,
+  // so a lone unmatched "]" is still what ends the label - greedy matching can
+  // never cross it to glom two adjacent links together (todo 1039).
+  const parenRe = /\[(?:[^[\]]|\[[^[\]]*\])*\]\(([^)]+\.md)\)/g;
   const wikiRe = /\[\[([^\]]+)\]\]/g;
   let m;
   while ((m = parenRe.exec(text))) links.push({ raw: m[1], kind: 'paren' });

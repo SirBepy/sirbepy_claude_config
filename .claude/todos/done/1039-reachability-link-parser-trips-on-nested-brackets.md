@@ -64,3 +64,7 @@ index is full of lines carrying 5-12 links).
 - A fixture line containing two links where the first label has brackets still counts BOTH.
 - Re-running against the claude_usage_in_taskbar memory dir reports `orphan-file: 0` for these two
   files (subject to that corpus not changing).
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane L9. 1039 test-first via tools/test_reachability.py (RED against HEAD, GREEN after) and re-run on the corpus that filed it (orphan-file: 0); 1007/1014 are procedure changes, untestable beyond ci/run_all.py.
