@@ -31,7 +31,7 @@ If missing, stop and tell the dev:
 - POST, `Content-Type: application/json`, body is `{ "query": "...", "variables": {...} }`.
 - The key is read from env every call, never hardcoded, never printed.
 
-### The request helper — use this for every call
+### The request helper - use this for every call
 
 PowerShell functions do NOT persist between separate tool calls, so paste the whole helper into each call that uses it.
 
@@ -77,7 +77,7 @@ See `skills/linear/queries.md` for the ready-made recipes: lookup by ID, keyword
 Always summarize cleanly - not raw JSON dumps:
 
 ```
-MOB-123 — Flight Change Notification (In Progress)
+MOB-123 - Flight Change Notification (In Progress)
 Assigned: Josip Muzic | Priority: High
 https://linear.app/revaire/issue/MOB-123
 ```
