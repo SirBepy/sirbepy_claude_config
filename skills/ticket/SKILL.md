@@ -1,6 +1,6 @@
 ---
 name: ticket
-description: Files, updates, or picks up a ticket, inferring the tracker from the repo's git remote (Shortcut for zirtue-corp, Linear for revaire). Use for "file a ticket", "log this as a bug", "update sc-12345", or picking up a story to work on.
+description: Files, updates, or picks up a ticket; tracker inferred from the repo's remote. Use for "file a ticket" or "log a bug".
 argument-hint: "[create|update|pickup] <ticket id and/or free-form description>"
 ---
 
@@ -237,6 +237,16 @@ move it backward - flag the mismatch and let the dev decide. Finish by asking wh
 - Never invents an id, UUID, or custom-field value. Unknown ones get fetched and pinned in the
   quirks file.
 - Never generates branch names. The dev handles git.
+
+## Bulk triage (N stories, N-judge panel)
+
+A one-off "search/fetch, build dossiers, N-judge panel, tally votes" job (todo 1096) does not need
+rebuilding by hand. `skills/ticket/scripts/shortcut_triage.py` has `search` / `dossier` / `render` /
+`batch` / `consensus` subcommands: the client (with the search API's 1000-result cap worked around
+via `--split-types`), the dossier shaper, the markdown renderer, the size-capped batcher, and a vote
+or median tally over N judge-verdict files. It is read-only - judging itself stays a Workflow
+script or a subagent fan-out, never this file. Run its offline test with
+`python skills/ticket/scripts/test_shortcut_triage.py`.
 
 ## Out of scope, deliberately
 

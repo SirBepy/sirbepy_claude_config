@@ -173,6 +173,14 @@ under `.claude/todos/`.
 
 This rule reaches only scripts whose filename carries the ticket id. Ones named for a subject rather than a ticket (`verify-amp-a.js`, `check-v2-gate.js`) have no owning ticket to close and are swept by hand instead; 14 such files were deleted on 2026-09-24.
 
+## Bulk triage over many stories (not the 1:1 flow above)
+
+A board-wide "search, build a dossier per story, run an N-judge panel, tally the votes" pass (the
+kind of run that produced todo 1096) is a different shape from this skill's per-ticket 1:1
+investigation flow above. For that, use `skills/ticket/scripts/shortcut_triage.py`'s `search` /
+`dossier` / `render` / `batch` / `consensus` subcommands instead of hand-rolling the fetch, dossier
+renderer, and vote tally again.
+
 ## What this skill never does
 
 - Never mutates a ticket (state or comment) without Joe's explicit per-ticket go-ahead.

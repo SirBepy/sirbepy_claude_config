@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/984-pay-down-the-28-skill-descriptions-grandfathered-past-the-budget.md -->
-<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=e5bc0cb5 -->
+<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=7, reconfirm-count=2, content-hash=e5bc0cb5 -->
 <!-- duplicate-checked -->
 <!-- checked against 976 (done/, shipped 2026-09-11). 976 added the gate and trimmed the one
      in-scope offender; it deliberately grandfathered everything else so the new gate would not
@@ -73,3 +73,4 @@ file. A skill that never enters the listing genuinely costs nothing.
   exit 1 with an actionable message, and restoring it produced exit 0. It is not vacuous.
 - Do not batch all 28 into one dispatch. Each trim is a judgement about what the skill must remain
   findable by, and a builder given 28 at once will optimise for the character count.
+- Done in loop-todos cycle 2 (2026-10-06): all 28 grandfathered descriptions trimmed to <=120 chars/<=25 words keeping slash triggers and routing phrases; LEGACY_OVER_BUDGET_DEBT is empty; check_skill_frontmatter.py OK on 91 skills. Biggest cut: impeccable 895->119 chars, which drops verbs like animate/harden/colorize from the description, so a first ask using only one of those may not route to it. Commits 074f52a plus the preview/ticket description lines riding in the 995/1096 commits.
