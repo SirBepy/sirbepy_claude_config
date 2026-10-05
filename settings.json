@@ -123,16 +123,6 @@
       "Bash(ollama list *)",
       "Skill(claude-api)"
     ],
-    "ask": [
-      "Read(**/package-lock.json)",
-      "Read(**/yarn.lock)",
-      "Read(**/pnpm-lock.yaml)",
-      "Read(**/Cargo.lock)",
-      "Read(**/poetry.lock)",
-      "Read(**/pubspec.lock)",
-      "Read(**/Gemfile.lock)",
-      "Read(**/.git/**)"
-    ],
     "deny": [
       "Read(**/*.pem)",
       "Read(**/*.key)",
@@ -159,6 +149,16 @@
       "Read(**/.idea/**)",
       "Read(**/.vscode/**)"
     ],
+    "ask": [
+      "Read(**/package-lock.json)",
+      "Read(**/yarn.lock)",
+      "Read(**/pnpm-lock.yaml)",
+      "Read(**/Cargo.lock)",
+      "Read(**/poetry.lock)",
+      "Read(**/pubspec.lock)",
+      "Read(**/Gemfile.lock)",
+      "Read(**/.git/**)"
+    ],
     "defaultMode": "auto",
     "additionalDirectories": [
       "/Users/josipmuzic/.claude",
@@ -177,7 +177,7 @@
       "/Users/josipmuzic/projects/cinnamon/sampl-flutter/packages/tiktok_sdk_v2/.git"
     ]
   },
-  "model": "sonnet",
+  "model": "Opus",
   "skillOverrides": {
     "apply-styleguide": "name-only",
     "favicon": "name-only",
