@@ -313,7 +313,9 @@ subject) and the same proposed block table:
   looks padded, especially one anchored by a small/mechanical commit (a version bump, a config
   tweak, a one-line fix) that got stretched to fill a gap that isn't really about that commit's work.
 
-Both are READ-ONLY DISPATCH: analysis only, no edits, no git commands that change repo state.
+Both are READ-ONLY DISPATCH: analysis only, no edits, no git commands that change repo state. Paste
+the canonical preamble from `refs/builder-preamble.md` into both dispatch prompts (with the
+`READ-ONLY DISPATCH` opt-out) - `hooks/dispatch-preamble-guard.py` rejects a prompt missing its markers.
 
 Reconcile the two reports before presenting:
 - Where both flag the same block, fix it - don't present a block either agent calls out as clearly

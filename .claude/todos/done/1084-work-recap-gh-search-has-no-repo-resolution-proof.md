@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=6, reconfirm-count=1, content-hash=b0d9eb9b -->
 <!-- duplicate-checked: 1040 (done) fixed the same pattern in refs/outbound-ground-check.md only; 299 is zirtue group inference; this is the leftover call sites in work-recap/fibo -->
 # work-recap's gh pr list --search has no repo-resolution proof
 
@@ -29,3 +30,7 @@ wording from refs/outbound-ground-check.md rather than restating its rationale.
 
 - Both files run the resolution check before their searches.
 - A failed check produces an explicit UNVERIFIED line in the recap, never a silent empty section.
+
+## Notes
+
+- Done in loop-todos cycle 2 (2026-10-06): fibo daily.md and weekly.md run gh repo view Fibo-Studio/fibo before the PR searches and report PRs as UNVERIFIED when it fails, mirroring todo 1040.

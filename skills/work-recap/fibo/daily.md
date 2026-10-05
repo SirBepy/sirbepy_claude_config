@@ -50,6 +50,16 @@ Keep the deduped list internally — used to group bullets, not printed raw.
 
 ### 4. Pull PR state
 
+`gh pr list --search` answers an unresolvable repo with `[]`, byte-identical to a genuine empty
+result (todo 1040): resolve the repo first.
+
+```
+gh repo view Fibo-Studio/fibo --json name >/dev/null || echo "PRs: UNVERIFIED (gh could not resolve Fibo-Studio/fibo)"
+```
+
+If that fails, report the PRs section as `PRs: UNVERIFIED (gh could not resolve Fibo-Studio/fibo)`
+instead of an empty list.
+
 Two calls:
 
 **(a) Merged in window** — primary signal for Done:

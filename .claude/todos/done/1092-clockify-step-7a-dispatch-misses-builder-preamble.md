@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=7, reconfirm-count=1, content-hash=8ed7580a -->
 <!-- duplicate-checked: 2026-10-05; grepped backlog + done/ for "7a" + "preamble" in clockify-reconciliator, no hit. -->
 # clockify-reconciliator step 7a's subagent dispatch does not point at the builder preamble
 
@@ -26,3 +27,7 @@ with the `READ-ONLY DISPATCH` opt-out.
 ## Acceptance
 - Step 7a names `refs/builder-preamble.md`.
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- Done in loop-todos cycle 2 (2026-10-06): step 7a tells the dispatcher to paste refs/builder-preamble.md with the READ-ONLY DISPATCH opt-out, matching modes.md's wording.
