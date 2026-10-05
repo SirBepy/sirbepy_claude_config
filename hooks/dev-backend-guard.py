@@ -85,6 +85,10 @@ E2E_TARGET_RE = re.compile(
 
 CHAIN_SPLIT_RE = re.compile(r"&&|\|\||;|\n|\|")
 
+# A leading `VAR=value` env assignment (e.g. `E2E_TARGET=dev node run-all.js`)
+# is not the executable; skip it when looking for the real command name.
+ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+
 
 def allow(message: str = "") -> None:
     if message:
@@ -104,6 +108,20 @@ def dev_marker_in(text: str) -> str | None:
             if end >= len(low) or not low[end].isalnum():
                 return marker
             idx = low.find(marker, idx + 1)
+    return None
+
+
+def executable_token(tokens: list[str]) -> str | None:
+    """First token that isn't a leading env assignment, i.e. the real
+    command name. `--types node` on a tsc invocation has "node" as a
+    basename too, but it is an argument value, not the executable - using
+    any-token membership in E2E_RUNNERS blocked a plain tsc compile whose
+    file list happened to contain an "e2e" path segment (todo 1066).
+    """
+    for tok in tokens:
+        if ENV_ASSIGN_RE.match(tok):
+            continue
+        return tok
     return None
 
 
@@ -144,12 +162,14 @@ def main() -> None:
             continue
         lowered = [t.lower() for t in tokens]
         basenames = {basename(t) for t in tokens}
+        exe = executable_token(tokens)
+        exe_basename = basename(exe) if exe is not None else ""
 
         target = nonlocal_e2e_target(segment)
         if (
             target is not None
             and E2E_ENTRYPOINT_RE.search(segment)
-            and (basenames & E2E_RUNNERS or "run-all" in segment.lower())
+            and (exe_basename in E2E_RUNNERS or "run-all" in segment.lower())
         ):
             block(f"this runs the e2e suite against the '{target}' target.")
 
@@ -160,7 +180,7 @@ def main() -> None:
         if basenames & APP_RUNNERS and any(t in DRIVING_SUBCOMMANDS for t in lowered):
             block(f"this drives the app against the DEV backend ('{seg_marker}').")
 
-        if basenames & E2E_RUNNERS:
+        if exe_basename in E2E_RUNNERS:
             block(f"this runs a Node script against the DEV backend ('{seg_marker}').")
 
     marker = dev_marker_in(command)

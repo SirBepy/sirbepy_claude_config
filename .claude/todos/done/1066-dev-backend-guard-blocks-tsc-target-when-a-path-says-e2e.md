@@ -39,3 +39,7 @@ Workaround used: a scratch tsconfig file, so `--target` no longer appeared on th
 ## Acceptance
 
 - The command above is allowed; the guard's existing zng e2e-against-dev cases still block.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), test-first (RED against HEAD, then GREEN).

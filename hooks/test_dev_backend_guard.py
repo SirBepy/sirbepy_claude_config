@@ -54,6 +54,15 @@ CASES = [
     ("pnpm vite build --target es2020", False, "vite --target is not an e2e target"),
     ("docker build --target=builder -t app .", False, "docker --target is not an e2e target"),
     ("npm run test:e2e -- --target=dev", True, "e2e npm script against dev still blocks"),
+    # todo 1066: `--types node` is an argument VALUE, not the executable;
+    # its basename must not make tsc read as the node e2e runner, and an
+    # "e2e" path segment in the file list must not read as an entrypoint.
+    (
+        "npx tsc --noEmit --strict --skipLibCheck --module esnext --moduleResolution bundler "
+        "--target es2022 --types node e2e-tauri/*.ts playwright.tauri.config.ts",
+        False,
+        "tsc compile with --types node and an e2e-path file is not an e2e run",
+    ),
     # Ordinary work must stay unblocked or the hook gets switched off.
     ("fvm flutter analyze", False, "bare analyze"),
     ("fvm flutter test", False, "bare test"),
