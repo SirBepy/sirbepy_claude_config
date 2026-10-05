@@ -5,6 +5,8 @@ Drives guard.main() end to end via subprocess against a temp
 SESSION_MARKER_DIR, so the on-disk marker behaviour is exercised for real.
 """
 
+import contextlib
+import io
 import sys
 import tempfile
 from pathlib import Path
@@ -88,6 +90,15 @@ def run_pre_push(command: str, session_id: str) -> int:
     return call_main({"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": command}, "session_id": session_id})
 
 
+def run_pre_push_capture(command: str, session_id: str) -> tuple:
+    """Like run_pre_push, but also returns what deny() wrote to stderr - the
+    denial message's own wording is what todo 1005's fix changes."""
+    buf = io.StringIO()
+    with contextlib.redirect_stderr(buf):
+        code = run_pre_push(command, session_id)
+    return code, buf.getvalue()
+
+
 with tempfile.TemporaryDirectory() as tmp:
     tmpdir = Path(tmp)
     guard.SESSION_MARKER_DIR = tmpdir / ".session-markers"
@@ -129,5 +140,14 @@ with tempfile.TemporaryDirectory() as tmp:
     code = run_pre_push("git push", "$CLAUDE_CODE_SESSION_ID")
     ok = code == 0
     fails += [] if _testlib.report(ok, f"{label} (exit={code})") else [label]
+
+    # todo 1005: a `cat` of auto-commit.md (never recorded - only Read-tool reads
+    # are) must still be blocked, and the deny message must say the Read tool is
+    # the requirement, not merely that the file be "read", so the block doesn't
+    # read as a false positive against a session that genuinely read the file.
+    label = "deny message names the Read tool as the actual requirement"
+    code, stderr = run_pre_push_capture("git push", "sess-5")
+    ok = code == 2 and "read tool" in stderr.lower()
+    fails += [] if _testlib.report(ok, f"{label} (exit={code}, stderr={stderr!r})") else [label]
 
 sys.exit(_testlib.summarize(fails, style="count"))

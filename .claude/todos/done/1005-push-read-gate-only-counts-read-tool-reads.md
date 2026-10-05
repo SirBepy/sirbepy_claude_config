@@ -84,3 +84,4 @@ read preceded an unasked-for push.
   up should read both: if 1029's cause turns out to be the prune in
   `write-session-marker.ps1`, then option 1 here becomes less urgent, because the wasted round trip
   would be happening once per prune rather than once per session.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane D2, test-first (RED against HEAD, then GREEN).

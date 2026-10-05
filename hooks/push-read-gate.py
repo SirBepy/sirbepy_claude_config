@@ -11,7 +11,12 @@ did, so this ships narrow rather than not at all.
 Two arms, same file, distinguished by `hook_event_name`:
 - PostToolUse on Read: records a session-scoped marker the moment
   `snippets/auto-commit.md` is read, by path suffix so any relative/absolute
-  form of the path matches.
+  form of the path matches. Only this tool is wired as a PostToolUse matcher
+  in settings.json, so a `cat`/`sed`/`head` of the same file via Bash never
+  reaches this arm at all (todo 1005). Widening the matcher to Bash/PowerShell
+  so a shell read also counts was the preferred fix there, but settings.json
+  wiring is out of this file's reach - the deny message below says so instead
+  of leaving the mismatch silent.
 - PreToolUse on Bash/PowerShell: token-aware `git push` detection (mirrors
   commit-guard.py's `git commit` detection, subcommand renamed). No read
   marker and no prior pass this session -> deny. Once a push is allowed, a
@@ -123,8 +128,10 @@ def handle_pre_tool_use(payload: dict) -> None:
 
     deny(
         "[push-read-gate] This session's first `git push` is blocked until "
-        "snippets/auto-commit.md has been read this session (todo 467: a skipped "
-        "read of this exact file preceded an unasked-for push). Read it, then "
+        "snippets/auto-commit.md has been read this session WITH THE READ TOOL "
+        "(todo 467: a skipped read of this exact file preceded an unasked-for "
+        "push; todo 1005: a `cat`/`sed`/`head` of the same file does not count, "
+        "only a Read tool call is recorded). Read it with the Read tool, then "
         "retry - every later push this session is ungated."
     )
 
