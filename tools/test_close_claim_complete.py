@@ -23,19 +23,29 @@ Covers two todos:
 - 1015 (complete-todo.ps1 batch -Id gives a misleading error): a
   comma-bearing -Id must fail with the real cause up front, not fall
   through to a "no todo file matching" message.
+
+- 1083 (stale-claim reclaim trusts a bare pid): a claim file recording a
+  pid that is alive on this machine used to be treated as live forever,
+  even when that pid had been recycled by an unrelated process. The claim
+  now also records procStartTicks; reclaim requires the pid to be alive
+  AND its start time to match. Test F proves a mismatching start time
+  (recycled-pid shape) reclaims once past the 4h mtime threshold; test G
+  proves a genuinely live claim (matching start time) is never reclaimed;
+  test H proves a legacy claim with no procStartTicks field keeps the old
+  pid-only behavior.
 """
 
+import os
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "hooks"))
 
 import _testlib  # noqa: E402
-
-import os  # noqa: E402
 
 # Override hooks exist solely so this same suite can be pointed at a baseline
 # checkout to demonstrate RED-before-GREEN; CI and normal runs never set these,
@@ -68,6 +78,30 @@ def run_command_text(command: str) -> subprocess.CompletedProcess:
         ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", command],
         capture_output=True, text=True, timeout=TIMEOUT_SECONDS,
     )
+
+
+def get_start_ticks(pid: int) -> int:
+    """Query this machine's own record of a live pid's process start time,
+    the same identity reserve-todo-id.ps1 and (after this todo) claim-todo.ps1
+    use to disambiguate a pid from a later, unrelated process that inherits
+    the same number once Windows recycles it.
+    """
+    proc = run_command_text(f"(Get-Process -Id {pid}).StartTime.Ticks")
+    return int(proc.stdout.strip())
+
+
+def write_claim(path: Path, *, pid: int, start_ticks: int | None, age_hours: float) -> None:
+    """Write a claim file by hand (not via the script under test) so the
+    staleness-reclaim path can be exercised with a controlled pid/start-ticks/
+    age combination, then back-date its mtime past the 4h threshold.
+    """
+    lines = ["session: other-session", f"pid: {pid}"]
+    if start_ticks is not None:
+        lines.append(f"procStartTicks: {start_ticks}")
+    lines.append("started: 2020-01-01T00:00:00.0000000Z")
+    path.write_text("\r\n".join(lines) + "\r\n", encoding="utf-8")
+    old = time.time() - age_hours * 3600
+    os.utime(path, (old, old))
 
 
 def make_backlog(tmpdir: Path, *filenames: str) -> Path:
@@ -207,6 +241,76 @@ with tempfile.TemporaryDirectory() as tmp:
     ok = proc.returncode == 0 and (done_dir(repo) / "07-alpha.md").exists()
     if not _testlib.report(ok, f"single id still completes after the batch-rejection check (out={proc.stdout!r})"):
         fails.append("single-id still works")
+
+
+# --- Test F (todo 1083): a claim file names a pid that IS alive on this
+# machine, but its recorded start time does NOT match that pid's actual
+# start time - the shape a recycled pid takes once an unrelated process
+# inherits the number. Past the 4h mtime threshold, this must reclaim. ---
+
+with tempfile.TemporaryDirectory() as tmp:
+    repo = make_backlog(Path(tmp), "09-alpha.md")
+    c = claims_dir(repo)
+    c.mkdir(parents=True)
+    my_pid = os.getpid()
+    my_start_ticks = get_start_ticks(my_pid)
+    mismatching_ticks = my_start_ticks + 1  # alive pid, wrong identity
+    write_claim(c / "09.claim", pid=my_pid, start_ticks=mismatching_ticks, age_hours=5)
+
+    proc = run_file(CLAIM_SCRIPT, "-Id", "09", "-RepoRoot", str(repo))
+    # Reclaim overwrites the claim with the caller's own session/pid, so the
+    # stale marker ("other-session", written by write_claim) must be gone.
+    ok = (
+        proc.returncode == 0
+        and "reclaimed" in proc.stdout.lower()
+        and "other-session" not in (c / "09.claim").read_text(encoding="utf-8")
+    )
+    if not _testlib.report(ok, f"alive pid with mismatching start time is reclaimed past 4h (rc={proc.returncode}, out={proc.stdout!r})"):
+        fails.append("mismatched start-time reclaim (1083)")
+
+
+# --- Test G (todo 1083): a claim file names a pid that IS alive AND whose
+# recorded start time matches - a genuinely live claim. Must never be
+# reclaimed, no matter how old its mtime is. ---
+
+with tempfile.TemporaryDirectory() as tmp:
+    repo = make_backlog(Path(tmp), "10-alpha.md")
+    c = claims_dir(repo)
+    c.mkdir(parents=True)
+    my_pid = os.getpid()
+    my_start_ticks = get_start_ticks(my_pid)
+    write_claim(c / "10.claim", pid=my_pid, start_ticks=my_start_ticks, age_hours=5)
+
+    proc = run_file(CLAIM_SCRIPT, "-Id", "10", "-RepoRoot", str(repo))
+    ok = (
+        proc.returncode == 1
+        and "not stale" in proc.stdout.lower()
+        and (c / "10.claim").read_text(encoding="utf-8").find("session: other-session") != -1
+    )
+    if not _testlib.report(ok, f"genuinely live claim (matching start time) is never reclaimed (rc={proc.returncode}, out={proc.stdout!r})"):
+        fails.append("genuine live claim never reclaimed (1083)")
+
+
+# --- Test H (todo 1083): a legacy claim with no procStartTicks field at all
+# falls back to the old pid-only check - alive pid, old mtime, still NOT
+# stale (same behavior as before this todo, for a claim written before the
+# field existed). ---
+
+with tempfile.TemporaryDirectory() as tmp:
+    repo = make_backlog(Path(tmp), "11-alpha.md")
+    c = claims_dir(repo)
+    c.mkdir(parents=True)
+    my_pid = os.getpid()
+    write_claim(c / "11.claim", pid=my_pid, start_ticks=None, age_hours=5)
+
+    proc = run_file(CLAIM_SCRIPT, "-Id", "11", "-RepoRoot", str(repo))
+    ok = (
+        proc.returncode == 1
+        and "not stale" in proc.stdout.lower()
+        and (c / "11.claim").read_text(encoding="utf-8").find("session: other-session") != -1
+    )
+    if not _testlib.report(ok, f"legacy claim with no procStartTicks keeps old pid-only check (rc={proc.returncode}, out={proc.stdout!r})"):
+        fails.append("legacy claim backward compat (1083)")
 
 
 sys.exit(_testlib.summarize(fails, style="count"))

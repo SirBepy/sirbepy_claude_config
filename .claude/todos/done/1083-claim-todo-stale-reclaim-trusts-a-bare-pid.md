@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=7, reconfirm-count=1, content-hash=fa7e58ab -->
 # claim-todo.ps1's stale-claim reclaim trusts a bare PID, like reservations did
 
 **Type:** task
@@ -30,3 +31,7 @@ contract's staleness rule. Legacy claims without the field keep today's behaviou
   time differs is reclaimed once past the 4h mtime threshold.
 - A genuinely live claim is never reclaimed.
 - `skills/close/ai-todos-format.md`'s staleness paragraph matches the new rule.
+
+## Notes
+
+- Done in loop-todos cycle 2 (2026-10-06): claim-todo.ps1 writes procStartTicks and treats a claim as live only when the pid exists AND its start ticks match (legacy claims without the field keep the pid-only check); ai-todos-format.md documents both. Tests F/G/H added, F RED on HEAD's script then GREEN; suite ALL PASS.

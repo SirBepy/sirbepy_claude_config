@@ -294,8 +294,9 @@ place that says "remember to claim".
 
 1. Ensure `.claims/` exists and the git-policy exclude lines are present (self-heal above).
 2. Write your claim content to a private temp name: `.claims/<id>.tmp-<pid>`.
-   Content (informational, not load-bearing): `session: <session-id or pid-fallback>`,
-   `pid: <pid>`, `started: <ISO timestamp>`.
+   Content: `session: <session-id or pid-fallback>`, `pid: <pid>`, `procStartTicks: <that
+   process's start time in ticks>`, `started: <ISO timestamp>`. `pid` plus `procStartTicks` are
+   load-bearing for the stale-claim check below; the rest is informational.
 3. Atomically rename it to `.claims/<id>.claim` with no-overwrite semantics
    (PowerShell: `Move-Item` WITHOUT `-Force`; it fails if the destination exists).
    - Rename succeeded -> you own the claim.
@@ -324,10 +325,16 @@ ambiguity, filesystem failure).
 after each todo in a batch. Never parse timestamps from the content; mtime is the liveness signal
 (filesystem clock, no skew).
 
-**Stale claim = BOTH signals dead:** mtime older than 4 hours, AND the PID in the file is not
-alive on this machine (`Get-Process -Id <pid>` fails). If the claim file is from another machine
-(PID meaningless), mtime alone decides. A stale claim may be deleted and re-claimed. A claim
-that is old but whose PID is alive is NOT stale - a long session is working; skip that todo.
+**Stale claim = BOTH signals dead:** mtime older than 4 hours, AND the owning process is not
+alive. A claim written by the current `claim-todo.ps1` records `procStartTicks` alongside the
+pid, so "alive" means the pid is running AND its own start time matches what was recorded - a
+bare pid number is not a reliable liveness signal, since Windows recycles pids and an unrelated
+later process can inherit the number and keep a dead session's claim alive forever (todo 1083,
+same fix 988 made for id reservations). A claim written before `procStartTicks` existed has no
+start time to confirm against, so it falls back to the old pid-only check (`Get-Process -Id
+<pid>` fails). If the claim file is from another machine (PID meaningless), mtime alone decides.
+A stale claim may be deleted and re-claimed. A claim that is old but whose owning process is
+confirmed alive is NOT stale - a long session is working; skip that todo.
 
 **Release:** delete `.claims/<id>.claim` when the todo completes or you abandon it. Completing
 also means: move the todo to `done/`, delete its PLAN.md line.

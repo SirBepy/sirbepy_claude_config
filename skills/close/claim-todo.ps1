@@ -147,9 +147,14 @@ function Claim-One {
     $tempPath  = Join-Path $claimsDir "$claimName.tmp-$PID"
 
     $sessionId = if ($env:CLAUDE_CODE_SESSION_ID) { $env:CLAUDE_CODE_SESSION_ID } else { "pid-$PID" }
+    # procStartTicks disambiguates this pid from a later, unrelated process that
+    # inherits the same number after Windows recycles it - same <pid>-<start-ticks>
+    # identity reserve-todo-id.ps1 adopted for reservation markers (todo 988).
+    $procStartTicks = (Get-Process -Id $PID).StartTime.Ticks
     $claimContent = @(
         "session: $sessionId"
         "pid: $PID"
+        "procStartTicks: $procStartTicks"
         "started: $((Get-Date).ToUniversalTime().ToString('o'))"
     ) -join "`r`n"
     $claimContent += "`r`n"
@@ -177,13 +182,29 @@ function Claim-One {
     # Destination exists - a real conflict. Stale = mtime > 4h AND recorded pid is dead.
     $existing = Get-Item -Path $claimPath
     $existingPid = $null
+    $existingStartTicks = $null
     $existingContent = Get-Content -Path $claimPath -Raw -ErrorAction SilentlyContinue
     if ($existingContent -match 'pid:\s*(\d+)') {
         $existingPid = [int]$matches[1]
     }
+    if ($existingContent -match 'procStartTicks:\s*(\d+)') {
+        $existingStartTicks = [int64]$matches[1]
+    }
 
+    # A bare pid is not a reliable liveness signal: Windows recycles pids, so an
+    # unrelated later process can inherit the number and keep a dead session's
+    # claim alive forever (todo 1083, same root cause 988 fixed for reservations).
+    # When the claim carries procStartTicks, liveness requires the pid to be
+    # running AND its own start time to match what was recorded. A claim written
+    # before this field existed has no start time to confirm against, so it
+    # falls back to the old pid-only check.
+    $hasStartSignal = [bool]$existingStartTicks
     $pidAlive = $false
-    if ($existingPid) {
+    if ($existingPid -and $hasStartSignal) {
+        $proc = Get-Process -Id $existingPid -ErrorAction SilentlyContinue
+        if ($proc) { $pidAlive = ($proc.StartTime.Ticks -eq $existingStartTicks) }
+    }
+    elseif ($existingPid) {
         $pidAlive = [bool](Get-Process -Id $existingPid -ErrorAction SilentlyContinue)
     }
 
