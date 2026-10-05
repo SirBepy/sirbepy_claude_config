@@ -25,3 +25,7 @@ with the `READ-ONLY DISPATCH` opt-out (the dispatch never writes to Shortcut).
 ## Acceptance
 - Step 4b names `refs/builder-preamble.md`.
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- Done in loop-todos cycle 3 (2026-10-06): step 4b tells the dispatcher to paste refs/builder-preamble.md with the READ-ONLY DISPATCH opt-out, same wording as clockify 7a (todo 1092).

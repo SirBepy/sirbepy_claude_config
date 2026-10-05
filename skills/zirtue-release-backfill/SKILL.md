@@ -213,7 +213,10 @@ step 4, cross-reference separately:
    the relevant repo's code, run `git log -S '<distinctive string from the ticket>'`
    to find the introducing commit, then apply step 4.4c's newest-containing-tag
    lookup to propose a Release. The agent reports its trace per ticket (file:line
-   or commit found, proposed tag) - it never writes to Shortcut.
+   or commit found, proposed tag) - it never writes to Shortcut. Paste the canonical
+   preamble from `~/.claude/refs/builder-preamble.md` into each dispatch prompt (with
+   the `READ-ONLY DISPATCH` opt-out) - `hooks/dispatch-preamble-guard.py` rejects a
+   prompt missing its markers.
 4. This bucket is **never auto-closed**. Every ticket in it goes through Gate D2
    regardless of its proposed confidence - a trace-based Release is inherently
    lower-certainty than a direct commit match, and Gate D2 already asks for every
