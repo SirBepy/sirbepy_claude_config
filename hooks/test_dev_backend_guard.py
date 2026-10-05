@@ -37,6 +37,16 @@ CASES = [
         True,
         "e2e target as a separate argument",
     ),
+    (
+        "cross-env E2E_TARGET=dev node e2e-suite.js",
+        True,
+        "e2e target set through a cross-env wrapper",
+    ),
+    (
+        "env E2E_TARGET=dev node run-all.js",
+        True,
+        "e2e target set through env",
+    ),
     # Local is the whole point of the guard, it must never be blocked.
     (
         "fvm flutter run -d chrome --web-port=8080 --dart-define-from-file=.env.local",

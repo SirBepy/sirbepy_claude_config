@@ -64,6 +64,9 @@ DRIVING_SUBCOMMANDS = {"run", "build", "drive", "test"}
 
 E2E_RUNNERS = {"node", "node.exe", "npm", "npm.cmd", "pnpm", "pnpm.cmd", "yarn", "yarn.cmd"}
 
+# Commands that only set env vars and then exec the rest of the line.
+ENV_WRAPPERS = {"cross-env", "cross-env.cmd", "cross-env-shell", "cross-env-shell.cmd", "env"}
+
 # Anything pointing a build or a suite at the deployed dev environment.
 DEV_MARKERS = (
     ".env.dev",
@@ -112,14 +115,17 @@ def dev_marker_in(text: str) -> str | None:
 
 
 def executable_token(tokens: list[str]) -> str | None:
-    """First token that isn't a leading env assignment, i.e. the real
-    command name. `--types node` on a tsc invocation has "node" as a
-    basename too, but it is an argument value, not the executable - using
-    any-token membership in E2E_RUNNERS blocked a plain tsc compile whose
-    file list happened to contain an "e2e" path segment (todo 1066).
+    """First token that isn't a leading env assignment or an env-setting
+    wrapper, i.e. the real command name. `--types node` on a tsc invocation
+    has "node" as a basename too, but it is an argument value, not the
+    executable - using any-token membership in E2E_RUNNERS blocked a plain
+    tsc compile whose file list happened to contain an "e2e" path segment
+    (todo 1066). Skipping the wrapper keeps `cross-env E2E_TARGET=dev node
+    run-all.js` reading as node, which only checking the first token let
+    through.
     """
     for tok in tokens:
-        if ENV_ASSIGN_RE.match(tok):
+        if ENV_ASSIGN_RE.match(tok) or basename(tok) in ENV_WRAPPERS:
             continue
         return tok
     return None
