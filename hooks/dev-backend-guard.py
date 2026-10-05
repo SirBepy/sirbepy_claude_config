@@ -66,6 +66,8 @@ E2E_RUNNERS = {"node", "node.exe", "npm", "npm.cmd", "pnpm", "pnpm.cmd", "yarn",
 
 # Commands that only set env vars and then exec the rest of the line.
 ENV_WRAPPERS = {"cross-env", "cross-env.cmd", "cross-env-shell", "cross-env-shell.cmd", "env"}
+# The wrappers' own flags that take a separate value (`env -u VAR`, `env -C DIR`).
+ENV_WRAPPER_VALUE_FLAGS = {"-u", "--unset", "-C", "--chdir", "-S", "--split-string"}
 
 # Anything pointing a build or a suite at the deployed dev environment.
 DEV_MARKERS = (
@@ -124,8 +126,17 @@ def executable_token(tokens: list[str]) -> str | None:
     run-all.js` reading as node, which only checking the first token let
     through.
     """
+    after_wrapper = False
+    skip_value = False
     for tok in tokens:
+        if skip_value:
+            skip_value = False
+            continue
         if ENV_ASSIGN_RE.match(tok) or basename(tok) in ENV_WRAPPERS:
+            after_wrapper = after_wrapper or basename(tok) in ENV_WRAPPERS
+            continue
+        if after_wrapper and tok.startswith("-"):
+            skip_value = tok in ENV_WRAPPER_VALUE_FLAGS
             continue
         return tok
     return None

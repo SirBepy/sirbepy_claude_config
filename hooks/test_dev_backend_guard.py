@@ -47,6 +47,16 @@ CASES = [
         True,
         "e2e target set through env",
     ),
+    (
+        "env -u http_proxy node e2e-suite.js --target=dev",
+        True,
+        "env's own value-taking flag is skipped before the runner",
+    ),
+    (
+        "env -i E2E_TARGET=dev node run-all.js",
+        True,
+        "env's own bare flag is skipped before the runner",
+    ),
     # Local is the whole point of the guard, it must never be blocked.
     (
         "fvm flutter run -d chrome --web-port=8080 --dart-define-from-file=.env.local",
