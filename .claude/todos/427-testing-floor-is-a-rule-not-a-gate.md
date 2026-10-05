@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=5, content-hash=589349fb -->
+<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=8, reconfirm-count=6, content-hash=589349fb -->
 <!-- duplicate-checked -->
 # The testing floor is a rule Claude must remember, not a gate it cannot pass
 
@@ -75,6 +75,12 @@ JSON form is better.
 - Orphan check after a triggered run pastes real process output proving nothing survived.
 - A deliberately unfixable failure terminates at the cap instead of looping.
 - All existing Stop hooks (`em-dash-guard.py`, ui-screenshot reminder) still fire correctly.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
+
+- [ ] [SEC] Wire the testing-floor Stop gate into settings.json; it can block every turn from ending while a fast check is red. Options: wire it now with Joe watching / keep unwired / drop.
 
 ## Notes
 
@@ -167,4 +173,4 @@ subprocess cases including fault injection.
    No existing test would catch this: both suites build single-stack or stubbed fixtures only. The
    regression test to add is a temp dir with two stack markers and distinguishable injected results,
    asserting the summary names BOTH. It fails today and passes after the fix.
-
+- loop-todos cycle 2, 2026-10-06: the dual-stack defect above is fixed. `detect_stack()` returns a list, `run_checks()` runs every matched stack and aggregates (ok = all, summaries joined), regression test `dual_stack_checks()` in hooks/test_testing_floor_guard.py RED then GREEN. Still unwired; the wiring question is in Open questions.

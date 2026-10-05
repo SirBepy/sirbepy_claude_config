@@ -165,13 +165,18 @@ def npm_cmd(root: Path) -> str:
 
 def detect_stack(root: Path):
     """Marker-file stack detection mirroring `skills/test/SKILL.md`'s table
-    (same rows, same precedence) so this hook's notion of "the project's fast
-    checks" doesn't drift from what `/test` would run by hand. Returns
-    (label, argv) or None if nothing recognised - None means "nothing to
-    verify", not "verification failed", so callers must not block on it.
+    (same rows, same markers) so this hook's notion of "the project's fast
+    checks" doesn't drift from what `/test` would run by hand. Returns a
+    LIST of every `(label, argv)` row `root` matches, per that SKILL.md's
+    Step 1: "A repo can match more than one row (a Tauri app matches Rust
+    *and* Node); run every row it matches." An empty list means "nothing
+    recognised" ("nothing to verify", not "verification failed"), so
+    callers must not block on it.
     """
+    matches = []
+
     if (root / "ci" / "run_all.py").is_file():
-        return ("scripts repo", [sys.executable, "ci/run_all.py"])
+        matches.append(("scripts repo", [sys.executable, "ci/run_all.py"]))
 
     pubspec = root / "pubspec.yaml"
     if pubspec.is_file():
@@ -180,30 +185,34 @@ def detect_stack(root: Path):
         except OSError:
             text = ""
         if "flutter:" in text:
-            return ("flutter", ["fvm", "flutter", "test"])
+            matches.append(("flutter", ["fvm", "flutter", "test"]))
 
+    # Root Cargo.toml takes precedence over a src-tauri/ one so a Tauri repo
+    # (which has both) is counted as a single "rust" match, not two.
     cargo_root = root / "Cargo.toml"
     cargo_tauri = root / "src-tauri" / "Cargo.toml"
     if cargo_root.is_file():
-        return ("rust", ["cargo", "test", "--lib", "--manifest-path", str(cargo_root)])
-    if cargo_tauri.is_file():
-        return ("rust", ["cargo", "test", "--lib", "--manifest-path", str(cargo_tauri)])
+        matches.append(("rust", ["cargo", "test", "--lib", "--manifest-path", str(cargo_root)]))
+    elif cargo_tauri.is_file():
+        matches.append(("rust", ["cargo", "test", "--lib", "--manifest-path", str(cargo_tauri)]))
 
     # Roblox/Luau: /test hands this to /jest-lua, a natural-language skill a
     # hook cannot invoke. Detected (so it's never silently mistaken for "no
     # stack") but never executed here - see run_stack_check's "roblox" arm.
+    # Same single-match precedence reasoning as rust above.
     if (root / "test.project.json").is_file() or (root / "testing" / "wally.toml").is_file():
-        return ("roblox", [])
-    try:
-        if any(root.glob("*.rbxlx")):
-            return ("roblox", [])
-    except OSError:
-        pass
+        matches.append(("roblox", []))
+    else:
+        try:
+            if any(root.glob("*.rbxlx")):
+                matches.append(("roblox", []))
+        except OSError:
+            pass
 
     if (root / "package.json").is_file():
-        return ("node", [npm_cmd(root), "test"])
+        matches.append(("node", [npm_cmd(root), "test"]))
 
-    return None
+    return matches
 
 
 def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner):
@@ -262,9 +271,16 @@ def sweep_node_orphans() -> None:
 
 
 def run_checks(root: Path, timeout: int = DEFAULT_TIMEOUT_SECONDS, runner=subprocess.run):
-    """(ok, summary) for `root`'s detected fast-check stack. `runner`
-    defaults to a real `subprocess.run`; tests always inject a fake so a
-    suite never needs a real npm/cargo/flutter toolchain installed.
+    """(ok, summary) aggregated across EVERY stack `detect_stack` matches
+    under `root`, not just the first - a dual-stack repo (Tauri: Rust +
+    Node; Roblox + Node) must have both checked, per `skills/test/
+    SKILL.md`'s "run every row it matches" rule this hook exists to
+    enforce (todo 427 Notes item 4). `ok` is True only if every matched
+    stack's own check passed; `summary` joins each stack's own summary
+    (each already names its own label) so a failure is traceable to the
+    stack that caused it. `runner` defaults to a real `subprocess.run`;
+    tests always inject a fake so a suite never needs a real npm/cargo/
+    flutter toolchain installed.
 
     TESTING_FLOOR_FAKE_CHECK, if set, short-circuits everything below it
     (including stack detection) - the one deliberate exception to "no test
@@ -281,12 +297,14 @@ def run_checks(root: Path, timeout: int = DEFAULT_TIMEOUT_SECONDS, runner=subpro
             return True, "stubbed pass (TESTING_FLOOR_FAKE_CHECK)"
         return False, f"stubbed fail (TESTING_FLOOR_FAKE_CHECK={fake})"
 
-    stack = detect_stack(root)
-    if stack is None:
+    stacks = detect_stack(root)
+    if not stacks:
         return True, f"no recognised fast-check stack detected under {root}; nothing to verify"
-    label, argv = stack
-    ok, summary = run_stack_check(label, argv, root, timeout, runner)
-    if label == "node":
+
+    results = [run_stack_check(label, argv, root, timeout, runner) for label, argv in stacks]
+    ok = all(stack_ok for stack_ok, _summary in results)
+    summary = " | ".join(stack_summary for _ok, stack_summary in results)
+    if any(label == "node" for label, _argv in stacks):
         sweep_node_orphans()
     return ok, summary
 

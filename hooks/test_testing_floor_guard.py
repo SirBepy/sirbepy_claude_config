@@ -392,8 +392,58 @@ def real_detection_checks() -> list:
     return fails
 
 
+def dual_stack_checks() -> list:
+    """Regression for todo 427 Notes item 4: `detect_stack()` returned a
+    single `(label, argv)` tuple and stopped at the first marker-file hit
+    in a fixed priority order, so a dual-stack repo (the exact Tauri shape
+    `skills/test/SKILL.md` names: Cargo.toml + package.json) only ever got
+    ONE stack's checks run, though the module docstring claimed parity with
+    that SKILL.md's "run every row it matches" rule. Reproduced with a
+    scratch dir holding both markers and a fake `runner` that returns a
+    DIFFERENT, distinguishable result per stack (rust passes, node fails),
+    so the test can tell whether both actually ran or only one did.
+    """
+    fails = []
+    lib = _testlib.load_module("testing_floor_lib", _HOOKS_DIR / "_testing_floor_lib.py")
+
+    with tempfile.TemporaryDirectory(prefix="testing-floor-dual-stack-") as tmp:
+        root = Path(tmp)
+        (root / "Cargo.toml").write_text('[package]\nname = "x"\n', encoding="utf-8")
+        (root / "package.json").write_text("{}", encoding="utf-8")
+
+        stacks = lib.detect_stack(root)
+        labels = [label for label, _argv in stacks]
+        ok = set(labels) == {"rust", "node"}
+        print(f"[{'PASS' if ok else 'FAIL'}] lib: detect_stack names BOTH rust and node for a Cargo.toml+package.json repo -> {stacks!r}")
+        if not ok:
+            fails.append("detect_stack returns both matches for a dual-stack repo")
+
+        class FakeProc:
+            def __init__(self, returncode, stdout):
+                self.returncode = returncode
+                self.stdout = stdout
+                self.stderr = ""
+
+        def fake_runner(argv, **kwargs):
+            # rust passes, node fails - distinguishable per-stack outcomes
+            # so a joined summary/ok that ignored one stack is detectable.
+            if argv[0] == "cargo":
+                return FakeProc(0, "RUST-MARKER: cargo test passed")
+            return FakeProc(1, "NODE-MARKER: npm test failed")
+
+        ok_all, summary = lib.run_checks(root, runner=fake_runner)
+        names_both = "rust" in summary and "node" in summary
+        markers_both = "RUST-MARKER" in summary and "NODE-MARKER" in summary
+        ok = (ok_all is False) and names_both and markers_both
+        print(f"[{'PASS' if ok else 'FAIL'}] lib: run_checks aggregates both stacks (ok=False, summary names both) -> ok={ok_all!r} summary={summary!r}")
+        if not ok:
+            fails.append("run_checks aggregates dual-stack results and names both")
+
+    return fails
+
+
 def run() -> int:
-    fails = unit_checks() + subprocess_checks() + real_detection_checks()
+    fails = unit_checks() + subprocess_checks() + real_detection_checks() + dual_stack_checks()
     return _testlib.summarize(fails)
 
 
