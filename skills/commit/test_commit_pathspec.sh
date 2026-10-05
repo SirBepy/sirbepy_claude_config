@@ -784,6 +784,49 @@ out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$multi_marker_dir" "$cp" -C "$r23" --e
 check "a pre-git-add'ed new file (no HEAD blob) stays exempt from the 2+-marker gate (todo 1026)" \
   0 'auto-derived own-range 1-2 \(every current hunk assumed own' 'UNVERIFIED|REFUSED' "$out" "$rc"
 
+# --- coverage-basename-new-file: the same-basename rule (todo 983's archival heuristic) must
+# only fire when the PATHSPEC file itself is new (a move's destination always is) - an unrelated
+# deletion elsewhere that merely happens to share a basename with an EXISTING, modified pathspec
+# file is not "half of a move" the way a brand-new same-basename destination is, since the
+# pathspec file already had its own HEAD blob before this commit touched it ---
+r29=$(new_repo); tmp_dirs+=("$r29")
+mkdir -p "$r29/skills/foo" "$r29/skills/bar"
+printf 'foo content\n' > "$r29/skills/foo/SKILL.md"
+printf 'bar content\n' > "$r29/skills/bar/SKILL.md"
+git -C "$r29" add skills/foo/SKILL.md skills/bar/SKILL.md
+git -C "$r29" commit -q -m "seed skills/foo and skills/bar"
+branch=$(git -C "$r29" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r29" rev-parse HEAD)
+printf 'foo content EDITED\n' > "$r29/skills/foo/SKILL.md"
+rm "$r29/skills/bar/SKILL.md"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r29" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "edit an existing same-basename file, unrelated deletion pending elsewhere" -- skills/foo/SKILL.md 2>&1); rc=$?
+check "an existing (non-new) pathspec file is never caught by the same-basename move heuristic" \
+  0 'coverage-check.*warning, non-blocking.*skills/bar/SKILL\.md' 'coverage-check.*REFUSED' "$out" "$rc"
+if [ "$(git -C "$r29" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: coverage-basename-new-file - the edit to skills/foo/SKILL.md did not commit"
+  fail=1
+else
+  echo "PASS: coverage-basename-new-file - the edit to skills/foo/SKILL.md committed despite the unrelated same-basename deletion"
+fi
+
+# --- a working-tree deletion (never `git rm`'d, classify_path's deleted-unstaged) is excluded
+# from overlap-check/foreign-hunk-check exactly like an already-`git rm`'d deleted-staged path -
+# both have nothing left in the working tree to diff, so the classification line's exclusion
+# note must name both, not only the git-rm case (todo 1033 item 2) ---
+r30=$(new_repo); tmp_dirs+=("$r30")
+mkdir -p "$r30/todos" "$r30/todos/done"
+printf 'the archived todo\n' > "$r30/todos/1033-example.md"
+git -C "$r30" add todos/1033-example.md
+git -C "$r30" commit -q -m "seed todos/1033-example.md"
+branch=$(git -C "$r30" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r30" rev-parse HEAD)
+mv "$r30/todos/1033-example.md" "$r30/todos/done/1033-example.md"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r30" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "archive todo 1033" -- todos/1033-example.md todos/done/1033-example.md 2>&1); rc=$?
+check "a working-tree (never git-rm'd) deletion is excluded from overlap-check/foreign-hunk-check same as a git-rm'd one" \
+  0 'todos/1033-example\.md: deleted-unstaged \(excluded from overlap-check/foreign-hunk-check - nothing left to diff\)' 'REFUSED' "$out" "$rc"
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else

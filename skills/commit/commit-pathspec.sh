@@ -193,8 +193,9 @@ derive_own_ranges() {
 
 # live/untracked/deleted-staged/deleted-unstaged/unknown. Neither overlap-check.sh nor
 # foreign-hunk-check.sh understands a deleted path (both crash or misreport on one, the second
-# defect this script exists to remove) - deleted-staged is the case with nothing left to diff,
-# so it is excluded from both checks' file lists below but still reaches the commit pathspec.
+# defect this script exists to remove) - deleted-staged and deleted-unstaged both leave nothing
+# in the working tree to diff, whether the deletion was ever `git rm`'d or not (todo 1033 item
+# 2), so both are excluded from both checks' file lists below but still reach the commit pathspec.
 classify_path() {
   local f="$1"
   if [ -e "$repo_root/$f" ]; then
@@ -219,14 +220,14 @@ for f in "${files[@]}"; do
     printf 'ERROR: %s is not on disk, not in the index, and not staged for deletion in %s\n' "$f" "$repo_root"
     exit 2
   fi
-  [ "$c" != "deleted-staged" ] && diffable_files+=("$f")
+  [ "$c" != "deleted-staged" ] && [ "$c" != "deleted-unstaged" ] && diffable_files+=("$f")
 done
 
 echo "=== commit-pathspec: $repo_root ==="
 printf '[pathspec] classification:\n'
 for f in "${files[@]}"; do
   note=""
-  [ "${class_of[$f]}" = "deleted-staged" ] && note=" (excluded from overlap-check/foreign-hunk-check - nothing left to diff)"
+  { [ "${class_of[$f]}" = "deleted-staged" ] || [ "${class_of[$f]}" = "deleted-unstaged" ]; } && note=" (excluded from overlap-check/foreign-hunk-check - nothing left to diff)"
   printf '  - %s: %s%s\n' "$f" "${class_of[$f]}" "$note"
 done
 
@@ -473,14 +474,19 @@ check_coverage_hit() {
   #     $2 (todo 1073): a same-basename file elsewhere that is merely being edited, not deleted
   #     or renamed away, is not missing anything a move would have left behind - the false
   #     positive was this basename rule firing on a staged MODIFY to an unrelated file that
-  #     happened to share a filename with the pathspec's own target.
+  #     happened to share a filename with the pathspec's own target. ALSO gated on the pathspec
+  #     file having no HEAD blob (coverage-basename-new-file): a move's destination is always
+  #     new, but an EXISTING pathspec file that is merely being edited already had its own HEAD
+  #     blob before this commit touched it, so an unrelated deletion sharing its basename is not
+  #     "half of a move" either - without this, editing skills/foo/SKILL.md while an unrelated
+  #     skills/bar/SKILL.md deletion was pending anywhere else refused on basename alone.
   local p="$1" is_del="$2" pd pb d f
   [ -n "${in_pathspec[$p]:-}" ] && return
   pd=$(dirname -- "$p")
   pb=$(basename -- "$p")
   for f in "${files[@]}"; do
     d=$(dirname -- "$f")
-    if [ "$d" = "$pd" ] || { [ "$is_del" = "1" ] && [ "$(basename -- "$f")" = "$pb" ]; }; then
+    if [ "$d" = "$pd" ] || { [ "$is_del" = "1" ] && [ "$(basename -- "$f")" = "$pb" ] && ! file_has_head_blob "$f"; }; then
       if [ -z "${move_seen[$p]:-}" ]; then
         move_seen["$p"]=1
         coverage_move+=("$p")
