@@ -251,6 +251,12 @@ format the drafting subagent applies in step 2.
      it. Fix any hit before publishing, not after - replace the em dash with a
      comma, colon, or hyphen (`Edit`, main agent, not a shell text write) and
      re-render the preview.
+   - **3-subagent verification:** after the em dash fix and any dev edits,
+     the main agent (never the drafting subagent, whose dispatches the hook
+     cannot see) runs `refs/outbound-verify.md` on the exact title and
+     preview-file body. `hooks/outbound-verify-guard.py` blocks `gh pr
+     create`/`gh pr edit` until 3 fresh verifiers PASS that text; any later
+     edit needs a new round.
    - **PR-guard marker:** a global PreToolUse hook blocks raw `gh pr
      create`/`gh pr edit`. Immediately before that call, and no earlier,
      write a uniquely-suffixed marker:

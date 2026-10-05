@@ -111,6 +111,9 @@ smaller scopes as well as smaller descriptions: two independently shippable chun
 
 ### 6. Create, log, report
 
+First run `~/.claude/refs/outbound-verify.md` on the final title and description: 3 fresh
+subagents must each PASS that exact text, or `hooks/outbound-verify-guard.py` blocks the call.
+
 One API call per the quirks file. Capture the returned id and URL, append the log entry the quirks
 file specifies, then tell the dev the id, the URL, and which defaults were applied.
 
@@ -148,6 +151,9 @@ absent at the tracked branch, which means the update is about to describe someth
 already exists" is not a reason to stop an update - the ticket exists precisely because the work is
 live. Queries 1 and 2 are informational here; report them, never block on them. Full rules are in
 `refs/outbound-ground-check.md`'s own "Updates are a different question" section.
+
+A claim-bearing change, a comment included, also needs `refs/outbound-verify.md`'s 3-subagent
+check on its exact text before the write; `hooks/outbound-verify-guard.py` enforces it.
 
 ### 5. Write, one ticket at a time
 

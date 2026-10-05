@@ -289,6 +289,15 @@
         ]
       },
       {
+        "matcher": "^(Bash|PowerShell|mcp__shortcut__.*|mcp__.*[Ll]inear.*|mcp__.*[Gg]it[Hh]ub.*)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\outbound-verify-guard.py\""
+          }
+        ]
+      },
+      {
         "matcher": "PowerShell",
         "hooks": [
           {
