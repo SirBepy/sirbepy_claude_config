@@ -114,6 +114,15 @@ Commit message follows the normal style - no need to mention the version bump.
 
 If no `package.json` exists, skip the version step and commit normally.
 
+## Pre-push todo sweep
+
+Runs first for `/commit push`, `/commit pushbump`, and `/commit pushnbump`, before the transcript check and client gate below - it can change what the push ships, so both of those must see the final range. Catches a small backlog todo sitting in the exact files the push already touches, while folding it in is still free.
+
+1. Skip silently when the repo has no `.claude/todos/` backlog with open todos. Skip on an unattended run too (nobody to answer step 3), with one line in the run's report saying the sweep was skipped.
+2. Dispatch ONE read-only subagent (`model: 'sonnet'`, canonical preamble from `refs/builder-preamble.md` with the `READ-ONLY DISPATCH` opt-out). Hand it the backlog path and `git log --format='%H %s' --name-only @{u}..HEAD`. A todo qualifies only when all three hold: it touches files an unpushed commit already changes, it is EASY by `/batch-todos`'s table, and it is the same concern or ticket as that commit. Todos with a live claim in `.claims/` and PRODUCT todos never qualify. It returns per hit: todo id, target commit sha, files, and one line on why it fits; zero hits is a valid answer, never padded.
+3. Zero hits: proceed silently. Otherwise one `ask_user_question` card, `multiSelect`, one option per hit (todo id, target commit subject, why it fits) plus "none, push as is".
+4. Per approved todo: claim it per `skills/close/ai-todos-format.md`, implement it, rerun the fast checks, then fold it into its target commit - Case A in `snippets/auto-commit.md` when the target is HEAD, `/commit fold <sha>` otherwise. When the fold path refuses (overlap with a later commit), commit it on top as its own commit instead, never force the fold. Close the todo and release the claim per the contract.
+
 ## Pre-push transcript check
 
 Runs only for `/commit push`, `/commit pushbump`, and `/commit pushnbump`, right before the `git push` call in each - never for a plain `/commit` or version-only bump, which stay untaxed. Catches a dev instruction that landed in the transcript but never reached the working context, before the push ships whatever got built on the gap (todo 902: a rejected layout was built, committed, and pushed because a peer relay sat between the dev's correction and the next turn).
@@ -138,7 +147,7 @@ Runs right after the Pre-push transcript check, for the same three push modes, o
 
 Same as `/commit` but also runs `git push` after committing.
 
-**Push rule:** if the commit step failed, do not push. If there was nothing to commit, don't stop there either - check `git rev-list --count @{u}..HEAD` (if `@{u}` doesn't resolve, say so and offer `git push -u origin <branch>` instead of silently doing nothing). Zero ahead: say "nothing to commit, nothing to push" and stop. One or more ahead: run the **Pre-push transcript check** and **Pre-push client gate** above, then push those existing commits and report how many.
+**Push rule:** if the commit step failed, do not push. If there was nothing to commit, don't stop there either - check `git rev-list --count @{u}..HEAD` (if `@{u}` doesn't resolve, say so and offer `git push -u origin <branch>` instead of silently doing nothing). Zero ahead: say "nothing to commit, nothing to push" and stop. One or more ahead: run the **Pre-push todo sweep**, **Pre-push transcript check** and **Pre-push client gate** above, then push those existing commits and report how many.
 
 After a successful push, run the **Build watch** (see `skills/commit/build-watch.md`).
 
@@ -146,7 +155,7 @@ After a successful push, run the **Build watch** (see `skills/commit/build-watch
 
 Same as `/commit v` but also runs `git push` after committing.
 
-Same push rule as `/commit push` above, including the **Pre-push transcript check** and **Pre-push client gate**.
+Same push rule as `/commit push` above, including the **Pre-push todo sweep**, **Pre-push transcript check** and **Pre-push client gate**.
 
 After a successful push, run the **Build watch** (see `skills/commit/build-watch.md`).
 
@@ -165,7 +174,7 @@ Order:
 2. Bump the patch version (same procedure as `/commit v`).
 3. Commit ONLY the version files, by pathspec: `git commit -m "<message>" -- <version-file> ...`.
 4. Message: `VERSION: <new-version>` — where `<new-version>` is the full version string after bumping. If a build number field (e.g. `"build"` in `package.json` or `tauri.conf.json`) exists alongside the version, append it: `VERSION: 1.0.1+21`.
-5. Run the **Pre-push transcript check** and **Pre-push client gate** above, then `git push`.
+5. Run the **Pre-push todo sweep**, **Pre-push transcript check** and **Pre-push client gate** above, then `git push`.
 
 Do not push if either commit step failed. Otherwise same push rule as `/commit push` above - a clean-tree branch that's still ahead of its upstream still gets pushed, it just won't happen here since the version commit always produces new changes.
 
