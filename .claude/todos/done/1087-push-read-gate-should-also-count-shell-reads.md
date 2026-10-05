@@ -29,3 +29,7 @@ produces a block plus a forced re-read.
 
 - A shell read of the snippet satisfies the gate; a mention without a read does not.
 - The deny message is updated to match.
+
+## Notes
+
+- 2026-10-05: done in the pre-push sweep. PostToolUse matcher widened to Read|Bash|PowerShell; a shell read (cat, head, tail, sed, less, more, Get-Content, gc) of snippets/auto-commit.md now counts, a command that only names the path does not.

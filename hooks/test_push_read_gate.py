@@ -86,6 +86,10 @@ def run_post_read(file_path: str, session_id: str) -> int:
     return call_main({"hook_event_name": "PostToolUse", "tool_name": "Read", "tool_input": {"file_path": file_path}, "session_id": session_id})
 
 
+def run_post_tool_use(tool_name: str, tool_input: dict, session_id: str) -> int:
+    return call_main({"hook_event_name": "PostToolUse", "tool_name": tool_name, "tool_input": tool_input, "session_id": session_id})
+
+
 def run_pre_push(command: str, session_id: str) -> int:
     return call_main({"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": command}, "session_id": session_id})
 
@@ -141,13 +145,56 @@ with tempfile.TemporaryDirectory() as tmp:
     ok = code == 0
     fails += [] if _testlib.report(ok, f"{label} (exit={code})") else [label]
 
-    # todo 1005: a `cat` of auto-commit.md (never recorded - only Read-tool reads
-    # are) must still be blocked, and the deny message must say the Read tool is
-    # the requirement, not merely that the file be "read", so the block doesn't
-    # read as a false positive against a session that genuinely read the file.
-    label = "deny message names the Read tool as the actual requirement"
+    # todo 1005: a `cat` of auto-commit.md must still be blocked if the session
+    # never actually reads it, and the deny message must still mention the
+    # Read tool as a way to satisfy the gate.
+    label = "deny message mentions the Read tool"
     code, stderr = run_pre_push_capture("git push", "sess-5")
     ok = code == 2 and "read tool" in stderr.lower()
     fails += [] if _testlib.report(ok, f"{label} (exit={code}, stderr={stderr!r})") else [label]
+
+    # todo 1087: a shell command that actually reads auto-commit.md now counts
+    # too, since the PostToolUse matcher widens from Read-only to Read|Bash|
+    # PowerShell. Only this hook's own PostToolUse arm is under test here -
+    # the matcher widening itself is a settings.json change this suite can't see.
+    label = "a Bash `cat` of auto-commit.md (absolute, tilde form) satisfies the gate"
+    run_post_tool_use("Bash", {"command": "cat ~/.claude/snippets/auto-commit.md"}, "sess-6")
+    code = run_pre_push("git push", "sess-6")
+    ok = code == 0
+    fails += [] if _testlib.report(ok, f"{label} (exit={code})") else [label]
+
+    label = "a PowerShell Get-Content of auto-commit.md (absolute backslash) satisfies the gate"
+    run_post_tool_use(
+        "PowerShell",
+        {"command": r"Get-Content C:\Users\tecno\.claude\snippets\auto-commit.md"},
+        "sess-7",
+    )
+    code = run_pre_push("git push", "sess-7")
+    ok = code == 0
+    fails += [] if _testlib.report(ok, f"{label} (exit={code})") else [label]
+
+    label = "a Bash `head` of auto-commit.md (relative) satisfies the gate"
+    run_post_tool_use("Bash", {"command": "head -n 20 snippets/auto-commit.md"}, "sess-8")
+    code = run_pre_push("git push", "sess-8")
+    ok = code == 0
+    fails += [] if _testlib.report(ok, f"{label} (exit={code})") else [label]
+
+    label = "`sed -n` of auto-commit.md satisfies the gate"
+    run_post_tool_use("Bash", {"command": "sed -n '1,5p' snippets/auto-commit.md"}, "sess-9")
+    code = run_pre_push("git push", "sess-9")
+    ok = code == 0
+    fails += [] if _testlib.report(ok, f"{label} (exit={code})") else [label]
+
+    label = "`git log -- snippets/auto-commit.md` only mentions the path, does not satisfy the gate"
+    run_post_tool_use("Bash", {"command": "git log -- snippets/auto-commit.md"}, "sess-10")
+    code = run_pre_push("git push", "sess-10")
+    ok = code == 2
+    fails += [] if _testlib.report(ok, f"{label} (exit={code})") else [label]
+
+    label = "`echo snippets/auto-commit.md` only mentions the path, does not satisfy the gate"
+    run_post_tool_use("Bash", {"command": "echo snippets/auto-commit.md"}, "sess-11")
+    code = run_pre_push("git push", "sess-11")
+    ok = code == 2
+    fails += [] if _testlib.report(ok, f"{label} (exit={code})") else [label]
 
 sys.exit(_testlib.summarize(fails, style="count"))

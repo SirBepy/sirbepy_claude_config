@@ -246,7 +246,7 @@
         ]
       },
       {
-        "matcher": "Read",
+        "matcher": "Read|Bash|PowerShell",
         "hooks": [
           {
             "type": "command",
