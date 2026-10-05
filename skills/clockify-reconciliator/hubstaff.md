@@ -50,7 +50,9 @@ all in the same tool call (PowerShell state doesn't persist across separate call
 backs up `~/.claude/.env` to `.env.bak`, rewrites the rotated `refresh_token` in place, and prints
 only the `access_token` to stdout - it never prints or files the refresh token elsewhere. If the
 script errors (backup or write failed), it exits non-zero before touching `.env` further; do not
-retry the exchange, the old refresh token is already invalidated.
+retry the exchange, the old refresh token is already invalidated. A still-valid access token is
+cached at `%LOCALAPPDATA%\claude-clockify\hubstaff-access-token.json` (expiry from the response's
+`expires_in`, else 24h), so a second call in the same window skips the exchange entirely.
 
 **Always send a browser `User-Agent` header on `account.hubstaff.com` requests.** That host sits behind Cloudflare, which blocks default library agents (python-urllib, curl) with `403 error code: 1010`. This looks exactly like a revoked token and will send you on a long detour minting a replacement PAT that fails the same way. Use e.g. `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36`.
 

@@ -153,11 +153,16 @@ function timelineHtml() {
       // hard-cut mid-word with no ellipsis (2026-09-28 finding: the Tue 7:30-8:20pm block above
       // clipped "...triggers across the v2 flow" with no indication anything was missing).
       const descLines = Math.max(1, Math.floor((height - 4 - 10.35) / 10.35));
+      // Below 14px even the time label doesn't fit, but a fully blank div reads as a
+      // rendering bug rather than "a few minutes logged" (2026-09-28 critique P2) - keep a
+      // centered glyph down to 8px, the point below which even a single character clips.
       const inner = height >= 26
         ? `<span class="v2-time">${startLabel}-${endLabel}</span><span class="v2-desc" style="-webkit-line-clamp:${descLines};display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;">${escHtml(e.desc)}</span>`
         : height >= 14
           ? `<span class="v2-time">${startLabel}-${endLabel}</span>`
-          : '';
+          : height >= 8
+            ? `<span class="v2-dot">&bull;</span>`
+            : '';
       // The hover tooltip is a tiny block's ONLY way to show its info (SKILL.md step 9a), which
       // makes tooltip clipping a real bug, not a cosmetic one. `.v2-cal`'s overflow-x:auto also
       // computes overflow-y to 'auto' (CSS overflow spec), so a tooltip that pops past the grid's
@@ -182,7 +187,10 @@ function timelineHtml() {
     }).join('');
     const t = dayTotals[d] || { old: 0, edit: 0, new: 0, meeting: 0 };
     const total = t.old + t.edit + t.new + t.meeting;
-    return `<div class="v2-col"><div class="v2-colhead"><span class="v2-dname">${dayLabel(d)}</span><span class="v2-ddate">${dateLabel(d)}</span><span class="v2-dtot">${total > 0 ? fmtHM(total) : '-'}</span></div><div class="v2-colbody" style="height:${gridHeight}px">${blocks}<div class="v2-other-lane">${otherBlocks}</div></div></div>`;
+    // Background gridline step matches HOUR_PX so each line lands exactly on an hour boundary
+    // (2026-09-28 critique P2: unmarked column body made tracing a block back to its hour in a
+    // far-right column an eyeballing exercise across most of the card's width).
+    return `<div class="v2-col"><div class="v2-colhead"><span class="v2-dname">${dayLabel(d)}</span><span class="v2-ddate">${dateLabel(d)}</span><span class="v2-dtot">${total > 0 ? fmtHM(total) : '-'}</span></div><div class="v2-colbody" style="height:${gridHeight}px;background-image:repeating-linear-gradient(to bottom, #262c38 0, #262c38 1px, transparent 1px, transparent ${HOUR_PX}px)">${blocks}<div class="v2-other-lane">${otherBlocks}</div></div></div>`;
   }).join('');
 
   let hourLabels = '';
@@ -214,7 +222,7 @@ const html = `<!doctype html>
 <meta name="color-scheme" content="dark">
 <meta name="darkreader-lock">
 <title>${escHtml(project)} week preview</title>
-<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web"></link>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
 <style>
   * { box-sizing: border-box; }
   html { scrollbar-width:thin; scrollbar-color:#363c48 #0b0d11; }
@@ -235,6 +243,7 @@ const html = `<!doctype html>
   .chip-new { color:#5eead4; }
   .chip-edit { color:#8fb8ff; }
   .chip-meeting { color:#c9b6f5; }
+  .chip-old { color:#8fd6ab; }
 
   .legend { display:flex; gap:16px; margin-top:14px; font-size:12px; color:#c3c8d1; }
   .legend-item { display:flex; align-items:center; gap:6px; }
@@ -254,7 +263,7 @@ const html = `<!doctype html>
   .v2-hourcol { position:relative; }
   .v2-hourlabel { position:absolute; right:6px; transform:translateY(-6px); font-size:9px; color:#5b616d; }
   .v2-cols { display:flex; flex:1; min-width:760px; }
-  .v2-col { flex:1; border-left:1px solid #191d24; position:relative; }
+  .v2-col { flex:1; border-left:1px solid #2a3040; position:relative; }
   .v2-colhead { display:flex; flex-direction:column; padding:6px 6px 4px; background:#12151b; border-bottom:1px solid #20242d; }
   .v2-dname { font-size:11px; font-weight:700; }
   .v2-ddate { font-size:9px; color:#5b616d; }
@@ -268,6 +277,7 @@ const html = `<!doctype html>
   .v2-meeting { background: repeating-linear-gradient(45deg,#5b4390,#5b4390 4px,#4a3577 4px,#4a3577 8px); color:#ece6fb; }
   .v2-time { display:block; font-weight:600; opacity:0.85; }
   .v2-desc { display:block; }
+  .v2-dot { display:block; text-align:center; font-size:8px; line-height:1; opacity:0.85; }
   .v2-other-lane { position:absolute; top:0; right:0; bottom:0; width:6px; }
   .v2-other-block { position:absolute; left:0; right:0; border:1px dashed #4a4f5c; border-radius:2px; background:transparent; }
   .v2-block[data-tip]:hover::after {

@@ -33,3 +33,7 @@ template's head, hit the same line, and switched to the `<script>` form.
 ## Acceptance
 
 - A rendered clockify-week card shows an icon in each hero chip.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.

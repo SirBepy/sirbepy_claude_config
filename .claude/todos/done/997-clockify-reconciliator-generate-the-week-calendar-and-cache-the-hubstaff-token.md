@@ -69,3 +69,4 @@ violation on 2026-09-23 (zng-app session c24838e2, Zirtue week of 2026-09-21).
   revision to fix. Concrete argument for `render_week_calendar.py` owning the coordinate math once
   instead of re-deriving gutter/body offsets by eye each run.
 - 2026-10-02 (zng-app, Zirtue week of 2026-09-28): the token cache would have saved two extra exchanges in one gated run. The first exchange happened inside a PowerShell call whose inline `node -e` script died on a quoting error, so that access token was lost with the process, and the post-write verification needed a third exchange. All three succeeded with no rate_limit, but only by luck. The script-the-calendar half of this todo is already done (`scripts/render_week.cjs`); only the token cache is still open.
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.
