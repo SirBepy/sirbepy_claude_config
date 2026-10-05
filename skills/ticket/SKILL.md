@@ -170,12 +170,13 @@ offer). This is Shortcut's equivalent of the `/linear` read path named in "Out o
 a session stops hand-rolling the same curl one-liner per ticket.
 
 Two gotchas are load-bearing, both hit live 2026-09-24: `~/.claude/.env` carries a BOM/CRLF, so a
-naive `grep '^KEY='` fails - the `sed`+`tr` strip below is required, not decorative. And Shortcut
+naive `grep '^KEY='` fails - the BOM strip must run before the anchored grep, and the `tr` after
+it is required too, not decorative. And Shortcut
 descriptions contain narrow no-break spaces that crash a default Windows Python's cp1250 stdout
 with `UnicodeEncodeError` - `PYTHONIOENCODING=utf-8` on the consuming `python` call avoids it.
 
 ```bash
-TOKEN=$(grep -a '^SHORTCUT_API_TOKEN=' ~/.claude/.env | sed 's/^\xef\xbb\xbf//' | cut -d= -f2 | tr -d '\r"')
+TOKEN=$(sed '1s/^\xef\xbb\xbf//' ~/.claude/.env | grep -a '^SHORTCUT_API_TOKEN=' | cut -d= -f2 | tr -d '\r"')
 curl -s -H "Shortcut-Token: $TOKEN" "https://api.app.shortcut.com/api/v3/stories/<id>" \
   | PYTHONIOENCODING=utf-8 python -c "import sys,json; sys.stdout.reconfigure(encoding='utf-8', errors='replace'); d=json.load(sys.stdin); print(d['name']); print(d['description'])"
 ```
