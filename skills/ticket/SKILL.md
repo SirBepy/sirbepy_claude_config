@@ -162,6 +162,27 @@ The write mechanics differ sharply per platform and both have a destructive fail
 quirks file is not optional reading here. Report one line per ticket: id, title, fields changed,
 before -> after for anything overwritten.
 
+## Shortcut reads, outside pickup
+
+A plain lookup - "what does sc-12345 say", a before-filing search, confirming a custom-field value
+- does not need the full Pickup flow below (comment-by-comment read, design pull, state-move
+offer). This is Shortcut's equivalent of the `/linear` read path named in "Out of scope" below, so
+a session stops hand-rolling the same curl one-liner per ticket.
+
+Two gotchas are load-bearing, both hit live 2026-09-24: `~/.claude/.env` carries a BOM/CRLF, so a
+naive `grep '^KEY='` fails - the `sed`+`tr` strip below is required, not decorative. And Shortcut
+descriptions contain narrow no-break spaces that crash a default Windows Python's cp1250 stdout
+with `UnicodeEncodeError` - `PYTHONIOENCODING=utf-8` on the consuming `python` call avoids it.
+
+```bash
+TOKEN=$(grep -a '^SHORTCUT_API_TOKEN=' ~/.claude/.env | sed 's/^\xef\xbb\xbf//' | cut -d= -f2 | tr -d '\r"')
+curl -s -H "Shortcut-Token: $TOKEN" "https://api.app.shortcut.com/api/v3/stories/<id>" \
+  | PYTHONIOENCODING=utf-8 python -c "import sys,json; sys.stdout.reconfigure(encoding='utf-8', errors='replace'); d=json.load(sys.stdin); print(d['name']); print(d['description'])"
+```
+
+Searching instead of a known id: `refs/shortcut-api.md` ("Searching stories") has the
+`search/stories` recipe; the same `$TOKEN` extraction and `PYTHONIOENCODING` handling apply.
+
 ## Pickup
 
 ### 1. Fetch the full ticket - description AND every comment
@@ -221,6 +242,7 @@ move it backward - flag the mismatch and let the dev decide. Finish by asking wh
 - Cross-ticket sweeps: `/shortcut-priorities`, `/shortcut-done-audit`. They operate on a board, not
   a ticket, so they stay separate skills.
 - Linear reads (search, list, lookup): `/linear` still owns those, along with the `Invoke-Linear`
-  helper and the ownership gate that `linear.md` points at.
+  helper and the ownership gate that `linear.md` points at. Shortcut's equivalent cheap read path
+  lives in this file's own "Shortcut reads, outside pickup" section instead of a separate skill.
 - Obsidian vault tickets: `/obsidian-pickup-ticket`. Explicitly out of the unification, per the dev
   on 2026-08-18.

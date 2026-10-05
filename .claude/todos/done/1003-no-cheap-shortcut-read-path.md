@@ -64,3 +64,4 @@ Option 2 is the honest minimum. Do not build a full read skill unless the patter
 - Low priority. This is friction, not breakage; every hand-rolled call did eventually work.
 - Do not fold this into `/ticket`'s write flow or its ground check. Those are guarded by
   `hooks/shortcut-create-guard.py` for good reasons and are out of scope here.
+- Completed by /loop-todos cycle 1 (2026-10-05): Shortcut reads section in skills/ticket/SKILL.md. Verify item 2 (a live read of story 55910) not run unattended; the recipe mirrors the one already used live 2026-09-24.
