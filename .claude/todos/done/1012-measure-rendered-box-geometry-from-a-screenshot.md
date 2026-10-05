@@ -51,3 +51,7 @@ Do not draft the script inline in this todo; `/bepy-skill-creator` or a normal e
 - One command measures a box's height from an existing PNG without writing a new script.
 - Running it on a Flutter web screenshot reproduces the 48 vs 45 result described above from the same inputs.
 - The three docs named above point at it, so the next session finds it before hand-rolling a column scan.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.

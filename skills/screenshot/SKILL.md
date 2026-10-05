@@ -175,3 +175,26 @@ Playwright loop. Replaces the pattern of re-deriving launch/loop/screenshot boil
 4. The command exits non-zero if any frame throws a page error - a blank/broken render never
    reports as captured. Its stdout is `{"captured":[...],"failed":[...]}`.
 5. `Read` each captured PNG back, same verification bar as every other mode.
+
+## Measure mode - box geometry from a screenshot, no DOM required
+
+`getBoundingClientRect()` via a `plan.json` `evaluate` step (Step 4's table) needs a DOM box, so it
+cannot measure a canvas-rendered surface (Flutter web/CanvasKit paints to `<canvas>`; there is no
+DOM box for an arbitrary decoration, and the semantics tree only covers interactive nodes). For
+that case, measure the screenshot's pixels instead:
+
+```
+python "C:/Users/tecno/.claude/skills/screenshot/measure-box.py" <screenshot.png> --color "#3a7bd5" [--min-run 60] [--tol 14] [--crop x0,y0,x1,y1] [--expect-height N]
+```
+
+It scans each pixel row for a horizontal run of >= `--min-run` pixels matching `--color` (hex or a
+name), collapses vertically-contiguous runs in the same x-band into one edge (an antialiased border
+is usually 1-3px tall), then pairs consecutive edges into `(top, bottom, height)` boxes - one per
+x-band, printed as `box x=<s>-<e> top=<t> bottom=<b> height=<h>`. Pass `--expect-height` to get a
+PASS/FAIL line and a non-zero exit when no box matches. Do not try a per-COLUMN scan first - that
+was the first instinct that failed in practice: antialiased glyph edges fall inside any sane colour
+tolerance and return a dozen one-pixel runs, not a usable box. Rows work because a solid border run
+is far longer than any antialiased glyph stroke, so `--min-run` cleanly separates the two.
+
+This is the canvas-equivalent check for `/mockup`'s "Geometric/numeric claims, measured" bullet
+when there is no DOM to run `getBoundingClientRect()` against.

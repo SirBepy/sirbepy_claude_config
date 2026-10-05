@@ -87,6 +87,13 @@ than trusting the stale one - or trust the screenshot and attempt the click.
 Always re-snapshot before looking up a node's DOM id/coordinates; don't reuse
 one taken more than a step ago.
 
+## Measuring painted geometry
+
+CanvasKit paints to `<canvas>`, so `getBoundingClientRect` has no box to query
+for a field or decoration. Measure the screenshot's pixels instead with
+`python skills/screenshot/measure-box.py` (see `skills/screenshot/SKILL.md`,
+"Measure mode").
+
 ## Never reload mid-flow
 
 Drive every transition through in-app navigation. Flutter streams update

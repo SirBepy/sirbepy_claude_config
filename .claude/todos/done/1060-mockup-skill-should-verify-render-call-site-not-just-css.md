@@ -57,3 +57,4 @@ a scoping miss).
 
 This is a skill-doc change only - no code in `skills/mockup/` itself needs editing beyond the
 SKILL.md text.
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.

@@ -27,3 +27,7 @@ Add a short "Iframing real pages into the panel" note to `C:\Users\tecno\.claude
 ## Acceptance
 - The mockup skill text tells a future session to verify in a sandboxed wrapper and names the postMessage + CORS pattern.
 - A board built from the note works in the panel on the first push (buttons change frames, fonts load).
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.
