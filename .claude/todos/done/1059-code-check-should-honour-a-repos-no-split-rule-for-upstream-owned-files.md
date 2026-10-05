@@ -43,3 +43,7 @@ hard-coding cueline.
 - A `/code-check` run in cueline over a diff touching `src/store/projectStore.ts` does not file a
   split finding against it.
 - Repos with no upstream remote behave exactly as before.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane L10: skills/code-check/SKILL.md. Procedure-doc change, untestable beyond ci/run_all.py. /close SKILL.md has no exercise-test wording (grep: 0 hits), so it needs no matching note.

@@ -124,6 +124,15 @@ If > 400 lines AND has an obvious split seam (separate concerns, reusable unit, 
 
 If no obvious seam, skip that file.
 
+**Upstream-owned exemption.** Before recording, check whether the file is exempt: the repo has an
+`upstream` remote (`git remote` lists one) AND a binding doc - the nearest `CLAUDE.md`, an
+ADR/decisions log (e.g. `docs/decisions.md`), or `.claude/code-check.md` if present - states a
+no-split policy for upstream-synced files (search for wording like "do not split" / "no-split" near
+"upstream"). If both hold, skip the finding and print `Skipping split finding for [file]:
+upstream-owned, <doc> <section> says "<quoted rule>".` instead of recording it. No `upstream`
+remote, or no such written rule, means the file behaves exactly as before: this is an opt-in
+exemption keyed to an actual documented decision, never a guess that a file "looks forked".
+
 ## Step 2 - DRY pass
 
 For each new top-level symbol in scope (function, const, class, interface, type, export, def, func, local function - language-dependent): Grep the repo for equivalents by name, shape, and purpose. For each duplicate found, record:
@@ -207,22 +216,36 @@ finding a human already saw and rejected from costing a fresh review cycle every
 | 2 - structural | Splitting an over-long file, extracting a repeated block, centralising constants | File it, unless the exercise test passes AND the suite is green |
 | 3 - judgment | The abstraction is wrong, the boundary is in the wrong place, a convention breach with a real decision inside it | Always file it. Never apply |
 
-**The exercise test, and it is the whole gate.** Before applying anything, name the specific test
-file or command that would FAIL if this change were wrong, and say why it would reach the changed
-lines. A repo-wide suite passing is not evidence for a file that no test imports.
+**The exercise test, and it is the whole gate.** Before applying anything, it must pass under
+EITHER of two forms:
+
+- **Named-test form.** Name the specific test file or command that would FAIL if this change were
+  wrong, and say why it would reach the changed lines. A repo-wide suite passing is not evidence
+  for a file that no test imports.
+- **Session-authored runtime-probe form.** All three hold: (a) the finding sits inside code this
+  same review's author wrote in this session, (b) the change is behaviour-preserving - pure
+  dedup/restructuring, no logic change, (c) a runtime probe covering the changed path exists (a
+  Playwright run, a manual repro, a ticket's own verification section) and is re-run after applying
+  with its real output pasted. This form exists because a freshly-written, behaviour-preserving
+  tidy-up in UI code with no unit-test coverage carries a different risk than a confident deletion
+  of code nobody in the room wrote - that risk is what the named-test form guards against, and it
+  still must, so the two forms stay separate rather than one replacing the other.
 
 This is not a hypothetical caution. Measured 2026-08-22 while writing this section: a mechanical
 dead-symbol scan flagged `hooks/_hooklib.py`'s `strip_quotes` as having zero references, when
 `hooks/package-manager-guard.py:28` and `hooks/flutter-workdir-guard.py:37` both import it under
 an alias. Deleting it would have made both guards fail closed on every invocation, and
 `python ci/run_all.py` would still have passed, because neither guard has a `hooks/test_*.py`
-suite. The detector was confident and wrong, and the verification floor could not see it.
+suite. The detector was confident and wrong, and the verification floor could not see it. That
+finding is not session-authored and is a deletion, not a tidy-up, so it stays on the named-test
+form only - the runtime-probe form never applies to it.
 
-After applying, run the named command, paste its real output, and report the change in one line.
-Never file a todo for something already applied.
+After applying, run the named command (or re-run the runtime probe, for the session-authored
+form), paste its real output, and report the change in one line. Never file a todo for something
+already applied.
 
-**The honest exit.** A class-1 finding whose exercise test cannot be named is neither applied nor
-filed. Append one line to `.claude/todos/dropped-findings.log` instead:
+**The honest exit.** A class-1 finding whose exercise test cannot be named under either form is
+neither applied nor filed. Append one line to `.claude/todos/dropped-findings.log` instead:
 
 ```
 <ISO date>  <class>  <path:line>  <one-line finding>  dropped: <what verification was missing>
