@@ -1,6 +1,6 @@
 ---
 name: one-off
-description: Triggers on /one-off <task> only: implements it immediately (no todo), then runs /code-check, /test, /e2e, /commit, /close.
+description: "Triggers on /one-off <task> only: implements it immediately (no todo), then runs /code-check, /test, /e2e, /commit, /close."
 disable-model-invocation: true
 argument-hint: "<task description>"
 ---
