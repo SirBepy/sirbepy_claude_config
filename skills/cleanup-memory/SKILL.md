@@ -14,7 +14,9 @@ the single question in Step 5 is the dev's one chance to redirect (apply / get a
 say something else), not a per-item gate. Nothing is ever plain-deleted: every archive/drop moves
 the file to `<memory-dir>/archive/` (Step 6), recoverable by moving it back and re-adding its
 `MEMORY.md` line. Step 6.5's index reorder is separate from that gate entirely: it moves index
-lines, never files, deletes nothing, and runs unconditionally.
+lines, never files, deletes nothing, and runs independent of the Step 5 answer - though it can
+skip itself (hand-sectioned index, unreconcilable mid-step conflict) rather than write, per its own
+safety checks.
 
 ## Step 1 - Locate and read
 
@@ -182,6 +184,20 @@ The only step that mutates the memory directory. Order matters and is not option
 keeps the index and the files from ever falling out of step (see CLAUDE.md's Memory Discipline:
 "never delete an index line while its memory file still exists on disk").
 
+**Mandatory backup, before anything below writes (todo 1014).** Copy the whole memory dir to
+`C:\tmp\memory-backup-<dir-name>-<YYYYMMDD-HHMMSS>\` and print the path. The memory directory has
+no version control of its own (`~/.claude`'s `.gitignore` only allowlists specific paths, and the
+per-project dirs under `~/.claude-personal/projects/` sit entirely outside any repo), so this copy
+is the only recovery this system has. Runs unconditionally, even when Step 5's apply set is empty -
+Step 6.5 below always writes (or attempts to), so "before Step 6" is "before the first possible
+write," not "only when something is being archived."
+
+**Peer check.** Call `list_peers`. If it shows another active session in this project, call
+`post_message` naming what this run is about to change (the apply set plus the pending Step 6.5
+reorder), then proceed - same pattern `/commit` already uses for its own shared-state writes. Both
+are MCP tools that may not exist in a plain terminal session; if either is unavailable, skip this
+check silently.
+
 For each archive/drop item, in this exact order:
 
 1. Move the file to `<memory-dir>/archive/` (never plain-delete).
@@ -219,14 +235,40 @@ Never touch `MEMORY.md` structure beyond the lines this run's apply set covers.
 
 Re-sort MEMORY.md into the three blocks defined in `refs/memory-rubric.md`'s "Index ordering"
 section: Axioms, then Recent (mtime within 7 days), then Rest, each sorted by file mtime
-descending with filename-ascending tiebreak. This is a pure line move - the set of lines before
-and after must be identical when both are sorted as sets; verify that before writing. No entry is
-added, edited, or removed here, which is why this step is not part of the Step 5 apply set and
-does not wait on it.
+descending with filename-ascending tiebreak. No entry is added, edited, or removed by the reorder
+itself, which is why this step is not part of the Step 5 apply set and does not wait on it.
 
-Compute the target order first and diff it against the current order. If they already match, make
-no edit and report "index already ordered, no-op" in Step 7 - this is what keeps a second run over
-an already-ordered index a true no-op.
+**This is a whole-file rewrite in a directory several sessions share, so it needs more than a
+same-run set-equality check (todo 1014).** `MEMORY.md` is keyed on the project path, not the
+session - every session in that project shares one file with no locking. The old check ("the set
+of lines before and after must be identical when both are sorted as sets") catches a reorder bug,
+but not a peer's write: a line a peer added mid-step was never in the before-snapshot, so comparing
+the two sorted sets for equality says nothing about it, and a stale rewrite would silently drop it.
+
+1. **Snapshot first.** Read `MEMORY.md` at the START of this step and record its line set
+   (`before`).
+2. **Section-heading guard.** If `before` contains two or more `## ` headings above the line-cap
+   region, the index has been hand-organised into topic sections rather than left in the
+   Axioms/Recent/Rest shape (fibo session e3334a4a, 2026-10-03: a flattening reorder would have
+   destroyed exactly this). Skip the reorder entirely, make no write, and report "reorder skipped:
+   MEMORY.md is hand-sectioned (`## ` headings found), flattening it would be destructive" in
+   Step 7. Otherwise continue.
+3. **Compute the target order** from `before` and diff it against the current order. If they
+   already match, make no edit and report "index already ordered, no-op" in Step 7 - this is what
+   keeps a second run over an already-ordered index a true no-op. Otherwise continue.
+4. **Re-read immediately before writing** (`current`), as late as the step allows - this is what
+   narrows the race window to the smallest this step can make it. Compare `current`'s line set
+   against `before`:
+   - **Identical sets:** proceed, write the target order computed from `before`. The ordinary case
+     the old check already covered correctly.
+   - **`current` is a strict superset of `before`** (every line of `before` still present, plus one
+     or more new lines): a peer wrote a new memory mid-step. Classify each new line into its block
+     by the same Axioms/Recent/Rest rule as every other line, fold it into the target order instead
+     of discarding it, and name the folded-in line(s) in Step 7's report.
+   - **Anything else** (a `before` line is now missing, or a line's text changed): a peer edited or
+     removed something this step cannot safely reconcile on its own. Abort, make no write, and
+     report "reorder skipped: MEMORY.md changed mid-step in a way that isn't a pure addition" in
+     Step 7, naming which line(s) differed.
 
 ## Step 7 - Post-apply summary
 
@@ -242,7 +284,10 @@ caller with no one left to prompt it - print the report and let its turn continu
 - Step 2's counts for both desync directions (`orphan-file`, `orphan-index-entry`), the
   definition used ("loaded-window, direct-link-only"), before and after apply.
 - Result of the mandatory final consistency check (clean, or what still mismatches).
-- Step 6.5's reorder result: what moved, or "no-op, already ordered".
+- Step 6.5's reorder result: what moved, "no-op, already ordered", a peer line folded in, or why
+  the reorder was skipped (hand-sectioned index, or a mid-step conflict it couldn't reconcile).
+- The backup path Step 6 printed before any write, and whether `list_peers` found another active
+  session in this project.
 
 ## Non-goals (v1)
 
