@@ -123,7 +123,8 @@ The full ordered sequence for `/commit push`, `/commit pushbump` and `/commit pu
 3. **Pre-push transcript check** - stop on any dev message since the last push that was never addressed.
 4. **Pre-push gate** - `/code-check` over `@{u}..HEAD`, then `/e2e` (or its no-suite note), then mark HEAD cleared.
 5. **`git push`**.
-6. **Build watch** - `skills/commit/build-watch.md`.
+6. **Post-push ticket move** - every ticket the push shipped goes to Testing.
+7. **Build watch** - `skills/commit/build-watch.md`.
 
 ## Pre-push todo sweep
 
@@ -154,13 +155,23 @@ Runs right after the Pre-push transcript check, for the same three push modes, i
 3. All green: `python C:/Users/tecno/.claude/hooks/push-gate.py mark <repo> --reason "<what passed, e.g. code-check + e2e passed, or code-check passed, e2e: no suite>"`, then push.
 4. Either one red or impossible to run: ask the dev through `ask_user_question` whether to push anyway, naming the failure. Yes: mark with `--reason` naming the failure and his approval, then push. No, or an unattended run with nobody to ask: do not push, report the failure.
 
+## Post-push ticket move
+
+Runs right after a successful `git push`, in all three push modes, attended or not. QA works from the board, not the git log, so a pushed fix still sitting in In Progress never reaches the person who tests it next (2026-09-03: eight pushed tickets left in In Progress; 2026-10-05: sc-54701 pushed and left In Progress, then Claude asked Joe where to move it instead of moving it).
+
+1. Collect ticket ids from the subjects of the commits the push shipped (record `@{u}..HEAD` before pushing): `<id>:` prefixes, `sc-<id>`, `[SC-<id>]`, or a Linear key. No ids: skip silently.
+2. Infer the tracker from `origin` the way `/ticket` does. Move a ticket only when Joe owns it and it sits before Testing (Backlog, To Do, In Progress, Blocked, PR Review, On hold). Shortcut: GET the story, then PUT only `workflow_state_id` with the Testing state of the story's own workflow (ENG - Core Workflow: `500018257`). Never send `custom_fields`, because PUT replaces them. If the story's workflow has no Testing-equivalent state, skip it and say so. Linear: the team's Testing/review state, same rules.
+3. Testing is the ceiling. Never move a ticket to Ready for deploy or Complete: QA promotes it from Testing, and the release skill closes it from there. A ticket already in Testing or later stays where it is, including one QA bounced and that was just re-fixed.
+4. Change the state only. Post no comment and draft no QA note unless the dev asks for one.
+5. Name the moved ids in the push report, plus each skipped id and why.
+
 ## `/commit push`
 
 Same as `/commit` but also runs `git push` after committing, following the **Push pipeline** above in order.
 
 **Push rule:** if the commit step failed, do not push. If there was nothing to commit, don't stop there either - check `git rev-list --count @{u}..HEAD` (if `@{u}` doesn't resolve, say so and offer `git push -u origin <branch>` instead of silently doing nothing). Zero ahead: say "nothing to commit, nothing to push" and stop. One or more ahead: run the **Pre-push todo sweep**, **Pre-push transcript check** and **Pre-push gate** above, then push those existing commits and report how many.
 
-After a successful push, run the **Build watch** (see `skills/commit/build-watch.md`).
+After a successful push, run the **Post-push ticket move**, then the **Build watch** (see `skills/commit/build-watch.md`).
 
 ## `/commit pushbump`
 
@@ -168,7 +179,7 @@ Same as `/commit v` but also runs `git push` after committing.
 
 Same push rule as `/commit push` above, including the **Pre-push todo sweep**, **Pre-push transcript check** and **Pre-push gate**.
 
-After a successful push, run the **Build watch** (see `skills/commit/build-watch.md`).
+After a successful push, run the **Post-push ticket move**, then the **Build watch** (see `skills/commit/build-watch.md`).
 
 ## `/commit pushnbump`
 
@@ -189,7 +200,7 @@ Order:
 
 Do not push if either commit step failed. Otherwise same push rule as `/commit push` above - a clean-tree branch that's still ahead of its upstream still gets pushed, it just won't happen here since the version commit always produces new changes.
 
-After a successful push, run the **Build watch** - see `skills/commit/build-watch.md` for the full detect/launch/gated-auto-fix procedure (not needed for a plain `/commit`).
+After a successful push, run the **Post-push ticket move**, then the **Build watch** - see `skills/commit/build-watch.md` for the full detect/launch/gated-auto-fix procedure (not needed for a plain `/commit`).
 
 ## `/commit onlyv` / `/commit onlybump`
 
