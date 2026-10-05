@@ -139,7 +139,7 @@ function timelineHtml() {
   // absolutely-positioned blocks, which don't contribute to a parent's height on their own, so
   // an unset height here collapses the column's real box below its visual content and the
   // blocks paint outside it (looks like overflow) instead of the column growing to fit.
-  const dayCols = dates.map(d => {
+  const dayCols = dates.map((d, di) => {
     const es = entries.filter(e => e.date === d);
     const blocks = es.map(e => {
       const top = ((e.startMin - GRID_START) / 60) * HOUR_PX;
@@ -158,7 +158,22 @@ function timelineHtml() {
         : height >= 14
           ? `<span class="v2-time">${startLabel}-${endLabel}</span>`
           : '';
-      return `<div class="v2-block v2-${e.state}" style="top:${top}px;height:${height}px" data-tip="${tip}">${inner}</div>`;
+      // The hover tooltip is a tiny block's ONLY way to show its info (SKILL.md step 9a), which
+      // makes tooltip clipping a real bug, not a cosmetic one. `.v2-cal`'s overflow-x:auto also
+      // computes overflow-y to 'auto' (CSS overflow spec), so a tooltip that pops past the grid's
+      // own edge gets silently cut off with no scroll affordance visible - exactly the case for a
+      // short meeting/task block sitting near the day's last hour (2026-09-30 finding: the Mon
+      // 18:00-18:20 standup and the 18:20-18:35 block right after it were both unreadable on
+      // hover). Flip the anchor per block instead of always opening down-right.
+      const tipUp = (top + height / 2) > (gridHeight / 2) ? ' v2-tip-up' : '';
+      const tipLeft = di >= dates.length - 2 ? ' v2-tip-left' : '';
+      // The truncating overflow:hidden must live on an INNER wrapper, not on .v2-block itself -
+      // .v2-block is what :hover triggers on and what the ::after tooltip is a child of, and a
+      // parent's overflow:hidden clips its own pseudo-element descendants even when they're
+      // position:absolute (2026-09-30 finding: the up/left anchor-flip above did nothing because
+      // the tooltip never escaped its own block's box in ANY direction - overflow:hidden on
+      // .v2-block was clipping it at the source, before the .v2-cal scroll container even mattered).
+      return `<div class="v2-block v2-${e.state}${tipUp}${tipLeft}" style="top:${top}px;height:${height}px" data-tip="${tip}"><div class="v2-block-inner">${inner}</div></div>`;
     }).join('');
     const otherBlocks = otherEntries.filter(e => e.date === d).map(e => {
       const top = ((e.startMin - GRID_START) / 60) * HOUR_PX;
@@ -245,7 +260,8 @@ const html = `<!doctype html>
   .v2-ddate { font-size:9px; color:#5b616d; }
   .v2-dtot { font-size:10.5px; color:#5fd99a; font-weight:600; margin-top:1px; }
   .v2-colbody { position:relative; }
-  .v2-block { position:absolute; left:2px; right:10px; border-radius:3px; padding:2px 4px; font-size:9px; overflow:hidden; line-height:1.15; cursor:default; }
+  .v2-block { position:absolute; left:2px; right:10px; border-radius:3px; font-size:9px; line-height:1.15; cursor:default; }
+  .v2-block-inner { height:100%; padding:2px 4px; overflow:hidden; }
   .v2-old { background:#2d5940; color:#cfe8da; }
   .v2-edit { background:#274870; border-left:3px solid #8fb8ff; color:#dbe8fb; }
   .v2-new { background:#0f7a6e; border-left:3px solid #5eead4; color:#d6fbf5; }
@@ -259,6 +275,8 @@ const html = `<!doctype html>
     background:#1c1f27; border:1px solid #333a47; color:#e6e8ec; padding:8px 10px; border-radius:6px;
     font-size:11px; width:220px; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
   }
+  .v2-block.v2-tip-up[data-tip]:hover::after { top:auto; bottom:0; }
+  .v2-block.v2-tip-left[data-tip]:hover::after { left:auto; right:105%; }
   .footer { margin-top:10px; font-size:11px; color:#7d8492; }
 </style>
 </head>
