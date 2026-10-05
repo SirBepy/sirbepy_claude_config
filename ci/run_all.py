@@ -128,10 +128,10 @@ def check_prefilter_suites(root: Path) -> tuple:
         try:
             # bash treats a Windows backslash as an escape char, not a separator, so the
             # posix form is required here even though run_hook_tests.py's python subprocess
-            # accepts either.
+            # accepts either. test_commit_pathspec.sh alone measured 132s on 2026-10-05.
             proc = subprocess.run(
                 [_bash_exe(), rel.as_posix()], cwd=str(root), capture_output=True,
-                text=True, encoding="utf-8", errors="replace", timeout=120,
+                text=True, encoding="utf-8", errors="replace", timeout=600,
             )
             ok, out, err = proc.returncode == 0, proc.stdout, proc.stderr
         except (OSError, subprocess.TimeoutExpired) as e:
