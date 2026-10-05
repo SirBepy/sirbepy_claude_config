@@ -12,6 +12,23 @@ Airion (PM) files epics, not tickets, so the dev files his own. Custom-field val
 UUIDs nobody remembers, which is why they are pinned below rather than re-derived. The dev is solo
 on the FE side of `zng-admin`, so branch-name generation is not part of this.
 
+## State ladder
+
+Global ceiling for every zng-* session, read by `/ticket` (SKILL.md step 0) before any state
+change - the one place this rule lives, no per-project copies.
+
+Testing (`500018257`) is the ceiling for Joe and Claude. Never PUT Ready for deploy (`500018659`)
+or Complete (`500018258`) by hand - QA promotes Testing to Ready for deploy, and
+`/zirtue-release-backfill` closes Ready for deploy to Complete. Won't do (`500019415`) is fine.
+"Mark sc-X done" means Testing at most - say why, don't ask.
+
+`hooks/shortcut-mutation-guard.py` checks the Shortcut MCP tools only. A raw `urllib`/`curl` script
+against `/api/v3/stories/{id}` is invisible to it - do the same requester and ceiling check by hand
+first, and name the script to Joe before running it.
+
+Other people's tickets: requester == Joe. An exception for tickets Joe names in the session is
+pending his confirmation (todo 1095).
+
 ## API
 
 REST is primary; the Shortcut MCP is frequently not connected. A single `POST /api/v3/stories`
@@ -144,9 +161,8 @@ Include `name`, `description` and `workflow_state_id` only when they are actuall
 custom field is changing, omit `custom_fields` from the payload entirely - that is the safest PUT,
 and it is what a plain state move should send.
 
-**Ownership:** `hooks/shortcut-mutation-guard.py` guards the MCP tools, not raw REST `curl` PUTs.
-The REST path therefore carries no automatic owner check: use it for stories the dev named
-explicitly, and never mutate one whose ownership he has not confirmed.
+**Ownership:** the REST path carries no automatic owner or ceiling check; see "State ladder" above.
+Use it for stories the dev named explicitly, and never mutate one whose ownership he has not confirmed.
 
 ## Pickup specifics
 
