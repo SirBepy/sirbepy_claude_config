@@ -58,3 +58,7 @@ mechanism, and the failure is invisible rather than loud.
   with the evidence.
 - If built: firing a question card with agents live produces a visible warning, demonstrated once.
 - If not built: the constraint is in the doctrine rather than only in a zng-app memory.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.

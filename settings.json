@@ -418,6 +418,16 @@
         ]
       },
       {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\agent-shared-tree-guard.py\"",
+            "statusMessage": "Checking for a subagent git stash/reset/checkout-path on a shared tree"
+          }
+        ]
+      },
+      {
         "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
@@ -557,6 +567,16 @@
         ]
       },
       {
+        "matcher": "^(AskUserQuestion|([A-Za-z0-9_]+__)?ask_user_question)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\question-card-live-agent-warn.py\"",
+            "statusMessage": "Checking for live background agents before this question card"
+          }
+        ]
+      },
+      {
         "matcher": "^(mcp__cc_conductor__show_preview|([A-Za-z0-9_]+__)?show_preview)$",
         "hooks": [
           {
@@ -671,6 +691,14 @@
             "command": "bash \"C:/Users/tecno/.claude/hooks/flagged-skill-mention.sh\"",
             "shell": "bash",
             "statusMessage": "Checking for disable-model-invocation skill mentions"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\output-style-reminder.py\""
           }
         ]
       }

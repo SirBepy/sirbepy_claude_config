@@ -88,3 +88,4 @@ Filed from a `countoff` session; the fix is entirely in `~/.claude/hooks/` plus 
 The preamble text itself needs no change for correctness - it already says the right thing, in the
 right place, with the right alternative. This todo is about the gap between saying and enforcing,
 which is the same gap `dispatch-preamble-guard.py` was built to close on the other axis.
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.

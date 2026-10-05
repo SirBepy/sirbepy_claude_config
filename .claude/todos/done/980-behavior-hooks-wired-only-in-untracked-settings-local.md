@@ -68,3 +68,4 @@ wired anywhere at all, so the next behavior hook added to `settings.local.json` 
   proposes moving specific entries out of it.
 - Do not widen this into a general settings refactor. The population is "tracked hook file, untracked
   or absent wiring", and nothing else.
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.
