@@ -60,5 +60,7 @@ result does, per this session's own back-and-forth pattern.
 
 ## Notes
 
+- /loop-todos 2026-10-05: dot glyph for 8-14px blocks, hour gridlines, brighter column borders and the chip-old tint shipped (99dc39a); shown to Joe as a show_preview card on sample data. Open: Joe's approval, plus the undecided type-scale and empty-weekend hatch items.
+
 Joe's own priority call on this list is unknown - ask before batching all four into one session,
 since he may only want a subset (same pattern as the P1-only pick earlier in this same session).

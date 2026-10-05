@@ -41,3 +41,7 @@ the right default.
 
 Run each subcommand against countoff (`generic-sirbepy-project`). `rules` should report the
 2026-09-30 release as matching the repo's `firestore.rules`.
+
+## Notes
+
+- /loop-todos 2026-10-05: BLOCKED. A builder's Write of tools/firebase-live.cjs (read-only GET/runQuery helper reading the firebase-tools configstore token) was denied by the auto-mode classifier as Credential Exploration; not retried. Needs Joe to allow that file kind, or to build it himself.

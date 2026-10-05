@@ -74,3 +74,7 @@ a mechanism gap, so a doc fix may be enough.
 - [ ] A spot-check of the next ~10 todos written across repos shows causes either receipted or labelled
 - [ ] If a hook is added: its false-positive rate is measured against the existing backlog first, and
       recorded in this file
+
+## Notes
+
+- /loop-todos 2026-10-05: the template's Context section now carries the receipt-or-UNVERIFIED contract (4c66704). Open: spot-check the next ~10 filed todos for compliance before deciding on a hook.
