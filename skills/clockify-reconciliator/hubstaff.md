@@ -1,10 +1,17 @@
 # clockify-reconciliator - HubStaff steps
 
-Read this file at steps 2, 11, and 12 of the main skill flow whenever `hubstaff_org_id` is set in the project config. Also read the "HubStaff update mode" section (between Step 11 and Step 12) whenever the dev asks to update/sync HubStaff rather than just compare. Skip this file entirely otherwise.
+Read this file only once SKILL.md's **step 10a gate has passed** - `hubstaff_org_id` set,
+`HUBSTAFF_REFRESH_TOKEN` present, and the window a full week whose counted hours have reached
+`weekly_target_hours`. A run that leaves the week short of target never reads this file at all, so a
+partial-week run opens no browser and spends no access-token exchange. Also read the "HubStaff update
+mode" section (between Step 11 and Step 12) whenever the dev asks to update/sync HubStaff rather than
+just compare.
 
-## Step 2 - HubStaff screenshot preflight (skip if `hubstaff_org_id` not set)
+## Step 2 - HubStaff screenshot preflight (runs after the Clockify writes, not before them)
 
-Run before any reconciliation work so the dev can fix auth without waiting through the full reconciliation.
+Despite the name, this no longer runs at the top of the flow: it is the first thing done after step
+10a's gate passes, immediately before Step 11. Surfacing an auth failure early is no longer worth a
+browser launch on every partial-week run.
 
 **Dependency: local Playwright, not a Playwright MCP server.** This step and step 12 drive the
 npx-cached `playwright` package directly via `skills/clockify-reconciliator/scripts/hs_preflight.cjs`
@@ -12,12 +19,16 @@ and `hs_weekshot.cjs` (Node, headed Chromium, persistent profile). No MCP browse
 assumed - do not wait for `browser_wait_for`/`browser_take_screenshot` to appear in the tool list. See
 `reference_local_playwright_fallback` for why this is the default over an MCP server.
 
-- Resolve the window now (see step 3 in SKILL.md for the parsing rules).
-- Compute all Mon-Sun calendar weeks that fall within that window.
+- The window is already resolved by now (SKILL.md step 3). Compute all Mon-Sun calendar weeks that
+  fall within it.
 - Kill any orphaned browser holding the HubStaff profile dir before opening a new one: `Get-CimInstance
   Win32_Process -Filter "Name='chrome.exe'" | Where-Object { $_.CommandLine -match 'playwright-profiles.hubstaff' } | Stop-Process -Force`.
   A prior run's browser left open on this profile makes the next launch fail with a misleading "Target
   closed" error instead of a real one (see `reference_playwright_orphan_profile_lock.md`).
+  That filter catches `chrome.exe` only. A stale `node.exe` still holding the profile produces the same
+  misleading "Target page, context or browser has been closed", so widen the match to any process whose
+  command line mentions the profile dir or the `hs_*.cjs` scripts before concluding the script is
+  broken (seen 2026-09-25).
 - Run `node skills/clockify-reconciliator/scripts/hs_preflight.cjs --org {hubstaff_org_id} --user
   {hubstaff_user_id} --profile C:/Users/tecno/AppData/Local/claude-clockify/playwright-profiles/hubstaff --mon {mon}
   --sun {sun}` for the first week, with `HUBSTAFF_EMAIL`/`HUBSTAFF_PASSWORD` set in the process env if

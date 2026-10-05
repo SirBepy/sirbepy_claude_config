@@ -22,8 +22,8 @@ argument-hint: <project-name> [lookback]
 ## Prereqs
 
 - Clockify API key env var set (or present in `~/.claude/.env`). Uses `api_key_env` from the project config if set, else defaults to `CLOCKIFY_API_KEY`.
-- If project config has `hubstaff_org_id` set: `HUBSTAFF_REFRESH_TOKEN` must be present in `~/.claude/.env`. If missing, skip HubStaff comparison and warn.
-- For the screenshot preflight auto-login (step 2): `HUBSTAFF_EMAIL` and `HUBSTAFF_PASSWORD` in `~/.claude/.env`. If either is missing, fall back to manual login (wait for the dev in the Playwright window) instead of auto-filling.
+- If project config has `hubstaff_org_id` set: `HUBSTAFF_REFRESH_TOKEN` must be present in `~/.claude/.env`. If missing, skip HubStaff comparison and warn. None of the HubStaff steps run unless step 10a's week-is-full gate passes, so these are prereqs for a full-week run only.
+- For the screenshot preflight auto-login: `HUBSTAFF_EMAIL` and `HUBSTAFF_PASSWORD` in `~/.claude/.env`. If either is missing, fall back to manual login (wait for the dev in the Playwright window) instead of auto-filling.
 - Project config file exists. If missing, print the template below and abort.
 
 ## Project config template
@@ -40,7 +40,7 @@ repos:
   - /abs/path/to/repo-1
   - /abs/path/to/repo-2
 ticket_regex: (sc-\d+)   # optional, default (sc-\d+)|(#\d+)
-weekly_target_hours: 30  # optional - drives the target bar in step 9a. Omit and no target renders.
+weekly_target_hours: 30  # optional - drives the hero ring in step 9a. Omit and no target renders.
 meeting_keywords: [standup, sync, planning, retro, grooming, "1:1", call]  # optional, this is the default list
 hubstaff_org_id: <id>       # optional - enables HubStaff comparison step
 hubstaff_user_id: <id>      # required if hubstaff_org_id is set - interpolated into the HubStaff URLs/filters
@@ -61,9 +61,18 @@ Read the named file. Abort with clear error listing missing required fields.
 
 **Resolve the Clockify API key here, before any API call:** use the env var named by `api_key_env` if the config sets it, else `CLOCKIFY_API_KEY`. Every Clockify request in steps 4 and 9 sends that value as the `X-Api-Key` header. Getting this wrong does not error loudly - the default key against another account's workspace returns 403 or an empty entry list, which looks exactly like "nothing to reconcile", so state which var you resolved in the run's first output line. If the resolved var is unset, abort and name it.
 
-### 2. HubStaff screenshot preflight (skip if `hubstaff_org_id` not set)
+### 2. HubStaff steps are deferred, not run here
 
-If `hubstaff_org_id` is set, read `skills/clockify-reconciliator/hubstaff.md` now and follow its "Step 2" section before any reconciliation work, so the dev can fix auth without waiting through the full run.
+Nothing HubStaff-related runs at the top of a run, the screenshot preflight included. Every HubStaff
+step (preflight, comparison, weekly screenshot) sits behind step 10a's week-is-full gate and runs
+after the Clockify writes.
+
+Joe, 2026-09-25: "pls update the skill so that hubstaff only fires when we fill up all the hours of
+the week". Reconstructing a week takes several runs, and HubStaff only has to mirror Clockify once
+Clockify is final, so a preflight on every intermediate run is noise. The old ordering put the
+preflight first precisely so an auth failure surfaced before the long part of the run; that tradeoff
+is now deliberately given up in exchange for not firing at all on a partial week. Do not "helpfully"
+restore an early preflight.
 
 ### 3. Resolve window
 
@@ -223,6 +232,36 @@ For each target:
 - **Never use the same description verbatim on two chunks.** If all commits land in one chunk leaving others empty, split the description on semicolons: assign the pre-semicolon part to the first chunk and the post-semicolon part(s) to the remaining chunk(s). If there are more chunks than semicolon-delimited parts, the last non-ticket part fills the extras.
 - If a day has zero commits at all across all repos, ask the dev what was done before proposing.
 
+### 7a. Dual-bound sanity check (mandatory before presenting)
+
+Joe, 2026-09-30: "from now on, when we do /clockify-reconciliator ask 2 more subagents to check if
+it makes sense, one aiming for more time one aiming for less." Triggered by a real miss: a run
+anchored a 2-hour block on a trivial version-bump commit ("Bump Flutter to 3.47.5") just because it
+happened to be the day's first commit - the block's real backing was the arbitrary "~2h before first
+commit" heuristic from step 6a, not the bump itself.
+
+After step 7 builds the proposal table (every day/week in scope, not just the flagged ones), dispatch
+two subagents in parallel, `model: 'sonnet'`, each given the same commit list (sha, timestamp,
+subject) and the same proposed block table:
+
+- **More-time-leaning**: argue for the longest defensible duration per block - real work has
+  context-switching, verification, and testing overhead a bare commit timestamp doesn't show. Flag
+  any block that looks implausibly short for what its commit(s) describe.
+- **Less-time-leaning**: argue for the shortest defensible duration per block - flag any block that
+  looks padded, especially one anchored by a small/mechanical commit (a version bump, a config
+  tweak, a one-line fix) that got stretched to fill a gap that isn't really about that commit's work.
+
+Both are READ-ONLY DISPATCH: analysis only, no edits, no git commands that change repo state.
+
+Reconcile the two reports before presenting:
+- Where both flag the same block, fix it - don't present a block either agent calls out as clearly
+  wrong.
+- Where they disagree, split the difference, or re-attribute: a trivial commit that inflated a block
+  should usually have its surrounding gap folded into the adjacent substantive block(s) instead of
+  carrying the padding itself.
+- If a real disagreement remains after reconciling, say so plainly in the step 9 plan rather than
+  silently picking a side.
+
 ### 8. Warn on other-project entries
 
 List description-less entries in OTHER projects in the same window. Dev handles those separately (could be a different config).
@@ -248,7 +287,8 @@ that this step now runs by default.
 ### 9. Present plan
 
 Show a table: date, start-end, duration, proposed split, proposed description(s). Precede it with
-the day-summary table and, on a Conductor host, the week calendar from step 9a. Use AskUserQuestion:
+the step 9a hero-card-plus-timeline preview (its column headers carry the day-by-day totals, so
+there is no separate day-summary table to print here). Use AskUserQuestion:
 
 - Apply all
 - Apply some (pick which by index)
@@ -256,82 +296,83 @@ the day-summary table and, on a Conductor host, the week calendar from step 9a. 
 
 ### 9a. Visual output (proposal here, refreshed again in step 13)
 
-Build, in this order:
+**Rendered by a script, not hand-rolled markup, on purpose.** Joe (2026-09-28): "whenever I use
+that skill, I'll always see the same website, just with different figures." Prose describing a
+layout invites a fresh session to reinterpret it slightly differently every run; a fixed template
+does not. `skills/clockify-reconciliator/scripts/render_week.cjs` is that template - it takes the
+classified entries as JSON and always produces the same hero-card-plus-timeline shape, so build the
+entries file from steps 4-8a's classification and invoke the script rather than composing HTML by
+hand.
 
-1. **Day-summary table** (always, every host): `Day | Existing | New | Total` hours, one row per day
-   in the window. Show this above the per-block breakdown table from step 9 - the dev sees the
-   headline numbers before the detail. **Re-sum every total in this row from the actual block
-   durations at presentation time, never carry over an earlier estimate** - a stale subtotal reaching
-   the dev is the same failure whether it's the target math or one day's arithmetic (2026-08-22: 8h
-   stated vs 10.5h actual for a single day).
-2. **The week calendar** (Claude Conductor sessions only, best-effort). "Best-effort" names exactly
-   one thing: what happens when the transport is genuinely unavailable. It is NOT licence to decide
-   the calendar is not worth building. Build it; the only path that skips it is a failed push after
-   both transports below have been tried, and that skip is silent because the tables are the
-   deliverable there. Judging it optional for any other reason - a short window, a simple week, a
-   sense that the tables suffice - is a scope decision the dev makes, not the run (todo 961). One self-contained HTML
-   document, pushed with the `show_preview` MCP tool: `{ slug: "clockify-week", html, title }`. The
-   card renders inline in the chat, and re-pushing the same slug replaces it in place, so the step 9
-   proposal and the step 13 final state are ONE card, not two. If the tool is unavailable (a plain
-   terminal session, or an app build predating it), fall back to `POST
-   http://127.0.0.1:27182/hooks/preview` with the same slug; connection refused means skip silently,
-   the tables are the deliverable there and no error is surfaced to the dev.
-3. In step 13, rebuild the same HTML with whatever was actually applied (dropped or edited rows
-   reflected) and re-push it under the same slug.
+**Build, one JSON array per call:**
 
-**The layout is a vertical week calendar, days as columns and time running downward.** Joe rejected
-the horizontal one-bar-per-day shape on sight (2026-08-27); do not reintroduce it. The vertical form
-is not only a preference - a column is wide enough to carry each block's description inline, which
-is what removes the need to read a separate table to know what a block is.
+- `--entries <path.json>`: this project's blocks, one object per entry -
+  `{date, start, end, desc, state, meetingKeyword?}`. `start`/`end` are local `HH:MM`
+  (`end: "24:00"` for a block that runs to midnight); `state` is `old`/`edit`/`new`/`meeting`
+  (step 4's classification); `desc` is what Clockify already holds for `old`, or what this run
+  would write for `edit`/`new` - the field itself is what makes the hover card's "what this run
+  would write" honest, no separate mechanism needed. `meetingKeyword` is the matched keyword from
+  `meeting_keywords`, only set on `meeting` blocks - the hover card surfaces it so a false-positive
+  match stays visible.
+- `--other-entries <path.json>` (optional): other-project blocks in the same window, step 4's
+  "keep ALL of them" bucket - `{date, start, end}` only, no `desc`/`state`. Rendered in their own
+  dashed lane, never counted toward any total.
+- `--project`, `--week-start`, `--week-end`: labels only.
+- `--target-hours`: **omit entirely (or pass `0`) unless the full-week gate below has passed.**
+  This is what keeps the ring honest - passing it renders a progress ring against that target;
+  omitting it renders a neutral gray ring with no target language at all.
+- `--out <path.html>`: where the rendered card is written. Read it back and push its contents with
+  the `show_preview` MCP tool: `{ slug: "clockify-week", html, title }`. Re-pushing the same slug in
+  step 13 replaces the card in place, so the step 9 proposal and the step 13 final state are ONE
+  card, not two. If the tool is unavailable (a plain terminal session, or an app build predating
+  it), fall back to `POST http://127.0.0.1:27182/hooks/preview` with the same slug; connection
+  refused means skip silently, the tables in step 9's own text are the deliverable there and no
+  error is surfaced to the dev.
 
-**Full-week gate, checked before either bullet below:** the target bar and its `to go this week`
-framing may only render when the window resolved in step 3 starts Monday 00:00 of its week and runs
-through that week's elapsed end (the default Monday-to-now window, a completed past Mon-Sun week, or
-an explicit range aligned the same way). `today`, `yesterday`, an explicit single-day range, or a
-`past-N-days`/`past-N-weeks` window that doesn't start on Monday all fail this gate - none of them
-saw the rest of the week, so a "remaining" figure computed from them is a guess dressed as a fact
-(2026-09-03: a `today`-only fetch reported "19h 40m to go this week" with Mon/Tue/Wed/Fri/Sat/Sun
-unchecked). A run that fails the gate renders the plain window total and the same-window
-old/edit/new/meeting breakdown instead, no target denominator, no remainder.
+Build this every run - the only path that skips it is a failed push after both transports above
+have been tried. Judging it optional for any other reason (a short window, a simple week, a sense
+that the tables suffice) is a scope decision the dev makes, not the run (todo 961).
 
-Structure, top to bottom:
+**What the template renders, so a change to it is a deliberate edit to `render_week.cjs`, not a
+per-run reinterpretation:**
 
-- **Headline**: gate passed - total counted hours in the window, `of <weekly_target_hours>h
-  target`, and a pill reading `Xh Ym to go`, or `over` in amber past the target. Gate failed - total
-  counted hours in the window only, no target/remaining language. Omit the whole row either way when
-  the config sets no target.
-- **Target bar** - gate passed only, horizontal and deliberately so: it is one quantity filling
-  toward a ceiling, not a timeline. Stacked segments in `old, edit, new, meeting` order, each sized as
-  its share of the target, with the shortfall drawn as a hatched remainder. **This bar is also the
-  legend** - print each state's name and hour total beneath it. That is what makes "how many hours is
-  what" a glance rather than a second table. Gate failed - replace it with the same-window
-  old/edit/new/meeting hour breakdown, no ceiling, no hatched remainder; it still doubles as the
-  legend for the grid below.
-- **The grid**: a 46px hour gutter plus one `1fr` column per day. Column header carries the day,
-  date, that day's counted total, and `+Xh other` when other-project time exists.
-  - 56px per hour, and this number is load-bearing: at 34px a 15-minute standup was 8px tall,
-    shorter than one line of type, so its label had to overlay the block beneath it.
-  - Crop to `floor(earliest start)`..`ceil(latest end)` rather than drawing 24 rows nobody worked
-    in, and say so in a footer line (`Showing 09:00 to 00:00 - the empty night hours are cropped`).
-  - Hour rules every hour, brighter every third, so a glance lands on 12:00 without counting.
-- **Blocks**, absolutely positioned by start and duration, each carrying its time range, duration
-  and description inline. Under ~26px tall, drop the description and keep the time range only.
-  Colour AND pattern both differ per state (the `dataviz` skill's rule - colour alone is not a
-  distinction): `new` bright teal, `edit` blue, `old` muted green, `meeting` diagonally striped
-  purple. Proposed blocks (`new`, `edit`) additionally get a bright left edge, so they stay
-  identifiable in a sliver too thin to show fill colour.
-- **Other-project blocks get their own narrow dashed lane** down the right edge of the column - a
-  separate lane, not the main one, so they can never collide with this project's blocks and read as
-  background rather than content. No text, no duration label, never counted in any total.
-- **Hover card** on every block: exact start-end, exact MINUTES (not only the rounded duration),
-  what Clockify holds right now (`(no description)` or `(no entry on this block)` when empty), and
-  what this run would write. On a meeting, also name the keyword that matched - a false positive
-  from `meeting_keywords` has to be visible, since keyword matching is the weakest link in the whole
-  classification.
+- **Hero card, always on top**: a ring showing total counted hours against `weekly_target_hours`
+  (or a neutral ring with no target language when the gate below fails or no target is configured),
+  the project + week label, and a chip row breaking the total into `old`/`edit`/`new`/`meeting`
+  hours - this doubles as the legend, so there is no separate legend to keep in sync.
+- **Hour-by-hour timeline below it**: days as columns, time running downward - Joe rejected a
+  horizontal one-bar-per-day shape on sight (2026-08-27), don't reintroduce it. A column is wide
+  enough to carry each block's time range and description inline, which is what removes the need
+  for a separate breakdown table to know what a block is. Column headers carry the day, date, and
+  that day's counted total.
+  - Grid crops to `floor(earliest start)`..`ceil(latest end)` across both `--entries` and
+    `--other-entries` rather than drawing 24 rows nobody worked in, and the footer names the crop.
+  - Colour AND pattern both differ per state (the `dataviz` skill's rule - colour alone is not a
+    distinction): `new` bright teal, `edit` blue, `old` muted green, `meeting` diagonally striped
+    purple. `new`/`edit` additionally get a bright left edge so they stay identifiable in a sliver
+    too thin to show fill colour - this is the one place the `impeccable` design-review hook will
+    flag a "side-tab" false positive; it's a deliberate, documented legibility requirement, not a
+    stray AI default, don't remove it to satisfy the hook.
+  - Blocks under ~26px show the time range only, not the description; under ~14px, neither -
+    color and the hover card still carry the information.
+  - Other-project blocks render in their own narrow dashed lane down the right edge of the column,
+    never the main lane, so they can never collide with this project's blocks and read as
+    background rather than content.
+  - Hover card on every block: exact start-end, exact MINUTES (not only the rounded duration), and
+    the description field as described above. Never let a rounded duration on the block itself hide
+    the real minutes - the hover card's minute count is what makes that honest.
+
+**Full-week gate, decides whether `--target-hours` gets passed at all:** only pass it when the
+window resolved in step 3 starts Monday 00:00 of its week and runs through that week's elapsed end
+(the default Monday-to-now window, a completed past Mon-Sun week, or an explicit range aligned the
+same way). `today`, `yesterday`, an explicit single-day range, or a `past-N-days`/`past-N-weeks`
+window that doesn't start on Monday all fail this gate - none of them saw the rest of the week, so a
+target/remaining figure computed from them is a guess dressed as a fact (2026-09-03: a `today`-only
+fetch reported "19h 40m to go this week" with Mon/Tue/Wed/Fri/Sat/Sun unchecked).
 
 Two honesty rules the visual must not break: never draw a project the run cannot actually see (a
-different workspace or API key), and never let a rounded duration hide the real minutes - that is
-what the hover card's minute count is for.
+different workspace or API key), and never let the ring or a rounded block duration hide the real
+minutes - that is what the hover card's minute count is for.
 
 ### 10. Apply
 
@@ -340,27 +381,56 @@ Approved rows only.
 - Description-only: `PUT /workspaces/{ws}/time-entries/{id}` with updated description, preserving start/end/project/billable/tags.
 - Split: shorten the original to the first chunk's end, then `POST /workspaces/{ws}/time-entries` for each remaining chunk with same project, same tags, contiguous times.
 
-### 11. HubStaff comparison (skip if `hubstaff_org_id` not set or `HUBSTAFF_REFRESH_TOKEN` missing)
+### 10a. HubStaff gate - fires only on a fully filled week
 
-If gated in, read `skills/clockify-reconciliator/hubstaff.md` and follow its "Step 11" section. If the
-dev then asks to update/sync HubStaff (not just compare), follow its "HubStaff update mode" section
-instead of improvising scope or entry-creation mechanics.
+Evaluate this after step 10's writes, off a LIVE re-fetch of the window rather than the proposal
+table's arithmetic. Every condition must hold or all three HubStaff steps are skipped:
 
-### 12. HubStaff weekly screenshot (skip if `hubstaff_org_id` not set or preflight marked auth as failed)
+1. The config sets `hubstaff_org_id`.
+2. `HUBSTAFF_REFRESH_TOKEN` is present in `~/.claude/.env`.
+3. The config sets `weekly_target_hours`.
+4. The window passes step 9a's full-week gate (starts Monday 00:00 of its week and runs through that
+   week's elapsed end).
+5. The window's counted in-project hours are at or above `weekly_target_hours`.
 
-If gated in, read `skills/clockify-reconciliator/hubstaff.md` and follow its "Step 12" section.
+Conditions 3 to 5 are the point of this step. A `today`, `yesterday`, single-date or
+`past-N-days` window fails 4 outright; a full week still short of target fails 5. Either way nothing
+opens a browser, nothing spends the one-per-run access-token exchange, and no screenshot is written.
+
+Report a skip with the real numbers - "HubStaff skipped, week is at 28h 00m of the 30h target, 2h 05m
+short" - never a bare "skipped". The number is the whole signal: it tells the dev whether a later run
+will let HubStaff through, and a bare skip line reads like a failure instead of a gate.
+
+If a config sets `hubstaff_org_id` but no `weekly_target_hours`, condition 5 has no denominator to
+test: run the HubStaff steps rather than skipping silently. No project config is in that state today
+(checked 2026-09-25), so this is a fallback, not a live path.
+
+Once the gate passes, run hubstaff.md's "Step 2" preflight first, then step 11, then step 12.
+
+### 11. HubStaff comparison (skip unless step 10a's gate passed)
+
+Read `skills/clockify-reconciliator/hubstaff.md` and follow its "Step 2" preflight, then its "Step
+11" section. If the dev then asks to update/sync HubStaff (not just compare), follow its "HubStaff
+update mode" section instead of improvising scope or entry-creation mechanics.
+
+### 12. HubStaff weekly screenshot (skip unless step 10a's gate passed, or the preflight marked auth as failed)
+
+Read `skills/clockify-reconciliator/hubstaff.md` and follow its "Step 12" section.
 
 ### 13. Report
 
 - Mode used (Reconciliation / Reconstruction / Audit)
 - Entries written (count + per-day summary)
-- Visual output (step 9a): day-summary table + the week calendar re-pushed under the same slug, or
-  "skipped - not a Conductor host" if neither the `show_preview` tool nor the hook endpoint was
-  reachable
+- Visual output (step 9a): hero-card-plus-timeline re-rendered via `render_week.cjs` with whatever
+  was actually applied and re-pushed under the same slug, or "skipped - not a Conductor host" if
+  neither the `show_preview` tool nor the hook endpoint was reachable
 - Gap-detection findings (step 6a): unlogged days/blocks surfaced, applied or still pending approval
 - In-flight cap (step 8a): excluded tail named as deferred if live work was detected, omitted otherwise
-- HubStaff comparison results (step 11), or "HubStaff comparison skipped - hubstaff_org_id not configured" if absent
-- HubStaff weekly screenshot path(s) (step 12), or skipped reason (auth failed preflight / org not configured)
+- HubStaff comparison results (step 11), or the step 10a skip line carrying the actual hour numbers
+  ("HubStaff skipped, week is at 28h 00m of the 30h target"). Other skip reasons stay as they were:
+  `hubstaff_org_id` not configured, or `HUBSTAFF_REFRESH_TOKEN` missing.
+- HubStaff weekly screenshot path(s) (step 12), or skipped reason (step 10a gate not met / auth failed
+  preflight / org not configured)
 - "Needs manual" targets with time + reason
 - Other-project warning list
 
@@ -379,8 +449,8 @@ If gated in, read `skills/clockify-reconciliator/hubstaff.md` and follow its "St
   toward a weekly target the dev explicitly stated, sized from real evidence, on a day with ZERO
   existing entries only. A stated weekly target is a ceiling to fill toward, never a license to invent
   hours beyond real evidence.
-- `weekly_target_hours` in the config does NOT widen that exception. It exists so step 9a can draw a
-  target bar; it is a standing display number, not a standing instruction to fill toward it. Case (b)
+- `weekly_target_hours` in the config does NOT widen that exception. It exists so step 9a can draw the
+  hero ring; it is a standing display number, not a standing instruction to fill toward it. Case (b)
   above still requires the dev to ask for the fill in this run. A run that quietly manufactured hours
   because a config file said 30 would be exactly the invented-hours failure the rule above bans.
 - Max 80 chars per description.
