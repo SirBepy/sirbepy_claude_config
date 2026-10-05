@@ -17,13 +17,22 @@ Merges go through this skill's flow too - never a raw `git merge` + push that la
 When a single file holds changes belonging to different commits, stage the specific hunks - do NOT commit the whole file, and do NOT mutate the working tree (delete progress → commit → undo) to fake it.
 
 - `git add -p` is the usual way, but it's INTERACTIVE and hangs in this non-interactive shell. Do not use it.
-- Non-interactive route instead:
-  1. `git -C <path> diff <file> > <tmp>.patch` (or `diff HEAD <file>`).
-  2. Edit the patch: delete the hunks you don't want. Keep the `diff --git`/`index`/`---`/`+++` header lines and the `@@` line of each hunk you keep. Don't bother renumbering `@@` counts.
-  3. `git -C <path> apply --cached --recount <tmp>.patch` (`--recount` tolerates off `@@` counts from hand-trimming). If it still rejects on context mismatch, re-dump and re-trim rather than forcing.
-  4. Verify the partially-staged result compiles/lints on its own (the committed state must build without the unstaged remainder), then commit.
+- The hand-rolled non-interactive route (`git diff <file> > <tmp>.patch`, trim hunks by hand, `apply --cached --recount <tmp>.patch`) has two traps hit in practice (todos 1046, 1068):
+  - The `>` redirect is a shell content-write hooks/shell-content-write-guard.py denies outright, so the documented command is uncallable as written.
+  - Piping the patch through a text-mode subprocess turns `\n` into `\r\n` on Windows, which breaks `git apply`'s context match ("patch does not apply") even though the patch text looked right.
+  - Committing straight from the real index risks sweeping in a concurrent session's staged files, and racing a peer's commit between staging and committing can silently revert their work entirely (a stale tree landing on their new HEAD looks like a normal commit, but `git show --stat` lists THEIR files as deleted).
+- Use `skills/commit/split-hunks.py` instead - it does the same diff/trim/apply mechanically, in bytes mode (no CRLF trap) with no shell redirect (nothing for the write guard to catch):
+  - **Solo case, nothing else of interest staged:**
+    `python skills/commit/split-hunks.py --repo <path> stage <file> --match <substring>`
+    Filters `<file>`'s unstaged hunks (vs HEAD) to the ones whose added/removed lines contain `<substring>`, applies just those into the real index with `git apply --cached`. Verify with `git diff --cached -- <file>`, same as before.
+  - **Shared-index case, a concurrent session has staged work or could commit while you're mid-split:**
+    `python skills/commit/split-hunks.py --repo <path> commit -m "<message>" --whole <file> [--whole <file> ...] --hunk <file>:<substring> [--hunk <file>:<substring> ...]`
+    Records `base=$(git rev-parse HEAD)` first, builds a private `GIT_INDEX_FILE` seeded from `base` (never the shared one), stages declared whole files and filtered hunks into it, refuses before creating any commit object if the resulting tree touches a path outside what was declared, then commits and lands it with `git update-ref HEAD <new> <base>` - a compare-and-swap that refuses outright (leaving HEAD exactly where the peer left it) if HEAD moved since `base` was read. On success it resyncs the real index's entries for the committed paths only (`git reset -q -- <paths>`), never touching anything else a concurrent session staged. On a lost race, rerun with `--base <the new HEAD>` to retry.
+  - `commit-tree`/`update-ref` are a different subcommand token than `git commit`, so hooks/commit-guard.py's marker gate and prefilter re-check never see this path; `commit` mode runs `prefilter-gate.sh` itself over the declared pathspec before building the commit, so that protection isn't silently skipped.
+  - Self-test: `bash skills/commit/test_split_hunks.sh` (covers the no-match case, the shared-index survival case, and the CAS race).
+- Verify the partially-staged/committed result compiles/lints on its own (the committed state must build without the unstaged remainder).
 - This is surgical and leaves the working tree untouched - prefer it over restore-edit-amend whenever you need exact lines.
-- **Exception to step 8's pathspec rule:** a hunk-level split genuinely needs the index (that's what `apply --cached` stages into), so it is the one case that commits FROM the index instead of by pathspec. Re-run `git diff --cached --stat` immediately before committing to confirm the index holds ONLY the hunks you just staged - if a concurrent session added anything else in between, stop and re-isolate rather than committing whatever the index now contains.
+- **Exception to step 8's pathspec rule:** a hunk-level split genuinely needs the index (that's what `apply --cached` stages into), so `stage` mode's result is the one case committed FROM the index instead of by pathspec - re-run `git diff --cached --stat` immediately before that commit to confirm the index holds ONLY the hunks just staged. `commit` mode above never has this exposure: it builds and verifies the tree in a private index before HEAD ever moves, so there is nothing left to "stop and re-isolate" from.
 
 ## Foreign hunk inside your own hunk
 

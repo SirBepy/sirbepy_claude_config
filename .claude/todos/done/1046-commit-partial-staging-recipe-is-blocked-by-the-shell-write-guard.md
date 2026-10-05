@@ -32,3 +32,7 @@ retry it.
 - Running the documented recipe on a file with two unrelated hunks stages exactly one, with no
   guard denial, verified by `git diff --cached`.
 - If a helper script is added, it has a self-test that CI discovers.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane G2: split-hunks.py stage mode (no shell redirect, bytes mode so no CRLF rewrite), tested in skills/commit/test_split_hunks.sh.
