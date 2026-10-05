@@ -141,7 +141,10 @@ One or two sentences. The user-facing or code outcome we're after.
 ## Context
 
 Background a future cold AI needs. Pointers to prior commits, related files with `path:line`.
-Why this is being deferred (so the AI knows what's already been considered).
+Why this is being deferred (so the AI knows what's already been considered). Any sentence naming
+a CAUSE ("X happens because Y", "the failure is caused by Z") carries either a receipt - a
+`file:line`, a command's real output, a log line - or the literal `UNVERIFIED` token plus the one
+check that would settle it. A labelled guess is fine and often useful; an unlabelled one is not.
 
 ## Approach
 
@@ -174,6 +177,14 @@ next session.
   unknown, and unknown is treated exactly like `ai` - nothing silently escapes the `/cleanup-todos`
   gate. Whoever WRITES the todo sets `Origin`; it is never upgraded from `ai` to `dev` just because
   the dev later read it or approved executing it - approval to execute is not authorship.
+- **Context's receipt-or-UNVERIFIED contract is the only way causal claims are enforced here.**
+  2026-09-28, `claude_usage_in_taskbar`: a Context section asserted a test failure's cause
+  outright with no measurement behind it, that cause was relayed to a peer session making a
+  release decision, and only a later DOM dump settled which of two contradictory versions had
+  been right. A cold session trusts a todo file more than any other artifact and has no transcript
+  to sanity-check it against, which is exactly why this is a template rule and not a reminder to
+  remember: `/create-todo`, `/code-check`, and `/close` Phase 3 write every Context section through
+  this file rather than restating the rule, so fixing it once here fixes it for all three.
 - Skip a section only if it genuinely doesn't apply. Never just a title and a one-liner.
 - The bar: a future cold AI session must execute from the file alone. Handoff todos ("continue
   this in another chat") should be VERY descriptive - what was tried, where it failed, what the
