@@ -43,3 +43,7 @@ executes. The code-check reviewer flagged it as drift-unsafe; that reasoning is 
   is denied; `git -C "<cleared>" status && git push` from an uncleared cwd is denied;
   `git -C "<uncleared>" status && git push` from a cleared cwd passes.
 - `python hooks/test_push_gate.py` prints ALL PASS.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane D2, test-first (RED against HEAD, then GREEN).

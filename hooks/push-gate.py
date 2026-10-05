@@ -10,6 +10,18 @@ Keyed by HEAD sha, so any new commit needs a fresh pass. `git push` detection
 is push-read-gate.py's own, loaded by path so the two gates never disagree
 about what counts as a push.
 
+Target-repo resolution (todo 1044) walks the command the same way
+is_git_push_invocation does, since a naive "first `-C` in the command" or
+"payload cwd always" both have a real bypass:
+- `git -C <cleared> status && git push` must NOT inherit the first git
+  call's `-C` - real git scopes `-C` to its own invocation only, so the
+  gate now reads `-C` off the invocation that reaches `push`, never an
+  earlier, unrelated one.
+- `cd <cleared> && git push` must NOT be checked against the pre-`cd` payload
+  cwd - a `cd`/Set-Location segment earlier in the same command pins the
+  effective cwd for every segment after it, mirroring
+  git-workdir-guard.py's own `pinned_cd` (same bypass, same fix shape).
+
 Fails open on any hook error: a bug here must never block every push.
 
 CLI, for skills and scripts:
@@ -18,6 +30,7 @@ CLI, for skills and scripts:
 
 import argparse
 import importlib.util
+import re
 import shlex
 import subprocess
 import sys
@@ -32,10 +45,15 @@ MARKER_DIR = _HOOKS_DIR / ".push-ok"
 GIT_TIMEOUT_SECONDS = 10
 
 try:
-    from _hooklib import read_payload, deny, git_repo_root
+    from _hooklib import read_payload, deny, git_repo_root, strip_quotes
 except Exception as e:
     sys.stderr.write(f"[push-gate] hook error, failing open: cannot import helpers ({e})\n")
     sys.exit(0)
+
+VALUE_FLAGS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
+CD_WORDS = {"cd", "cd.", "chdir", "pushd", "sl", "set-location", "push-location"}
+ABS_PATH_RE = re.compile(r"^(?:[A-Za-z]:[\\/]|\\\\|/[^/\s])")
+CHAIN_SPLIT_RE = re.compile(r"&&|\|\||;|\n|\|")
 
 
 def _load_push_detector():
@@ -45,22 +63,80 @@ def _load_push_detector():
     return mod.is_git_push_invocation
 
 
-def git_dash_c_path(command: str) -> str | None:
-    """The `-C <path>` of the first `git ... push` call, if any. posix=False
-    keeps Windows backslashes intact; quotes are stripped by hand."""
+def _tokenize_segment(segment: str) -> list[str]:
     try:
-        tokens = shlex.split(command, posix=False)
+        return [strip_quotes(t) for t in shlex.split(segment, posix=False)]
     except ValueError:
-        return None
+        return []
+
+
+def _pinned_cd(tokens: list[str]) -> str | None:
+    """Absolute path of a cd/Set-Location/Push-Location in this segment, if
+    any - scans the 3 tokens after the cd-word so a flag in between (e.g.
+    `Set-Location -Path X`) doesn't hide the value. Mirrors
+    git-workdir-guard.py's pinned_cd exactly; duplicated rather than imported
+    since that file is a sibling guard, not a shared library."""
+    for i, tok in enumerate(tokens):
+        if tok.lower() not in CD_WORDS:
+            continue
+        for cand in tokens[i + 1 : i + 4]:
+            if ABS_PATH_RE.match(cand):
+                return cand
+    return None
+
+
+def _git_push_dash_c(tokens: list[str]) -> tuple[bool, str | None]:
+    """(is_push, dash_c_value) for one segment's tokens: walks past global git
+    flags the same way is_git_push_invocation does, but also remembers a `-C`
+    value seen along the way - and only returns it when THIS walk's git
+    invocation reaches `push`, so an earlier, unrelated `git -C X status` in
+    the same chained command is never mistaken for the push's own `-C`."""
     for i, tok in enumerate(tokens):
         if tok != "git":
             continue
         j = i + 1
+        dash_c = None
         while j < len(tokens) and tokens[j].startswith("-"):
             if tokens[j] == "-C" and j + 1 < len(tokens):
-                return tokens[j + 1].strip("\"'")
-            j += 1
+                dash_c = strip_quotes(tokens[j + 1])
+                j += 2
+            elif tokens[j] in VALUE_FLAGS and "=" not in tokens[j]:
+                j += 2
+            else:
+                j += 1
+        if j < len(tokens) and tokens[j] == "push":
+            return True, dash_c
+    return False, None
+
+
+def git_dash_c_path(command: str) -> str | None:
+    """The `-C <path>` attached to the specific `git ... push` invocation in
+    `command`, if any - never an earlier, unrelated `git -C` call in the same
+    chained command. posix=False keeps Windows backslashes intact."""
+    for segment in CHAIN_SPLIT_RE.split(command):
+        tokens = _tokenize_segment(segment)
+        is_push, dash_c = _git_push_dash_c(tokens)
+        if is_push:
+            return dash_c
     return None
+
+
+def resolve_push_target(command: str, payload_cwd: str) -> str:
+    """The effective repo path for the `git push` in `command`: that push
+    invocation's own `-C`, else the path pinned by a `cd`/Set-Location
+    segment earlier in the same command, else the shell's live cwd."""
+    effective_cwd = payload_cwd or "."
+    for segment in CHAIN_SPLIT_RE.split(command):
+        tokens = _tokenize_segment(segment)
+        if not tokens:
+            continue
+        is_push, dash_c = _git_push_dash_c(tokens)
+        if is_push:
+            return dash_c or effective_cwd
+        cd_pin = _pinned_cd(tokens)
+        if cd_pin:
+            effective_cwd = cd_pin
+    return effective_cwd
 
 
 def head_sha(path) -> str | None:
@@ -110,7 +186,7 @@ def main() -> None:
     if not _load_push_detector()(command):
         sys.exit(0)
 
-    target = git_dash_c_path(command) or payload.get("cwd") or "."
+    target = resolve_push_target(command, payload.get("cwd") or "")
     root = git_repo_root(target)
     if not root:
         sys.exit(0)

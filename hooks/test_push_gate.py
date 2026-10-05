@@ -23,6 +23,10 @@ DASH_C_CASES = [
     (r'git -C "C:\Users\tecno\Desktop\Projects\zng-app" push', r"C:\Users\tecno\Desktop\Projects\zng-app", "quoted backslash path"),
     ("git -C C:/repo push origin main", "C:/repo", "bare forward-slash path"),
     ("git push", None, "no -C"),
+    # todo 1044: a chained, unrelated `git -C` before the push must never be
+    # attributed to the push itself.
+    ('git -C "C:/cleared" status && git push', None, "earlier unrelated git -C is not the push's own"),
+    ('git -C "C:/cleared" status && git -C "C:/target" push', "C:/target", "push's own -C survives an earlier unrelated git -C"),
 ]
 
 
@@ -96,5 +100,28 @@ with tempfile.TemporaryDirectory() as tmp:
     (personal / "f.txt").write_text("y", encoding="utf-8")
     git(personal, "commit", "-q", "-am", "second")
     expect("a new commit needs a fresh mark", call_main("git push", personal), 2)
+
+    # todo 1044: resolve the repo the push actually runs in, not the first
+    # `-C` in the command or the payload cwd regardless of a `cd`/`-C` ahead
+    # of it. `personal`'s current HEAD (the second commit above) is cleared
+    # here so it can stand in as the "cleared" side of each case; `client`'s
+    # HEAD has never been marked, so it stands in as "uncleared".
+    guard.cli(["mark", str(personal), "--reason", "code-check passed, e2e: no suite"])
+
+    expect(
+        "cd into an uncleared repo from a cleared cwd is denied",
+        call_main(f'cd "{client}" && git push', personal),
+        2,
+    )
+    expect(
+        "an earlier git -C into a cleared repo does not clear a push from an uncleared cwd",
+        call_main(f'git -C "{personal}" status && git push', client),
+        2,
+    )
+    expect(
+        "an earlier git -C into an uncleared repo does not block a push from a cleared cwd",
+        call_main(f'git -C "{client}" status && git push', personal),
+        0,
+    )
 
 sys.exit(_testlib.summarize(fails, style="count"))
