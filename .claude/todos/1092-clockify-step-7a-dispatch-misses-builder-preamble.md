@@ -16,7 +16,7 @@ FAIL checklist: "Every subagent dispatch prompt includes the subagents-never-com
 only says "Both are READ-ONLY DISPATCH". Per `refs/builder-preamble.md`'s "What the guard actually
 enforces", `READ-ONLY DISPATCH` exempts only the screenshot-id marker; the staging line and the
 `run_in_background` + `FORBIDDEN` line are still required, or the guard rejects the dispatch.
-Sibling dispatches added the same week (`skills/audit/SKILL.md:67-69`, `skills/commit/SKILL.md`'s
+Sibling dispatches added the same week (`skills/audit/SKILL.md:61-62`, `skills/commit/SKILL.md`'s
 pre-push todo sweep) point at the preamble explicitly.
 
 ## Approach
