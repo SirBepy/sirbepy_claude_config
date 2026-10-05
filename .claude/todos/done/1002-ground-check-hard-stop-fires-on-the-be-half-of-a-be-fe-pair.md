@@ -92,3 +92,7 @@ logic has to consult it.
   as the reason (per the 2026-09-29 sc-56121 case in Context).
 - A grep of `hooks/` confirms no guard duplicates the done-state rule in code.
 - `python ci/run_all.py` passes after the edit.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane K: refs/outbound-ground-check.md. Doc change; the owner/repo sed was proven live against this repo's own origin (one-pass form failed on owner/repo.git, two-pass form resolves).

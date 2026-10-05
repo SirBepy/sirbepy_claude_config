@@ -78,3 +78,7 @@ but the recipe should be robust to it either way rather than depending on the an
 - A grep shows no remaining `gh ... --search` call site in `skills/` or `refs/` that treats an empty
   result as proof of absence.
 - `python ci/run_all.py` passes after the edit.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane K: refs/outbound-ground-check.md. Doc change; the owner/repo sed was proven live against this repo's own origin (one-pass form failed on owner/repo.git, two-pass form resolves).
