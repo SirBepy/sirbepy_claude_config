@@ -126,6 +126,12 @@ with tempfile.TemporaryDirectory() as tmp:
     ok = proc.returncode == 0 and log4.exists() and "auth switch --user JosipMuzicZirtue" in log4.read_text(encoding="utf-8")
     fails += [] if _testlib.report(ok, f"{label} (log={log4.read_text(encoding='utf-8') if log4.exists() else None!r})") else [label]
 
+    log4b = tmpdir / "log-no-origin-create-flag-value-first.txt"
+    proc = run_hook(fresh_repo, 'gh repo create --private --source . zirtue-corp/real-name', "SirBepy", stub_bin, log4b)
+    label = "no origin, a value-taking flag before OWNER/NAME: its value is not read as the name"
+    ok = proc.returncode == 0 and log4b.exists() and "auth switch --user JosipMuzicZirtue" in log4b.read_text(encoding="utf-8")
+    fails += [] if _testlib.report(ok, f"{label} (log={log4b.read_text(encoding='utf-8') if log4b.exists() else None!r})") else [label]
+
     log5 = tmpdir / "log-no-origin-create-noop.txt"
     proc = run_hook(fresh_repo, 'gh repo create mine --private', "SirBepy", stub_bin, log5)
     label = "no origin, repo create resolving to the already-active personal account: no switch call"

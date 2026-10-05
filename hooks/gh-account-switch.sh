@@ -31,13 +31,17 @@ else
   # active account is left alone rather than guessed at.
   case "$cmd" in
     *"repo create"*)
+      # A value-taking flag before OWNER/NAME (`--source .`) must skip its value
+      # too, or the value is read as the name and the real owner is missed.
       owner=$(printf '%s' "$cmd" | python -c "import sys,shlex
+value_flags = {'-d', '--description', '-h', '--homepage', '-t', '--team', '-l', '--license',
+               '-g', '--gitignore', '-s', '--source', '-r', '--remote', '-p', '--template'}
 toks = shlex.split(sys.stdin.read())
 for i, t in enumerate(toks):
     if t == 'create' and i > 0 and toks[i-1] == 'repo':
         j = i + 1
         while j < len(toks) and toks[j].startswith('-'):
-            j += 1
+            j += 2 if toks[j] in value_flags else 1
         if j < len(toks) and '/' in toks[j]:
             print(toks[j].split('/', 1)[0])
         break
