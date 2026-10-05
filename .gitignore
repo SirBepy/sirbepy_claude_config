@@ -37,6 +37,13 @@
 !.github/
 !.github/**
 
+# The Claude app syncs its own managed skills here; machine-local, not authored in this repo
+skills/synced/
+
+# Disposable scratch: .for_bepy/ is per-project throwaway output, stackdumps are crash residue
+**/.for_bepy/
+*.stackdump
+
 # Per-user ticket log, not shared
 skills/ticket/log.md
 

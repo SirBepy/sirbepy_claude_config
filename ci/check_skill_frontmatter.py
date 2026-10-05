@@ -259,7 +259,12 @@ def main() -> int:
     args = parser.parse_args()
     root = args.root
 
-    files = sorted(root.glob("skills/**/SKILL.md"), key=lambda p: p.relative_to(root).as_posix())
+    # skills/synced/ is the Claude app's own synced-skill bucket: third-party frontmatter this
+    # repo neither owns nor commits (it is gitignored), so its budget is not ours to enforce.
+    files = sorted(
+        (p for p in root.glob("skills/**/SKILL.md") if p.relative_to(root).parts[:2] != ("skills", "synced")),
+        key=lambda p: p.relative_to(root).as_posix(),
+    )
 
     if not files:
         print(f"FAIL: no skills/**/SKILL.md files found under {root}")
