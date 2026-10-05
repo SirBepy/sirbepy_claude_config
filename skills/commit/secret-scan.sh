@@ -25,6 +25,9 @@ fi
 
 AWK='
 BEGIN {
+  # EXEMPT: binary paths from binary_list() (_prefilter-lib.sh, todo 1086) - a text-heavy
+  # binary (PDF, font) clears the NUL sniff git itself uses and must not be scanned as prose.
+  n = split(EXEMPT, e, "\n"); for (i=1; i<=n; i++) if (e[i] != "") ex[e[i]]=1
   if ((getline probe < PATFILE) < 0) {
     print "ERROR: cannot read secret pattern file: " PATFILE
     exit 1
@@ -46,7 +49,7 @@ BEGIN {
 }
 /^\+\+\+ b\// {
   f=substr($0,7)
-  skip = (f ~ /\.env\.example$/ || f ~ /\.md$/)
+  skip = (f ~ /\.env\.example$/ || f ~ /\.md$/ || (f in ex))
   next
 }
 /^@@/ { match($0, /\+[0-9]+/); ln=substr($0, RSTART+1, RLENGTH-1)+0; next }
@@ -78,12 +81,15 @@ BEGIN {
 
 if [ "${1:-}" = "--range" ]; then
   diff_out=$(git diff "$2" 2>&1) || { printf 'ERROR: git diff --range %s failed: %s\n' "$2" "$diff_out"; exit 1; }
-  printf '%s\n' "$diff_out" | awk -v PATFILE="$patfile" "$AWK" | sort
+  changed=(); while IFS= read -r n; do [ -n "$n" ] && changed+=("$n"); done < <(git diff --name-only "$2" 2>/dev/null)
+  exempt=$(binary_list ${changed+"${changed[@]}"})
+  printf '%s\n' "$diff_out" | awk -v PATFILE="$patfile" -v EXEMPT="$exempt" "$AWK" | sort
 else
   # --repo <path>: forwarded by prefilter-gate.sh when the first path argument resolves to a
   # repo other than cwd (todo 447); absent, git_c is a passthrough and behaviour is unchanged.
   parse_repo_arg "$@"
   set -- "${PREFILTER_ARGS[@]}"
+  exempt=$(binary_list "$@")
 
   {
     git_c diff HEAD -- "$@"
@@ -98,5 +104,5 @@ else
       fi
     done
     scan_invisible_paths "$@"
-  } | awk -v PATFILE="$patfile" "$AWK" | sort
+  } | awk -v PATFILE="$patfile" -v EXEMPT="$exempt" "$AWK" | sort
 fi

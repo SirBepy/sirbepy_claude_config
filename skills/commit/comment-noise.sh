@@ -17,6 +17,9 @@ script_dir=$(cd "$(dirname "$0")" && pwd)
 
 AWK='
 BEGIN {
+  # EXEMPT: binary paths from binary_list() (_prefilter-lib.sh, todo 1086) - a text-heavy
+  # binary (PDF, font) clears the NUL sniff git itself uses and must not be scanned for noise.
+  n = split(EXEMPT, e, "\n"); for (i=1; i<=n; i++) if (e[i] != "") ex[e[i]]=1
   # haystack_file: "<file>\t<HEAD line>" pairs for every file touched by this diff, built by
   # build_haystack() below. A comment line already present at HEAD under a DIFFERENT path is a
   # verbatim move, not new authorship (todo 899) - never trimmed, so never counted as noise.
@@ -32,8 +35,9 @@ BEGIN {
     close(haystack_file)
   }
 }
-/^\+\+\+ b\// { f=substr($0,7); run=0; next }
+/^\+\+\+ b\// { f=substr($0,7); run=0; skip=(f in ex); next }
 /^\+/ && !/^\+\+\+/ {
+  if (skip) next
   # Markdown/mdx "#" is a heading, never a comment - the cap is a code rule (todo 340).
   if (f ~ /\.(md|mdx)$/) next
   # Generated output has no author to act on a flagged block (todo 456); matched by filename
@@ -101,16 +105,19 @@ build_haystack() {
 
 if [ "${1:-}" = "--range" ]; then
   diff_out=$(git diff "$2" 2>&1) || { printf 'ERROR: git diff --range %s failed: %s\n' "$2" "$diff_out"; exit 1; }
+  changed=(); while IFS= read -r n; do [ -n "$n" ] && changed+=("$n"); done < <(git diff --name-only "$2" 2>/dev/null)
   diff_tmp=$(mktemp) && haystack_tmp=$(mktemp) || { printf 'ERROR: mktemp failed\n'; exit 1; }
   trap 'rm -f "$diff_tmp" "$haystack_tmp"' EXIT
   printf '%s\n' "$diff_out" > "$diff_tmp"
   build_haystack "$diff_tmp" "$haystack_tmp"
-  awk -v haystack_file="$haystack_tmp" "$AWK" "$diff_tmp" | sort
+  exempt=$(binary_list ${changed+"${changed[@]}"})
+  awk -v haystack_file="$haystack_tmp" -v EXEMPT="$exempt" "$AWK" "$diff_tmp" | sort
 else
   # --repo <path>: forwarded by prefilter-gate.sh when the first path argument resolves to a
   # repo other than cwd (todo 447); absent, git_c is a passthrough and behaviour is unchanged.
   parse_repo_arg "$@"
   set -- "${PREFILTER_ARGS[@]}"
+  exempt=$(binary_list "$@")
 
   diff_tmp=$(mktemp) && haystack_tmp=$(mktemp) || { printf 'ERROR: mktemp failed\n'; exit 1; }
   trap 'rm -f "$diff_tmp" "$haystack_tmp"' EXIT
@@ -131,5 +138,5 @@ else
   } > "$diff_tmp"
 
   build_haystack "$diff_tmp" "$haystack_tmp"
-  awk -v haystack_file="$haystack_tmp" "$AWK" "$diff_tmp" | sort
+  awk -v haystack_file="$haystack_tmp" -v EXEMPT="$exempt" "$AWK" "$diff_tmp" | sort
 fi

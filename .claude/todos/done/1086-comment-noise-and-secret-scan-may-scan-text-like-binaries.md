@@ -29,3 +29,7 @@ matters, since it blocks a commit and is never auto-fixed.
 
 - One shared binary check, used by every prefilter.
 - test_prefilters.sh covers the PDF fixture for each script.
+
+## Notes
+
+- 2026-10-05: done in the pre-push sweep. is_binary_path/binary_list moved into _prefilter-lib.sh; em-dash.sh, secret-scan.sh and comment-noise.sh all use it. Both secret-scan and comment-noise did scan a text-like PDF before (RED reproduced). Tradeoff, approved via the sweep card: secret-scan no longer reads a text-like binary such as a PDF, matching how git already hides true binaries from it.

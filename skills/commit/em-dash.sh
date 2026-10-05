@@ -34,42 +34,8 @@ exempt_list() {
   done
 }
 
-# A text-heavy binary (PDF, font) can clear 8KB with no NUL byte, so git's own `+++ /dev/null`
-# vs real-diff heuristic (used below for untracked files) still emits it as scannable text
-# (todo 986). Extension is checked first since that is the exact shape that slipped through;
-# the NUL sniff backs it up for an extensionless binary.
-BINARY_EXT_RE='\.(pdf|png|jpe?g|gif|webp|ico|ttf|otf|woff2?|mp3|mp4|zip)$'
-is_binary_path() {
-  local f="$1" p stats
-  printf '%s' "$f" | grep -qiE "$BINARY_EXT_RE" && return 0
-  if git_c ls-files --error-unmatch -- "$f" >/dev/null 2>&1; then
-    stats=$(git_c diff HEAD --numstat -- "$f" 2>/dev/null)
-  else
-    stats=$(git_c diff --no-index --numstat -- /dev/null "$f" 2>/dev/null)
-  fi
-  case "$stats" in -$'\t'-$'\t'*) return 0 ;; esac
-  case "$f" in /*|?:[/\\]*) p="$f" ;; *) p="${repo:+$repo/}$f" ;; esac
-  [ -f "$p" ] || return 1
-  # od's hex pairs stay whitespace-delimited tokens here deliberately - stripping the
-  # separators first (as an earlier version of this check did) lets two adjacent non-NUL
-  # bytes' digits align into a spurious "00", e.g. a space (20) before a newline (0a)
-  # concatenates to "200a", which itself contains "00" with no null byte anywhere.
-  head -c 8000 -- "$p" | od -An -tx1 -v | tr -s ' \n' '\n' | grep -qx '00'
-}
-
-# Routes a binary path into the AWK scanner's existing skip set rather than reshaping the
-# diff-gathering calls below - they already key "skip" off the '+++ b/<key>' header, so
-# reusing that path avoids a second file-list-filtering mechanism (todo 986).
-binary_list() {
-  local f p key
-  for f in "$@"; do
-    is_binary_path "$f" || continue
-    printf 'skipped binary: %s\n' "$f" >&2
-    key=$(git_c ls-files --full-name -- "$f" 2>/dev/null)
-    [ -z "$key" ] && key=$(git_c ls-files --others --exclude-standard --full-name -- "$f" 2>/dev/null)
-    printf '%s\n' "${key:-$f}"
-  done
-}
+# is_binary_path()/binary_list(): shared with secret-scan.sh and comment-noise.sh via
+# _prefilter-lib.sh (todo 1086), so all three prefilters agree on which files are binary.
 
 AWK='
 BEGIN { n=split(EXEMPT, e, "\n"); for (i=1; i<=n; i++) if (e[i] != "") ex[e[i]]=1 }

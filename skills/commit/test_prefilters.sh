@@ -274,6 +274,40 @@ printf 'hello%sworld\n' "$ED" > "$edbin/note.md"
 out=$(cd "$edbin" && bash "$em_dash" note.md 2>/dev/null); rc=$?
 check "em-dash.sh still flags an em dash in a plain-text file" 0 'note\.md:1' '' "$out" "$rc"
 
+# --- secret-scan.sh: a text-heavy binary (PDF) is skipped, not scanned (todo 1086) ---
+# Same text-like-PDF shape as em-dash.sh's case above: plain-text structure in the first bytes,
+# no NUL in the first 8KB, so git's own binary sniff treats it as scannable text. A credential
+# embedded in that "text" must not be flagged - the file is binary by extension regardless of
+# what git's heuristic says.
+ssbin=$(new_repo); tmp_dirs+=("$ssbin")
+fake_tok4="ghp_""abcdefghij1234567890abcdef"
+{
+  printf '%%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\nBT /F1 12 Tf (api_key = "%s") Tj ET\n' "$fake_tok4"
+  head -c 9000 /dev/zero | tr '\0' 'x'
+} > "$ssbin/doc.pdf"
+out=$(cd "$ssbin" && "$gate" doc.pdf); rc=$?
+check "secret-scan.sh does not flag a credential embedded in a text-heavy PDF" 0 '' 'ghp_' "$out" "$rc"
+
+printf 'const tok = "%s";\n' "$fake_tok4" > "$ssbin/config.js"
+out=$(cd "$ssbin" && "$gate" config.js); rc=$?
+check "secret-scan.sh still flags the same credential in a plain-text file" 1 'config\.js:1: ghp_' '' "$out" "$rc"
+
+# --- comment-noise.sh: a text-heavy binary (PDF) is skipped, not scanned (todo 1086) ---
+cnbin=$(new_repo); tmp_dirs+=("$cnbin")
+{
+  printf '%%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n'
+  for i in 1 2 3 4 5 6; do printf '// note %d\n' "$i"; done
+  for i in $(seq 1 18); do printf 'var x = %d;\n' "$i"; done
+  head -c 9000 /dev/zero | tr '\0' 'x'
+} > "$cnbin/doc.pdf"
+out=$(cd "$cnbin" && bash "$comment_noise" doc.pdf)
+if printf '%s' "$out" | grep -qF 'doc.pdf'; then
+  echo "FAIL: comment-noise.sh flagged a text-heavy PDF: $out"
+  fail=1
+else
+  echo "PASS: comment-noise.sh does not flag a text-heavy PDF"
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else
