@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=8, reconfirm-count=1, content-hash=a67f26bc -->
 <!-- duplicate-checked: 2026-09-29; grepped backlog + done/ for "client-push-gate" and "client-repo", no hits (the hook was created 2026-09-29, commit eddcdc6). -->
 # client-push-gate resolves the wrong repo for `cd X && git push` and chained `git -C`
 

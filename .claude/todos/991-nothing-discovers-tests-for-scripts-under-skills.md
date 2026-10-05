@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/991-nothing-discovers-tests-for-scripts-under-skills.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=1, content-hash=c66f26b5 -->
 <!-- duplicate-checked -->
 <!-- checked against 977 and 983, both in done/. 977 added a test for tools/dead-probe-check.py,
      which ci/run_tool_tests.py already discovered; it never touched discovery itself. 983 changed

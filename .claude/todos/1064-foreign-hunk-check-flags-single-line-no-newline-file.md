@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=8, reconfirm-count=1, content-hash=8b102c2c -->
 <!-- duplicate-checked: grepped the backlog and done/ for "no newline", "@@ -1 +1", "single-line hunk". Zero hits. -->
 # 1064 - foreign-hunk-check flags a one-line, no-trailing-newline file as foreign
 

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=4, reconfirm-count=1, content-hash=e6a15bbf -->
 <!-- duplicate-checked: grepped this backlog for "tauri.md", "view files only", "300-line" and "size rule" on 2026-09-22 - no hits. -->
 # `code-style/tauri.md`'s ~300-line rule says "views only", but practice splits shared modules and CSS too
 
@@ -55,3 +56,7 @@ reason, since `server_supervisor`'s unsplit `state.ts` was cited as a deliberate
 - `code-style/tauri.md`'s size rule describes which modules it covers in a way that matches how it is
   applied, and says something about CSS files.
 - `python ci/run_all.py` passes after the edit.
+
+## Notes
+
+- Dropped via /cleanup-todos 2026-10-05: worth 4/10, a one-sentence style-guide drift note with no recurring cost.

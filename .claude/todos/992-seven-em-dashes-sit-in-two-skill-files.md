@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/992-seven-em-dashes-sit-in-two-skill-files.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=3, reconfirm-count=1, content-hash=d5c08c77 -->
 <!-- duplicate-checked -->
 <!-- checked against 290 and 791, both in done/. 290 is about a builder emitting em dashes in NEW
      output despite the rule being in its dispatch; 791 is about the prefilter requirement living

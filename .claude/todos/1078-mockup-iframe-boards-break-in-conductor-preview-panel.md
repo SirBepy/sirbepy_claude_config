@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=be7ad57f -->
 <!-- duplicate-checked: hits 330/407/43/897 are done and cover stage width, plan previews, autopilot deletion and image previews; none covers cross-frame injection failing in the sandboxed panel -->
 # /mockup: iframe-based live-variant boards silently break inside Conductor's preview panel
 

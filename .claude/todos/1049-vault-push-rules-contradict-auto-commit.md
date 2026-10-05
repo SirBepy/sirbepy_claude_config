@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=61745638 -->
 <!-- duplicate-checked: 229 is the /obsidian skill's arg parsing and 467 is read-once enforcement; this is a contradiction between three push rules -->
 # Three rules disagree on whether Claude may push the Obsidian vault
 

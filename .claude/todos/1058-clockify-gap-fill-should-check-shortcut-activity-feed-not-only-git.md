@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=6, reconfirm-count=1, content-hash=f6970b28 -->
 <!-- duplicate-checked: grepped for "shortcut activity"/"activity feed"/"secondary evidence"/"gap
 evidence" across the backlog, no hit touches step 6a's gap-evidence sources -->
 # clockify-reconciliator gap-fill should check the Shortcut activity feed, not only git commits

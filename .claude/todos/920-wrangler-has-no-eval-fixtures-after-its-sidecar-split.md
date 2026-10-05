@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-09-10, complexity=HARD, worth=5, reconfirm-count=1, content-hash=41ffbe8f -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=5, reconfirm-count=2, content-hash=41ffbe8f -->
 <!-- duplicate-checked: the likely hit, done/477, is the SPLIT itself and is complete. This is 477's optional "Consider" note, unbuilt, and it only became worth doing BECAUSE the split landed. Distinct work. -->
 # /wrangler has no eval fixtures now that it is split across sidecars
 

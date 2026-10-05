@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=6, reconfirm-count=1, content-hash=29426150 -->
 <!-- duplicate-checked -->
 # Two orchestration papercuts: `Explore` scouts have no Write tool (the doctrine's "scout writes the spec pack" fails silently), and `commit-pathspec.sh --expect-sha` refuses a short sha
 

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=c7a1f965 -->
 <!-- duplicate-checked: searched this backlog for "send_message", "daemon-meta", "stop guard", "report_turn_status" and "peer relay". The near hits are 453 (silent.md duplicating terse-replies.md, a tone-ownership question) and 491 / done-332 (a skill-name hook firing on relayed peer text, a different hook and a different trigger). Neither covers two live rules disagreeing about whether a peer-relay turn owes a send_message. -->
 # send-message-stop-guard contradicts the daemon-meta exception it is supposed to coexist with
 

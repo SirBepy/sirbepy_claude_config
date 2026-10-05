@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=6, reconfirm-count=1, content-hash=f6b0c74b -->
 <!-- duplicate-checked: 491/332 cover peer/daemon envelopes, 342 covers first-line scope; this is the conductor-slash-context block appended to Joe's own prompt -->
 # flagged-skill-mention fires on skill names inside Conductor's machine-generated slash-context block
 

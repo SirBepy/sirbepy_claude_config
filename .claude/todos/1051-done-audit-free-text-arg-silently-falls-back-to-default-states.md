@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=b8cff8cb -->
 <!-- duplicate-checked: 1023 (backlog read before fan-out), 1010 (7b script deletion), 1019 (history endpoint), 312 (ID arg mode) are the same skill but different defects; none covers free-text args. -->
 # 1051 - shortcut-done-audit treats a free-text arg as "no arg" and audits the wrong columns
 

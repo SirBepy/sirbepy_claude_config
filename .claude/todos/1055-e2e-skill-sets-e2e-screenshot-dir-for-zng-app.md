@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=2bc65deb -->
 <!-- duplicate-checked: grepped todos and done/ for E2E_SCREENSHOT_DIR, rename-session, "screenshot dir" on 2026-09-30; relocated from zng-app todo 41, nothing here covered it. -->
 # 1055 - /e2e (or /flutter-e2e) should set E2E_SCREENSHOT_DIR from rename-session.ps1 -GetId
 

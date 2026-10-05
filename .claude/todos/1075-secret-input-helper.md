@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=5, reconfirm-count=1, content-hash=46c68d56 -->
 <!-- duplicate-checked: surfaced from mc_plugins_tag session 2026-10-03 -->
 # A global way for Joe to hand Claude a secret without pasting it in chat
 

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=8cf806a7 -->
 <!-- duplicate-checked: done/815 and done/485 are both about step 6's git-log fetch (staleness
 mid-run, and --all branch scoping); neither touches working-tree state - this is about real work
 that has no commit at all yet, which git log can never see regardless of flags or timing -->

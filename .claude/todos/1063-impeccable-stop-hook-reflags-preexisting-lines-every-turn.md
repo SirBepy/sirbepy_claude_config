@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=8, reconfirm-count=1, content-hash=0d262793 -->
 <!-- duplicate-checked: 1037 is impeccable's self-update failing; no open todo covers its Stop-hook findings loop. -->
 # impeccable's Stop hook re-flags pre-existing lines on every turn, forcing empty turns
 

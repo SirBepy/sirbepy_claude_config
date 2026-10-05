@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/988-pid-recycling-makes-reservation-self-healing-never-fire.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=1, content-hash=4d7c863b -->
 <!-- duplicate-checked -->
 <!-- checked against 336 (id allocation races, the reason reserve-todo-id.ps1 exists) and 60 (the
      screenshot-folder id, which is where the pid-plus-start-time form was adopted). 336 is about

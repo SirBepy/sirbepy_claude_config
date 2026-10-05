@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=b90172d0 -->
 # The UNVERIFIED rule does not cover an artifact being evaluated for adoption
 
 **Type:** skill-improvement

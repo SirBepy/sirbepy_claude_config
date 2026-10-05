@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=8, reconfirm-count=1, content-hash=066d3fdf -->
 <!-- duplicate-checked: 2026-09-27, grepped this backlog and done/ for "foreign-hunk". 985, 989, 994, 1004 and 1025 all concern commit-pathspec.sh's session-marker UNVERIFIED refusal and its ergonomics; done/806 shipped the comparison script and done/924 added the own-range derivation. None covers a path whose diff has no + side at all, which no caller can ever satisfy. -->
 # `foreign-hunk-check.sh` cannot pass a pure deletion, so every todo archival exits 1
 

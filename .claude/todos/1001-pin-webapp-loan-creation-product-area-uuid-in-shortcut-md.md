@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=6, reconfirm-count=1, content-hash=ceaf3b2d -->
 <!-- duplicate-checked: grepped this backlog for "Product Area", "custom-fields" and "WebApp: Loan Creation" on 2026-09-24 - no hits. -->
 # `skills/ticket/shortcut.md`'s pinned Product Area table is missing most of the ZNG values, including `WebApp: Loan Creation`
 

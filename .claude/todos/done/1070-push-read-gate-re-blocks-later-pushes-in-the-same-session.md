@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=9, reconfirm-count=1, content-hash=ff093473 -->
 <!-- duplicate-checked: 467 created the gate; this is the gate re-arming after its first pass -->
 # push-read-gate blocks later pushes in a session that already pushed once
 
@@ -41,3 +42,7 @@ chained-vs-standalone pattern may be coincidence.
 ## Acceptance
 
 - A session that passed the gate once is never re-gated, regardless of marker pruning or chaining.
+
+## Notes
+
+- Duplicate of 1029 - merged during /cleanup-todos 2026-10-05; confirmed prune root cause folded into 1029's Notes.

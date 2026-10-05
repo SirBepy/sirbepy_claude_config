@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=6, reconfirm-count=1, content-hash=0a678d1a -->
 <!-- duplicate-checked: 1006 is about pasting the preamble block at all, a compliance gap. This is about the block's CONTENT being silent on a restriction that exists, so a fully compliant dispatch still fails. Different failure, different fix. -->
 # 1011 - builder-preamble.md never says a dispatched agent cannot write to .claude/todos/
 

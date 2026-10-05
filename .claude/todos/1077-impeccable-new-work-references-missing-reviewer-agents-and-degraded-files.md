@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=1, content-hash=8654864f -->
 # impeccable's new-work flow points at reviewer/documenter agents and degraded/ files that don't exist
 
 **Type:** skill-improvement

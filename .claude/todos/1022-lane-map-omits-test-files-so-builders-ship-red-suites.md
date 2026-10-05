@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=d0b42319 -->
 <!-- duplicate-checked: the existing lane-map guidance in mega-todos Step C is about file-overlap partitioning and unverified paths; nothing in it or in delegation-doctrine.md says a todo's owned set must include the tests that assert against the files it moves. 1020 and 1021 are the same run's other findings but different mechanisms (vehicle choice, classifier). -->
 # A lane's owned files omit the tests that assert on them, so builders ship red suites
 

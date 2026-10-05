@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=c2df4402 -->
 <!-- duplicate-checked: the guard's five hits are all different surfaces. 427 is about making the TESTING floor a Stop hook (no overlap with todo-file writes). 505 (already in done/) was the auto-mode preamble contradicting the shell-write ban, a different instruction and a different hook. 403, 350 and 423 share only the words "claude"/"hook"/"blocks". This one is skills/mega-todos/SKILL.md vs hooks/agent-todo-write-guard.py specifically. -->
 # /mega-todos tells builders to record decisions in `.claude/todos/`, which a hook hard-blocks
 

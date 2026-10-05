@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=3, reconfirm-count=1, content-hash=d7d93228 -->
 <!-- duplicate-checked: done/331 and done/348 are the closest neighbours and neither covers this. 331 built the guard (omissions were invisible until /close swept); 348 created refs/builder-preamble.md so there was something to paste FROM. Both are landed. This one asks why, with the guard AND the paste source both in place, the block still gets left out of the first draft. -->
 # 1006 - Always paste the builder-preamble block on the first draft of an Agent dispatch, not after a rejection
 
@@ -50,6 +51,7 @@ mainly so the pattern doesn't recur silently across sessions.
 
 - ~~Dropped via /cleanup-todos 2026-09-05: the rule already exists, per `~/.claude` todo 773, done in `fc4ec4b`.~~ **That drop was wrong and this todo was restored 2026-09-06 after an adversarial re-check.** 773 answered discoverability: is the rule written down. It is, and this file's own Context already said so, explicitly pre-empting that objection ("the rule was known, just not applied on the first draft"). This todo asks the enforcement question instead: why documenting it did not stop the miss from recurring. The archive answered a question 773 had already closed and left this one untouched.
 - Relocated from todo 125 in `c:\Users\tecno\Desktop\Projects\zng-app` via /cleanup-todos 2026-09-24: the subject is `hooks/dispatch-preamble-guard.py` and the global CLAUDE.md dispatch rule, not zng-app code. It was only ever logged from zng-app sessions because that is where the dispatches happened.
+- Duplicate of 1028 - merged during /cleanup-todos 2026-10-05; read-before-drafting evidence folded into 1028's Notes.
 
 ## Occurrence 2, 2026-09-15 (zng-app, sc-55568 verification session)
 

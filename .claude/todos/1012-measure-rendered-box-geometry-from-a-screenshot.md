@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=1, content-hash=815b4c60 -->
 <!-- duplicate-checked: screenshot/SKILL.md covers capture and the --plan evaluate step covers DOM getBoundingClientRect; neither helps on a canvas-rendered app where there is no DOM box to query -->
 # Measuring a rendered box from a screenshot is hand-rolled every time
 

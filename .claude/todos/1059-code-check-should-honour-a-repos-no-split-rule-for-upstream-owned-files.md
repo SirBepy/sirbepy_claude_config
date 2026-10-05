@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/1059.claim -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=1, content-hash=111a0a1c -->
 <!-- duplicate-checked: 2026-10-01; grepped this backlog for "upstream/master", "upstream-owned", "upstream-identical" (no hits) and skills/code-check for "upstream" (no hits). -->
 # `/code-check` keeps flagging upstream-owned files a fork has decided never to split
 

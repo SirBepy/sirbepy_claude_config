@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=a415961a -->
 <!-- duplicate-checked -->
 # A two-line blockquote pastes as one line in Conductor
 

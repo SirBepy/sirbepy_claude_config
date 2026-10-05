@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=8, reconfirm-count=1, content-hash=c9301e42 -->
 <!-- duplicate-checked: 1018 is the todo-write-guard blocking .claude/todos/ writes - a different hook, a different path, a different fix. 505 (in done/) was auto mode's preamble contradicting the shell-write ban, which is about HOW to write a file, not about a classifier denying one specific path. Nothing covers the commit marker. -->
 # The auto-mode classifier denies the commit-marker write, so per-builder commit mode is unreliable
 

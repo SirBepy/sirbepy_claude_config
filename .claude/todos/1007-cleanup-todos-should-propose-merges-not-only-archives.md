@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=c1e952ef -->
 <!-- duplicate-checked: searched the live backlog and done/ for merge/consolidate/fold proposals against /cleanup-todos. The skill has a Step 2 DEDUPE (two todos describing the SAME task, one is archived as a loser) and a Step 6.4a low-worth roundup. Neither is this: this is about todos describing DIFFERENT tasks that share a target file. No existing item covers it. -->
 # 1007 - /cleanup-todos should propose MERGES, not just dedupes and archives
 

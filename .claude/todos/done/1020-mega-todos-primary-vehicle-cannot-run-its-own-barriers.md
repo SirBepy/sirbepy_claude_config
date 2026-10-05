@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=2, reconfirm-count=1, content-hash=e1a4e69a -->
 <!-- duplicate-checked: 938 and 949 are about ESCAPING a preamble into a Workflow script (backticks, backslashes, -Compact/-AsJsLiteral) - mechanics of getting text in. This is the prior question of whether Workflow can host the run at all given the skill's own verify ladder. 1018 is the separate todo-write-guard conflict. -->
 # /mega-todos names Workflow as its vehicle but its own barriers cannot run there
 
@@ -64,3 +65,4 @@ Check whether `/autopilot` and `/delegate` have the same latent conflict before 
 
 Measured on that run: 10 lanes, 2 waves, 6 concurrent at peak, 5 barriers. Under Workflow that is 5
 separate scripts to author and escape; under the Agent tool it is 10 prompts and 5 shell barriers.
+- Dropped via /cleanup-todos 2026-10-05: premise false, skills/mega-todos/SKILL.md:50-54 (3380f17, predates this todo) already names Workflow as the one vehicle and forbids switching to the Agent tool mid-run.

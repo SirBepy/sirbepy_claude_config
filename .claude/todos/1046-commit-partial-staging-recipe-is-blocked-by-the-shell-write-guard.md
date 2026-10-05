@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=bfaa56aa -->
 <!-- duplicate-checked: 2026-09-29; grepped backlog + done/ for "shell-content-write-guard", "partial staging", "apply --cached"; done/827 (CRLF-safe patching) and done/792 (git show blob extraction) are related but neither covers edge-cases.md's recipe. -->
 # `/commit` partial-staging recipe is blocked by the shell-write guard
 

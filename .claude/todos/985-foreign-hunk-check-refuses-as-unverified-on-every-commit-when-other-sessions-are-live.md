@@ -1,5 +1,6 @@
 <!-- duplicate-checked: 924 (done/) auto-derived the --own ranges from `git diff HEAD`; this is the follow-on failure that derivation created. 806 (done/) shipped the comparison script itself. -->
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=9b7e9503 -->
 # commit-pathspec.sh's foreign-hunk-check refuses as UNVERIFIED on every commit whenever other sessions are live, so every commit gets `--force foreign-hunk`
 
 **Type:** skill-improvement
@@ -40,3 +41,4 @@ step 1 lands, `--own-range` is the correct workaround and `--force foreign-hunk`
 SKILL.md prose could say so. That is also a second instance of the pattern todo
 `989-commit-pathspec-refuses-then-prints-the-answer-it-refused-for` already describes.
 
+- Folded from 989 (archived as duplicate, /cleanup-todos 2026-10-05): measured cost was 10/10 commits needing two calls in one session; a `--accept-derived-ranges` escape hatch was considered and rejected; a liveness filter on the marker count is a complementary fix alongside repo-scoping.

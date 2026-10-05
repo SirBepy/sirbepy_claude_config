@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=92f1ac62 -->
 # /commit's baseline worktree can't be removed once the harness moves cwd into it
 
 **Type:** skill-improvement

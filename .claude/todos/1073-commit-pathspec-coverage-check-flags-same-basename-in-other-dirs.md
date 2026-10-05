@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=714c97ad -->
 <!-- duplicate-checked: no other todo covers the coverage-check basename false positive -->
 # commit-pathspec.sh coverage check refuses on a same-named file in an unrelated directory
 

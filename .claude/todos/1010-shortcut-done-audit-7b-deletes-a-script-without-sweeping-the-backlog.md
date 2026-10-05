@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=fb7bb81b -->
 <!-- duplicate-checked: nothing in this backlog covers post-deletion reference sweeping. 1006 concerns pasting the builder preamble, not deletion fallout. PLAN.md mentions shortcut-done-audit only as a scheduling line. -->
 # 1010 - shortcut-done-audit step 7b deletes a script without sweeping the backlog for references to it
 

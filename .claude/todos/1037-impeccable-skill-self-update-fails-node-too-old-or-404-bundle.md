@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=1, content-hash=1d2b35f4 -->
 <!-- duplicate-checked: 327 is a Shortcut search skill gap, 489 is a mega-todos verify-reachability bug, 889 is a Flutter/zng-app build clobber - none are about impeccable's own self-update; the guard only matched on generic "skill/update/verify/bundle" vocabulary -->
 # impeccable skill self-update fails (Node too old and/or a 404 bundle-verify)
 

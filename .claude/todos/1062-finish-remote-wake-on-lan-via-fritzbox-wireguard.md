@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=5, reconfirm-count=1, content-hash=e3250126 -->
 # Finish remote Wake-on-LAN: FRITZ!Box WireGuard tunnel + verify wake from outside the LAN
 
 **Type:** task

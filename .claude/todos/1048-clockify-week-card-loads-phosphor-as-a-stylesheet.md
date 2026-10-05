@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=6, reconfirm-count=1, content-hash=75fdfb2c -->
 <!-- duplicate-checked: 997 and 830 share only clockify/week/script vocabulary, neither mentions icons or Phosphor -->
 # clockify-week card loads the Phosphor icon script as a stylesheet
 

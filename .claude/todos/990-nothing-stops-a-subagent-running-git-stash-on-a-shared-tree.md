@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=04f27b75 -->
 <!-- duplicate-checked -->
 # Nothing stops a subagent running git stash on a shared tree
 

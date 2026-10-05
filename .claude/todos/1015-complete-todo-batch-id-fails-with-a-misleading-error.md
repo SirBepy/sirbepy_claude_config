@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=6, reconfirm-count=1, content-hash=9f429e89 -->
 <!-- duplicate-checked: searched this backlog for complete-todo, batch and reserve-todo-id. Nothing covers the error message on a rejected multi-id call. -->
 # 1015 - complete-todo.ps1 rejects a batch -Id with a misleading error
 

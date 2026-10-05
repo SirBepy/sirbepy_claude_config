@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=5, reconfirm-count=1, content-hash=18148d92 -->
 <!-- duplicate-checked: grepped for "per-repo"/"commit count"/"checked...repo" across the backlog,
 no hit touches step 6's commit sweep or step 9's plan presentation -->
 # clockify-reconciliator plan presentation should state per-repo commit counts up front

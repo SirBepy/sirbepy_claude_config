@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=e225b69d -->
 # Autopilot sends too many chat bubbles; define what Joe wants surfaced and use write_plan for the rest
 
 **Type:** skill-improvement

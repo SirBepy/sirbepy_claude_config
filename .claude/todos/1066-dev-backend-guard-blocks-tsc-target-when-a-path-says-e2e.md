@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=8, reconfirm-count=1, content-hash=e8180b31 -->
 <!-- duplicate-checked: hits are other guards (em-dash, cargo pipe, shell write, sensitive file); none covers dev-backend-guard's e2e/target matching -->
 # dev-backend-guard blocks a plain `tsc --target es2022` because a file path contains "e2e"
 

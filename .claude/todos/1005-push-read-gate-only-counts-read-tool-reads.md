@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=542a4639 -->
 <!-- duplicate-checked: grepped this backlog and done/ for "push-read-gate", "auto-commit.md" and "gate" + "read"; the only related entry is the original todo 467 that created the gate, which is about the missing check, not about how the check detects a read. -->
 # 1005 - push-read-gate only counts Read-tool reads, so a `cat` of auto-commit.md does not satisfy it
 

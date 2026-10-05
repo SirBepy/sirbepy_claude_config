@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=06af0eab -->
 <!-- duplicate-checked: hits are about lint-staged, push of a clean tree, clockify, scout file sets and the screenshot reminder; none covers parallel builders' staged files leaking into another chunk's commit -->
 # Parallel builders in one working tree: staged files leak into the wrong commit
 

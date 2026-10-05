@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=8fca45ee -->
 <!-- duplicate-checked: 203 (9of10 lifts), 12 (never set Complete) and 1051 (done-audit arg parsing) touch the same area but none covers commit-less Ready for deploy tickets or the 1.1.0 tag format. -->
 # 1052 - zirtue-release-backfill misses Ready for deploy tickets with no commits, and hard-codes 1.0.0 tags
 

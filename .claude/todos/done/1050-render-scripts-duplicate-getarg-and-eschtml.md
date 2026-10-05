@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=3, reconfirm-count=1, content-hash=dfbf3b04 -->
 <!-- duplicate-checked: first finding about skill render-script helpers -->
 # Two skill render scripts each define their own getArg and escHtml
 
@@ -36,3 +37,7 @@ valid outcome.
 
 - Either one shared module that every render script imports, with each script re-run once to confirm
   it still renders, or this todo archived with the reason it was declined.
+
+## Notes
+
+- Dropped via /cleanup-todos 2026-10-05: worth 3/10, two near-duplicate helpers with no third occurrence; the todo's own Approach defaults to declining it.

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=8, reconfirm-count=1, content-hash=8faa6ef6 -->
 <!-- duplicate-checked: hook hits (1067, 101, 210, 216, 221) share only generic words; grep of the backlog and done/ for skills/audit and rubric-template found no todo about /audit's own files -->
 # /audit's rubric template is Claude-Conductor-specific and the skill ships no refutation template
 

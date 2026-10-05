@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=8, reconfirm-count=1, content-hash=bf99d142 -->
 <!-- duplicate-checked: read 1005 in full. It owns the "a shell cat does not satisfy the gate" half and I folded today's second sighting into its Notes. This is the other half: the gate firing TWICE in one session, which 1005's own last acceptance line assumes cannot happen. Different symptom, different suspected cause (marker files disappearing, not read detection). 467 created the gate and is about the missing check. 365 is about malformed marker paths from bad call sites, not about markers being deleted. -->
 # The push-read gate refires mid-session, and its markers are missing from disk
 
@@ -72,3 +73,7 @@ six commits pushed unasked) is still live.
 - If the prune was the cause: a prefixed marker demonstrably survives a `write-session-marker.ps1`
   call, shown by listing the directory either side of it.
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- Root cause confirmed by code read (/cleanup-todos 2026-10-05, folded from archived duplicate 1070): `hooks/write-session-marker.ps1` Remove-DeadSessionMarkers lists every file in `.session-markers/` and keys liveness on the bare filename, so any prefixed marker (`push-gate-passed-<id>`, `read-auto-commit-<id>`) never matches a live session id and is pruned on the next marker write, the session's own included.

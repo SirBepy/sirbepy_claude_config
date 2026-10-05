@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=4e465905 -->
 <!-- duplicate-checked: surfaced from mc_plugins_tag session 2026-10-02/03 -->
 # commit/SKILL.md documents commit-pathspec.sh without its required flags
 
@@ -16,3 +17,7 @@ In `skills/commit/SKILL.md` step 8's scripted-chain paragraph, show the full inv
 
 ## Acceptance
 - A fresh session following SKILL.md commits without a usage error on the first call.
+
+## Notes
+
+- Duplicate of 1004 - merged during /cleanup-todos 2026-10-05; nothing unique to salvage.

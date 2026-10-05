@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-09-10, complexity=EASY, worth=6, reconfirm-count=4, content-hash=4f44421f -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=6, reconfirm-count=5, content-hash=4f44421f -->
 <!-- duplicate-checked -->
 # Settle whether Shortcut's search API decodes a literal plus as a space
 

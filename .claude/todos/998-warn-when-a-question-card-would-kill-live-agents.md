@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=1, content-hash=76589161 -->
 <!-- duplicate-checked: the behaviour itself is already recorded as a zng-app project memory (reference_question_card_answer_kills_background_agents). This todo is about the missing MECHANICAL guard, not about documenting the behaviour again. -->
 # 998 - Warn when a question card is about to kill live background agents
 

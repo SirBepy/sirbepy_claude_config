@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=8, reconfirm-count=1, content-hash=25b1401f -->
 <!-- duplicate-checked: no other todo covers claim filename normalization -->
 # claim-todo.ps1 and complete-todo.ps1 disagree on leading zeros in claim filenames
 
@@ -18,3 +19,7 @@ Normalize the numeric id the same way in both scripts (`skills/close/claim-todo.
 - Batch-claim `-Id 01,03`, then `complete-todo.ps1 -Id 01`: no "no claim on record" warning, `1.claim` removed.
 - Single-claim `-Id 02`, then complete: still works.
 - Any existing test for these scripts updated; `python ci/run_all.py` green.
+
+## Notes
+
+- Duplicate of 1024 - merged during /cleanup-todos 2026-10-05; confirmed PowerShell int-array root cause folded into 1024's Notes.

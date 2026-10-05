@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=6, reconfirm-count=1, content-hash=5281ef50 -->
 # A Claude-volunteered token-cost figure skips the caching/deferral check
 
 **Type:** skill-improvement

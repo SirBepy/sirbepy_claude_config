@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=6, reconfirm-count=1, content-hash=8eb1f9eb -->
 <!-- duplicate-checked: 1004 covers the missing --expect-branch/--expect-sha flags in the documented line; no todo covers the personal-repo overlap mismatch -->
 # commit-pathspec.sh refuses overlap hits on personal repos that SKILL.md says never to ask about
 

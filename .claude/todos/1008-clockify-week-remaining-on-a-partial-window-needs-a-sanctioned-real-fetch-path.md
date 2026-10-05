@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=9, reconfirm-count=1, content-hash=acedc8f5 -->
 <!-- duplicate-checked: done/905 covers the original bug (guessing a weekly-remaining figure from
 an incomplete single-day fetch, now gated off); this is the opposite case - the dev explicitly asks
 for the figure anyway and the skill has no sanctioned way to answer honestly -->

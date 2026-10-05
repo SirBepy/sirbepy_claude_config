@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=8, reconfirm-count=1, content-hash=809c957b -->
 <!-- duplicate-checked: grepped todos, done/ and dropped-findings.log for "exercise test", "Step 4a" and "code-check" on 2026-09-28. Closest are done/451 (findings filed for a reader who never reads) and done/898 (findings resurface after being declined). This is a third, distinct failure: the gate's pass condition is structurally unreachable in UI code, so it routes to file even when the author could fix it in ten minutes. -->
 # 1038 - code-check's exercise-test gate over-files in UI code that has no tests
 

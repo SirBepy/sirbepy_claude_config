@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=2d59f058 -->
 # reachability.mjs counts an indexed file as an orphan when its link text contains brackets
 
 **Type:** bug

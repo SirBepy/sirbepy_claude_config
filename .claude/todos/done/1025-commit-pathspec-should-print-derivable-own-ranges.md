@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=3, reconfirm-count=1, content-hash=086058e6 -->
 <!-- duplicate-checked: 924 and 933 cover WHY the own-range derivation refuses under multiple session markers (correctness). This is about what it PRINTS when it refuses (ergonomics). Do not fold: closing this by relaxing the refusal would reopen exactly what 924 fixed. -->
 # commit-pathspec.sh should print the ranges it just derived when it refuses
 
@@ -61,3 +62,4 @@ the global `~/.claude` tree belong in this repo's backlog rather than the surfac
 Worth weighing against just doing nothing: the workaround is a one-line awk invocation and the
 refusal is rare for anyone working solo. If the fix is not near-trivial, closing this as won't-do is
 a reasonable outcome.
+- Dropped via /cleanup-todos 2026-10-05: premise mostly false, commit-pathspec.sh already prints each auto-derived range inline in its UNVERIFIED message, so no hand re-derivation is needed.

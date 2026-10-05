@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=3, reconfirm-count=1, content-hash=d6318b30 -->
 <!-- duplicate-checked: the guard's hits (1008, 1016, 1017, 997, 285) are all unrelated clockify-reconciliator findings that only share the "clockify/reconciliator/skill" vocabulary; none of them discuss the FAIL-checklist hardcoded-name rule or Joe-attribution wording. -->
 # clockify-reconciliator's week-preview rewrite hardcodes "Joe" in new SKILL.md prose
 
@@ -56,3 +57,7 @@ Pick one, deliberately, then apply it consistently to the whole file (not just t
   this diff.
 - If option 1: this todo is closed as Won't Do with the reasoning above, and (optionally) a
   separate todo is filed against `bepy-skill-creator/SKILL.md` proposing the exception.
+
+## Notes
+
+- Dropped via /cleanup-todos 2026-10-05: worth 3/10, the 'Joe, DATE' attribution lines match a long-standing in-file convention; preference, not defect.

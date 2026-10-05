@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=38b33a30 -->
 <!-- duplicate-checked: hook hits (259, 357, 41, 43, 489) share only generic words (step/check/verify/live); 43 is the closest (/mockup-related) but is about autopilot disposal policy, a different concern -->
 # /mockup's step 6 "gated selectors" check should also verify the live render call site, not just the stylesheet
 

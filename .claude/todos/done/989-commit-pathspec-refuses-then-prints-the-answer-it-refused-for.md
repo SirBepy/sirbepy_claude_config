@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=8384590c -->
 <!-- duplicate-checked -->
 # commit-pathspec refuses, then prints the exact answer it refused for
 
@@ -83,3 +84,4 @@ Surfaced from a `countoff` session, filed here because the fix is entirely in
 
 Related: todo 924 is the REOPENED item the refusal message itself cites, and this is a usability
 consequence of that reopening rather than a disagreement with it.
+- Duplicate of 985 - merged during /cleanup-todos 2026-10-05; measured cost, rejected escape hatch and liveness-filter angle folded into 985's Notes.

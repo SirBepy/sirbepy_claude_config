@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=8, reconfirm-count=1, content-hash=3f311728 -->
 <!-- duplicate-checked: grepped this backlog and done/ for "claim" crossed with "autopilot|dispatch|builder". 1006, 1011, 1018 and 1020 are about builder preambles and todo WRITES; none covers the orchestrator claiming a todo before a builder EXECUTES it. -->
 # /autopilot and the delegation doctrine never tell the orchestrator to claim a todo before dispatching its builder
 

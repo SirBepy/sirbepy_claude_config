@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=8, reconfirm-count=1, content-hash=4ca3112a -->
 <!-- duplicate-checked: grepped this backlog for "ground check", "ground-check", "outbound-marker" and "hard stop" on 2026-09-24 - only 398 (Shortcut query-string plus-encoding), unrelated. -->
 # The outbound ground check's done-state hard stop fires on the BE half of a BE/FE pair, where the FE work is demonstrably undone
 

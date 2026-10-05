@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=1, content-hash=b68b262a -->
 <!-- duplicate-checked: grepped the backlog and done/ for contradict, override the ticket, reverses, instruction conflicts, ticket says, prior decision. Zero hits. The nearest existing rules are the CLAUDE.md "ground tickets in code" and "verify root cause first" lines, which govern Claude's own proposals, not an instruction from Joe that silently undoes one. -->
 # 999 - Challenge an instruction that reverses a ticketed decision, before obeying it
 

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=90d1dc7b -->
 <!-- duplicate-checked: grepped this backlog for "receipt", "UNVERIFIED" and "causal". No hits. Filed from a claude_usage_in_taskbar session per root CLAUDE.md's rule that a finding about the global tree belongs in this repo's backlog. Id reserved via reserve-todo-id.ps1. -->
 # The todo template lets a guessed CAUSE be written as fact
 

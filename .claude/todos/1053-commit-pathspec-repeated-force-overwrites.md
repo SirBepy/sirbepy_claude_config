@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=372febd2 -->
 <!-- duplicate-checked: new finding about commit-pathspec.sh flag parsing -->
 # commit-pathspec.sh: a second --force silently replaces the first
 

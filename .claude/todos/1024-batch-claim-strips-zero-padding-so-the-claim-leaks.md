@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=8, reconfirm-count=1, content-hash=f862bbaf -->
 <!-- duplicate-checked: 929 and 953 in done/ were both archived as REFUTED on 2026-09-10 on the strength of live scratch-backlog tests. Those tests were correct AND their conclusion was wrong to generalise: both ran claim-todo.ps1 with a SINGLE padded id, which genuinely works. This todo reproduces the defect in the BATCH form, which neither of them tested, side by side against the single form in the same session. It is not a re-file of a refuted premise; it is the case the refutations missed, and it names why they missed it. -->
 # Batch claim-todo.ps1 strips zero padding, so a padded id's claim leaks and complete-todo warns falsely
 
@@ -116,3 +117,5 @@ not exist *on that path*. A refutation is only as broad as the call it actually 
 should have made was the one the contract mandates. When archiving a todo as refuted, check that the
 reproduction attempted matches the invocation the original report quoted; here the quoted transcripts
 in both 929 and 953 plainly showed a comma-separated `-Id`, and both tests used a single id.
+
+- Root cause confirmed live (/cleanup-todos 2026-10-05, folded from archived duplicate 1072): an unquoted `-Id 16,13,15,01` is parsed by PowerShell as an integer array before the script runs, so `01` arrives as `1`; quoting the list (`-Id "16,13,15,01"`) preserves the padding. The regex in `_shared.ps1` is not the cause.

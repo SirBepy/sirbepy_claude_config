@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=6, reconfirm-count=1, content-hash=c2b37fee -->
 <!-- duplicate-checked: 314 is done/ and added the login preamble itself; 221/293/935/1010 are other skills' stale paths, different surfaces -->
 # flutter-e2e SKILL.md points at a zng-biller script path that no longer exists
 

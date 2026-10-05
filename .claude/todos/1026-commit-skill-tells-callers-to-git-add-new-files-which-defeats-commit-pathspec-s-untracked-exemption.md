@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=8, reconfirm-count=1, content-hash=2f3f90dc -->
 <!-- duplicate-checked: 985 is about WHICH markers should count as "shared checkout"; 1025 is about PRINTING the derived ranges when the refusal fires; 989 is about the refuse-then-print-the-answer shape generally. None of the three touch the untracked/`git add` ordering below, which is a contradiction between SKILL.md's prose and the script's own exemption rather than a property of the refusal itself. Do not fold into any of them: fixing this one removes a whole class of refusals that 985/1025 would still have to handle for tracked files. -->
 # /commit's "git add new files first" instruction silently defeats commit-pathspec.sh's untracked-file exemption
 

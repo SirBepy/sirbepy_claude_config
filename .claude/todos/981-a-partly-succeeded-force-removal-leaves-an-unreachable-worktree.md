@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=cc1bc7ee -->
 <!-- duplicate-checked -->
 <!-- checked against 975 (done/, fixed 2026-09-11). 975 is the PS 5.1 terminating-error trap that
      made the fallback chain unreachable; this is a different failure that only became visible once

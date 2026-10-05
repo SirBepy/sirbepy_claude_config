@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=1, content-hash=1115c28e -->
 <!-- duplicate-checked: 2026-09-29; grepped backlog + done/ for "client-repo", "SirBepy.*origin"; only done/941 and done/433 hit, both predate the client list. -->
 # Move the remaining "origin under SirBepy" checks onto the client-repo list
 

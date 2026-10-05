@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=8, reconfirm-count=1, content-hash=bf912aa8 -->
 <!-- duplicate-checked: grepped this backlog and done/ for "gh pr list", "ground check", "ground-check" on 2026-09-29. Only hit for "gh pr list" is done/445 (PR title convention, unrelated). 1002 is the adjacent live todo and covers verdict LOGIC once the queries return honest data; this one covers query 1 returning dishonest data. Folded the overlapping half into 1002 rather than restating it here. -->
 # Ground check query 1 reads CLEAN when `gh` cannot resolve the repo, because `gh pr list --search` returns `[]` instead of failing
 

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=ac366109 -->
 <!-- duplicate-checked: grepped this backlog and done/ for "visual", "screenshot", "Phase 0" and "close". 459 (id mismatch) and 324 (screenshot deletion moved to /disk-doctor) both concern the screenshot FOLDER, not the check that reads it. Nothing covers the flag being satisfied by the wrong kind of capture. -->
 # /close Phase 0's visual-work check is satisfied by automated screenshots
 

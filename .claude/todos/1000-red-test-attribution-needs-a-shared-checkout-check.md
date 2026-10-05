@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=9a848928 -->
 <!-- duplicate-checked: searched this backlog for "test", "red", "retry", "flaky" and "shared checkout". No existing todo covers attributing a failing test run. The related material is a zng-app memory (feedback_retry_a_failing_test_before_reporting_it), not a todo, and a memory is what already failed here - see Context. -->
 # 1000 - A red test run in a shared checkout needs two mechanical checks before it is reported
 

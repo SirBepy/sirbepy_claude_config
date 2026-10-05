@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-09-10, complexity=HARD, worth=5, reconfirm-count=4, content-hash=182409d3 -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=5, reconfirm-count=5, content-hash=182409d3 -->
 <!-- duplicate-checked -->
 # Rethink the comment rule from what comments are actually worth, in a dedicated session
 

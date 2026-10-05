@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/1004.claim -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=8, reconfirm-count=1, content-hash=aa8e82a8 -->
 <!-- duplicate-checked: 2026-09-24; grepped this backlog for "commit-pathspec" - 985/989/994 all cover the own-range/short-sha REFUSAL behaviour once the script is running. None covers the invocation line in SKILL.md itself being uncallable. done/964 is the todo that created the script. -->
 # `/commit`'s documented `commit-pathspec.sh` line is missing required flags
 

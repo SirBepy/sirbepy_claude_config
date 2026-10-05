@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=f9322e1a -->
 <!-- duplicate-checked: grepped this backlog and done/ for "run_in_background" and "FORBIDDEN". The hits are about the preamble guard's string checks and about orphan processes, not about the rule lacking a legitimate exception. This is the rule's content, not its enforcement. -->
 # The run_in_background ban has no escape for a real concurrency test
 

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=4d6cdf85 -->
 <!-- duplicate-checked: grepped the backlog for "flutter-bump". Only hit is 1064, which is about foreign-hunk-check.sh, a different fix. -->
 # 1065 - /flutter-bump: cover the client push gate and the steps it keeps missing
 

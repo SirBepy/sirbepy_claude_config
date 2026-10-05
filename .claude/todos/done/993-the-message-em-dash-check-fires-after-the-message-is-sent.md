@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/993-the-message-em-dash-check-fires-after-the-message-is-sent.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=2, reconfirm-count=1, content-hash=18e157a3 -->
 <!-- duplicate-checked -->
 <!-- checked against 986 (untracked, filed by a concurrent session 2026-09-12): that one is about
      the em-dash prefilter scanning text-like binaries such as PDFs, a false-positive problem in the
@@ -74,3 +75,4 @@ message check was bolted onto the Stop event, which is the easy place to inspect
   flag it, which is the enforcement working correctly and is itself the point being made.
 - Do not "solve" this by relaxing the rule for chat. The rule is stated as absolute and the dev has
   reaffirmed it; the problem is the timing of the check, not its strictness.
+- Dropped via /cleanup-todos 2026-10-05: already fixed, hooks/em-dash-guard.py runs PreToolUse on send_message/post_message/update_message/ask_user_question (wired in settings.json).

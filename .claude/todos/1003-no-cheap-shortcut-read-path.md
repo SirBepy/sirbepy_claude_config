@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=5, reconfirm-count=1, content-hash=a9098472 -->
 <!-- duplicate-checked: searched this backlog for shortcut/ticket read helpers; this is about a
      missing READ path for Shortcut specifically, not about /ticket's write/ground-check flow -->
 # 1003 - No cheap read-only Shortcut lookup path, so sessions hand-roll curl

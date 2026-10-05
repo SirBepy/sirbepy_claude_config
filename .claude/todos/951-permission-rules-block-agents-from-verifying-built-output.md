@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-09-10, complexity=HARD, worth=8, reconfirm-count=1, content-hash=490f4b79 -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=8, reconfirm-count=2, content-hash=490f4b79 -->
 <!-- duplicate-checked -->
 <!-- checked against 453-silent-output-style-duplicates-terse-replies-snippet.md and
      831-ticket-skill-log-append-blocked-from-project-sessions.md (in done/): both read in full,

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=fa99b9c0 -->
 <!-- duplicate-checked: grepped active + done/ for "4a", "memory check", "feedback_clockify" -
 done/82-clockify-reconciliator-memory-check-and-unlogged-day.md is what CREATED step 4a (it added the
 memory-check step at all). This is the follow-on: the step exists and was skipped with nothing

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=9, reconfirm-count=1, content-hash=06f16024 -->
 <!-- duplicate-checked: 1046 is the shell redirect in the same recipe, 806 and 872 are the working-tree foreign-hunk check, 797 is positional refs; none covers committing hunks past a shared index that holds another session's staged files, or the HEAD race of a private index -->
 # Partial-hunk commit in a shared index has no safe recipe
 

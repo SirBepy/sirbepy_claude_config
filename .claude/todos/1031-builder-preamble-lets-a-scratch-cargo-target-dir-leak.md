@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=8ed3d907 -->
 <!-- duplicate-checked: grepped this backlog and done/ for CARGO_TARGET_DIR / "scratch target" / sstest-target, zero hits. done/391-builders-have-no-sanctioned-way-to-get-a-whole-tree-baseline.md is adjacent but a different defect: it was about builders having no sanctioned baseline MECHANISM, and produced the preamble's current "Taking a baseline" clause. This is about that clause's sanctioned escape hatches carrying no cleanup obligation for a scratch target dir specifically. -->
 # The builder preamble lets a scratch CARGO_TARGET_DIR leak, and nothing can reclaim it
 

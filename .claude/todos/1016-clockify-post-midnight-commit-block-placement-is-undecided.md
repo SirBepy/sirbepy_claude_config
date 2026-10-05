@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=5, reconfirm-count=1, content-hash=43a38416 -->
 <!-- duplicate-checked: grepped active + done/ for "overnight", "small hours", "small-hours",
 "late-night", "02:03" - the only hits are done/485 (branch scoping), done/815 (fetch staleness),
 done/90 (hubstaff align) and done/91 (midnight-to-midnight WINDOW resolution). None covers where a

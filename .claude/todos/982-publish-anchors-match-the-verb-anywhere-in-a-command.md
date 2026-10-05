@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=073b9545 -->
 <!-- duplicate-checked -->
 <!-- checked against 971 (done/, fixed 2026-09-11) and 951. 971 was about the guard prescribing a
      dry-run flag to tools that lack one, which is now fixed per tool; this is a different failure,

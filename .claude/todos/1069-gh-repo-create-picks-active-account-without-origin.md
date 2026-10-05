@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=6, reconfirm-count=1, content-hash=5dc4a2af -->
 <!-- duplicate-checked: 210 (done) was manual multi-account wrappers, 235 (done) was create-pr image upload; neither covers repo creation with no origin -->
 # gh-account-switch hook can't pick the account for `gh repo create` in a repo with no origin yet
 

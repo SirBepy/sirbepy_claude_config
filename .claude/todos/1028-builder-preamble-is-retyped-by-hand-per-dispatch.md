@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=1, content-hash=803b66f6 -->
 <!-- duplicate-checked: grepped this backlog and done/ for "preamble", "dispatch", "builder" and "dispatch-preamble-guard". Entries about the guard HOOK concern what it checks; nothing covers the orchestrator-side cost of composing the block. refs/builder-preamble.md exists as the paste source, which is the thing this todo says is not enough. -->
 # The builder preamble is retyped by hand into every dispatch
 
@@ -75,3 +76,5 @@ confirm it is accepted, rather than reasoning that the markers are present.
   them from report text in that same run. That is a second manual tax with the same shape, and it is
   worth deciding whether a builder should get a staging file it CAN write. Not folded in here because
   the fix is a different hook and a different contract; file separately if it recurs.
+
+- Supporting evidence folded from archived duplicate 1006 (/cleanup-todos 2026-10-05): reading `refs/builder-preamble.md` in the same turn, right before drafting a dispatch, fixed preamble compliance on one run, which argues for a composer that reads the file rather than relying on memory.

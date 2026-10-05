@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=1, content-hash=33a49b33 -->
 <!-- duplicate-checked: no live or done todo covers the preview skill's image branch; the render_markdown.py script covers markdown only -->
 # /preview image branch needs a real gallery script instead of a hand-typed builder per push
 

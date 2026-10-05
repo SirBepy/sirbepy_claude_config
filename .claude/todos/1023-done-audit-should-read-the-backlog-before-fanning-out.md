@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=8, reconfirm-count=1, content-hash=0c6dbe0c -->
 <!-- duplicate-checked: read 1010 in full. It is the same skill and the same blind spot (the backlog is never consulted) but a different step, failure and fix: 1010 is step 7b orphaning todos AFTER a script deletion; this is steps 3-5 paying for a fan-out that re-derives findings already filed. 1019 is the same skill again, different defect (the API ref denying the story-history endpoint). 233 and 312 are scope/arg-mode changes. 328 is /complete-todo, a different skill. -->
 # 1023 - shortcut-done-audit fans out without reading the project's own todo backlog
 

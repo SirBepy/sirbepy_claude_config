@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/984-pay-down-the-28-skill-descriptions-grandfathered-past-the-budget.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=e5bc0cb5 -->
 <!-- duplicate-checked -->
 <!-- checked against 976 (done/, shipped 2026-09-11). 976 added the gate and trimmed the one
      in-scope offender; it deliberately grandfathered everything else so the new gate would not

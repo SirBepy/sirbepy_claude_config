@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=8, reconfirm-count=1, content-hash=471ed86e -->
 <!-- duplicate-checked: searched the live backlog and done/ for cleanup-memory, MEMORY.md and reorder. 1007 is the /cleanup-TODOS merge proposal, a different skill and a different problem. Nothing covers the memory dir's concurrency exposure. -->
 # 1014 - /cleanup-memory's reorder step is a whole-file rewrite in a directory several sessions write to
 

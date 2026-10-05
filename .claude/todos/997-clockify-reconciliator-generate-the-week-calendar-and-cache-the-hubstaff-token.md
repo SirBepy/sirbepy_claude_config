@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=1, content-hash=ad618f68 -->
 <!-- duplicate-checked: no todo in this backlog mentions the week calendar, show_preview or hs_get_token caching -->
 # 997 - clockify-reconciliator: script the week calendar and cache the HubStaff access token
 

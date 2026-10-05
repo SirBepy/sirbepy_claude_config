@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=3035201e -->
 <!-- duplicate-checked: 350 is the PreToolUse hook on tool-call text args; this is the diff prefilter mis-scanning binary blobs. The other hits share only the words commit/line. -->
 # em-dash prefilter scans text-like binaries (PDFs) and blocks the commit with no way to fix the line
 

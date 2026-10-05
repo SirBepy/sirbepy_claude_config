@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=6, reconfirm-count=1, content-hash=02823346 -->
 <!-- duplicate-checked: 394 (done/) asked the same question and was relocated to claude_usage_in_taskbar todo 911, which settled it on 2026-10-02. This is the skill edit 394 said still lands here. -->
 # create-pr: drop the "parser only reads send_message" marker branch
 

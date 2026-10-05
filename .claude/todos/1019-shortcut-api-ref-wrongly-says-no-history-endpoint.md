@@ -1,3 +1,4 @@
+<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=8, reconfirm-count=1, content-hash=e3b0c442 -->
 # refs/shortcut-api.md wrongly says there is no story history endpoint
 
 `GET /api/v3/stories/<id>/history` exists and returns real workflow-state transitions with
