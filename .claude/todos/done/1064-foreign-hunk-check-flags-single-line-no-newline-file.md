@@ -40,3 +40,7 @@ never covers it. Would check the hunk-header parsing in `foreign-hunk-check.sh`.
 - The diff above, with `--own flutter.version:1-1`, exits 0 with `flutter.version: clean`.
 - A test case for a count-less `@@ -N +N @@` header sits alongside the script's existing tests.
 - `/flutter-bump` commits no longer need `--force foreign-hunk`.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), test-first (RED against HEAD, then GREEN).

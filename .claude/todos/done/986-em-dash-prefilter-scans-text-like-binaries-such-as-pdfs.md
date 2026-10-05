@@ -37,3 +37,7 @@ In `skills/commit/em-dash.sh` (and check `comment-noise.sh` / `secret-scan.sh` f
 - A repo with a text-heavy PDF (reproduce with wedding_invitation's `public/rite-of-marriage.pdf` at `f1473c3`, with the `.gitattributes` line removed in a scratch worktree) commits cleanly through `commit-pathspec.sh` with no `.gitattributes` help.
 - A `.md`/`.jsx` with an added em dash is still flagged (existing `hooks/test_*` or a scratch check).
 - `ci/run_all.py` green.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), test-first (RED against HEAD, then GREEN).

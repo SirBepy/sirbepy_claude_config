@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Fixture suite for secret-scan.sh, comment-noise.sh, em-dash.sh, overlap-check.sh (todo 810),
-# seeded from done/412, done/460, done/456, done/778. Invoke directly:
+# foreign-hunk-check.sh (todos 1033, 1064), seeded from done/412, done/460, done/456, done/778.
+# Invoke directly:
 #   bash skills/commit/test_prefilters.sh
 # The comment-noise.sh cut-ratio arithmetic (the exact-25%-boundary math) has no test coverage
 # here: its old suite, test_comment_noise.sh, was deleted with the cap it tested (todo 922).
@@ -13,6 +14,7 @@ secret_scan="$script_dir/secret-scan.sh"
 comment_noise="$script_dir/comment-noise.sh"
 em_dash="$script_dir/em-dash.sh"
 overlap_check="$script_dir/overlap-check.sh"
+foreign_hunk_check="$script_dir/foreign-hunk-check.sh"
 
 fail=0
 tmp_dirs=()
@@ -215,6 +217,62 @@ printf 'line1\nCHANGED2-AGAIN\nline3\n' > "$local/f.txt"
 out=$(cd "$local" && "$overlap_check" f.txt); rc=$?
 check "overlap-check.sh reports a hunk-level hit against an unpushed local commit" \
   1 'f\.txt:[0-9]+-[0-9]+ [0-9a-f]{7,40} change line2' '' "$out" "$rc"
+
+# --- foreign-hunk-check.sh: pure deletion reports clean, not foreign (todo 1033) ---
+# complete-todo.ps1's archive move (rm + git add of the destination only) leaves the source
+# half unstaged - " D" in git status, not a `git rm` - so it has to be reproduced that way,
+# not with `git mv`, or git's own rename detection folds the two paths back into one.
+fh1=$(new_repo); tmp_dirs+=("$fh1")
+mkdir -p "$fh1/.claude/todos/done"
+printf 'line one\nline two\nline three\n' > "$fh1/.claude/todos/24-foo.md"
+git -C "$fh1" add .claude/todos/24-foo.md
+git -C "$fh1" commit -q -m "add todo"
+rm "$fh1/.claude/todos/24-foo.md"
+printf 'line one\nline two\nline three\n' > "$fh1/.claude/todos/done/24-foo.md"
+git -C "$fh1" add .claude/todos/done/24-foo.md
+out=$(cd "$fh1" && "$foreign_hunk_check" --own .claude/todos/done/24-foo.md:1-3 \
+  .claude/todos/24-foo.md .claude/todos/done/24-foo.md); rc=$?
+check "foreign-hunk-check.sh reports a pure deletion clean instead of foreign" \
+  0 '24-foo\.md: clean \(pure deletion' '' "$out" "$rc"
+
+# A path with both an added and a removed line is a real modification, not a pure deletion -
+# an empty --own must still mark the whole diff foreign, exactly as before this fix.
+printf 'a\nb\nc\n' > "$fh1/mixed.txt"
+git -C "$fh1" add mixed.txt
+git -C "$fh1" commit -q -m "add mixed.txt"
+printf 'a\nmine\nforeign\n' > "$fh1/mixed.txt"
+out=$(cd "$fh1" && "$foreign_hunk_check" mixed.txt); rc=$?
+check "foreign-hunk-check.sh still treats an unattributed real modification as foreign" \
+  1 'no own-ranges given, treating entire diff as foreign' '' "$out" "$rc"
+
+# --- foreign-hunk-check.sh: count-less single-line hunk header, no trailing newline (todo 1064) ---
+# `@@ -1 +1 @@` omits the ",1" git prints for a multi-line hunk; the no-newline marker line
+# that follows must not be miscounted as a content line shifting the own-range off by one.
+fh2=$(new_repo); tmp_dirs+=("$fh2")
+printf '3.47.5' > "$fh2/flutter.version"
+git -C "$fh2" add flutter.version
+git -C "$fh2" commit -q -m seed
+printf '3.47.6' > "$fh2/flutter.version"
+out=$(cd "$fh2" && "$foreign_hunk_check" --own flutter.version:1-1 flutter.version); rc=$?
+check "foreign-hunk-check.sh covers a count-less no-newline single-line hunk with own-range 1-1" \
+  0 'flutter\.version: clean' '' "$out" "$rc"
+
+# --- em-dash.sh: a text-heavy binary (PDF) is skipped, not scanned (todo 986) ---
+# Git's own binary sniff only checks the first ~8KB for a NUL byte; a PDF whose early bytes
+# are plain-text structure (as real PDFs are) clears that check and is handed to the scanner
+# as if it were prose, so the extension has to gate it independently of git's heuristic.
+edbin=$(new_repo); tmp_dirs+=("$edbin")
+ED=$(printf '\xe2\x80\x94')
+{
+  printf '%%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\nBT /F1 12 Tf (hello%sworld) Tj ET\n' "$ED"
+  head -c 9000 /dev/zero | tr '\0' 'x'
+} > "$edbin/doc.pdf"
+out=$(cd "$edbin" && bash "$em_dash" doc.pdf 2>/dev/null); rc=$?
+check "em-dash.sh does not flag a text-heavy PDF containing an em dash" 0 '' 'doc\.pdf' "$out" "$rc"
+
+printf 'hello%sworld\n' "$ED" > "$edbin/note.md"
+out=$(cd "$edbin" && bash "$em_dash" note.md 2>/dev/null); rc=$?
+check "em-dash.sh still flags an em dash in a plain-text file" 0 'note\.md:1' '' "$out" "$rc"
 
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"

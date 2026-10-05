@@ -62,11 +62,16 @@ for f in "$@"; do
   fi
 
   if [ -z "$spec" ]; then
-    if [ -n "$diff_out" ]; then
+    if [ -z "$diff_out" ]; then
+      printf '%s: clean (no diff)\n' "$f"
+    # A pure deletion has no '+' content line (only the '+++ /dev/null' header, which starts
+    # with three pluses, not one) - no new-file line range could ever be declared for it, so
+    # asking the caller for --own here is asking for something that cannot exist (todo 1033).
+    elif ! printf '%s\n' "$diff_out" | grep -qE '^\+[^+]|^\+$'; then
+      printf '%s: clean (pure deletion, no added lines to attribute)\n' "$f"
+    else
       printf '%s: no own-ranges given, treating entire diff as foreign\n' "$f"
       status=1
-    else
-      printf '%s: clean (no diff)\n' "$f"
     fi
     continue
   fi
@@ -99,6 +104,9 @@ for f in "$@"; do
         if line_is_own "$ln" "$spec"; then own_ct=$((own_ct + 1)); else foreign_ct=$((foreign_ct + 1)); fi
         ln=$((ln + 1)) ;;
       '-'*) ;;
+      # Marker line, not content - a one-line hunk with no trailing newline emits this right
+      # after the '-' line, and it is not itself a '+' line counted toward ln (todo 1064).
+      "\\ "*) ;;
       *) ln=$((ln + 1)) ;;
     esac
   done <<<"$diff_out"
