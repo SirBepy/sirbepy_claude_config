@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=1, content-hash=1277c0e8 -->
+<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=6, reconfirm-count=2, content-hash=1277c0e8 -->
 # A read-only live Firebase inspect helper
 
 **Type:** skill-improvement
@@ -41,6 +41,12 @@ the right default.
 
 Run each subcommand against countoff (`generic-sirbepy-project`). `rules` should report the
 2026-09-30 release as matching the repo's `firestore.rules`.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
+
+- [ ] [SEC] The auto-mode classifier blocked a builder writing a read-only helper that reads the firebase-tools token cache. Options: Joe allows that file kind for one builder run / Joe builds it himself / drop the helper.
 
 ## Notes
 

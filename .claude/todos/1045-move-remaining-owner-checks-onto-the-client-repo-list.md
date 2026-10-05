@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=1, content-hash=1115c28e -->
+<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=6, reconfirm-count=2, content-hash=1115c28e -->
 <!-- duplicate-checked: 2026-09-29; grepped backlog + done/ for "client-repo", "SirBepy.*origin"; only done/941 and done/433 hit, both predate the client list. -->
 # Move the remaining "origin under SirBepy" checks onto the client-repo list
 
@@ -45,3 +45,9 @@ the push half is now hook-enforced, the commit half is not.
 - `skills/commit/test_commit_pathspec.sh` has a case where a commit touching only `src/x.ts` is
   refused, and passes with `--force coverage-tests`.
 - `python ci/run_all.py` shows no new failures versus HEAD.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
+
+- [ ] [ARCH] Should the /commit fold-ask and the /cleanup-todos worth cap read the shared client-repo list instead of their own `SirBepy` check? Unifying flips Fibo-Studio repos from asking to never asking. Options: unify / keep the two checks separate.

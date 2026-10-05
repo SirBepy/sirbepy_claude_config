@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=fb7bb81b -->
+<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=4, reconfirm-count=2, content-hash=fb7bb81b -->
 <!-- duplicate-checked: nothing in this backlog covers post-deletion reference sweeping. 1006 concerns pasting the builder preamble, not deletion fallout. PLAN.md mentions shortcut-done-audit only as a scheduling line. -->
 # 1010 - shortcut-done-audit step 7b deletes a script without sweeping the backlog for references to it
 
@@ -63,3 +63,4 @@ the backlog for what is left.
 ## Notes
 
 - /loop-todos 2026-10-05: step 7b backlog sweep, AC-vs-mention split and recovery note shipped in skills/shortcut-done-audit/SKILL.md (same commit as 1019/1023/1051). Only the live-verification Acceptance bullet remains: run 7b once on a real ticket and confirm the note lands and the `git show <commit>~1:<path>` recovery returns the file.
+- Archived by /cleanup-todos 2026-10-06 (loop-todos cycle 2), worth 4: code shipped in cycle 1; only a live Shortcut run of 7b remained, which happens on its next real use, not as a standalone todo.

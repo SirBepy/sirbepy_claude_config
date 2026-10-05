@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=6, reconfirm-count=1, content-hash=d2e17e7f -->
+<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=5, reconfirm-count=2, content-hash=d2e17e7f -->
 <!-- duplicate-checked: 1035 is about hardcoding "Joe" in skill prose, 997 is about generating the calendar and caching the hubstaff token - both distinct from this visual-critique-followup list, only sharing "clockify/week/preview" vocabulary -->
 # clockify-week preview: unaddressed P2/P3 findings from the 2026-09-28 impeccable critique
 
@@ -57,6 +57,12 @@ result does, per this session's own back-and-forth pattern.
 - Column dividers and/or hour gridlines are visibly distinguishable at normal viewing distance.
 - `.chip-old` has a non-default accent color.
 - Joe has seen and approved (or explicitly declined) each change live in the preview panel.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
+
+- [ ] [UX] Approve the clockify week card shown 2026-10-05, and say whether the remaining type-scale and empty-weekend hatch items are wanted. Options: approve and do both / approve and drop both / list changes.
 
 ## Notes
 

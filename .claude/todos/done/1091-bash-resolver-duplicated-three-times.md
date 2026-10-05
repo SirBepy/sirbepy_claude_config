@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=3, reconfirm-count=1, content-hash=816c2c7d -->
 <!-- duplicate-checked: 2026-10-05; grepped backlog + done/ + dropped-findings.log for "resolve_bash" and "Resolve-BashExe", no hit. -->
 # Decide whether the Git-for-Windows bash resolver gets one shared home
 
@@ -25,3 +26,7 @@ Pick one:
 
 ## Acceptance
 - The chosen option is applied, and `python ci/run_all.py` passes.
+
+## Notes
+
+- Archived by /cleanup-todos 2026-10-06 (loop-todos cycle 2), worth 3: the duplicate resolve_bash copies are documented on purpose in split-hunks.py's docstring; churn only.

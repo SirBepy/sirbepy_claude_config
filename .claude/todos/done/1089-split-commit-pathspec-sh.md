@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=4, reconfirm-count=1, content-hash=7d1cb821 -->
 <!-- duplicate-checked: 2026-10-05; grepped backlog + done/ for "commit-pathspec" split / "session-liveness" / "coverage-check.sh", no hit. -->
 # Split commit-pathspec.sh's session-liveness and coverage-check blocks into sibling scripts
 
@@ -26,3 +27,7 @@ to `skills/commit/overlap-check.sh` and `skills/commit/foreign-hunk-check.sh`.
 ## Acceptance
 - `bash skills/commit/test_commit_pathspec.sh` passes with no assertion edits.
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- Archived by /cleanup-todos 2026-10-06 (loop-todos cycle 2), worth 4: behavior-neutral split of a working script, no misfire; payoff does not justify churn on the commit tool every run depends on.

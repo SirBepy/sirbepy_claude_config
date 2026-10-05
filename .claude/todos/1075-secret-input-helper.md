@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=5, reconfirm-count=1, content-hash=46c68d56 -->
+<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=5, reconfirm-count=2, content-hash=46c68d56 -->
 <!-- duplicate-checked: surfaced from mc_plugins_tag session 2026-10-03 -->
 # A global way for Joe to hand Claude a secret without pasting it in chat
 
@@ -17,3 +17,9 @@ Either (a) promote the script to a global tool (e.g. `~/.claude/tools/set-secret
 
 ## Acceptance
 - A session asked for a secret uses the standard helper without inventing one, and the value never appears in the transcript.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
+
+- [ ] [SEC] How should Claude collect a secret from Joe without it entering the transcript? Options: (a) promote the WinForms prompt script to a global `tools/set-secret.ps1` / (b) file a Conductor MCP `request_secret` tool in claude_usage_in_taskbar's backlog / drop.

@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=3, reconfirm-count=1, content-hash=1462b151 -->
 <!-- duplicate-checked: 2026-10-05; grepped backlog + done/ for "git_dash_c_path", only done/1044 (the fix that introduced resolve_push_target) hits. -->
 # push-gate.py's git_dash_c_path duplicates resolve_push_target and only a test calls it
 
@@ -22,3 +23,7 @@ Delete `git_dash_c_path` and point its test cases at `resolve_push_target` (or a
 ## Acceptance
 - `python hooks/test_push_gate.py` prints ALL PASS with the same case count.
 - `grep -n git_dash_c_path hooks/` finds nothing.
+
+## Notes
+
+- Archived by /cleanup-todos 2026-10-06 (loop-todos cycle 2), worth 3: dead test-only helper in push-gate.py, harmless; DRY churn.

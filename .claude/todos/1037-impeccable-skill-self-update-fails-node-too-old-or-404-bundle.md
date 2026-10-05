@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=1, content-hash=1d2b35f4 -->
+<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=4, reconfirm-count=2, content-hash=1d2b35f4 -->
 <!-- duplicate-checked: 327 is a Shortcut search skill gap, 489 is a mega-todos verify-reachability bug, 889 is a Flutter/zng-app build clobber - none are about impeccable's own self-update; the guard only matched on generic "skill/update/verify/bundle" vocabulary -->
 # impeccable skill self-update fails (Node too old and/or a 404 bundle-verify)
 
@@ -47,6 +47,12 @@ would be an overreach.
 - `impeccable` skill reports as updated to the latest version, OR
 - A clear, confirmed reason is recorded for why it can't be updated on this machine right now
   (e.g. "blocked on Node upgrade, Joe deferred it").
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
+
+- [ ] [TOOLING] `npx impeccable update` needs Node >= 22.18.0 (machine has 22.13.0), and bumping Node affects every Node tool on the machine. Options: bump Node now / wait on upstream issue #479 / drop the update.
 
 ## Notes
 

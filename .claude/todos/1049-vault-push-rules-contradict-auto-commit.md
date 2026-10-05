@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=61745638 -->
+<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=6, reconfirm-count=2, content-hash=61745638 -->
 <!-- duplicate-checked: 229 is the /obsidian skill's arg parsing and 467 is read-once enforcement; this is a contradiction between three push rules -->
 # Three rules disagree on whether Claude may push the Obsidian vault
 
@@ -27,3 +27,9 @@ Decide with Joe which rule wins for the vault specifically. If the vault is mean
 ## Acceptance
 
 The three documents give the same answer, and a vault commit made from a vault session either pushes or doesn't without any rule contradicting it.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
+
+- [ ] [ARCH] The vault's CLAUDE.md says every commit is pushed at once, while auto-commit.md says a push always needs Joe's ask, and obsidian-git has been dead since 2026-08-25. Options: a named vault exception in auto-commit.md (Claude pushes vault commits) / drop the vault's push rule (vault commits stay local until Joe pushes).

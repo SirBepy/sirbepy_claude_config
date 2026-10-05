@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=5, content-hash=388b488c -->
+<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=7, reconfirm-count=6, content-hash=388b488c -->
 <!-- duplicate-checked -->
 # Six of ~30 hook events are wired, and all 41 hooks use exit codes only
 
@@ -87,6 +87,12 @@ The `Stop` + `decision: block` field is what todo 427 depends on, so read that o
 - If the em-dash hook is converted to `"decision": "block"`, its existing test still passes and the
   reason text reaches the model.
 - No existing hook's behavior regresses: all 13 current hook tests still pass, real output pasted.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
+
+- [ ] [SEC] Wire a `PermissionRequest` hook, which changes what every concurrent session may do. Options: wire it now with Joe watching / keep deferred / drop.
 
 ## Notes
 

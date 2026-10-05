@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=e225b69d -->
+<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=6, reconfirm-count=2, content-hash=e225b69d -->
 # Autopilot sends too many chat bubbles; define what Joe wants surfaced and use write_plan for the rest
 
 **Type:** skill-improvement
@@ -50,6 +50,12 @@ Where the rules live today:
 - Joe's answer recorded here.
 - `skills/autopilot/SKILL.md` has the Reporting section; a dry read of it gives an unambiguous
   answer to "do I send a bubble for this commit?".
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
+
+- [ ] [UX] During an /autopilot or /loop-todos run, which events should earn a chat bubble? Options: only blockers, reversible decisions and the final summary (everything else in write_plan) / also each commit / also each todo closed.
 
 ## Notes
 

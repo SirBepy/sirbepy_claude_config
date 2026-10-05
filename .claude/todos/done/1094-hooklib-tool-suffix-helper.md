@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=4, reconfirm-count=1, content-hash=0bcc6b0a -->
 <!-- duplicate-checked: 2026-10-05; grepped backlog + done/ for "tool_suffix" and "rsplit(\"__\"", no hit. -->
 # Add a tool_suffix helper to _hooklib instead of a sixth copy of the MCP-name strip
 
@@ -24,3 +25,7 @@ from every live session.
 ## Acceptance
 - `python ci/run_all.py` passes, including the hook import smoke check.
 - `grep -n 'rsplit("__", 1)' hooks/*.py` finds only `_hooklib.py`.
+
+## Notes
+
+- Archived by /cleanup-todos 2026-10-06 (loop-todos cycle 2), worth 4: DRY-only helper across 7 live guard hooks; editing shared hook files for no behaviour gain risks bricking live sessions.

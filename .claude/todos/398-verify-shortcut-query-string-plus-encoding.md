@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=6, reconfirm-count=5, content-hash=4f44421f -->
+<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=5, reconfirm-count=6, content-hash=4f44421f -->
 <!-- duplicate-checked -->
 # Settle whether Shortcut's search API decodes a literal plus as a space
 
@@ -42,6 +42,12 @@ wrong story list feeds outbound work the dev sends as his own words.
 - The question is answered with a receipt: a doc URL fetched, or a real API response.
 - Both call sites use the settled form, or the canonical ref explicitly blesses both.
 - `refs/shortcut-api.md` records the answer so it is not re-derived.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
+
+- [ ] [TOOLING] Run the two read-only Shortcut `search/stories` calls (literal `+` vs `%20`) in an attended session; an unattended run declines a credentialed call to a client tracker. Options: run them attended / drop the footnote and keep both forms documented.
 
 ## Notes
 

@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=5, reconfirm-count=1, content-hash=e3250126 -->
+<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=5, reconfirm-count=2, content-hash=e3250126 -->
 # Finish remote Wake-on-LAN: FRITZ!Box WireGuard tunnel + verify wake from outside the LAN
 
 **Type:** task
@@ -118,6 +118,12 @@ retries a failed password), `wol-sniff.ps1` (UDP 7/9 listener, self-tested), `wo
 - [ ] `adb shell pm list packages | findstr wireguard`
 - [ ] `powershell -File C:\tmp\fritz.ps1 -Password <ask Joe> -Page shareWireguard -Out C:\tmp\fritz-wg.json`, then check whether `userConnections`/`boxConnections` are still empty
 - [ ] Compare the router WAN IP (TR-064 `GetExternalIPAddress` on `:49000/igdupnp/control/WANIPConn1`) with `https://api.ipify.org` to confirm there's still no CGNAT
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
+
+- [ ] [TOOLING] Joe: press the FRITZ!Box two-factor button at the router so the WireGuard tunnel can be created.
 
 ## Notes
 

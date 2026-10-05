@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=7, reconfirm-count=1, content-hash=073b9545 -->
+<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=8, reconfirm-count=2, content-hash=073b9545 -->
 <!-- duplicate-checked -->
 <!-- checked against 971 (done/, fixed 2026-09-11) and 951. 971 was about the guard prescribing a
      dry-run flag to tools that lack one, which is now fixed per tool; this is a different failure,
@@ -73,6 +73,12 @@ the rest of the session.
 - The change is written in ONE complete file write, never partial edits: this is a live guard that
   every concurrent session runs on every Bash command.
 - `python ci/run_all.py` passes.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
+
+- [ ] [SEC] Finish steps 3 and 5 (stop a verb inside quoted text or a heredoc from matching the destructive-command guard). It loosens a core safety guard, so it needs Joe present. Options: fix it in an attended session / leave it as a documented gap.
 
 ## Notes
 

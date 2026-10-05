@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=3, reconfirm-count=1, content-hash=8d31e0fa -->
 <!-- duplicate-checked: 2026-10-05; done/854 is the Python run_main shim in hooks/test_*.py, a different file family. No open todo covers the bash new_repo/check helpers. -->
 # Share one bash test harness across skills/commit's three test suites
 
@@ -22,3 +23,7 @@ suites. Keep each suite's own pass/fail summary line unchanged.
 ## Acceptance
 - All three suites pass, and `python ci/run_all.py` passes.
 - `grep -c 'new_repo()' skills/commit/test_*.sh` reports 0 definitions outside test-harness.sh.
+
+## Notes
+
+- Archived by /cleanup-todos 2026-10-06 (loop-todos cycle 2), worth 3: DRY-only test harness extraction, no incident.

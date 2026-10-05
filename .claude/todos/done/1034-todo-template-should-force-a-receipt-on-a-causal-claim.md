@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-05, complexity=EASY, worth=7, reconfirm-count=1, content-hash=90d1dc7b -->
+<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=4, reconfirm-count=2, content-hash=90d1dc7b -->
 <!-- duplicate-checked: grepped this backlog for "receipt", "UNVERIFIED" and "causal". No hits. Filed from a claude_usage_in_taskbar session per root CLAUDE.md's rule that a finding about the global tree belongs in this repo's backlog. Id reserved via reserve-todo-id.ps1. -->
 # The todo template lets a guessed CAUSE be written as fact
 
@@ -78,3 +78,4 @@ a mechanism gap, so a doc fix may be enough.
 ## Notes
 
 - /loop-todos 2026-10-05: the template's Context section now carries the receipt-or-UNVERIFIED contract (4c66704). Open: spot-check the next ~10 filed todos for compliance before deciding on a hook.
+- Completed by loop-todos cycle 2 on 2026-10-06: template shipped in 4c66704; spot-check of the 7 todos filed after it (1095-1101) found 1097/1099 cite source receipts, 1095/1096/1098/1100 make no causal claim, and 1101's 'Likely cause' lacked the label, now marked UNVERIFIED.
