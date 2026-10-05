@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=7, reconfirm-count=1, content-hash=45ac5a46 -->
 # Concurrent ci/run_all.py runs flake two test suites
 
 **Type:** task
@@ -35,3 +36,7 @@ which is a separate habit problem but was triggered by the slow, overlapping run
 
 - Six concurrent `python ci/run_all.py` invocations all report "OK: all 6 checks passed".
 - No suite's verdict depends on another run's scratch files.
+
+## Notes
+
+- Done in loop-todos cycle 2 (2026-10-06): check_skill_tests timeout 120 -> 600; reserve-todo-id.ps1 takes an injectable -Now so the boundary test pins one clock instead of racing wall time; the secret-write-guard missing-patterns test runs a temp copy of the hook instead of renaming the shared secret-patterns.txt. Each suite passes 3x sequential and 5x concurrent; the 6-way concurrent run_all acceptance runs at the Phase 2 gate.

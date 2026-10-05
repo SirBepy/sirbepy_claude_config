@@ -208,7 +208,7 @@ def check_skill_tests(root: Path) -> tuple:
         try:
             proc = subprocess.run(
                 runner, cwd=str(root), capture_output=True,
-                text=True, encoding="utf-8", errors="replace", timeout=120,
+                text=True, encoding="utf-8", errors="replace", timeout=600,
             )
             ok, out, err = proc.returncode == 0, proc.stdout, proc.stderr
         except (OSError, subprocess.TimeoutExpired) as e:

@@ -6,8 +6,10 @@ Exits 0 on all-pass, 1 on any failure, printing a PASS/FAIL line per case.
 
 import json
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import _testlib
@@ -136,17 +138,32 @@ def check_fails_open_on_garbage() -> bool:
 
 
 def check_fails_loud_on_missing_patterns() -> bool:
-    real = HOOKS_DIR / "secret-patterns.txt"
-    moved = HOOKS_DIR / "secret-patterns.txt.movedfortest"
-    payload = json.dumps({"tool_input": {"file_path": "x.txt", "content": AKIA}})
-    real.rename(moved)
-    try:
+    """Exercises the missing-pattern-file path on a PRIVATE copy of the hook,
+    never by renaming the real shared hooks/secret-patterns.txt in place.
+
+    The old version renamed-away-and-back the one real file every concurrent
+    `ci/run_all.py` invocation in this checkout reads, so a sibling process
+    mid-flight on ANY other case here (e.g. check_env_example_write) could
+    have its subprocess call land in the gap and see the file briefly
+    missing - not a bug in this test's own cases, but this case reaching
+    outside its own sandbox into shared repo state (todo 1082). secret-write-
+    guard.py resolves its PATTERNS_PATH from its own file's directory
+    (`_HOOKS_DIR = Path(__file__).resolve().parent`), so copying the hook
+    plus its _hooklib.py and secret-patterns.txt dependency into a scratch
+    temp dir and running THAT copy gets the same missing-file behavior with
+    zero shared mutable state.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_dir = Path(tmp)
+        for name in ("secret-write-guard.py", "_hooklib.py", "secret-patterns.txt"):
+            shutil.copy2(HOOKS_DIR / name, tmp_dir / name)
+        (tmp_dir / "secret-patterns.txt").unlink()
+
+        payload = json.dumps({"tool_input": {"file_path": "x.txt", "content": AKIA}})
         proc = subprocess.run(
-            [sys.executable, str(HOOKS_DIR / "secret-write-guard.py")],
+            [sys.executable, str(tmp_dir / "secret-write-guard.py")],
             input=payload, capture_output=True, text=True,
         )
-    finally:
-        moved.rename(real)
     ok = proc.returncode != 0
     return _testlib.report(ok, f"fails LOUD (exit {proc.returncode}) when pattern file is missing")
 

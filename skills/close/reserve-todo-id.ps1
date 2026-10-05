@@ -39,6 +39,15 @@
 .PARAMETER MaxAttempts
   Bounded retry count on collision. Default 20.
 
+.PARAMETER Now
+  Reference time for staleness math, instead of the live Get-Date. Lets a
+  self-test pin fixture mtimes and the "now" used to age them to the SAME
+  instant, so the 4h/24h boundary comparison no longer depends on how much
+  real wall-clock time elapses between writing the fixture and this script
+  actually running - under concurrent CI load that gap can grow enough to
+  flip a boundary case that was never meant to be live-timing-sensitive
+  (todo 1082). Defaults to Get-Date for real reservations.
+
 .OUTPUTS
   Writes the reserved numeric id (and nothing else) to the success stream so a caller can do
   $id = & reserve-todo-id.ps1 -RepoRoot $root. All other messages go via Write-Host.
@@ -51,10 +60,13 @@
 param(
     [string]$RepoRoot = (Get-Location).Path,
 
-    [int]$MaxAttempts = 20
+    [int]$MaxAttempts = 20,
+
+    [Nullable[DateTime]]$Now = $null
 )
 
 $ErrorActionPreference = 'Stop'
+$effectiveNow = if ($Now) { $Now } else { Get-Date }
 
 function Write-Info($msg) { Write-Host $msg }
 function Write-Fail($msg) { Write-Error $msg }
@@ -67,7 +79,7 @@ if (-not (Test-Path $todosDir)) {
 }
 
 function Remove-StaleReservations {
-    param([string]$TodosDir)
+    param([string]$TodosDir, [DateTime]$Now)
     # A bare pid is not a reliable liveness signal: Windows recycles pids, so once an
     # unrelated process inherits the number, "Get-Process -Id <pid>" reads true forever
     # and the marker never prunes (todo 988, reproduced against a real marker whose
@@ -90,7 +102,7 @@ function Remove-StaleReservations {
                 if ($proc) { $pidAlive = ($proc.StartTime.Ticks -eq $reservedStartTicks) }
             }
 
-            $ageHours = ((Get-Date) - $_.LastWriteTime).TotalHours
+            $ageHours = ($Now - $_.LastWriteTime).TotalHours
             $isStale = if ($hasStartSignal) {
                 # Two-signal marker: today's rule, pid-plus-start-time disambiguates a
                 # recycled pid from the session that actually wrote this reservation.
@@ -144,7 +156,7 @@ $attempt = 0
 while ($attempt -lt $MaxAttempts -and -not $reservedId) {
     $attempt++
 
-    Remove-StaleReservations -TodosDir $todosDir
+    Remove-StaleReservations -TodosDir $todosDir -Now $effectiveNow
     $candidateId = (Get-MaxId -TodosDir $todosDir -DoneDir $doneDir) + 1
 
     $markerPath = Join-Path $todosDir "$candidateId-.reserved"
