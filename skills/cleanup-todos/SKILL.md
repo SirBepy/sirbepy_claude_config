@@ -190,6 +190,43 @@ separate staleness computation here - `last-checked` is the sole staleness signa
 deep or shallow, and Step 5 leaves it UNCHANGED for shallow-tier rows specifically, since nothing
 about them was actually verified this run.
 
+## Step 4.5 - Merge-cluster proposal (read-only)
+
+A different question than Step 2's dedupe: Step 2 asks whether two todos describe the SAME task;
+this asks whether N todos describe DIFFERENT tasks that happen to land in the same file(s), and are
+therefore cheaper to review together than apart (todo 1007). Runs after Step 4 so `worth` scores
+are already available; writes nothing - its output feeds Step 6's report as a proposal, same as
+Step 2's dedupe pairs.
+
+1. **Extract each todo's target files.** Grep each surviving todo's full text (Goal, Context,
+   Approach, Notes) for path-shaped tokens - a run of non-whitespace characters ending in a
+   recognized extension (`.dart .ts .tsx .js .mjs .py .ps1 .md .html .json .yml .yaml .sh .css`, or
+   a project-specific one already seen elsewhere in the backlog). This is mechanical, no subagent:
+   if Step 4 dispatched chunks, have each chunk return a fifth CSV column (`files`, the matched
+   paths pipe-joined) instead of a second read-only pass over content already loaded into that
+   chunk's context; the `INLINE_MAX` branch computes it directly in the orchestrator the same way,
+   since it already holds every todo's text. `update-markers.ps1` ignores unrecognized CSV columns
+   (`Import-Csv` plus access-by-name only), so adding this column needs no change there.
+2. **Group by file overlap, never by topic.** Build an undirected graph: one node per todo, one
+   edge between two todos that name at least one file in common. Each connected component (full
+   transitive closure - a chain A-B, B-C merges all three) is a merge-group candidate. A todo
+   sharing no file with any other produces no edge and is not part of any group.
+3. **Hub-file guard.** A file named by more than `MERGE_FILE_FANOUT` todos (a barrel file, a
+   constants file, `app_router.dart`) would drag unrelated todos into one blob through that file
+   alone. Exclude such a file from the overlap key before building the graph, and name it in the
+   report ("ignored `<path>` as a hub, named by `<N>` todos") rather than silently dropping its pull
+   on the grouping.
+4. **Score each group.** Sum and max of the group's `worth` values from Step 4 - report both, since
+   a group of five 3s is not a 3 (the `175/176/177` case from todo 1007: two cheap todos riding
+   along with one already justified at worth 8).
+5. **Origin gate, the same rule Step 7 already applies to every other destructive proposal.** A
+   group where every member is `ai`/absent-origin is eligible for Step 7 Pass A to execute without
+   asking. A group containing even one `dev`-origin member goes on Step 6's confirm list and waits -
+   this step never merges on its own judgement.
+6. **No overlap, no noise.** Singleton groups produce no proposal. A backlog with no overlapping
+   todos reports "No file-overlap clusters found," the same shape as Step 6's existing "No
+   duplicates found."
+
 ## Step 5 - Update markers
 
 Before writing anything, for every todo still in the backlog after Step 1 (including any
@@ -276,6 +313,10 @@ Contents, in order:
 1. Folder-location audit hits (or "No stray locations found.").
 2. Dedupe-pair count: "Dedupe pairs found: `<N>` (see confirm list below)." or "No duplicates
    found." if zero.
+2a. Merge-cluster proposals from Step 4.5: `<ids> -> one todo, shared files: <paths>, worth:
+   sum=<S> max=<M>` per group, plus any hub-files excluded from grouping, or "No file-overlap
+   clusters found." if zero. An all-`ai`/absent-origin group is also named in 4b (already executed
+   by Pass A); a group touching a `dev`-origin member is also named in item 5's confirm list.
 3. Staleness nag: "`<N>` todos not reconfirmed in `CLEANUP_STALE_DAYS` (14) days or more," computed
    from the PRE-refresh `last-checked` snapshot Step 5 recorded before overwriting it - never from
    the value Step 5 just wrote, which would always read as fresh.
@@ -289,7 +330,9 @@ Contents, in order:
    list the dev scans to decide what is worth their tokens. State the count plainly, including
    when it is zero.
 4b. An **archived** list: everything Step 7's Pass A already moved to `done/`, as `id - title -
-   reason`. This is a record, not a proposal - it has already happened.
+   reason`. This is a record, not a proposal - it has already happened. Includes sources folded
+   into a new merged todo by an all-`ai`/absent-origin Step 4.5 group, noted as `id -> folded into
+   <new-id>`.
 4c. A **relocated** list: everything Step 7's Pass A already moved to another repo's backlog, as
    `id -> new-id@dest-repo - reason`. Also a record, not a proposal.
 5. A unified confirm list, `dev`-origin ONLY: every `origin: dedupe` loser appears here regardless of triage tier
@@ -297,7 +340,8 @@ Contents, in order:
    plus every `origin: drop` suggestion (these are deep-tier only by construction, since shallow
    rows always have `suggested_drop` forced to `false` - not an extra exclusion rule, just a
    consequence of Step 4), plus every `dev`-origin `suggested_relocate` candidate (destination +
-   reason). Each entry: id, title, one-line reason, origin(s).
+   reason), plus every Step 4.5 merge-group containing a `dev`-origin member (ids, shared files,
+   worth sum/max). Each entry: id, title, one-line reason, origin(s).
 6. A claims-check note: the check in Step 7 narrows but does not close a race with another session
    claiming a todo between this report and the dev's reply - worst case is a claimed todo gets
    archived, recoverable by moving it back out of `done/`.
@@ -344,6 +388,28 @@ non-Windows, or missing):
   `<date>`."
 
 Never plain-delete, per the contract.
+
+**Merge (Step 4.5 proposals).** For a group confirmed to merge - automatically in Pass A when
+every member is `ai`/absent-origin, or in Pass B after the dev's reply for a group containing a
+`dev`-origin member:
+
+1. Reserve this backlog's next id: `~/.claude/skills/close/reserve-todo-id.ps1 -RepoRoot <this
+   repo>` - never hand-scan for max+1, the same concurrent-writer race `ai-todos-format.md`
+   already forbids elsewhere in this contract.
+2. Write the merged todo under that id via Edit/Write, in the shape `/pickup --merge`'s Step M3
+   already specifies: every source's own evidence, its own acceptance criteria and its own
+   `file:line` citations, attributed by source id rather than paraphrased together, plus an `##
+   Open questions` section when two sources' content actually contradicts. Reuse that shape - this
+   skill does not reimplement `/pickup --merge`'s merge-writing logic, only triggers the same
+   contract from a different entry point. Delete the `<id>-.reserved` marker once this file is
+   written.
+3. For each source id, run `complete-todo.ps1 -Id <id> -Note "Folded into <new-id> via
+   /cleanup-todos <date> (file-overlap merge: <shared files>)."` - archives it to `done/`, prunes
+   its PLAN.md line, releases any claim, same mechanics as every other archival in this skill.
+
+Archiving a merge source is still subject to the same claims-check immediately before the move
+that every other Step 7 archival uses - a merge source claimed by another session mid-run is
+skipped, not force-merged, and named in the closing message like any other skipped id.
 
 **Relocate.** For a confirmed (or Pass-A, `ai`/absent-origin) `suggested_relocate` id:
 
@@ -411,6 +477,9 @@ into the closing summary as still-pending, for confirmation on a later run.
 - `DEEP_CHUNK_SIZE = 30`, `DEEP_MAX_CHUNKS = 6` - 180 todos of deep coverage per run, chunked by
   ascending id over the full pre-dedupe set. Overflow gets the shallow pass (Step 4). Constants, not
   flags; tune here.
+- `MERGE_FILE_FANOUT = 8` - a file named by more than this many todos is treated as a hub and
+  excluded from Step 4.5's overlap key, so a barrel/constants file can't drag unrelated todos into
+  one merge-group. Constant, not a flag; tune here.
 - `INLINE_MAX = 4` - at or under this many todos in the full pre-dedupe set, Step 4 skips
   chunking/dispatch and does the deep pass inline in the orchestrator instead (todo 942). The real
   criterion is "the orchestrator already read the whole set into context, so a dispatch buys back

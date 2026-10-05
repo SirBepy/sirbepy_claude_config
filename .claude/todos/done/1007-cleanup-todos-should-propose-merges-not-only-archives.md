@@ -102,3 +102,4 @@ Say that in the report, because it is what makes a merge safe to accept quickly.
 - Related but distinct: `/batch-todos` classifies EASY/HARD for execution. This is about the shape
   of the backlog, not about running it. Do not couple them; the skill's own Non-goals section
   already rules that coupling out for v1.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane L9. 1039 test-first via tools/test_reachability.py (RED against HEAD, GREEN after) and re-run on the corpus that filed it (orphan-file: 0); 1007/1014 are procedure changes, untestable beyond ci/run_all.py.
