@@ -827,6 +827,62 @@ out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r30" --ex
 check "a working-tree (never git-rm'd) deletion is excluded from overlap-check/foreign-hunk-check same as a git-rm'd one" \
   0 'todos/1033-example\.md: deleted-unstaged \(excluded from overlap-check/foreign-hunk-check - nothing left to diff\)' 'REFUSED' "$out" "$rc"
 
+# --- directory pathspec expansion (todo 1101): naming an already-tracked directory in the
+# pathspec must not silently drop brand-new untracked files sitting inside it - the previous
+# defect committed only the tracked modification and printed "[commit] committed" with the new
+# file still `??`. Both the modified tracked file and the new file must land ---
+r31=$(new_repo); tmp_dirs+=("$r31")
+mkdir -p "$r31/mydir"
+printf 'tracked content\n' > "$r31/mydir/tracked.txt"
+git -C "$r31" add mydir/tracked.txt
+git -C "$r31" commit -q -m "seed mydir/tracked.txt"
+branch=$(git -C "$r31" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r31" rev-parse HEAD)
+printf 'tracked content EDITED\n' > "$r31/mydir/tracked.txt"
+printf 'brand new in dir\n' > "$r31/mydir/newfile.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r31" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "dir pathspec with modified + new file" -- mydir 2>&1); rc=$?
+check "a tracked-directory pathspec expands to list the new untracked file inside it (todo 1101)" \
+  0 'mydir/newfile\.txt: untracked' 'REFUSED|ERROR' "$out" "$rc"
+if [ "$(git -C "$r31" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: todo 1101 - dir-pathspec commit did not land"
+  fail=1
+else
+  echo "PASS: todo 1101 - dir-pathspec commit landed"
+fi
+if ! git -C "$r31" ls-files --error-unmatch -- mydir/newfile.txt >/dev/null 2>&1; then
+  echo "FAIL: todo 1101 - new file inside the tracked-dir pathspec was not committed"
+  fail=1
+else
+  echo "PASS: todo 1101 - new file inside the tracked-dir pathspec landed in the commit"
+fi
+if [ "$(git -C "$r31" show HEAD:mydir/tracked.txt)" != "tracked content EDITED" ]; then
+  echo "FAIL: todo 1101 - the modified tracked file inside the dir pathspec did not land"
+  fail=1
+else
+  echo "PASS: todo 1101 - the modified tracked file inside the dir pathspec landed"
+fi
+
+# --- regression guard: a WHOLLY untracked directory named as a pathspec entry keeps its
+# existing behaviour (the whole directory is staged and committed via the untracked-classify
+# path, unchanged by the todo-1101 expansion which only triggers for an already-tracked dir) ---
+r32=$(new_repo); tmp_dirs+=("$r32")
+mkdir -p "$r32/freshdir"
+printf 'all new\n' > "$r32/freshdir/a.txt"
+printf 'also new\n' > "$r32/freshdir/b.txt"
+branch=$(git -C "$r32" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r32" rev-parse HEAD)
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r32" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "wholly untracked dir, unchanged behaviour" -- freshdir 2>&1); rc=$?
+check "a wholly untracked directory pathspec still commits every file inside it (regression guard)" \
+  0 'freshdir: untracked' 'REFUSED|ERROR' "$out" "$rc"
+if ! git -C "$r32" ls-files --error-unmatch -- freshdir/a.txt freshdir/b.txt >/dev/null 2>&1; then
+  echo "FAIL: regression guard - a wholly untracked directory no longer commits all its files"
+  fail=1
+else
+  echo "PASS: regression guard - a wholly untracked directory still commits all its files"
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else

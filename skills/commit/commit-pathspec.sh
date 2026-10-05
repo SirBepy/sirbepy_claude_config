@@ -223,6 +223,27 @@ for f in "${files[@]}"; do
   [ "$c" != "deleted-staged" ] && [ "$c" != "deleted-unstaged" ] && diffable_files+=("$f")
 done
 
+# Directory pathspec expansion (todo 1101): an already-tracked directory entry (classified
+# "live" above, since `git ls-files --error-unmatch` matched at least one tracked path inside
+# it) still leaves a brand-new file in that directory as a plain untracked path that
+# `git commit -- <dir>` never adds - git's own pathspec match follows tracked content only, so
+# the file stayed `??` while the script printed "[commit] committed". List every untracked file
+# under the directory and treat each one exactly like a named new file from here on: classified,
+# diffed, staged and committed alongside it. A wholly-untracked directory entry is already
+# classified "untracked" above and `git add -- <dir>` already recurses into it on its own, so it
+# is skipped here to avoid double-processing the same files under a second code path.
+for f in "${files[@]}"; do
+  [ "${class_of[$f]}" = "live" ] || continue
+  [ -d "$repo_root/$f" ] || continue
+  while IFS= read -r newf; do
+    [ -z "$newf" ] && continue
+    [ -n "${class_of[$newf]:-}" ] && continue
+    class_of["$newf"]=untracked
+    files+=("$newf")
+    diffable_files+=("$newf")
+  done < <(git_c ls-files --others --exclude-standard -- "$f")
+done
+
 echo "=== commit-pathspec: $repo_root ==="
 printf '[pathspec] classification:\n'
 for f in "${files[@]}"; do
