@@ -132,6 +132,12 @@ with tempfile.TemporaryDirectory() as tmp:
     ok = proc.returncode == 0 and log4b.exists() and "auth switch --user JosipMuzicZirtue" in log4b.read_text(encoding="utf-8")
     fails += [] if _testlib.report(ok, f"{label} (log={log4b.read_text(encoding='utf-8') if log4b.exists() else None!r})") else [label]
 
+    log4c = tmpdir / "log-no-origin-create-visibility-first.txt"
+    proc = run_hook(fresh_repo, 'gh repo create --visibility public zirtue-corp/real-name', "SirBepy", stub_bin, log4c)
+    label = "no origin, --visibility's value is not read as OWNER/NAME"
+    ok = proc.returncode == 0 and log4c.exists() and "auth switch --user JosipMuzicZirtue" in log4c.read_text(encoding="utf-8")
+    fails += [] if _testlib.report(ok, f"{label} (log={log4c.read_text(encoding='utf-8') if log4c.exists() else None!r})") else [label]
+
     log5 = tmpdir / "log-no-origin-create-noop.txt"
     proc = run_hook(fresh_repo, 'gh repo create mine --private', "SirBepy", stub_bin, log5)
     label = "no origin, repo create resolving to the already-active personal account: no switch call"

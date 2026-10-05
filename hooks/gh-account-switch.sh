@@ -35,7 +35,8 @@ else
       # too, or the value is read as the name and the real owner is missed.
       owner=$(printf '%s' "$cmd" | python -c "import sys,shlex
 value_flags = {'-d', '--description', '-h', '--homepage', '-t', '--team', '-l', '--license',
-               '-g', '--gitignore', '-s', '--source', '-r', '--remote', '-p', '--template'}
+               '-g', '--gitignore', '-s', '--source', '-r', '--remote', '-p', '--template',
+               '--visibility'}
 toks = shlex.split(sys.stdin.read())
 for i, t in enumerate(toks):
     if t == 'create' and i > 0 and toks[i-1] == 'repo':
