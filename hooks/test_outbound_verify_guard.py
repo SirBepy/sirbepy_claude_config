@@ -204,6 +204,18 @@ def check_body_file() -> bool:
     return _testlib.report(ok, "body file content is what gets checked, Windows path intact")
 
 
+def check_body_file_msys() -> bool:
+    with tempfile.TemporaryDirectory() as tmp:
+        body = Path(tmp) / "sc.json"
+        body.write_text(json.dumps({"text": CLAIM}), encoding="utf-8")
+        drive = body.drive.rstrip(":").lower()
+        msys_path = "/" + drive + str(body)[len(body.drive):].replace("\\", "/")
+        command = f"curl -X POST {SC}/123/comments -d @{msys_path}"
+        hit = guard.detect("Bash", {"command": command}, tmp)
+        ok = hit is not None and any(CLAIM in v for v in hit.values)
+    return _testlib.report(ok, "MSYS /c/... body file path is read on Windows")
+
+
 def check_mcp_e2e() -> bool:
     tool_input = {"storyPublicId": 1, "text": CLAIM}
     blocked = run_hook(tool_input, [], tool_name="mcp__shortcut__stories-create-comment") == 2
@@ -216,6 +228,8 @@ def main() -> int:
     fails += _testlib.run_cases(E2E_CASES, check_e2e)
     if not check_body_file():
         fails.append("body file")
+    if not check_body_file_msys():
+        fails.append("body file msys")
     if not check_mcp_e2e():
         fails.append("mcp e2e")
     return _testlib.summarize(fails)

@@ -169,9 +169,16 @@ def prose_from_body(body: str, out: list) -> bool:
     return collect_prose(parsed, out)
 
 
+MSYS_DRIVE_RE = re.compile(r"^/([A-Za-z])/")
+
+
 def read_file(path: str, cwd: str | None) -> str:
     if path in ("-", ""):
         raise Unverifiable("the text is piped from stdin")
+    if os.name == "nt":
+        m = MSYS_DRIVE_RE.match(path)
+        if m:
+            path = f"{m.group(1).upper()}:/{path[m.end():]}"
     p = Path(os.path.expanduser(path))
     if not p.is_absolute() and cwd:
         p = Path(cwd) / p
