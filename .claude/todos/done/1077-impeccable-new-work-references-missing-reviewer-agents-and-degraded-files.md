@@ -47,3 +47,7 @@ the first improvised dispatch for lacking the staging line, one more round trip.
 
 A fresh session following new-work section 7 can spawn the reviewer and documenter (or the named
 fallback) without inventing a prompt, and the dispatch passes `dispatch-preamble-guard` first try.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.
