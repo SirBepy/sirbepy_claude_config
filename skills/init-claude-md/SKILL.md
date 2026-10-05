@@ -1,6 +1,6 @@
 ---
 name: init-claude-md
-description: Generates or updates the project-level CLAUDE.md file. Runs via /init-claude-md standalone or as a step in /bepy-project-setup-web.
+description: Generates or updates the project-level CLAUDE.md file. Step in /bepy-project-setup-web.
 ---
 
 # /init-claude-md

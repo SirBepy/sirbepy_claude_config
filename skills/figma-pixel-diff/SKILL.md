@@ -1,6 +1,6 @@
 ---
 name: figma-pixel-diff
-description: Fetches one Figma node, samples/crops its rendered PNG, and matches a pixel color to the nearest project token. Also measures a local render screenshot against a design screenshot at a different zoom, via a shared anchor.
+description: Matches a Figma node's pixel color to the nearest project token, or diffs a local screenshot against a design mock.
 argument-hint: "<figma-url-or-node-id>"
 ---
 

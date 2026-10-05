@@ -1,6 +1,6 @@
 ---
 name: cleanup-todos
-description: Dedupes todos and scores each for staleness, complexity and worth; archives dead ai-origin ones, never touches dev-origin unconfirmed. Invoked as /cleanup-todos, and chain-invoked unattended by /auto-do-todos as its own Step 2.
+description: Scores todos for staleness/complexity/worth; archives dead ai-origin, never dev-origin. /cleanup-todos, /auto-do-todos.
 ---
 
 # /cleanup-todos

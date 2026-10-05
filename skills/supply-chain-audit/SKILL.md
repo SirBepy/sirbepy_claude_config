@@ -1,6 +1,6 @@
 ---
 name: supply-chain-audit
-description: Audits an untrusted skill, hook, agent config, plugin manifest or vendored diff and returns FAIL/WARN/PASS per item. Use before adopting third-party Claude config or vendored code, or for "is this safe to adopt".
+description: Audits an untrusted skill, hook, config, or diff; FAIL/WARN/PASS per item. Before adopting, or "is this safe to adopt".
 argument-hint: "<directory> | --diff <base>[..<head>] | --diff <file.diff>"
 context: fork
 background: false

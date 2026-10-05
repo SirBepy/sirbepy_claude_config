@@ -1,6 +1,6 @@
 ---
 name: context-left
-description: Use when the user asks how much context is left or remaining, how full the context window is, how much room is left before it fills, or invokes /context-left. Reports remaining context-window tokens + percent for this session. Read-only, localhost-only.
+description: Use when the user asks how much context is left, or invokes /context-left. Reports remaining tokens and percent.
 ---
 
 # /context-left

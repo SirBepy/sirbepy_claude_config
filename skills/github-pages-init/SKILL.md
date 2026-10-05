@@ -1,6 +1,6 @@
 ---
 name: github-pages-init
-description: Creates a GitHub repo if missing and enables GitHub Pages for web projects. Runs via /github-pages-init standalone or as a step in /bepy-project-setup-web.
+description: Creates a GitHub repo if missing and enables GitHub Pages for web projects. Step in /bepy-project-setup-web.
 ---
 
 # /github-pages-init

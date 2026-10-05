@@ -1,6 +1,6 @@
 ---
 name: generate
-description: Generates images with free AI models via a provider cascade - Cloudflare Workers AI FLUX-1-schnell (~10k neurons/day free, the default), Gemini "nano banana" (needs billing; no free image tier), Pollinations as a keyless last resort. Use for raster references, logo/mascot concepts, hero images, placeholders, or whenever SVG hand-authoring can't reach the needed style (hands, faces, organic or painterly looks). Triggers - /generate, "generate an image", "AI image", "make a picture of".
+description: Generates images with free AI models. For raster refs, logos, or styles SVG can't do. /generate, "generate an image".
 argument-hint: "<what to generate>"
 ---
 

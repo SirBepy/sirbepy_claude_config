@@ -1,6 +1,6 @@
 ---
 name: code-check
-description: Triggers on /code-check. Structural + convention review - file splits, DRY, dead code, documented project patterns. Writes findings to the todos backlog. Callable standalone or from /close.
+description: "Triggers on /code-check: structural + convention review (file splits, DRY, dead code), writes todo findings."
 argument-hint: "[uncommitted|unpushed|<path>|<hash>] (default: uncommitted)"
 ---
 

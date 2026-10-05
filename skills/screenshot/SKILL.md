@@ -1,6 +1,6 @@
 ---
 name: screenshot
-description: Triggers on /screenshot, and on requests to shoot a matrix of frames/states of a local page (design comps, responsive sweeps). Takes portfolio-quality screenshots of the current project using a persistent Playwright helper script.
+description: Triggers on /screenshot, or to shoot a matrix of frames/states of a local page (design comps, responsive sweeps).
 ---
 
 # /screenshot

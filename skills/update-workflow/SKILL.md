@@ -1,6 +1,6 @@
 ---
 name: update-workflow
-description: Syncs .github/workflows/deploy.yml against this skill's template for the detected project type (html, vite, or react), creating it if missing or flagging unrecognized diffs for confirmation before overwriting.
+description: Syncs .github/workflows/deploy.yml against this skill's template for the detected project type, creating it if missing.
 argument-hint: "[skipVerification]"
 ---
 

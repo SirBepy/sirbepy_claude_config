@@ -1,6 +1,6 @@
 ---
 name: sleep-when-done
-description: Triggers on /sleep-when-done only. Puts the PC to sleep as the final step once the current task is done, provided this session's fast checks have passed.
+description: Triggers on /sleep-when-done only. Puts the PC to sleep as the final step once this session's fast checks have passed.
 ---
 
 # /sleep-when-done

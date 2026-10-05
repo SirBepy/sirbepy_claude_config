@@ -1,6 +1,6 @@
 ---
 name: pwa
-description: Sets up Progressive Web App support for the project, skipping stacks that already ship their own PWA plugin. Runs via /pwa standalone or as a step in /bepy-project-setup-web.
+description: Sets up Progressive Web App support, skipping stacks with their own PWA plugin. Step in /bepy-project-setup-web.
 ---
 
 # /pwa

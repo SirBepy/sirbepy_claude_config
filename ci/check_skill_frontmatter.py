@@ -58,35 +58,6 @@ DESCRIPTION_BUDGET_CHARS = 120
 # The one sound automatic exemption is `disable-model-invocation: true`, applied live from the file
 # in check_description_budget below. A skill that never enters the listing genuinely costs nothing.
 LEGACY_OVER_BUDGET_DEBT = frozenset({
-    "android-drive",
-    "apply-styleguide",   # step run by bepy-project-setup-web
-    "batch-todos",        # invoked by auto-do-todos, mega-todos
-    "brainstorm",
-    "cleanup-todos",      # invoked by auto-do-todos, mega-todos
-    "code-check",         # invoked via Skill tool by close
-    "context-left",
-    "favicon",            # step run by bepy-project-setup-web
-    "figma-pixel-diff",
-    "flutter-e2e",
-    "generate",
-    "github-pages-init",  # step run by bepy-project-setup-web
-    "impeccable",
-    "init-claude-md",     # step run by bepy-project-setup-web
-    "inject-widgets",     # step run by bepy-project-setup-web
-    "iterate-it",         # invoked by autopilot, auto-do-todos, batch-todos, cleanup-memory,
-                           # cleanup-todos, delegate, loop-todos, mega-todos, rate-it-and-commit
-    "meta-tags",          # step run by bepy-project-setup-web
-    "portfolio-data",     # step run by bepy-project-setup-web
-    "preview",
-    "pwa",                # step run by bepy-project-setup-web
-    "rate-it",            # invoked by rate-it-and-commit
-    "rate-it-and-commit",
-    "screenshot",         # invoked by portfolio-data
-    "sleep-when-done",    # invoked by autopilot's --sleep step
-    "supervised-run",
-    "supply-chain-audit",
-    "ticket",
-    "update-workflow",    # step run by bepy-project-setup-web; also referenced by github-pages-init
 })
 
 TOP_LEVEL_KEY = re.compile(r"^([A-Za-z][A-Za-z0-9_-]*):(.*)$")
