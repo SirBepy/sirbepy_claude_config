@@ -38,3 +38,8 @@ to suppress only after the user confirms, so the model had no clean way out.
 
 Editing one line of a file with pre-existing findings, then running 5 more turns without editing
 it, produces at most one Stop injection.
+
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05); full CI green (7/7) before commit.

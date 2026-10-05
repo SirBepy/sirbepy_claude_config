@@ -956,14 +956,20 @@ export function rememberFindings(cache, sessionId, filePath, findings) {
   ensureSession(cache, sessionId).updatedAt = Date.now();
 }
 
+// Deliberately line-number-free: an unrelated edit elsewhere in the file
+// shifts every finding below it, and a line-keyed identity read that shift
+// as a brand-new finding on every Stop pass (todo 1063). The snippet is the
+// matched text itself, so it survives the shift; the antipattern+value pair
+// (where extractable) is even more stable since it ignores surrounding
+// whitespace changes too. Line number is a last-resort tiebreaker only for
+// a finding with neither, which the detector does not currently produce.
 function findingCacheKey(finding) {
-  const line = finding?.line || 0;
   const value = extractFindingIgnoreValue(finding);
-  if (line > 0 && value) return `${finding.antipattern}:${line}:${value}`;
-  if (line > 0) return `${finding.antipattern}:${line}`;
-  if (value) return `${finding.antipattern}:0:${value}`;
+  if (value) return `${finding.antipattern}:${value}`;
   const snippet = String(finding?.snippet || '').trim().slice(0, 80);
-  return snippet ? `${finding.antipattern}:0:${snippet}` : `${finding.antipattern}:0`;
+  if (snippet) return `${finding.antipattern}:${snippet}`;
+  const line = finding?.line || 0;
+  return line > 0 ? `${finding.antipattern}:${line}` : `${finding.antipattern}:0`;
 }
 
 export function renderTemplate(findings, filePath, config, opts = {}) {
@@ -1971,8 +1977,10 @@ export async function runStopHook({ stdinJson, env = {}, cwd = process.cwd(), no
     // findings; whether to act on them is the agent's call. Exit fast with no
     // output before any scan. Only Claude Code sends this field; other
     // harnesses omit it, so the strict `=== true` is a no-op for them. This
-    // guard makes the loop impossible regardless of the finding cache key's
-    // line-number sensitivity (out of scope here; see findingCacheKey).
+    // guard caps same-turn re-entry; it is not what keeps a later, separate
+    // Stop event quiet on an unchanged file (todo 1063) - that is
+    // findingCacheKey's line-number-independent identity plus remembering
+    // the complete scan, not just the fresh subset, in rememberFindings.
     if (event.stop_hook_active === true) {
       return result({ skipped: 'stop-hook-active', durationMs: Date.now() - started });
     }
@@ -2044,8 +2052,15 @@ export async function runStopHook({ stdinJson, env = {}, cwd = process.cwd(), no
       // earlier Stop pass) already surfaced.
       const filtered = filterFindings(findings || [], content, ext, config);
       const fresh = dedupeAgainstCache(filtered, cache, sessionId, filePath);
+      // Remember the complete scan, not just the fresh subset (rememberFindings'
+      // own contract, violated here until todo 1063): passing only `fresh`
+      // forgot every already-known finding on each call, so the next Stop
+      // pass saw them as new again and the reported count oscillated between
+      // the two subsets turn after turn with no file edit in between.
+      if (filtered.length > 0) {
+        rememberFindings(cache, sessionId, filePath, filtered);
+      }
       if (fresh.length > 0) {
-        rememberFindings(cache, sessionId, filePath, fresh);
         freshGroups.push({ filePath, findings: fresh });
       }
     }
