@@ -19,3 +19,7 @@ In `C:\Users\tecno\.claude\skills\commit\commit-pathspec.sh`, before refusing on
 - On a SirBepy-origin repo with an overlap hit, the script commits without `--force` and prints the info line.
 - On a client repo, it still refuses by default.
 - The REFUSED message names a `--force` value the script accepts.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05). Script halves: eccffe6, 5d6f7b2, 61e7fae, f582722 (tests in skills/commit/test_*.sh); doc halves in skills/commit/SKILL.md (this commit) and e9f4620.

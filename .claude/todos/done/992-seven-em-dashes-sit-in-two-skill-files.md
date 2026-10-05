@@ -69,3 +69,4 @@ design decision about which lines the checker looks at is not a drive-by edit's 
 - Low urgency and purely cosmetic in effect, but the rule is stated as absolute, and a stated
   absolute that is visibly false in the repo's own files is what erodes the rest of them.
 - These are prose files: no test can catch a regression here, so the check is a re-scan, not a suite.
+- Completed by /loop-todos cycle 1 (2026-10-05). Script halves: eccffe6, 5d6f7b2, 61e7fae, f582722 (tests in skills/commit/test_*.sh); doc halves in skills/commit/SKILL.md (this commit) and e9f4620.

@@ -84,3 +84,4 @@ The caller's workaround today is to notice that the only non-clean path is the d
 it is a pure deletion with `git diff HEAD --summary -- <path>` and `git diff HEAD -- <path> | grep -c
 '^+[^+]'` returning 0, then proceed. That is correct but it is reasoning a script should not require,
 and it only stays safe while the caller actually performs it rather than assuming.
+- Completed by /loop-todos cycle 1 (2026-10-05). Script halves: eccffe6, 5d6f7b2, 61e7fae, f582722 (tests in skills/commit/test_*.sh); doc halves in skills/commit/SKILL.md (this commit) and e9f4620.

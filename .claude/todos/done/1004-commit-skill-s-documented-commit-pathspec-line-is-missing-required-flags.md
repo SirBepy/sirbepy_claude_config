@@ -70,3 +70,4 @@ Both fixes are in `skills/commit/SKILL.md` step 8, no script change needed:
 - 2026-10-01, hit again from a zng-app session: copied step 8's documented line
   (`commit-pathspec.sh -m ... -- <files>`), got `ERROR: --expect-branch, --expect-sha, -m and -- <files>
   are all required`, one extra round trip. Still unfixed in SKILL.md as of that date.
+- Completed by /loop-todos cycle 1 (2026-10-05). Script halves: eccffe6, 5d6f7b2, 61e7fae, f582722 (tests in skills/commit/test_*.sh); doc halves in skills/commit/SKILL.md (this commit) and e9f4620.

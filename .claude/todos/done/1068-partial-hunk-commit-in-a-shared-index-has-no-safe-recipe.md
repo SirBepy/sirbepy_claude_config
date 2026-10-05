@@ -47,3 +47,7 @@ the commit-guard marker or a hook exemption, and record the decision.
 - With another session's files staged in the shared index, the resulting commit contains only the
   declared paths and hunks, verified by `git show --stat`.
 - The shared index shows no staged entries for the committed paths afterwards.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05). Script halves: eccffe6, 5d6f7b2, 61e7fae, f582722 (tests in skills/commit/test_*.sh); doc halves in skills/commit/SKILL.md (this commit) and e9f4620.

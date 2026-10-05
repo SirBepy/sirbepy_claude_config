@@ -89,3 +89,4 @@ Peer sweep at filing time: `list_peers` showed two live sessions in `claude_usag
 (`55dd049e`, `0e42f732`). Neither names the commit skill or `commit-pathspec.sh` in its session name
 or recent channel messages - both were on view-harness/CSS and permission-modal work - so no peer was
 asked. That is a weak signal, not proof nobody else has hit this.
+- Completed by /loop-todos cycle 1 (2026-10-05). Script halves: eccffe6, 5d6f7b2, 61e7fae, f582722 (tests in skills/commit/test_*.sh); doc halves in skills/commit/SKILL.md (this commit) and e9f4620.

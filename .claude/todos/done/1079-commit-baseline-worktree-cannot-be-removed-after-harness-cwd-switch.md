@@ -28,3 +28,7 @@ Seen 2026-10-05 in a zng-biller session committing to `~/.claude` (b5ab1be). The
 
 - Following step 6 as written creates and removes a baseline worktree from a session whose primary cwd the harness moved into it, with no leftover directory.
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05). Script halves: eccffe6, 5d6f7b2, 61e7fae, f582722 (tests in skills/commit/test_*.sh); doc halves in skills/commit/SKILL.md (this commit) and e9f4620.
