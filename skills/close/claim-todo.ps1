@@ -16,6 +16,12 @@
   Claims section for the incident (todo 484) this closes: a claim call that has to be
   remembered once per todo gets skipped exactly when several todos move at once.
 
+  The two forms are NOT equivalent when any id is zero-padded: PowerShell parses an
+  unquoted comma list as numeric literals before this script ever runs, so -Id 08,20
+  arrives here as "8","20" with the padding already gone (todo 1024) - complete-todo.ps1
+  still finds the resulting claim either way, but the quoted form (-Id "08,20") is the
+  one that preserves the id exactly as typed. Prefer it whenever an id might be padded.
+
   Duplicate-id-safe: if an id matches more than one backlog file (a known collision
   case in this project), -Slug picks one and the claim is named "<id>-<slug>.claim" so
   the sibling file's own claim is never touched. In a batch, embed the slug inline as
@@ -63,6 +69,16 @@ if (-not (Test-Path $todosDir)) {
     exit 2
 }
 
+# PowerShell itself - not this script - parses an UNQUOTED comma list like
+# "-Id 08,20" as an array of numeric literals before this param block ever runs,
+# which drops any leading zero (08 becomes 8) with no way for this script to recover
+# it after the fact (confirmed root cause, todo 1024). $Id arrives already split into
+# more than one element ONLY through that path: a single quoted string always binds
+# as a 1-element array here, so Count -gt 1 at this point is the tell.
+if ($Id.Count -gt 1) {
+    Write-Host "NOTE: -Id arrived pre-split into $($Id.Count) separate values, which means PowerShell already parsed this batch as numbers before this script started - any zero-padding (e.g. 08) is already gone and cannot be recovered here. If padding matters, re-run with the whole list quoted: -Id `"$($Id -join ',')`"." -ForegroundColor Yellow
+}
+
 # -Id is [string[]] so both unquoted array args (-Id 03,04,05) and one quoted
 # comma-string (-Id "03,04,05") bind; re-join then split covers both shapes.
 $rawIds = ($Id -join ',') -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
@@ -97,6 +113,7 @@ function Claim-One {
 
     $resolved = Resolve-TodoFile -Dir $todosDir -RawId $RawId -Slug $SlugParam
     $numericId = $resolved.NumericId
+    $canonicalId = $resolved.CanonicalId
     $slugLocal = $resolved.Slug
     $idPattern = $resolved.Pattern
     $backlogMatches = $resolved.Matches
@@ -112,7 +129,7 @@ function Claim-One {
     $siblingCount = $backlogMatches.Count
 
     if ($backlogMatches.Count -gt 0 -and $slugLocal) {
-        $slugPattern = "^0*$([regex]::Escape($numericId))-$([regex]::Escape($slugLocal))\.md$"
+        $slugPattern = "^0*$([regex]::Escape($canonicalId))-$([regex]::Escape($slugLocal))\.md$"
         $backlogMatches = $backlogMatches | Where-Object { $_.Name -match $slugPattern }
         if ($backlogMatches.Count -eq 0) {
             return [ordered]@{ Id = $numericId; Reason = 'error'; Message = "No active todo matching id '$RawId' with slug '$slugLocal' found in $todosDir." }

@@ -119,3 +119,4 @@ reproduction attempted matches the invocation the original report quoted; here t
 in both 929 and 953 plainly showed a comma-separated `-Id`, and both tests used a single id.
 
 - Root cause confirmed live (/cleanup-todos 2026-10-05, folded from archived duplicate 1072): an unquoted `-Id 16,13,15,01` is parsed by PowerShell as an integer array before the script runs, so `01` arrives as `1`; quoting the list (`-Id "16,13,15,01"`) preserves the padding. The regex in `_shared.ps1` is not the cause.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane C, test-first via tools/test_close_*.py (RED against HEAD copies, then GREEN).

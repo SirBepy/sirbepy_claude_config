@@ -66,3 +66,7 @@ Consider whether `reserve-todo-id.ps1` has the same asymmetry while in there.
   the misleading "no todo file matching" line.
 - `complete-todo.ps1 -Id 07` still archives todo 07 exactly as today.
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane C, test-first via tools/test_close_*.py (RED against HEAD copies, then GREEN).

@@ -19,7 +19,16 @@ function Resolve-TodoFile {
         if (-not $slugLocal) { $slugLocal = $matches[2] }
     }
 
-    $idPattern = "^0*$([regex]::Escape($numericId))-.*\.md$"
+    # Canonical (zero-stripped) id for MATCHING patterns only - NumericId above stays
+    # exactly what the caller typed, including any literal padding, because callers
+    # (claim-todo.ps1) name new files after it. A bare numeric RawId with no "-slug"
+    # suffix never goes through the strip above, so without this, a "0*<id>" tolerant
+    # pattern anchors on the typed padding instead of tolerating ANY padding width -
+    # the reason complete-todo.ps1 -Id 08 failed to find a claim file actually named
+    # 8.claim (todo 1024).
+    $canonicalId = if ($numericId -match '^\d+$') { $numericId -replace '^0+(?=\d)', '' } else { $numericId }
+
+    $idPattern = "^0*$([regex]::Escape($canonicalId))-.*\.md$"
     $pattern = $idPattern
     $allFiles = Get-ChildItem -Path $Dir -Filter '*.md' -File -ErrorAction SilentlyContinue
     $matchesFound = $allFiles | Where-Object { $_.Name -match $idPattern }
@@ -43,10 +52,11 @@ function Resolve-TodoFile {
     }
 
     [ordered]@{
-        NumericId = $numericId
-        Slug      = $slugLocal
-        Pattern   = $pattern
-        Matches   = $matchesFound
-        FellBack  = $fellBack
+        NumericId   = $numericId
+        CanonicalId = $canonicalId
+        Slug        = $slugLocal
+        Pattern     = $pattern
+        Matches     = $matchesFound
+        FellBack    = $fellBack
     }
 }

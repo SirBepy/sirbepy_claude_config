@@ -62,6 +62,16 @@ $IdRaw = $Id -join ','
 Remove-Variable -Name Id
 $Id = $IdRaw
 
+# Reject a batch -Id up front with the real cause, instead of letting the comma-joined
+# string fall through to the lookup below and fail as "no todo file matching id
+# '184,163,...'" - a message that sends the caller looking for a filesystem problem
+# that does not exist (todo 1015). claim-todo.ps1 documents and supports a batch -Id;
+# this script deliberately does not, per the .PARAMETER Id note above.
+if ($IdRaw -match ',') {
+    Write-Host "ERROR: -Id takes one todo per call; complete-todo.ps1 has no batch form (see the .PARAMETER Id note at the top of this script). Call it once per id: foreach (`$id in $IdRaw -split ',') { complete-todo.ps1 -Id `$id }" -ForegroundColor Red
+    exit 2
+}
+
 . (Join-Path $PSScriptRoot '_shared.ps1')
 
 # Cwd is not the repo (issue 504): a call from a subdirectory, or from a sibling repo
@@ -133,12 +143,13 @@ if (-not (Test-Path $todosDir)) {
 
 $resolved = Resolve-TodoFile -Dir $todosDir -RawId $Id -Slug $Slug
 $numericId = $resolved.NumericId
+$canonicalId = $resolved.CanonicalId
 $Slug = $resolved.Slug
 $idPattern = $resolved.Pattern
 $backlogMatches = $resolved.Matches
 
 $slugPattern = $null
-if ($Slug) { $slugPattern = "^0*$([regex]::Escape($numericId))-$([regex]::Escape($Slug))\.md$" }
+if ($Slug) { $slugPattern = "^0*$([regex]::Escape($canonicalId))-$([regex]::Escape($Slug))\.md$" }
 
 if ($resolved.FellBack) {
     Write-Warning "[$RepoRoot] Todo '$Id' has no numeric prefix, which ai-todos-format.md treats as malformed. Archiving it anyway; future files should get an id from reserve-todo-id.ps1."
@@ -210,15 +221,20 @@ $claimMatches = @()
 if (Test-Path $claimsDir) {
     if ($Slug) {
         $claimMatches = Get-ChildItem -Path $claimsDir -Filter '*.claim' -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -match "^0*$([regex]::Escape($numericId))-$([regex]::Escape($Slug))\.claim$" }
+            Where-Object { $_.Name -match "^0*$([regex]::Escape($canonicalId))-$([regex]::Escape($Slug))\.claim$" }
     }
     if ($claimMatches.Count -eq 0) {
+        # Canonical (zero-stripped) id, not the literal $numericId: a batch claim-todo.ps1
+        # call can write an unpadded claim (e.g. "8.claim") for an id the caller still
+        # refers to padded ("-Id 08") - PowerShell's own unquoted comma-list parsing strips
+        # the padding before claim-todo.ps1 ever runs (todo 1024). Anchoring on the literal
+        # padded id here reproduced the leaked-claim, false-warning bug this fixes.
         $claimMatches = Get-ChildItem -Path $claimsDir -Filter '*.claim' -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -match "^0*$([regex]::Escape($numericId))\.claim$" }
+            Where-Object { $_.Name -match "^0*$([regex]::Escape($canonicalId))\.claim$" }
     }
     if ($claimMatches.Count -eq 0) {
         $wildcard = Get-ChildItem -Path $claimsDir -Filter '*.claim' -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -match "^0*$([regex]::Escape($numericId))-.*\.claim$" }
+            Where-Object { $_.Name -match "^0*$([regex]::Escape($canonicalId))-.*\.claim$" }
         if ($wildcard.Count -eq 1) { $claimMatches = $wildcard }
     }
 }
@@ -244,7 +260,7 @@ if (Test-Path $planPath) {
     # underscore/backtick wrapping and "[P]" too, since hand-edits use them and
     # a stale line in any style still needs pruning. Step 1 already resolved a
     # single file for this id, so every matching line here is that same file's.
-    $idPart = "0*$([regex]::Escape($numericId))"
+    $idPart = "0*$([regex]::Escape($canonicalId))"
     $backtick = [char]0x60
     $wrappedId = "(\*\*$idPart\*\*|__${idPart}__|$backtick$idPart$backtick|$idPart)"
     $lineIdPattern = "^\s*-\s*\[\s*\]\s*$wrappedId(\s*\[P\])?(\s|$)"
