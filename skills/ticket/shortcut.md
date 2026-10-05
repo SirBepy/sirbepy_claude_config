@@ -56,7 +56,7 @@ Always send all five, as `{field_id, value_id}` pairs.
 |---|---|---|
 | Skill Set | `6216069e-0b41-45b7-8f1f-7d5e8b9b5983` | Frontend `6216069e-e3ed-403b-804c-f678c58b61a7`, Backend `6216069e-c745-4d0e-9722-39c6071c7e65` |
 | Technical Area | `6216069e-ae53-4892-a4f2-d9cc796f1484` | Web App `6881029c-3921-4900-ad9a-197d3755d25f`, Admin Portal `6216069e-e33b-44b0-a3d8-15a130a5a88b`, Biller Portal `6a0366ad-d4ea-407a-bec3-d1aa9c11e99f` |
-| ZNG: Product Area | `6881002d-700f-4bb7-b919-6cf8880ccdb9` | WebApp: Billers, RPPS, Billing Accounts `688101d5-cf51-4616-8aad-ed52a9b9a45b`, WebApp: Global `6881002d-2a43-40e9-964b-d72c3f556bcd`, AP: Billers & Partners `6977aec4-d5e1-4c55-a993-32a33bba368b` (renamed from "AP: Billers", same id), AP: Users `6977ae32-566a-466d-baa0-0c3a2862ab9e`, WebApp: Banking & Payments `688101d5-e043-4e09-b87a-bd478a78a6bb` |
+| ZNG: Product Area | `6881002d-700f-4bb7-b919-6cf8880ccdb9` | WebApp: Billers, RPPS, Billing Accounts `688101d5-cf51-4616-8aad-ed52a9b9a45b`, WebApp: Global `6881002d-2a43-40e9-964b-d72c3f556bcd`, WebApp: Loan Creation `688101d5-2fd8-4ffb-a0c1-9b8f6a53048c`, AP: Billers & Partners `6977aec4-d5e1-4c55-a993-32a33bba368b` (renamed from "AP: Billers", same id), AP: Users `6977ae32-566a-466d-baa0-0c3a2862ab9e`, WebApp: Banking & Payments `688101d5-e043-4e09-b87a-bd478a78a6bb` |
 | Priority | `6260361c-cc5f-475f-9758-ea5b740e5b81` | High `6260361c-8f25-4cfd-941c-d32094abaca0`, Medium `6260361c-7ae3-4d8f-9594-fdff9c39fe4e` |
 | Release | `68f8e559-4a18-4a6e-be1c-fa2f5aaa4fdb` | At creation only: **Next release** `698b4bce-ecd7-44c3-b62a-2b49b2506c1d` (the dev renumbers manually later). Never set on an existing ticket, including a state move - Joe sets it himself at actual release time |
 

@@ -66,3 +66,4 @@ label.
      `~/.claude` work from a project session unless Joe says so. The 2026-10-02 edits followed the
      skill. Decide which wins (likely: pinned-value refreshes are exempt, or the skill files a todo
      here instead of editing) and state it in one of the two files.
+- Completed by /loop-todos cycle 1 (2026-10-05): UUID taken from this todo's own text, no API call. Data-only, no test applies.
