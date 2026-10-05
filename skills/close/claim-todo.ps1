@@ -218,7 +218,7 @@ function Claim-One {
 
     Remove-Item -Path $claimPath -Force
     if (Try-Rename -From $tempPath -To $claimPath) {
-        return [ordered]@{ Id = $numericId; Reason = 'claimed'; Message = "Existing claim for $numericId was stale (age $([math]::Round($ageHours, 2))h, pid $existingPid not alive) - reclaimed ($($todoFile.Name)) -> .claims\$claimName" }
+        return [ordered]@{ Id = $numericId; Reason = 'claimed'; Message = "Existing claim for $numericId was stale (age $([math]::Round($ageHours, 2))h, pid $existingPid not alive or recycled) - reclaimed ($($todoFile.Name)) -> .claims\$claimName" }
     }
 
     Remove-Item -Path $tempPath -Force -ErrorAction SilentlyContinue

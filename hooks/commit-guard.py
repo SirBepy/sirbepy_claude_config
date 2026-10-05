@@ -343,7 +343,7 @@ def main() -> None:
         sys.exit(0)
 
     reason = (
-        "[commit-guard] Raw `git commit` is blocked; no part of this call ran, "
+        "[commit-guard] Raw `git commit` (or a commit-tree/update-ref landing) is blocked; no part of this call ran, "
         "including any command chained before it. Use the /commit skill instead "
         f"- it writes the session marker this hook checks. If /commit itself is "
         f"broken, set {OVERRIDE_ENV}=1 in this session's environment (settings.json "

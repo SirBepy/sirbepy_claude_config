@@ -252,6 +252,13 @@ class TestConsensusVote(unittest.TestCase):
         self.assertEqual(result["agreed"], {})
         self.assertEqual(result["incomplete"], {1: ["close", "close"]})
 
+    def test_judge_listing_an_id_twice_does_not_fake_coverage(self):
+        j1 = [{"id": 1, "verdict": "close"}, {"id": 1, "verdict": "close"}]
+        j2 = []
+        result = st.tally_vote([j1, j2])
+        self.assertEqual(result["agreed"], {})
+        self.assertEqual(result["incomplete"], {1: ["close"]})
+
     def test_judge_count_recorded(self):
         result = st.tally_vote([[], [], []])
         self.assertEqual(result["judge_count"], 3)

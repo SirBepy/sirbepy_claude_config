@@ -163,7 +163,8 @@ def test_check_flag_cli(tmp):
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps({"id": page_id}).encode("utf-8"))
+            body = {} if "NOID_MARKER" in html_in else {"id": page_id}
+            self.wfile.write(json.dumps(body).encode("utf-8"))
 
         def do_GET(self):
             page_id = self.path.rsplit("/", 1)[-1]
@@ -192,7 +193,17 @@ def test_check_flag_cli(tmp):
         encoding="utf-8",
     )
 
+    noid_html = tmp / "noid.html"
+    noid_html.write_text("<!doctype html><html><body>NOID_MARKER</body></html>", encoding="utf-8")
+
     try:
+        proc_noid = run(str(noid_html), "--check", env=env, timeout=45)
+        check(
+            "--check fails clearly when the render-check endpoint returns no id",
+            proc_noid.returncode != 0 and "returned no id" in proc_noid.stderr,
+            proc_noid.stdout + proc_noid.stderr,
+        )
+
         proc_good = run(str(good_html), "--check", env=env, timeout=45)
         unavailable = any(
             marker in (proc_good.stdout + proc_good.stderr)

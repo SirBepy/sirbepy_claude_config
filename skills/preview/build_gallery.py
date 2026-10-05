@@ -305,6 +305,9 @@ def main():
             print(f"check: could not reach render-check endpoint: {e}", file=sys.stderr)
             sys.exit(1)
         render_id = render_resp.get("id")
+        if not render_id:
+            print(f"check FAILED: render-check endpoint returned no id: {render_resp}", file=sys.stderr)
+            sys.exit(1)
         render_url = f"{RENDER_CHECK_ENDPOINT.rstrip('/')}/{render_id}"
         ok, message = check_rendered_page(render_url)
         if not ok:

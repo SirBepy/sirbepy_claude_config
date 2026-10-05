@@ -386,8 +386,11 @@ def tally_vote(all_decisions):
     judge_count = len(all_decisions)
     votes = defaultdict(list)
     for decisions in all_decisions:
-        for d in decisions:
-            votes[d["id"]].append(d["verdict"])
+        # One vote per judge per id (a judge restating an id keeps its last
+        # verdict), so coverage counts judges, not raw entries.
+        per_judge = {d["id"]: d["verdict"] for d in decisions}
+        for id_, verdict in per_judge.items():
+            votes[id_].append(verdict)
 
     agreed = defaultdict(list)
     disputed = {}
