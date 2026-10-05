@@ -22,3 +22,7 @@ In `hooks/gh-account-switch.sh`: when the command is `gh repo create` and there 
 
 - Hook self-test: `gh repo create foo --private --source .` in a repo without origin resolves to SirBepy (or is blocked with guidance).
 - Existing origin-based switching unchanged.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane D2, test-first (RED against HEAD, then GREEN).
