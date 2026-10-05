@@ -30,3 +30,7 @@ finding per occurrence rather than one per file and value; would check each dete
 ## Acceptance
 - The comment or the fix lands, and the impeccable test file passes.
 - `skills/impeccable` stays a near-verbatim vendor copy apart from this one function.
+
+## Notes
+
+- Done in loop-todos cycle 3 (2026-10-06): yes, design-system source scans (design-system.mjs:724-797) and bounce-easing can emit two same-value findings per file; findingCacheKey keeps antipattern:value and appends an occurrence index (scan order) only from the 2nd same-value finding on, via nextFindingCacheKey in dedupeAgainstCache/rememberFindings. New test RED (1 !== 2) then GREEN, line-shift tests unchanged. Tradeoff: inserting a new same-value occurrence before an existing one re-surfaces that one once.

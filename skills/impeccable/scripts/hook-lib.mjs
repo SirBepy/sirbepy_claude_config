@@ -930,8 +930,9 @@ export function dedupeAgainstCache(findings, cache, sessionId, filePath) {
   const fileEntry = ensureFile(cache, sessionId, filePath);
   const known = new Set(fileEntry.findings || []);
   const fresh = [];
+  const seenCounts = new Map();
   for (const f of findings) {
-    const key = findingCacheKey(f);
+    const key = nextFindingCacheKey(f, seenCounts);
     if (known.has(key)) continue;
     known.add(key);
     fresh.push(f);
@@ -951,7 +952,8 @@ export function dedupeAgainstCache(findings, cache, sessionId, filePath) {
 // Callers must pass the complete current finding set, not just the fresh ones.
 export function rememberFindings(cache, sessionId, filePath, findings) {
   const fileEntry = ensureFile(cache, sessionId, filePath);
-  const keys = new Set((findings || []).map(f => findingCacheKey(f)));
+  const seenCounts = new Map();
+  const keys = new Set((findings || []).map(f => nextFindingCacheKey(f, seenCounts)));
   fileEntry.findings = Array.from(keys);
   ensureSession(cache, sessionId).updatedAt = Date.now();
 }
@@ -963,13 +965,40 @@ export function rememberFindings(cache, sessionId, filePath, findings) {
 // (where extractable) is even more stable since it ignores surrounding
 // whitespace changes too. Line number is a last-resort tiebreaker only for
 // a finding with neither, which the detector does not currently produce.
-function findingCacheKey(finding) {
+//
+// Value-only is not occurrence-unique though (todo 1102): checkSourceDesignSystem
+// (design-system.mjs) scans every source line and only dedupes by
+// antipattern+line+value, so the same off-palette font/color/radius/size can
+// legitimately recur at two different lines in one file; so can bounce-easing,
+// whose motion-rules check runs once per matching element with no cross-element
+// dedupe. Callers pass an occurrenceIndex (via nextFindingCacheKey) so the
+// second-and-later same-value occurrence in one scan gets a distinct key
+// instead of colliding with the first. overused-font's two emit sites already
+// dedupe to one finding per unique value before this key is even computed, so
+// they never hit index > 0, but the index is harmless for them either way.
+function findingCacheKey(finding, occurrenceIndex = 0) {
   const value = extractFindingIgnoreValue(finding);
-  if (value) return `${finding.antipattern}:${value}`;
+  if (value) {
+    const base = `${finding.antipattern}:${value}`;
+    return occurrenceIndex > 0 ? `${base}:${occurrenceIndex}` : base;
+  }
   const snippet = String(finding?.snippet || '').trim().slice(0, 80);
   if (snippet) return `${finding.antipattern}:${snippet}`;
   const line = finding?.line || 0;
   return line > 0 ? `${finding.antipattern}:${line}` : `${finding.antipattern}:0`;
+}
+
+// Assigns each finding its position among same-antipattern-and-value findings
+// seen so far in this scan (scan order = source line order in practice), so
+// dedupeAgainstCache/rememberFindings give a repeated value a stable-but-distinct
+// key per occurrence instead of the first one's key for all of them.
+function nextFindingCacheKey(finding, seenCounts) {
+  const value = extractFindingIgnoreValue(finding);
+  if (!value) return findingCacheKey(finding);
+  const base = `${finding.antipattern}:${value}`;
+  const index = seenCounts.get(base) || 0;
+  seenCounts.set(base, index + 1);
+  return findingCacheKey(finding, index);
 }
 
 export function renderTemplate(findings, filePath, config, opts = {}) {

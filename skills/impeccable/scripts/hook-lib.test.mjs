@@ -60,6 +60,22 @@ test('dedupeAgainstCache still treats two distinct findings on different lines a
   assert.equal(fresh.length, 1, 'a genuinely different occurrence must still surface');
 });
 
+test('dedupeAgainstCache keeps two same-value findings from one scan as two (todo 1102)', () => {
+  // Reproduces the reviewer's case for todo 1063: a value-keyed detector
+  // (overused-font) can emit the same font at two unrelated lines in one
+  // file. The value-only key must not collapse them to one.
+  const cache = { version: 1, sessions: {} };
+  const sessionId = 'session-value-branch';
+  const filePath = 'src/page.html';
+
+  const first = { antipattern: 'overused-font', file: filePath, line: 5, snippet: 'Primary font: Comic Sans' };
+  const second = { antipattern: 'overused-font', file: filePath, line: 80, snippet: 'Primary font: Comic Sans' };
+
+  const fresh = dedupeAgainstCache([first, second], cache, sessionId, filePath);
+
+  assert.equal(fresh.length, 2, 'two genuinely separate occurrences of the same value must both surface');
+});
+
 test('runStopHook stays quiet on a second pass when the file did not change', async () => {
   const { dir, filePath } = makeProject();
   const sessionId = 'session-c';
