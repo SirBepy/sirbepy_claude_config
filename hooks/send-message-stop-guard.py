@@ -48,7 +48,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, iter_turn_tool_uses, is_tool_result_entry
+    from _hooklib import read_payload, iter_turn_tool_uses, is_tool_result_entry, is_injected_user_entry
 except Exception as e:
     sys.stderr.write(f"[send-message-stop-guard] FATAL: cannot import _hooklib ({e}); failing open.\n")
     sys.exit(0)
@@ -128,8 +128,12 @@ def _decoy_send_message_text(transcript_path: str) -> str:
 
 def _last_real_user_text(transcript_path: str) -> str:
     """Text of the most recent `type: user` transcript entry that is a real
-    prompt, not a wrapped tool_result (same distinction _hooklib's own
-    iter_turn_tool_uses draws for its turn boundary)."""
+    prompt: not a wrapped tool_result, and not a harness-injected mid-turn
+    notification (hand-back/task-notification/stop-hook feedback - same
+    distinction _hooklib's own iter_turn_tool_uses draws for its turn
+    boundary, todo 1081). A `[daemon-meta]` relay entry is deliberately NOT
+    filtered here - _is_relay_input below still needs to see it when it IS
+    the real boundary, per this guard's own relay exemption."""
     path = Path(transcript_path)
     if not path.exists():
         return ""
@@ -144,7 +148,7 @@ def _last_real_user_text(transcript_path: str) -> str:
             except json.JSONDecodeError:
                 pass
     for entry in reversed(entries):
-        if entry.get("type") != "user" or is_tool_result_entry(entry):
+        if entry.get("type") != "user" or is_tool_result_entry(entry) or is_injected_user_entry(entry):
             continue
         content = (entry.get("message", {}) or {}).get("content")
         if isinstance(content, str):

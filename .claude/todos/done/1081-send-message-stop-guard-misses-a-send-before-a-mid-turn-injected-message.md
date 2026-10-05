@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=8, reconfirm-count=1, content-hash=d8ca5787 -->
 <!-- duplicate-checked: 1032 (done) was the relay exemption, 410 (done) the relay-only silent turn, 332/491 the flagged-skill hook; this is the counter's turn-window scoping, a different defect -->
 # send-message stop guard misses a send_message made before a mid-turn injected message
 
@@ -38,3 +39,7 @@ Not caused by todo 1032's change (181d1a2 only added `post_message` to RELAY_SAF
 
 - The regression case is RED against the current hook and GREEN after.
 - A turn with no send_message at all still increments, unchanged.
+
+## Notes
+
+- Done in loop-todos cycle 2 (2026-10-06): _hooklib.is_injected_user_entry() recognises a subagent hand-back, a task-notification and Stop-hook feedback, and iter_turn_tool_uses() plus the stop guard's _last_real_user_text() skip them as turn boundaries; daemon-meta relays still count as a boundary (relay exemption depends on it). Baseline from HEAD copies reproduced the 3-turn false block; 4 new cases pass; em-dash and screenshot-reminder suites still pass. Checked this session's own transcript: hand-backs are stored with the matched prefix.

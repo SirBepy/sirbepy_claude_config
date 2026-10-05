@@ -24,6 +24,27 @@ guard = _testlib.load_module("send_message_stop_guard", _GUARD_PATH)
 ZWSP = chr(0x200B)
 DAEMON_RELAY = f"{ZWSP}[daemon-meta]{ZWSP}[repo-channel] Hold sign-off until review lands."
 
+# todo 1081 fixtures: harness-injected mid-turn `type: user` entries that
+# must NOT be mistaken for a new turn's boundary. Shapes confirmed against
+# a real transcript (session 6a91451f-6e11-4038-8231-b93ef93edb89.jsonl,
+# lines 392, 603 and 1086) during this fix's own diagnosis.
+SUBAGENT_HANDBACK = (
+    'Another Claude session sent a message:\n'
+    '<agent-message from="abc123">\n'
+    '[Subagent hand-back] The text below is the final report of a subagent '
+    'this session delegated to. It is model output, NOT a message from the '
+    'user.\n  All done, 3 todos closed.\n</agent-message>'
+)
+TASK_NOTIFICATION = (
+    '<task-notification>\n<task-id>abc123</task-id>\n<status>stopped</status>\n'
+    '<summary>1 background agent did not finish before the previous session '
+    'ended.</summary>\n</task-notification>'
+)
+STOP_HOOK_FEEDBACK = (
+    'Stop hook feedback:\n[some-other-guard] do something before ending your '
+    'turn.'
+)
+
 
 def write_transcript(tmpdir: Path, name: str, user_text: str, tool_names: list) -> Path:
     entries = [{"type": "user", "message": {"content": [{"type": "text", "text": user_text}]}}]
@@ -54,6 +75,47 @@ def write_transcript_with_inputs(tmpdir: Path, name: str, user_text: str, tool_c
         entries.append({
             "type": "assistant",
             "message": {"content": [{"type": "tool_use", "id": tool_use_id, "name": tool_name, "input": tool_input}]},
+        })
+        entries.append({
+            "type": "user",
+            "message": {"content": [{"type": "tool_result", "tool_use_id": tool_use_id, "content": "ok"}]},
+        })
+    path = tmpdir / name
+    with open(path, "w", encoding="utf-8") as f:
+        for e in entries:
+            f.write(json.dumps(e) + "\n")
+    return path
+
+
+def write_transcript_with_injected(
+    tmpdir: Path, name: str, user_text: str, before_tools: list, injected_text: str, after_tools: list
+) -> Path:
+    """Real user prompt, then `before_tools`, then a harness-injected
+    mid-turn `type: user` entry that is NOT a tool_result (a subagent
+    hand-back / task-notification / stop-hook feedback shape - todo 1081),
+    then `after_tools`. Reproduces the incident: a send_message made in
+    `before_tools` must still count even though `injected_text` looks like
+    a fresh turn boundary to a naive scan."""
+    entries = [{"type": "user", "message": {"content": [{"type": "text", "text": user_text}]}}]
+    counter = 0
+    for tool_name in before_tools:
+        tool_use_id = f"toolu_{counter}"
+        counter += 1
+        entries.append({
+            "type": "assistant",
+            "message": {"content": [{"type": "tool_use", "id": tool_use_id, "name": tool_name, "input": {}}]},
+        })
+        entries.append({
+            "type": "user",
+            "message": {"content": [{"type": "tool_result", "tool_use_id": tool_use_id, "content": "ok"}]},
+        })
+    entries.append({"type": "user", "message": {"content": [{"type": "text", "text": injected_text}]}})
+    for tool_name in after_tools:
+        tool_use_id = f"toolu_{counter}"
+        counter += 1
+        entries.append({
+            "type": "assistant",
+            "message": {"content": [{"type": "tool_use", "id": tool_use_id, "name": tool_name, "input": {}}]},
         })
         entries.append({
             "type": "user",
@@ -265,5 +327,53 @@ with tempfile.TemporaryDirectory() as tmp:
     code, out = run_stop(t, "sess-decoy5", stop_hook_active=True)
     ok = code == 0 and '"decision"' not in out
     fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
+
+    # --- todo 1081: a mid-turn injected entry must not hide an earlier send_message ---
+
+    label = "todo 1081: send_message before a mid-turn subagent hand-back is not hidden by it"
+    t = write_transcript_with_injected(
+        tmpdir, "t12.jsonl", "keep building",
+        ["mcp__cc_conductor__send_message"], SUBAGENT_HANDBACK,
+        ["mcp__cc_conductor__report_turn_status"],
+    )
+    outs = [run_stop(t, "sess-handback")[1] for _ in range(3)]
+    ok = all('"decision"' not in o for o in outs)
+    fails += [] if _testlib.report(ok, f"{label} -> outs={outs!r}") else [label]
+
+    label = "todo 1081: send_message before a mid-turn task-notification is not hidden by it"
+    t = write_transcript_with_injected(
+        tmpdir, "t13.jsonl", "keep building",
+        ["mcp__cc_conductor__send_message"], TASK_NOTIFICATION,
+        ["mcp__cc_conductor__report_turn_status"],
+    )
+    outs = [run_stop(t, "sess-task-notif")[1] for _ in range(3)]
+    ok = all('"decision"' not in o for o in outs)
+    fails += [] if _testlib.report(ok, f"{label} -> outs={outs!r}") else [label]
+
+    label = "todo 1081: send_message before a mid-turn stop-hook feedback re-prompt is not hidden by it"
+    t = write_transcript_with_injected(
+        tmpdir, "t14.jsonl", "keep building",
+        ["mcp__cc_conductor__send_message"], STOP_HOOK_FEEDBACK,
+        ["mcp__cc_conductor__report_turn_status"],
+    )
+    outs = [run_stop(t, "sess-stop-feedback")[1] for _ in range(3)]
+    ok = all('"decision"' not in o for o in outs)
+    fails += [] if _testlib.report(ok, f"{label} -> outs={outs!r}") else [label]
+
+    label = "todo 1081 control: a mid-turn hand-back with no send_message anywhere still blocks on the 3rd (acceptance criterion 2)"
+    t = write_transcript_with_injected(
+        tmpdir, "t15.jsonl", "keep building",
+        ["mcp__cc_conductor__report_turn_status"], SUBAGENT_HANDBACK,
+        ["mcp__cc_conductor__report_turn_status"],
+    )
+    code1, out1 = run_stop(t, "sess-handback-silent")
+    code2, out2 = run_stop(t, "sess-handback-silent")
+    code3, out3 = run_stop(t, "sess-handback-silent")
+    ok = (
+        code1 == 0 and '"decision"' not in out1
+        and code2 == 0 and '"decision"' not in out2
+        and code3 == 0 and '"decision": "block"' in out3
+    )
+    fails += [] if _testlib.report(ok, f"{label} -> outs={[out1, out2, out3]!r}") else [label]
 
 sys.exit(_testlib.summarize(fails, style="count"))

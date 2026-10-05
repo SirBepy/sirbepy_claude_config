@@ -282,10 +282,57 @@ def is_tool_result_entry(entry: dict) -> bool:
     return any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content)
 
 
+def _entry_text(entry: dict) -> str:
+    """Flatten a transcript entry's `message.content` to plain text,
+    whether it is a bare string or a list of blocks (text blocks only -
+    tool_result/tool_use blocks carry no `text` key and are skipped)."""
+    content = (entry.get("message", {}) or {}).get("content")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(
+            b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text"
+        )
+    return ""
+
+
+# Prefixes marking a `type: user` transcript entry the harness injected
+# mid-turn rather than a human/queued prompt: a cross-session subagent
+# hand-back relay, a background-task completion notification, or a Stop
+# hook's own re-prompt after it blocked. None of these starts a new human
+# turn, so a turn-boundary scan must look past one rather than treating it
+# as "this turn" starting here (todo 1081 - a send_message made before one
+# of these arrived was getting hidden, falsely tripping the silent-turn
+# counter in send-message-stop-guard.py even though the turn DID send).
+# `<agent-message from="...">` is the same hand-back marker
+# hooks/_outbound_verify_transcript.py's AGENT_MESSAGE_RE already parses,
+# confirmed against a real transcript (session 6a91451f, line 392 etc.) and
+# `<task-notification>` / "Stop hook feedback:" the same way (lines 603 and
+# 1086 of that same transcript). Deliberately excludes the `[daemon-meta]`
+# peer-relay prefix (send-message-stop-guard.py's own _is_relay_input /
+# _RELAY_TAG_RE): a relay-only turn is meant to count as its own boundary,
+# since the Stop guard's relay exemption (todo 410/1032) depends on that.
+_INJECTED_USER_ENTRY_RE = re.compile(
+    r"^(?:Another Claude session sent a message:\s*<agent-message\b"
+    r"|<task-notification>"
+    r"|Stop hook feedback:)"
+)
+
+
+def is_injected_user_entry(entry: dict) -> bool:
+    """True if a `type: user` entry is a harness-injected mid-turn
+    notification (see _INJECTED_USER_ENTRY_RE) rather than a real human or
+    queued prompt. Checked alongside `is_tool_result_entry` wherever a turn
+    boundary is scanned - neither alone covers both non-boundary shapes."""
+    if entry.get("type") != "user":
+        return False
+    return bool(_INJECTED_USER_ENTRY_RE.match(_entry_text(entry).lstrip()))
+
+
 def iter_turn_tool_uses(transcript_path: str):
     """Yield (name, input) for tool_use blocks in assistant entries after the
-    most recent REAL user entry (not a tool_result), an approximation of
-    "this turn"."""
+    most recent REAL user entry (not a tool_result, not a harness-injected
+    mid-turn notification), an approximation of "this turn"."""
     path = Path(transcript_path)
     if not path.exists():
         return
@@ -301,7 +348,7 @@ def iter_turn_tool_uses(transcript_path: str):
                 pass
     last_user_idx = -1
     for i, e in enumerate(entries):
-        if e.get("type") == "user" and not is_tool_result_entry(e):
+        if e.get("type") == "user" and not is_tool_result_entry(e) and not is_injected_user_entry(e):
             last_user_idx = i
     for e in entries[last_user_idx + 1:]:
         if e.get("type") != "assistant":
