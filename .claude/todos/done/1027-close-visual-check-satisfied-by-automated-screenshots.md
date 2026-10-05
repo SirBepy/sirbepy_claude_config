@@ -74,3 +74,4 @@ session, the more reliably the guard disarms.
   is worse than the current gap.
 - The `claude_usage_in_taskbar` instance of the missed item was filed as that repo's todo 980 on
   2026-09-26, so the concrete case is not lost while this is open.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane H. Procedure-doc change, untestable beyond ci/run_all.py; 1055's preamble half added by the orchestrator.

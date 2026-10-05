@@ -84,6 +84,15 @@ against a 393pt design frame - see the logical-width step below.
 - [ ] Diff mode: capture gotchas (semantics/scroll, CTA flash, wheel-scroll) checked before trusting
       a screenshot that showed a surprising delta
 
+## Note for /close's visual-work check
+
+Screenshots this skill (or its delegates) write to `.for_bepy/screenshots/<id>/` during a run are
+not automatically shown to Joe. `/close` Phase 0's visual-work check only clears on a frame actually
+reaching Joe this session (`SendUserFile`, `/preview`'s image branch, or equivalent) - files existing
+on disk from an automated run do not satisfy it (todo 1027). If a run here is meant to double as the
+visual proof for a CSS/layout change, follow it with that SendUserFile/`/preview` call naming the
+frame.
+
 ## Related
 
 - `~/.claude/skills/flutter-e2e/SKILL.md` - the Flutter driving mechanics and capture gotchas this

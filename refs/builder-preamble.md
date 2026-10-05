@@ -43,7 +43,8 @@ session's commit depends on it).
 If this dispatch captures screenshots, save them under `.for_bepy/screenshots/<pid>-<start-ticks>/`,
 the id the orchestrator resolved once via `rename-session.ps1 -GetId` (never a bare or hand-picked
 subfolder name, and never one you derive yourself) - that's what leaves files `/close` can never
-prove ownership of and therefore never clean up.
+prove ownership of and therefore never clean up. A suite that picks its own folder (zng-app's
+`e2e/run-all.js`) takes the same path via `E2E_SCREENSHOT_DIR=<repo>/.for_bepy/screenshots/<id>`.
 
 <OFF_LIMITS>
 

@@ -62,3 +62,7 @@ In `skills/flutter-bump/SKILL.md`:
 - A cold session runs `/flutter-bump` through to pushed commits in all three repos without
   improvising a script or rediscovering the gate.
 - The smoke helper exists in the skill folder and runs against local zng-api for admin and biller.
+
+## Notes
+
+- /loop-todos 2026-10-05: step 2e now runs the push gate via skills/commit/SKILL.md's Push pipeline, plus the backend precondition, flutterRoot re-check and full commit-pathspec invocation. Still open: the committed admin/biller smoke helper (skills/flutter-bump/scripts/smoke.cjs); its recipe and accounts live in zng-app's project memory (reference_admin_biller_local_smoke_e2e.md), so build it from a zng-app session against a live local backend.

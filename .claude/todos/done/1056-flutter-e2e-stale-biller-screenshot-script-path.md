@@ -28,3 +28,7 @@ Replace the pointer with the local-only path, or point at zng-app's tracked `e2e
 ## Acceptance
 
 - No mention of `scripts/screenshot-dev.js` as a committed file remains in `skills/flutter-e2e/SKILL.md`.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane H. Procedure-doc change, untestable beyond ci/run_all.py; 1055's preamble half added by the orchestrator.

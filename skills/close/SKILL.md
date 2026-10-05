@@ -66,12 +66,15 @@ Resolve this session's screenshot-subfolder id now: run `rename-session.ps1 -Get
 matched against `~/.claude/sessions/*.json`, not a process-tree walk (todo 60: the walk resolved
 to two different PIDs at two points in the SAME session; the sessionId match is stable). The
 start-time suffix is load-bearing, not decoration: Windows recycles PIDs, so a bare PID can
-collide with a dead session that left files behind; PID plus start time cannot. Also note whether
-this session captured any screenshots at all. Phase 3 step 3 uses both: the id locates this
-session's own subfolder for Phase 4's screenshot count, and the zero-writes flag sets that count to
-0 without touching the filesystem.
+collide with a dead session that left files behind; PID plus start time cannot. Also note two
+separate flags, which answer different questions and must never collapse into one: whether this
+session captured any screenshots at all (the **zero-writes flag**), and whether any capture was
+actually put in front of Joe (the **shown-to-Joe flag**, see the visual-work check below). Phase 3
+step 3 uses the id and the zero-writes flag only: the id locates this session's own subfolder for
+Phase 4's screenshot count, and the zero-writes flag sets that count to 0 without touching the
+filesystem.
 
-**Visual-work check.** If any file changed this session matches `.css`/`.scss`/`.less`, or is otherwise a user-facing visual/layout change, and the zero-screenshots flag above is true, add "show Joe a live screenshot of the visual change" to the unfinished-commitments list below. CLAUDE.md's UI & visual changes section already requires this; a green headless/e2e test pass is not a substitute, since it cannot detect "this looks wrong" (2026-08-01: an AUQ card-height CSS fix shipped on a passing Playwright regression test alone, never shown live).
+**Visual-work check.** If any file changed this session matches `.css`/`.scss`/`.less`, or is otherwise a user-facing visual/layout change, and the shown-to-Joe flag above is false, add "show Joe a live screenshot of the visual change" to the unfinished-commitments list below. The shown-to-Joe flag is true only if the transcript shows a frame actually reaching Joe this session - a `SendUserFile` call, `/preview`'s image branch, or equivalent - naming a screenshot tied to this change; it is NOT satisfied by files merely existing under `.for_bepy/screenshots/<id>/`. A `/e2e` or `/flutter-e2e` run (or any other automated harness) writes PNGs there that nobody ever looks at - that sets the zero-writes flag false while the shown-to-Joe flag stays false too, and it is the shown-to-Joe flag this check must read (todo 1027: a session that ran `pnpm run test:view` had the zero-writes flag read FALSE from 29 harness-written PNGs and the check never fired, though Joe saw none of them). CLAUDE.md's UI & visual changes section already requires this; a green headless/e2e test pass is not a substitute, since it cannot detect "this looks wrong" (2026-08-01: an AUQ card-height CSS fix shipped on a passing Playwright regression test alone, never shown live).
 
 **Orphaned-probe check (todo 968).** If this project has any file under a `verify/`, `e2e/`,
 `tests/`, `test/`, `__tests__/`, `cypress/`, `playwright/`, or `spec(s)/` directory, run

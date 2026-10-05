@@ -39,3 +39,4 @@ repo already honours an override, `E2E_SCREENSHOT_DIR` (`e2e/lib/config.js:107`,
 - No change to any zng-app tracked file.
 
 ## Notes
+- Completed by /loop-todos cycle 1 (2026-10-05), lane H. Procedure-doc change, untestable beyond ci/run_all.py; 1055's preamble half added by the orchestrator.
