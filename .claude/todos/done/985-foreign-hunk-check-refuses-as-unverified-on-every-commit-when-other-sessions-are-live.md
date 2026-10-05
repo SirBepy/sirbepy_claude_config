@@ -42,3 +42,4 @@ SKILL.md prose could say so. That is also a second instance of the pattern todo
 `989-commit-pathspec-refuses-then-prints-the-answer-it-refused-for` already describes.
 
 - Folded from 989 (archived as duplicate, /cleanup-todos 2026-10-05): measured cost was 10/10 commits needing two calls in one session; a `--accept-derived-ranges` escape hatch was considered and rejected; a liveness filter on the marker count is a complementary fix alongside repo-scoping.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane B, test-first in skills/commit/test_commit_pathspec.sh (11 new assertions RED against HEAD, 57/57 GREEN).

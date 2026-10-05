@@ -31,3 +31,7 @@ comma form working. Add a self-test case in the commit skill's test suite, if on
 - `--force overlap --force foreign-hunk` proceeds past both checks.
 - `--force overlap,foreign-hunk` still works.
 - `python ci/run_all.py` is green.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane B, test-first in skills/commit/test_commit_pathspec.sh (11 new assertions RED against HEAD, 57/57 GREEN).

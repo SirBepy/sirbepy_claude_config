@@ -548,6 +548,242 @@ out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r16" --ex
 check "plain --own (no --own-since) still leaves the HEAD-relative auto-derive unchanged" \
   0 'auto-derived own-range 1-6,17-23 \(every current hunk assumed own' 'derived since|UNVERIFIED|REFUSED' "$out" "$rc"
 
+# --- repeated --force flags accumulate, never last-one-wins (todo 1053): a stale HEAD plus an
+# undeclared second hunk in the same call, overridden with two SEPARATE --force flags rather
+# than one comma-joined value - proves the arg parser appends instead of overwriting ---
+r19=$(new_repo); tmp_dirs+=("$r19")
+{
+  printf 'line %02d\n' $(seq 1 30)
+} > "$r19/multi.txt"
+git -C "$r19" add multi.txt
+git -C "$r19" commit -q -m "seed multi.txt"
+branch=$(git -C "$r19" rev-parse --abbrev-ref HEAD)
+stale_sha=$(git -C "$r19" rev-parse HEAD)
+printf 'peer commit\n' >> "$r19/README.md"
+git -C "$r19" commit -q -am "simulated peer commit, unrelated file"
+sed -i '3s/.*/line 03 CHANGED/' "$r19/multi.txt"
+sed -i '20s/.*/line 20 CHANGED/' "$r19/multi.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r19" --expect-branch "$branch" --expect-sha "$stale_sha" \
+  --own-range multi.txt:1-6 --force head-guard --force foreign-hunk -m "repeated force accumulates" -- multi.txt 2>&1); rc=$?
+check "repeated --force head-guard: overridden rather than lost to a later --force" \
+  0 'OVERRIDDEN \(--force head-guard\)' 'REFUSED' "$out" "$rc"
+check "repeated --force foreign-hunk: ALSO overridden in the same call (todo 1053)" \
+  0 'OVERRIDDEN \(--force foreign-hunk\)' 'REFUSED' "$out" "$rc"
+
+# --- overlap-check on a personal-repo origin proceeds without --force (todo 1076): a local
+# bare remote stands in for "has an upstream" without needing network access, then the
+# origin url decides personal vs client exactly as hooks/gh-account-switch.sh's own mapping
+# does. Unpushed commit changes line 5; the working tree edits line 5 again - a real
+# hunk-level overlap, not file-level ---
+r20=$(new_repo); tmp_dirs+=("$r20")
+bare20=$(mktemp -d) || { echo "FAIL: mktemp -d (bare20)"; exit 1; }
+tmp_dirs+=("$bare20")
+git init -q --bare "$bare20"
+git -C "$r20" remote add origin "$bare20"
+{
+  printf 'line %02d\n' $(seq 1 30)
+} > "$r20/multi.txt"
+git -C "$r20" add multi.txt
+git -C "$r20" commit -q -m "seed multi.txt"
+branch=$(git -C "$r20" rev-parse --abbrev-ref HEAD)
+git -C "$r20" push -q -u origin "$branch"
+sed -i '5s/.*/line 05 UNPUSHED/' "$r20/multi.txt"
+git -C "$r20" commit -q -am "unpushed change to line 5"
+sha=$(git -C "$r20" rev-parse HEAD)
+sed -i '5s/.*/line 05 WORKING TREE EDIT/' "$r20/multi.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r20" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "personal repo proceeds on overlap without force" -- multi.txt 2>&1); rc=$?
+check "personal-repo origin: an overlap hit proceeds without --force, prints the info line" \
+  0 'personal repo: proceeding \(SKILL.md step 8 branch 2\)' 'REFUSED' "$out" "$rc"
+if [ "$(git -C "$r20" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: personal-repo overlap bypass did not commit"
+  fail=1
+else
+  echo "PASS: personal-repo overlap bypass committed"
+fi
+
+# --- the same overlap hit on a client-repo origin still refuses by default (todo 1076) - the
+# origin is changed to a client-org url AFTER the local push, since @{u} only needs the
+# already-fetched tracking ref, not a reachable remote ---
+r21=$(new_repo); tmp_dirs+=("$r21")
+bare21=$(mktemp -d) || { echo "FAIL: mktemp -d (bare21)"; exit 1; }
+tmp_dirs+=("$bare21")
+git init -q --bare "$bare21"
+git -C "$r21" remote add origin "$bare21"
+{
+  printf 'line %02d\n' $(seq 1 30)
+} > "$r21/multi.txt"
+git -C "$r21" add multi.txt
+git -C "$r21" commit -q -m "seed multi.txt"
+branch=$(git -C "$r21" rev-parse --abbrev-ref HEAD)
+git -C "$r21" push -q -u origin "$branch"
+sed -i '5s/.*/line 05 UNPUSHED/' "$r21/multi.txt"
+git -C "$r21" commit -q -am "unpushed change to line 5"
+sha=$(git -C "$r21" rev-parse HEAD)
+sed -i '5s/.*/line 05 WORKING TREE EDIT/' "$r21/multi.txt"
+git -C "$r21" remote set-url origin "https://github.com/zirtue-corp/testrepo.git"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r21" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "client repo still refuses on overlap" -- multi.txt 2>&1); rc=$?
+check "client-repo origin: an overlap hit still refuses by default" \
+  1 'overlap-check.*REFUSED' 'personal repo: proceeding' "$out" "$rc"
+check "client-repo overlap REFUSED message names a --force value the script actually accepts" \
+  1 'REFUSED.*--force overlap' '' "$out" "$rc"
+if [ "$(git -C "$r21" rev-parse HEAD)" != "$sha" ]; then
+  echo "FAIL: a refused client-repo overlap must not have committed"
+  fail=1
+else
+  echo "PASS: refused client-repo overlap left HEAD untouched"
+fi
+
+# --- --force overlap-check is accepted as an alias for --force overlap (todo 1076) - the
+# label the REFUSED message itself prints, which a caller naturally retypes verbatim ---
+r22=$(new_repo); tmp_dirs+=("$r22")
+bare22=$(mktemp -d) || { echo "FAIL: mktemp -d (bare22)"; exit 1; }
+tmp_dirs+=("$bare22")
+git init -q --bare "$bare22"
+git -C "$r22" remote add origin "$bare22"
+{
+  printf 'line %02d\n' $(seq 1 30)
+} > "$r22/multi.txt"
+git -C "$r22" add multi.txt
+git -C "$r22" commit -q -m "seed multi.txt"
+branch=$(git -C "$r22" rev-parse --abbrev-ref HEAD)
+git -C "$r22" push -q -u origin "$branch"
+sed -i '5s/.*/line 05 UNPUSHED/' "$r22/multi.txt"
+git -C "$r22" commit -q -am "unpushed change to line 5"
+sha=$(git -C "$r22" rev-parse HEAD)
+sed -i '5s/.*/line 05 WORKING TREE EDIT/' "$r22/multi.txt"
+git -C "$r22" remote set-url origin "https://github.com/zirtue-corp/testrepo.git"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r22" --expect-branch "$branch" --expect-sha "$sha" \
+  --force overlap-check -m "overlap-check alias accepted" -- multi.txt 2>&1); rc=$?
+check "--force overlap-check is accepted as an alias for --force overlap" \
+  0 'OVERRIDDEN \(--force overlap\)' 'REFUSED' "$out" "$rc"
+
+# --- coverage check: a staged MODIFY to an unrelated, same-basename file in a different
+# directory must only WARN, never REFUSE (todo 1073) - the false positive was the staged-diff
+# loop calling check_coverage_hit for every status, not only a deletion/rename, so a same-
+# basename M status (still fully present, nothing missing) got treated as "half a move" ---
+r28=$(new_repo); tmp_dirs+=("$r28")
+mkdir -p "$r28/a" "$r28/b"
+printf 'a-content\n' > "$r28/a/config.yml"
+printf 'b-content\n' > "$r28/b/config.yml"
+git -C "$r28" add a/config.yml b/config.yml
+git -C "$r28" commit -q -m "seed a/config.yml b/config.yml"
+branch=$(git -C "$r28" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r28" rev-parse HEAD)
+printf 'a-content EDITED\n' > "$r28/a/config.yml"
+git -C "$r28" add a/config.yml
+printf 'b-content EDITED\n' > "$r28/b/config.yml"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r28" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "unrelated same-basename staged edit only warns" -- b/config.yml 2>&1); rc=$?
+check "a staged MODIFY to an unrelated same-basename file only warns, never refuses (todo 1073)" \
+  0 'coverage-check.*warning, non-blocking.*a/config\.yml' 'coverage-check.*REFUSED' "$out" "$rc"
+if [ "$(git -C "$r28" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: the same-basename-modify case did not commit b/config.yml"
+  fail=1
+else
+  echo "PASS: the same-basename-modify case committed b/config.yml despite the unrelated staged edit"
+fi
+
+# --- coverage check regression guard: a REAL git mv across directories with the SAME
+# basename, destination only in the pathspec, still refuses (todo 1073 must not regress the
+# todo-983 archival-move case the basename rule exists for) ---
+r27=$(new_repo); tmp_dirs+=("$r27")
+mkdir -p "$r27/x" "$r27/y"
+printf 'moved content\n' > "$r27/x/f.md"
+git -C "$r27" add x/f.md
+git -C "$r27" commit -q -m "seed x/f.md"
+branch=$(git -C "$r27" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r27" rev-parse HEAD)
+git -C "$r27" mv x/f.md y/f.md
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r27" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "same-basename real rename, destination only" -- y/f.md 2>&1); rc=$?
+check "same-basename rename across directories (real git mv) still refuses when only destination is named" \
+  1 'coverage-check.*REFUSED.*x/f\.md' '' "$out" "$rc"
+
+# --- foreign-hunk-check liveness filter (todo 985): a marker whose registered cwd (via
+# ~/.claude/sessions/*.json, COMMIT_PATHSPEC_SESSION_REGISTRY_DIR overridden here) is a
+# DIFFERENT repo cannot hold a hunk in THIS one, so it must not count toward the 2+-marker
+# gate - leaving a genuinely solo session free of the UNVERIFIED refusal just because other
+# Claude sessions are live elsewhere on the machine ---
+r25=$(new_repo); tmp_dirs+=("$r25")
+{
+  printf 'line %02d\n' $(seq 1 30)
+} > "$r25/multi.txt"
+git -C "$r25" add multi.txt
+git -C "$r25" commit -q -m "seed multi.txt"
+branch=$(git -C "$r25" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r25" rev-parse HEAD)
+sed -i '3s/.*/line 03 CHANGED/' "$r25/multi.txt"
+sed -i '20s/.*/line 20 CHANGED/' "$r25/multi.txt"
+marker_dir25=$(mktemp -d); tmp_dirs+=("$marker_dir25")
+registry_dir25=$(mktemp -d); tmp_dirs+=("$registry_dir25")
+unrelated_dir25=$(mktemp -d); tmp_dirs+=("$unrelated_dir25")
+same_id25="11111111-1111-4111-8111-111111111111"
+other_id25="22222222-2222-4222-8222-222222222222"
+printf 'x' > "$marker_dir25/$same_id25"
+printf 'x' > "$marker_dir25/$other_id25"
+repo25_root=$(git -C "$r25" rev-parse --show-toplevel)
+printf '{"pid":1,"sessionId":"%s","cwd":"%s"}' "$same_id25" "$repo25_root" > "$registry_dir25/same.json"
+printf '{"pid":2,"sessionId":"%s","cwd":"%s"}' "$other_id25" "$unrelated_dir25" > "$registry_dir25/other.json"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$marker_dir25" COMMIT_PATHSPEC_SESSION_REGISTRY_DIR="$registry_dir25" \
+  "$cp" -C "$r25" --expect-branch "$branch" --expect-sha "$sha" -m "only the same-repo marker counts" -- multi.txt 2>&1); rc=$?
+check "a marker registered to a DIFFERENT repo's cwd is not counted, leaving this session solo (todo 985)" \
+  0 'auto-derived own-range 1-6,17-23 \(every current hunk assumed own' 'UNVERIFIED|REFUSED' "$out" "$rc"
+
+# --- same filter, regression guard: two markers BOTH registered to THIS repo's cwd still
+# trigger the UNVERIFIED gate - proves the repo-scoping does not just silence the check ---
+r26=$(new_repo); tmp_dirs+=("$r26")
+{
+  printf 'line %02d\n' $(seq 1 30)
+} > "$r26/multi.txt"
+git -C "$r26" add multi.txt
+git -C "$r26" commit -q -m "seed multi.txt"
+branch=$(git -C "$r26" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r26" rev-parse HEAD)
+sed -i '3s/.*/line 03 CHANGED/' "$r26/multi.txt"
+sed -i '20s/.*/line 20 CHANGED/' "$r26/multi.txt"
+marker_dir26=$(mktemp -d); tmp_dirs+=("$marker_dir26")
+registry_dir26=$(mktemp -d); tmp_dirs+=("$registry_dir26")
+peer_id26="33333333-3333-4333-8333-333333333333"
+own_id26="44444444-4444-4444-8444-444444444444"
+printf 'x' > "$marker_dir26/$peer_id26"
+printf 'x' > "$marker_dir26/$own_id26"
+repo26_root=$(git -C "$r26" rev-parse --show-toplevel)
+printf '{"pid":3,"sessionId":"%s","cwd":"%s"}' "$peer_id26" "$repo26_root" > "$registry_dir26/peer.json"
+printf '{"pid":4,"sessionId":"%s","cwd":"%s"}' "$own_id26" "$repo26_root" > "$registry_dir26/own.json"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$marker_dir26" COMMIT_PATHSPEC_SESSION_REGISTRY_DIR="$registry_dir26" \
+  "$cp" -C "$r26" --expect-branch "$branch" --expect-sha "$sha" -m "two same-repo markers still refuse" -- multi.txt 2>&1); rc=$?
+check "two markers both registered to THIS repo's cwd still trigger UNVERIFIED (todo 985)" \
+  1 'foreign-hunk-check.*UNVERIFIED' 'foreign-hunk-check.*clean' "$out" "$rc"
+
+# --- a short --expect-sha resolves via git rev-parse before the head-guard comparison (todo
+# 994, script half) instead of a bare string-equality that could only ever match a full sha ---
+r24=$(new_repo); tmp_dirs+=("$r24")
+branch=$(git -C "$r24" rev-parse --abbrev-ref HEAD)
+full_sha24=$(git -C "$r24" rev-parse HEAD)
+short_sha24="${full_sha24:0:7}"
+printf 'seed\nedited\n' > "$r24/README.md"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r24" --expect-branch "$branch" --expect-sha "$short_sha24" \
+  -m "short expect-sha resolves before comparing" -- README.md 2>&1); rc=$?
+check "a short --expect-sha resolves to the full sha before the head-guard comparison" \
+  0 'head-guard. OK' 'REFUSED|ERROR' "$out" "$rc"
+
+# --- untracked-file exemption keys on "no blob at HEAD", not on classify_path's live/
+# untracked split (todo 1026): a brand-new file the caller already `git add`-ed before calling
+# this script is "live" per classify_path (it's in the index now), but it still has no HEAD
+# baseline for a peer's lines to hide inside, so it must stay exempt from the 2+-marker gate
+# exactly like a never-added untracked file does ---
+r23=$(new_repo); tmp_dirs+=("$r23")
+branch=$(git -C "$r23" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r23" rev-parse HEAD)
+printf 'brand new\nsecond line\n' > "$r23/brand-new.txt"
+git -C "$r23" add brand-new.txt
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$multi_marker_dir" "$cp" -C "$r23" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "pre-added new file keeps the untracked exemption" -- brand-new.txt 2>&1); rc=$?
+check "a pre-git-add'ed new file (no HEAD blob) stays exempt from the 2+-marker gate (todo 1026)" \
+  0 'auto-derived own-range 1-2 \(every current hunk assumed own' 'UNVERIFIED|REFUSED' "$out" "$rc"
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else

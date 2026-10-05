@@ -19,3 +19,7 @@ In `skills/commit/commit-pathspec.sh` (coverage-check step), drop the basename m
 - Repro: stage `a/config.yml`, commit `b/config.yml` by pathspec: warns, does not refuse.
 - `git mv x/f.md y/f.md` then pathspec only `y/f.md`: still refuses.
 - `python ci/run_all.py` green.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane B, test-first in skills/commit/test_commit_pathspec.sh (11 new assertions RED against HEAD, 57/57 GREEN).

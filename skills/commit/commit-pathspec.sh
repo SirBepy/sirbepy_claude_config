@@ -81,7 +81,10 @@ while [ $# -gt 0 ]; do
       key="${spec%%:*}"
       explicit_ranges["$key"]+="${spec#*:},"
       ;;
-    --force) force_list="${2:-}"; shift 2 ;;
+    # Appended, not assigned (todo 1053): a repeated --force flag is how a caller naturally
+    # writes "override these two checks", and an assignment here silently dropped every
+    # earlier one, honouring only the last --force actually typed.
+    --force) force_list="${force_list:+$force_list,}${2:-}"; shift 2 ;;
     -m|--message) message="${2:-}"; shift 2 ;;
     --) shift; files=("$@"); break ;;
     *) printf 'ERROR: unknown argument %s\n' "$1"; exit 2 ;;
@@ -95,9 +98,14 @@ fi
 
 if [ -n "$force_list" ]; then
   IFS=',' read -r -a force_arr <<<"$force_list"
+  normalized_force=()
   for c in "${force_arr[@]}"; do
+    # overlap-check is accepted as an alias for overlap (todo 1076): it is the exact label
+    # the overlap-check REFUSED message itself prints, and typing that back verbatim was the
+    # second failed call the todo measured.
+    [ "$c" = "overlap-check" ] && c=overlap
     case "$c" in
-      head-guard|overlap|foreign-hunk|coverage) ;;
+      head-guard|overlap|foreign-hunk|coverage) normalized_force+=("$c") ;;
       branch-guard|prefilter|prefilter-gate)
         printf 'ERROR: --force %s is never accepted - branch-guard and the prefilter gate are not overridable\n' "$c"
         exit 2 ;;
@@ -106,6 +114,7 @@ if [ -n "$force_list" ]; then
         exit 2 ;;
     esac
   done
+  force_list=$(IFS=,; echo "${normalized_force[*]}")
 fi
 has_force() { [[ ",$force_list," == *",$1,"* ]]; }
 
@@ -116,6 +125,34 @@ if ! git -C "$repo_check" rev-parse --show-toplevel >/dev/null 2>&1; then
 fi
 repo_root=$(git -C "$repo_check" rev-parse --show-toplevel)
 git_c() { git -C "$repo_root" "$@"; }
+
+# --expect-sha accepts a short sha (todo 994): resolve it against this repo before the
+# head-guard comparison, the same normalization a caller would otherwise have to do by hand.
+# Restricted to a bare hex string so a branch/tag name typo can never silently resolve to
+# today's HEAD and defeat the guard it is supposed to be.
+if [[ "$expect_sha" =~ ^[0-9a-fA-F]{4,40}$ ]]; then
+  resolved_expect_sha=$(git_c rev-parse --verify "$expect_sha" 2>/dev/null) || resolved_expect_sha=""
+  [ -n "$resolved_expect_sha" ] && expect_sha="$resolved_expect_sha"
+fi
+
+# Mirrors hooks/gh-account-switch.sh's own org-to-account mapping (todo 1076): any origin not
+# matching one of Joe's three client orgs, or no origin at all, is personal - the same bucket
+# that hook's own `*) acct=SirBepy` default falls into.
+is_personal_repo() {
+  local remote
+  remote=$(git_c remote get-url origin 2>/dev/null) || return 0
+  case "$remote" in
+    *zirtue-corp/*|*Fibo-Studio/*|*revaire*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+# A path's exemption from the multi-session gate below keys on "no blob at HEAD", not on
+# classify_path's live/untracked split (todo 1026): a file the caller already `git add`-ed
+# before calling this script is "live" per classify_path (it is in the index now), but if it
+# was never part of any commit it still has no HEAD baseline for a peer's lines to hide
+# inside - the exact case the untracked exemption exists for.
+file_has_head_blob() { git_c cat-file -e "HEAD:$1" 2>/dev/null; }
 
 # --own-since resolution: a shorthand for "every commit since <sha> is mine" (todo 978). Merged
 # into own_shas so overlap-check.sh's own-commit exclusion sees no difference between a hand-typed
@@ -248,8 +285,14 @@ else
   elif [ "$ov_rc" -ne 0 ]; then
     if has_force overlap; then
       printf '[overlap-check] OVERRIDDEN (--force overlap):\n%s\n' "$ov_out"
+    elif is_personal_repo; then
+      # SKILL.md step 8, "On exit 1, evaluate in this order" branch 2: a personal repo has no
+      # cross-ticket boundary to cross, so Claude never asks on an overlap hit there and always
+      # takes the genuinely-separate-work branch (todo 1076) - this proceeds the same way
+      # instead of making every personal-repo commit pay for a --force round trip.
+      printf '[overlap-check] info, personal repo: proceeding (SKILL.md step 8 branch 2):\n%s\n' "$ov_out"
     else
-      printf '[overlap-check] REFUSED (judgement call - see SKILL.md step 8, "On exit 1, evaluate in this order"):\n%s\n' "$ov_out"
+      printf '[overlap-check] REFUSED (judgement call - see SKILL.md step 8, "On exit 1, evaluate in this order"; rerun with --force overlap to proceed anyway):\n%s\n' "$ov_out"
       exit 1
     fi
   else
@@ -269,6 +312,39 @@ fi
 # actually fine (annoying, safe) - it can never make a genuinely shared tree look like a solo one.
 # This script only reads the directory: it never writes or deletes a marker.
 session_marker_dir="${COMMIT_PATHSPEC_SESSION_MARKER_DIR:-$dir/../../hooks/.session-markers}"
+# A live marker elsewhere on the machine says nothing about THIS repo (todo 985): the marker
+# is keyed by session id, not by repo, so "4 live session markers" routinely meant 4 sessions
+# in 4 unrelated repos, refusing a solo-repo commit as reflexively as a genuinely shared one.
+# Resolve each marker's session to its registered cwd via ~/.claude/sessions/*.json - the same
+# sessionId/cwd pair write-session-marker.ps1 itself reads for pid liveness - and count only
+# the ones whose cwd is this repo or a path under it.
+session_registry_dir="${COMMIT_PATHSPEC_SESSION_REGISTRY_DIR:-$dir/../../sessions}"
+marker_shares_this_repo() {
+  # No resolvable record (missing registry, unparseable line, no matching sessionId) stays
+  # counted as sharing this repo - unresolved inflates the count rather than clearing it, the
+  # same safe-direction rule the comment above this block already commits to for stale
+  # markers: never let missing data make a genuinely shared tree look solo.
+  local session_id="$1" f line cwd norm_cwd norm_repo
+  norm_repo=$(printf '%s' "$repo_root" | tr '[:upper:]' '[:lower:]')
+  norm_repo="${norm_repo%/}"
+  [ -d "$session_registry_dir" ] || return 0
+  shopt -s nullglob
+  for f in "$session_registry_dir"/*.json; do
+    line=$(grep -F "\"sessionId\":\"$session_id\"" "$f" 2>/dev/null) || continue
+    cwd=$(printf '%s' "$line" | grep -oE '"cwd":"[^"]*"')
+    cwd="${cwd#*:\"}"; cwd="${cwd%\"}"
+    cwd=$(printf '%s' "$cwd" | sed 's/\\\\/\//g')
+    norm_cwd=$(printf '%s' "$cwd" | tr '[:upper:]' '[:lower:]')
+    norm_cwd="${norm_cwd%/}"
+    shopt -u nullglob
+    case "$norm_cwd" in
+      "$norm_repo"|"$norm_repo"/*) return 0 ;;
+      *) return 1 ;;
+    esac
+  done
+  shopt -u nullglob
+  return 0
+}
 session_marker_count=0
 if [ -d "$session_marker_dir" ]; then
   # Count ONLY bare session-id markers. write-session-marker.ps1 names its file exactly
@@ -280,7 +356,9 @@ if [ -d "$session_marker_dir" ]; then
   for marker_path in "$session_marker_dir"/*; do
     case "${marker_path##*/}" in
       [0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])
-        session_marker_count=$((session_marker_count + 1)) ;;
+        if marker_shares_this_repo "${marker_path##*/}"; then
+          session_marker_count=$((session_marker_count + 1))
+        fi ;;
     esac
   done
   shopt -u nullglob
@@ -316,12 +394,12 @@ for f in "${diffable_files[@]}"; do
       derive_notes+="  - $f: pure deletion, no new-file lines to own, skipped for this check"$'\n'
       continue
     fi
-    if [ -n "$own_since" ] && [ "${class_of[$f]}" != "untracked" ]; then
+    if [ -n "$own_since" ] && file_has_head_blob "$f"; then
       # Traces to a concrete, git-verifiable commit list (own_since..HEAD), not an assumption
       # that whatever is currently uncommitted must be mine - the same trust level as a
       # caller-declared --own-range (todo 978). Bypasses the multi-session gate below.
       derive_notes+="  - $f: auto-derived own-range $spec (derived since $own_since, trusted - own commit history, todo 978)"$'\n'
-    elif [ "$multi_session" -eq 1 ] && [ "${class_of[$f]}" != "untracked" ]; then
+    elif [ "$multi_session" -eq 1 ] && file_has_head_blob "$f"; then
       unverified_files+=("$f")
       derive_notes+="  - $f: auto-derived own-range $spec, UNVERIFIED ($session_marker_count live session markers - a peer may hold lines in this file, todo 924 REOPENED)"$'\n'
     else
@@ -381,22 +459,28 @@ coverage_move=()
 coverage_other=()
 declare -A move_seen other_seen
 check_coverage_hit() {
-  # $1: a path NOT in the pathspec that showed up as a delete (or the old half of a rename) in
-  # either diff below. Matched against $files directly, not against the diff's own "add" side -
-  # an archival destination is frequently still untracked (not yet `git add`-ed when this check
-  # runs), so it would never appear as an "A" in any git diff for this check to pair it against.
+  # $1: a path NOT in the pathspec that showed up in either diff below. $2: 1 when $1's status
+  # is deletion-shaped (a plain delete, or the old side of a rename) - 0 for anything else
+  # (add, modify, the new side of a rename), i.e. the path still fully exists somewhere and so
+  # cannot be "half of a move" (todo 1073).
   #   - same directory as a pathspec file: git's own rename detection already paired an old path
   #     with a differently-named new path (e.g. src/old.txt -> src/new.txt) via R-status, so a
-  #     directory match is sufficient signal there (todo 495/964's original heuristic, unchanged).
+  #     directory match is sufficient signal there (todo 495/964's original heuristic, unchanged
+  #     for any status - an unrelated ADD or MODIFY co-located with the pathspec was already the
+  #     documented "move shape" per SKILL.md step 8, not something this todo revisits).
   #   - same basename as a pathspec file, regardless of directory (todo 983): the archival shape,
-  #     where <id>-<slug>.md is identical on both sides and only the directory differs.
-  local p="$1" pd pb d f
+  #     where <id>-<slug>.md is identical on both sides and only the directory differs. Gated on
+  #     $2 (todo 1073): a same-basename file elsewhere that is merely being edited, not deleted
+  #     or renamed away, is not missing anything a move would have left behind - the false
+  #     positive was this basename rule firing on a staged MODIFY to an unrelated file that
+  #     happened to share a filename with the pathspec's own target.
+  local p="$1" is_del="$2" pd pb d f
   [ -n "${in_pathspec[$p]:-}" ] && return
   pd=$(dirname -- "$p")
   pb=$(basename -- "$p")
   for f in "${files[@]}"; do
     d=$(dirname -- "$f")
-    if [ "$d" = "$pd" ] || [ "$(basename -- "$f")" = "$pb" ]; then
+    if [ "$d" = "$pd" ] || { [ "$is_del" = "1" ] && [ "$(basename -- "$f")" = "$pb" ]; }; then
       if [ -z "${move_seen[$p]:-}" ]; then
         move_seen["$p"]=1
         coverage_move+=("$p")
@@ -411,15 +495,18 @@ check_coverage_hit() {
 }
 
 # Staged half: `git diff --cached --name-status` - a `git mv`/`git rm`/`git add` already sitting
-# in the index. Unchanged from before todo 983.
+# in the index. Every staged status still reaches check_coverage_hit, unchanged from before
+# todo 983 - only the is_del flag it is passed is new.
 staged=$(git_c diff --cached --name-status)
 while IFS=$'\t' read -r status path rest; do
   [ -z "$path" ] && continue
   if [[ "$status" == R* ]]; then
-    check_coverage_hit "$path"
-    check_coverage_hit "$rest"
+    check_coverage_hit "$path" 1
+    check_coverage_hit "$rest" 0
   else
-    check_coverage_hit "$path"
+    is_del=0
+    [[ "$status" == D* ]] && is_del=1
+    check_coverage_hit "$path" "$is_del"
   fi
 done <<<"$staged"
 
@@ -433,8 +520,8 @@ unstaged=$(git_c diff --name-status)
 while IFS=$'\t' read -r status path rest; do
   [ -z "$path" ] && continue
   case "$status" in
-    D*) check_coverage_hit "$path" ;;
-    R*) check_coverage_hit "$path" ;;
+    D*) check_coverage_hit "$path" 1 ;;
+    R*) check_coverage_hit "$path" 1; check_coverage_hit "$rest" 0 ;;
   esac
 done <<<"$unstaged"
 
