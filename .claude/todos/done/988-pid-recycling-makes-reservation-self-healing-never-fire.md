@@ -91,3 +91,4 @@ contract says may never be reused, and the promise of no-separate-cleanup-needed
   the fix, not before: removing it first destroys the only live evidence.
 - Do not fix this by dropping the PID check and going age-only. The PID half is what stops a live
   session losing its reservation mid-write; weakening it trades a cosmetic leak for a real race.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane C, test-first via tools/test_close_*.py (RED against HEAD copies, then GREEN).

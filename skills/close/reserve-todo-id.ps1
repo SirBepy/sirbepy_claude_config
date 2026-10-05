@@ -25,8 +25,11 @@
 
   Reservation lifecycle: the CALLER deletes ".claude/todos/<id>-.reserved" immediately after
   writing the real "<id>-<slug>.md" file. An abandoned reservation (crash between reserve and
-  write) self-heals: the next call to this script prunes it once its mtime exceeds 4 hours,
-  no separate cleanup skill required.
+  write) self-heals: the next call to this script prunes it once its mtime exceeds 4 hours
+  AND the pid recorded in it is confirmed dead - confirmed by pid plus that pid's own start
+  time, not a bare pid number, since Windows recycles pids and a bare number can belong to a
+  totally unrelated later process (todo 988). A marker written before this check existed has
+  no start time to confirm against, so it falls back to a 24-hour age-only prune instead.
 
 .PARAMETER RepoRoot
   Project root containing (or to receive) .claude/todos/. Defaults to the current directory.
@@ -65,15 +68,43 @@ if (-not (Test-Path $todosDir)) {
 
 function Remove-StaleReservations {
     param([string]$TodosDir)
+    # A bare pid is not a reliable liveness signal: Windows recycles pids, so once an
+    # unrelated process inherits the number, "Get-Process -Id <pid>" reads true forever
+    # and the marker never prunes (todo 988, reproduced against a real marker whose
+    # recorded pid 2184 had been reassigned to svchost seven days later). Markers written
+    # below now also record the pid's own start time, so liveness means "this pid is
+    # running AND it started at the moment we recorded" - the same <pid>-<start-ticks>
+    # identity rename-session.ps1 -GetId already uses for the same reason.
     Get-ChildItem -Path $TodosDir -Filter '*-.reserved' -File -ErrorAction SilentlyContinue |
         ForEach-Object {
             $reservedPid = $null
+            $reservedStartTicks = $null
             $content = Get-Content -Path $_.FullName -Raw -ErrorAction SilentlyContinue
             if ($content -match 'pid:\s*(\d+)') { $reservedPid = [int]$matches[1] }
+            if ($content -match 'procStartTicks:\s*(\d+)') { $reservedStartTicks = [int64]$matches[1] }
+
+            $hasStartSignal = [bool]$reservedStartTicks
             $pidAlive = $false
-            if ($reservedPid) { $pidAlive = [bool](Get-Process -Id $reservedPid -ErrorAction SilentlyContinue) }
+            if ($reservedPid -and $hasStartSignal) {
+                $proc = Get-Process -Id $reservedPid -ErrorAction SilentlyContinue
+                if ($proc) { $pidAlive = ($proc.StartTime.Ticks -eq $reservedStartTicks) }
+            }
+
             $ageHours = ((Get-Date) - $_.LastWriteTime).TotalHours
-            if ($ageHours -gt 4 -and -not $pidAlive) {
+            $isStale = if ($hasStartSignal) {
+                # Two-signal marker: today's rule, pid-plus-start-time disambiguates a
+                # recycled pid from the session that actually wrote this reservation.
+                ($ageHours -gt 4) -and (-not $pidAlive)
+            }
+            else {
+                # Legacy marker from before procStartTicks existed - a bare pid can never
+                # be disambiguated from a recycled one, so it gets a much larger age-only
+                # threshold instead of staying immortal. 24h is well past any single-sitting
+                # session, the only case a reservation should still legitimately be open.
+                $ageHours -gt 24
+            }
+
+            if ($isStale) {
                 Remove-Item -Path $_.FullName -Force -ErrorAction SilentlyContinue
             }
         }
@@ -119,9 +150,11 @@ while ($attempt -lt $MaxAttempts -and -not $reservedId) {
     $markerPath = Join-Path $todosDir "$candidateId-.reserved"
     $tempPath   = Join-Path $todosDir "$candidateId-.reserved.tmp-$PID"
 
+    $procStartTicks = (Get-Process -Id $PID).StartTime.Ticks
     $content = @(
         "session: $sessionId"
         "pid: $PID"
+        "procStartTicks: $procStartTicks"
         "reserved: $((Get-Date).ToUniversalTime().ToString('o'))"
     ) -join "`r`n"
     $content += "`r`n"
