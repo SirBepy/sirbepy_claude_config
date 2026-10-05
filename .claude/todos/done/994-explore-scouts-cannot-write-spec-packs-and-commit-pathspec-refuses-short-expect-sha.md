@@ -30,3 +30,7 @@ Head Soccer autopilot session 51bc2e71, 2026-09-12: three of four `subagent_type
 - `bash skills/commit/commit-pathspec.sh --expect-sha <7 chars> ...` passes the head guard when HEAD matches.
 - The doctrine names the agent type for a writing scout.
 - A first-time caller can copy the invocation out of `skills/commit/SKILL.md` step 8 and have it exit 0 without a flag-name retry.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane L5: refs/builder-preamble.md and refs/delegation-doctrine.md (994's script half shipped in eccffe6). Doc change; hooks/test_dispatch_preamble_guard.py confirms the paste block still carries all three guard markers.

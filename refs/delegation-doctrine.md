@@ -77,7 +77,24 @@ the spec pack must outlive the session (a successor, a builder fan-out), the dis
 an output file under `docs/research/` for the scout to write with the Write tool, allowing that
 single file inside an otherwise `READ-ONLY DISPATCH`: a report living only in context is gone at
 the next respawn boundary, so anything a successor needs has to already be on disk before then
-(2026-09-05, head_soccer_v_fable_oneshot).
+(2026-09-05, head_soccer_v_fable_oneshot). Use `subagent_type: general-purpose` for that
+dispatch, never `Explore`: `Explore` strips the `Write` tool entirely, so a scout told to write a
+spec pack under that type either fails the write or silently falls back to returning it inline,
+forcing the orchestrator to copy 12-14 KB out of the report by hand (todo 994, Head Soccer session
+51bc2e71). A `general-purpose` scout stays read-only in effect via its OFF LIMITS file list, not
+via a stripped toolset; when the pack can stay inline in the report instead, skip the output file
+and keep `Explore`.
+
+**Claim before dispatch.** When a dispatch's work comes from a todo file, the orchestrator claims
+that todo via `claim-todo.ps1` BEFORE dispatching the builder, and releases it via
+`complete-todo.ps1` once the builder's report lands and the work is committed - or releases without
+completing on an abort. This is the root `CLAUDE.md` claim rule ("before EXECUTING any todo, claim
+it ... every path, including ad-hoc 'do todo 07'") applied to the dispatch path specifically: the
+claim is the orchestrator's own action, never the builder's, since a subagent cannot reliably reach
+`.claude/todos/` at all (`hooks/agent-todo-write-guard.py` blocks it) and the claim has to outlive
+the builder's own lifetime regardless. `/autopilot` inherits this from here rather than restating it
+(todo 1042: two todos shipped via dispatched builders with no claim ever taken, caught only after
+the fact by `complete-todo.ps1`'s own warning).
 
 **Todo-to-dispatch fidelity.** When a dispatch is built from a todo file, enumerate that todo's
 Approach and Acceptance items before writing the prompt, then confirm each one appears in the
@@ -113,10 +130,14 @@ and the out-of-scope-findings channel below are the only guards.
   highest-value part of this channel: it is what caught the dropped item on todo 465, and naming it
   explicitly makes the rescue deliberate instead of lucky (todo 811). The orchestrator files each
   one as a proper todo after the fan-out returns (see "Out-of-scope findings" below).
-- The staging line, conditional on whether the repo shares a git index with concurrent sessions:
-  default `Stage your changes but do NOT commit. The main agent will run /commit after your
-  report-back.`; for a shared-index repo (e.g. zng-app, zng-biller) substitute `Leave all changes
-  unstaged. The main agent will run /commit by pathspec after your report-back.` Subagents cannot
+- The staging line, conditional on whether the repo shares a git index with concurrent sessions OR
+  with another builder the orchestrator is running at the same time in this same tree: default
+  `Stage your changes but do NOT commit. The main agent will run /commit after your report-back.`;
+  for a shared-index repo (e.g. zng-app, zng-biller) or a parallel-builder dispatch, substitute
+  `Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.`
+  and have that builder name its changed files in its report - the orchestrator commits by that
+  list, never by `git diff --cached`, which can't tell one parallel builder's staged files from
+  another's (see "Parallelism" below, todo 1061). Subagents cannot
   invoke skills, so they must never commit, except `/mega-todos` agents, which commit via a
   branch-guarded procedure - see `~/.claude/skills/mega-todos/SKILL.md`. Include this line even
   when the dispatch provably touches zero git-tracked files (e.g. a gitignored scratch dir): the
@@ -180,7 +201,12 @@ by proxy anyway (todo 335).
 
 **Parallelism.** Independent chunks fan out concurrently; anything that touches the same files
 runs sequentially, or each builder gets its own worktree. Never let two builders write the same
-file in parallel.
+file in parallel. Every builder running concurrently with another in the same tree uses the
+`Leave all changes unstaged` staging line (not the default stage-only variant) and names its own
+changed files in its report; the orchestrator commits each chunk by that reported file list, never
+by `git diff --cached`, which cannot tell one builder's staged files from another's already sitting
+in the same index (todo 1061: another builder's staged deletions rode into an unrelated commit this
+way and left HEAD uncompilable until the second builder's own commit landed).
 
 **Reports come back as conclusions plus evidence.** A subagent returns what it concluded, what it
 changed, and the commands it ran with their real output. It does not return file dumps, search

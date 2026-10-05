@@ -21,3 +21,7 @@ In `refs/builder-preamble.md`'s placeholder table and `refs/delegation-doctrine.
 ## Acceptance
 
 Both refs say it, and a dry read of the doctrine leaves no path where `git diff --cached` is the pathspec source while parallel builders run.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane L5: refs/builder-preamble.md and refs/delegation-doctrine.md (994's script half shipped in eccffe6). Doc change; hooks/test_dispatch_preamble_guard.py confirms the paste block still carries all three guard markers.

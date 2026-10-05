@@ -56,3 +56,4 @@ written would skip the claim every time, because neither document mentions it.
 
 `/mega-todos` has its own claim handling per its SKILL.md and is not the gap here; check it is
 consistent with whatever the doctrine settles on, so the two do not diverge.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane L5: refs/builder-preamble.md and refs/delegation-doctrine.md (994's script half shipped in eccffe6). Doc change; hooks/test_dispatch_preamble_guard.py confirms the paste block still carries all three guard markers.

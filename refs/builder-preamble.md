@@ -24,6 +24,16 @@ entries) and delete that target too, even though it lives in the main checkout. 
 `node_modules` containing `link:`/`workspace:` entries into a worktree in the first place. A
 baseline is taken before you edit, never recovered by rewinding a shared tree.
 
+If getting an uncontended build means pointing a scratch output dir outside the repo (e.g.
+`CARGO_TARGET_DIR`), put it under `$env:TEMP` or a gitignored in-repo path, never a bare drive-root
+child like `C:\tmp\<name>` or `D:\<name>` - the removal guard refuses to delete any drive-root child
+as a protected system path, so that location can never be reclaimed by you OR the orchestrator later
+(observed twice: a 7.4 GB and a 14 GB leak, both stuck). Remove the scratch dir yourself before
+reporting and paste the command output proving it's gone, the same evidence standard the orphan
+check below demands for processes - kept as its own sentence rather than folded into that check,
+since a directory isn't a process and you're deciding this here, while picking a build location, not
+there.
+
 Clean up only the exact files you created, by exact name, never by glob or wildcard: never touch
 `hooks/.commit-marker-*` (the guard consumes those itself) or `hooks/.session-markers/` (a live
 session's commit depends on it).
@@ -83,21 +93,27 @@ also names anything in that todo the dispatch prompt did not ask for, not just f
 lane - that is the channel that caught a dropped item on todo 465, and it only works if you use it.
 
 The harness auto-backgrounds any command past 120 seconds whether you asked it to or not - that's
-the case that actually fires, not a deliberate `run_in_background: true`. When a command you
-foregrounded with an explicit `timeout` gets auto-backgrounded past its cap, you're already in the
-reporting case: read its log from disk, quote the tail, name the PID still running, and deliver your
-final report now. Do not start a `Monitor`. Do not end a turn on "standing by", "will report back",
-or "pausing here" - a parked intent to report later is a failed dispatch, not a completed one.
+the case that actually fires, not a deliberate `run_in_background: true`. When a command gets
+auto-backgrounded past its cap, whether on its own or because you deliberately re-ran it expecting
+exactly that, you're already in the reporting case: read its log from disk, quote the tail, name the
+PID still running, and deliver your final report now. Do not start a `Monitor`. Do not end a turn on
+"standing by", "will report back", or "pausing here" - a parked intent to report later is a failed
+dispatch, not a completed one.
 
 Your final message is your entire return value. ALL commands, including the verify floor
 (build/test/lint/typecheck), run synchronously in the same tool call: `run_in_background` is
 FORBIDDEN in builder subagents, and so is `Monitor` - a long build is waited out, never handed off
-to fire later. Ending the turn while anything is still running is a failed dispatch. Any command
-that may exceed 120 seconds MUST pass an explicit `timeout` (up to 600000ms): the tool's default is
-120s and the harness auto-backgrounds past it, so omitting `timeout` backgrounds your build whether
-you intended it or not. The only case allowed to end a turn with something unfinished is a
-foregrounded command that outlives its own 600000ms cap: report the partial output plus the exact
-command still in flight, don't end a turn on bare "still waiting" with nothing else.
+to fire later. The ban is on the OUTCOME (ending a turn with anything unfinished, or deferring a
+report), not on the flag for its own sake: the one allowed use of `run_in_background: true` is two
+or more processes that must genuinely overlap in wall-clock time (a real concurrency test, which two
+synchronous foreground calls cannot express) - start them with it, wait out every one of them with a
+bounded poll, and report the result in this same turn. Ending the turn while anything is still
+running is still a failed dispatch either way. Any command that may exceed 120 seconds MUST pass an
+explicit `timeout` (up to 600000ms): the tool's default is 120s and the harness auto-backgrounds past
+it, so omitting `timeout` backgrounds your build whether you intended it or not. The only case
+allowed to end a turn with something unfinished is a foregrounded command that outlives its own
+600000ms cap: report the partial output plus the exact command still in flight, don't end a turn on
+bare "still waiting" with nothing else.
 ```
 
 ## Placeholder table
@@ -105,7 +121,7 @@ command still in flight, don't end a turn on bare "still waiting" with nothing e
 | Placeholder | Substitute with | Delete entirely when |
 | --- | --- | --- |
 | `<WORKING_DIR>` | the dispatch's actual working directory | never - always filled |
-| `<STAGING_LINE>` | `Stage your changes but do NOT commit. The main agent will run /commit after your report-back.` by default, or `Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.` for a repo sharing a git index with concurrent sessions (e.g. zng-app, zng-biller) | never - always filled |
+| `<STAGING_LINE>` | `Stage your changes but do NOT commit. The main agent will run /commit after your report-back.` by default, or `Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.` for a repo sharing a git index with concurrent sessions (e.g. zng-app, zng-biller) OR whenever this dispatch is one of several builders the orchestrator is running at once in this same tree - staged files from one parallel builder are indistinguishable from another's once both are in the index, so `git diff --cached` can never be the commit pathspec there (todo 1061: a reader's staged deletions rode into a different builder's commit this way) | never - always filled |
 | `<GLOBAL_EDIT_BAN>` | `Never edit files under \`~/.claude/\` (skills, hooks, settings, global CLAUDE.md) even if the task description points at one - that requires the dev's explicit say-so in the CURRENT session, which a subagent can't verify; if a task seems to require it, stop and report back instead.` | the session's own working directory IS `~/.claude` itself (dev opened the session there, so global work is the whole point and the ban would refuse the assigned task) |
 | `<OFF_LIMITS>` | the per-dispatch OFF LIMITS file list | never - always filled |
 | `<ORPHAN_CHECK>` | (removed - the orphan-check paragraph is now static body text in the block above, unconditional) | n/a |
@@ -143,3 +159,14 @@ cannot use `<STAGING_LINE>` truthfully, since the builder does commit. Do not dr
 or invent a different phrasing to dodge it - quote the normal-case sentence and say plainly that
 this dispatch is the documented exception; see `skills/mega-todos/SKILL.md`'s injected commit block
 for the worked example.
+
+## Todo-backlog writes are blocked for dispatched agents
+
+`hooks/agent-todo-write-guard.py` denies any Write or Edit (both tools, no size or content
+exemption) from a dispatched agent (one carrying `agent_id`) targeting a file directly under
+`.claude/todos/` - the match excludes the sibling `.claims/` and `done/` directories, so a claim or
+archive write is unaffected. A dispatch whose task is backlog maintenance (appending a note to an
+existing todo, editing one) cannot do that write itself: have it return the drafted text in its
+report instead, and the orchestrator applies it from its own session, which the guard never
+touches. A ten-file "append a note" dispatch that skips this costs a full subagent turn for zero
+writes (2026-09-24, zng-app, ~91k tokens).

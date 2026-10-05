@@ -71,3 +71,7 @@ dispatch that ends on "will report back") is real and the rule is doing work.
 - The allowed case is stated concretely enough that a builder needing true concurrency can tell it
   applies to them without asking.
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane L5: refs/builder-preamble.md and refs/delegation-doctrine.md (994's script half shipped in eccffe6). Doc change; hooks/test_dispatch_preamble_guard.py confirms the paste block still carries all three guard markers.

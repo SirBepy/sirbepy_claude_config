@@ -48,3 +48,7 @@ literal strings `dispatch-preamble-guard.py` checks for.
   read from its source, not inferred.
 - The return-it-in-the-report pattern is named explicitly as the workaround.
 - `grep -rn "agent-todo-write-guard" refs/ skills/` returns the new mention.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), lane L5: refs/builder-preamble.md and refs/delegation-doctrine.md (994's script half shipped in eccffe6). Doc change; hooks/test_dispatch_preamble_guard.py confirms the paste block still carries all three guard markers.
