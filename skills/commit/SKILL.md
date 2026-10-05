@@ -45,11 +45,11 @@ The marker is keyed to this session and is never consumed, so every later commit
    - Python: any `test_*.py` or `*_test.py` files anywhere in the repo (`Get-ChildItem -Recurse -Filter "test_*.py"`, plus `*_test.py`). If found, run each with `python <file>`.
    - Node: a root `package.json` with a `"test"` script. If found, run the project's package manager `test` command.
    - A `tests/` directory containing a runner config (`pytest.ini`, `jest.config.*`, etc). If found, run the matching runner.
-   Apply step 6's own baseline comparison and failure treatment to whichever runner matched above - same identity comparison, same required evidence, same unattended-aborts-without-asking rule. If none of these are found, say so explicitly ("no test suite detected") rather than passing silently. Slow e2e suites (Playwright, etc) are out of scope here - those stay opt-in per the floor in `CLAUDE.md`, except before a client-repo push (see the Pre-push client gate).
-6b. **Client-repo gate** - only when `python C:/Users/tecno/.claude/hooks/_client_repo.py is-client <repo>` prints `client` (the list in `~/.claude/refs/client-repos.txt`, see `~/.claude/snippets/client-repo.md`). Personal repos skip this step silently.
+   Apply step 6's own baseline comparison and failure treatment to whichever runner matched above - same identity comparison, same required evidence, same unattended-aborts-without-asking rule. If none of these are found, say so explicitly ("no test suite detected") rather than passing silently. Slow e2e suites (Playwright, etc) are out of scope here - those run once per push, in the Pre-push gate.
+6b. **Fast-check and test-coverage gate** - every repo, per the floor in `CLAUDE.md`.
    - **`/test`** runs in place of step 6a's detection, since it also covers typecheck, lint and build. Step 6's baseline comparison applies to its failures unchanged. A repo with a project `run-tests` skill (step 6) still runs `/test` afterwards for the checks that skill does not cover.
    - **Test coverage check:** if the pathspec changes non-test source files and touches no test file, stop and write the test that fails without the change, or state in the commit report why the change is untestable by Claude.
-   - `/code-check` does not run here; it runs once per push, in the Pre-push client gate.
+   - `/code-check` does not run here; it runs once per push, in the Pre-push gate.
 7. **Submodule check:** run `git submodule status` (no flags). For each submodule whose sha is prefixed with `+` (modified) or `-` (uninitialized/not checked out), handle it before committing the parent:
    - If prefixed with `-`: warn the user, do not auto-commit an uninitialized submodule.
    - If prefixed with `+` (dirty pointer — submodule has new commits not yet staged in parent): this is fine, include `<submodule-path>` in step 8's commit pathspec and the pointer bump lands with the parent commit.
@@ -118,16 +118,16 @@ If no `package.json` exists, skip the version step and commit normally.
 
 The full ordered sequence for `/commit push`, `/commit pushbump` and `/commit pushnbump`. This list is the ONLY place the whole sequence is enumerated: `CLAUDE.md`, snippets and memories point here instead of restating it, because every restated copy has drifted the moment a step was added (the todo sweep reached this file while two summaries still listed only `/code-check` + `/e2e`). Adding, removing or reordering a push step means editing this list in the same commit. When describing what a push will run, read this list, never a summary of it.
 
-1. **Commit** - steps 1-8 above, including step 6b's client-repo gate (`/test` plus the test-coverage check) when the repo is a client repo. `pushbump` adds the version bump; `pushnbump` adds kit sync and a separate version commit.
+1. **Commit** - steps 1-8 above, including step 6b's gate (`/test` plus the test-coverage check). `pushbump` adds the version bump; `pushnbump` adds kit sync and a separate version commit.
 2. **Pre-push todo sweep** - fold small backlog todos sitting in the files the push already touches.
 3. **Pre-push transcript check** - stop on any dev message since the last push that was never addressed.
-4. **Pre-push client gate** - client repos only: `/code-check` over `@{u}..HEAD`, then `/e2e`, then mark HEAD cleared.
+4. **Pre-push gate** - `/code-check` over `@{u}..HEAD`, then `/e2e` (or its no-suite note), then mark HEAD cleared.
 5. **`git push`**.
 6. **Build watch** - `skills/commit/build-watch.md`.
 
 ## Pre-push todo sweep
 
-Runs first for `/commit push`, `/commit pushbump`, and `/commit pushnbump`, before the transcript check and client gate below - it can change what the push ships, so both of those must see the final range. Catches a small backlog todo sitting in the exact files the push already touches, while folding it in is still free.
+Runs first for `/commit push`, `/commit pushbump`, and `/commit pushnbump`, before the transcript check and pre-push gate below - it can change what the push ships, so both of those must see the final range. Catches a small backlog todo sitting in the exact files the push already touches, while folding it in is still free.
 
 1. Skip silently when the repo has no `.claude/todos/` backlog with open todos. Skip on an unattended run too (nobody to answer step 3), with one line in the run's report saying the sweep was skipped.
 2. Dispatch ONE read-only subagent (`model: 'sonnet'`, canonical preamble from `refs/builder-preamble.md` with the `READ-ONLY DISPATCH` opt-out). Hand it the backlog path and `git log --format='%H %s' --name-only @{u}..HEAD`. A todo qualifies only when all three hold: it touches files an unpushed commit already changes, it is EASY by `/batch-todos`'s table, and it is the same concern or ticket as that commit. Todos with a live claim in `.claims/` and PRODUCT todos never qualify. It returns per hit: todo id, target commit sha, files, and one line on why it fits; zero hits is a valid answer, never padded.
@@ -145,20 +145,20 @@ Runs only for `/commit push`, `/commit pushbump`, and `/commit pushnbump`, right
 5. No dev turns since the reference point, or all addressed: proceed silently, no added output.
 6. Any unaddressed turn: stop before `git push`, quote the message verbatim, and ask whether to address it now or push anyway.
 
-## Pre-push client gate
+## Pre-push gate
 
-Runs right after the Pre-push transcript check, for the same three push modes, only in a client repo (step 6b's `is-client` check). `hooks/client-push-gate.py` blocks the push until this gate clears HEAD, so skipping it only earns a denied `git push`.
+Runs right after the Pre-push transcript check, for the same three push modes, in every repo. `hooks/push-gate.py` blocks the push until this gate clears HEAD, so skipping it only earns a denied `git push`.
 
 1. `/code-check` over what this push ships (`@{u}..HEAD`). Fix findings about lines the push changes, recommit per the fold rules, rerun; findings about untouched code go to the backlog.
-2. `/e2e` against the same range. A stack with no scripted e2e path gets `/e2e`'s own drive-it-by-hand fallback, not a skip.
-3. Both green: `python C:/Users/tecno/.claude/hooks/_client_repo.py mark <repo> --reason "code-check + e2e passed"`, then push.
+2. `/e2e` against the same range. **No suite** means `/e2e`'s Run-mode table matches only its "anything else" row (no scripted path). Then branch on `python C:/Users/tecno/.claude/hooks/_client_repo.py is-client <repo>`: `client` gets `/e2e`'s drive-it-by-hand fallback, per `snippets/client-repo.md`; `personal` skips e2e without asking and records "e2e: no suite" in the mark reason.
+3. All green: `python C:/Users/tecno/.claude/hooks/push-gate.py mark <repo> --reason "<what passed, e.g. code-check + e2e passed, or code-check passed, e2e: no suite>"`, then push.
 4. Either one red or impossible to run: ask the dev through `ask_user_question` whether to push anyway, naming the failure. Yes: mark with `--reason` naming the failure and his approval, then push. No, or an unattended run with nobody to ask: do not push, report the failure.
 
 ## `/commit push`
 
 Same as `/commit` but also runs `git push` after committing, following the **Push pipeline** above in order.
 
-**Push rule:** if the commit step failed, do not push. If there was nothing to commit, don't stop there either - check `git rev-list --count @{u}..HEAD` (if `@{u}` doesn't resolve, say so and offer `git push -u origin <branch>` instead of silently doing nothing). Zero ahead: say "nothing to commit, nothing to push" and stop. One or more ahead: run the **Pre-push todo sweep**, **Pre-push transcript check** and **Pre-push client gate** above, then push those existing commits and report how many.
+**Push rule:** if the commit step failed, do not push. If there was nothing to commit, don't stop there either - check `git rev-list --count @{u}..HEAD` (if `@{u}` doesn't resolve, say so and offer `git push -u origin <branch>` instead of silently doing nothing). Zero ahead: say "nothing to commit, nothing to push" and stop. One or more ahead: run the **Pre-push todo sweep**, **Pre-push transcript check** and **Pre-push gate** above, then push those existing commits and report how many.
 
 After a successful push, run the **Build watch** (see `skills/commit/build-watch.md`).
 
@@ -166,7 +166,7 @@ After a successful push, run the **Build watch** (see `skills/commit/build-watch
 
 Same as `/commit v` but also runs `git push` after committing.
 
-Same push rule as `/commit push` above, including the **Pre-push todo sweep**, **Pre-push transcript check** and **Pre-push client gate**.
+Same push rule as `/commit push` above, including the **Pre-push todo sweep**, **Pre-push transcript check** and **Pre-push gate**.
 
 After a successful push, run the **Build watch** (see `skills/commit/build-watch.md`).
 
@@ -185,7 +185,7 @@ Order:
 2. Bump the patch version (same procedure as `/commit v`).
 3. Commit ONLY the version files, by pathspec: `git commit -m "<message>" -- <version-file> ...`.
 4. Message: `VERSION: <new-version>` — where `<new-version>` is the full version string after bumping. If a build number field (e.g. `"build"` in `package.json` or `tauri.conf.json`) exists alongside the version, append it: `VERSION: 1.0.1+21`.
-5. Run the **Pre-push todo sweep**, **Pre-push transcript check** and **Pre-push client gate** above, then `git push`.
+5. Run the **Pre-push todo sweep**, **Pre-push transcript check** and **Pre-push gate** above, then `git push`.
 
 Do not push if either commit step failed. Otherwise same push rule as `/commit push` above - a clean-tree branch that's still ahead of its upstream still gets pushed, it just won't happen here since the version commit always produces new changes.
 

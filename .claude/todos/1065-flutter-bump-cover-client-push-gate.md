@@ -9,8 +9,9 @@
 ## Goal
 
 A `/flutter-bump` run should reach the push without improvising. Today the skill says "commit +
-push per repo", but all three ZNG repos are client repos, so `hooks/client-push-gate.py` blocks
-every push until /code-check and /e2e have run. The skill does not mention this gate.
+push per repo", but `hooks/push-gate.py` (renamed from `client-push-gate.py` 2026-10-05, now
+gating every repo) blocks every push until /code-check and /e2e have run. The skill does not
+mention this gate.
 
 ## Context
 
@@ -44,7 +45,7 @@ Seen on the 2026-10-02 bump from 3.47.5 to 3.47.6, in a zng-app session:
 In `skills/flutter-bump/SKILL.md`:
 
 - Add a push-gate step between 2e's commit and push: /code-check on the bump commit, /e2e (zng-app
-  suite both phases at `--concurrency=5`; admin/biller smoke), then `_client_repo.py mark`. Joe's
+  suite both phases at `--concurrency=5`; admin/biller smoke), then `push-gate.py mark`. Joe's
   2026-10-02 call is the policy to encode: push only if all are green.
 - Promote the admin/biller smoke into a committed helper, for example
   `skills/flutter-bump/scripts/smoke.cjs` taking repo, email and nav JSON. Keep the accounts and

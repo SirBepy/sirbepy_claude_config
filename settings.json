@@ -343,8 +343,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\client-push-gate.py\"",
-            "statusMessage": "Checking client-repo push clearance"
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\push-gate.py\"",
+            "statusMessage": "Checking push clearance"
           }
         ]
       },

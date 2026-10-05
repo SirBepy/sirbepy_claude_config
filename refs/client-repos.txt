@@ -1,4 +1,4 @@
-# Client repos: the only source of truth for snippets/client-repo.md's higher testing floor.
+# Client repos: the only source of truth for snippets/client-repo.md's client-only rules (by-hand e2e on no-suite pushes, folded tweaks).
 # One `owner/repo` origin slug per line, matched case-insensitively against `git remote get-url origin`.
 # Keyed by origin rather than folder, so a second checkout or linked worktree of a listed repo counts too.
 # A repo missing from this list is personal, whoever owns it.

@@ -1,9 +1,8 @@
-"""Self-test for client-push-gate.py and _client_repo.py.
+"""Self-test for push-gate.py.
 
-Run directly: python hooks/test_client_push_gate.py
-End-to-end cases build throwaway git repos in a temp dir and point the
-client list and marker dir there, so the real refs/client-repos.txt and
-hooks/.client-push-ok/ are never read or written.
+Run directly: python hooks/test_push_gate.py
+End-to-end cases build throwaway git repos in a temp dir and point the marker
+dir there, so the real hooks/.push-ok/ is never read or written.
 """
 
 import subprocess
@@ -14,32 +13,9 @@ from pathlib import Path
 import _testlib
 
 _HOOKS_DIR = Path(__file__).resolve().parent
-guard = _testlib.load_module("client_push_gate", _HOOKS_DIR / "client-push-gate.py")
-lib = guard._client_repo
+guard = _testlib.load_module("push_gate", _HOOKS_DIR / "push-gate.py")
 
 fails = []
-
-# --- origin_slug: every remote URL shape the listed repos actually use ---
-
-SLUG_CASES = [
-    ("https://github.com/Revaire-Inc/revaire-mobile.git", "revaire-inc/revaire-mobile", "https with .git"),
-    ("git@github-work:zirtue-corp/zng-admin.git", "zirtue-corp/zng-admin", "scp-style host alias"),
-    ("ssh://git@github.com/zirtue-corp/zng-api", "zirtue-corp/zng-api", "ssh url, no .git"),
-    ("https://github.com/SirBepy/foo/", "sirbepy/foo", "trailing slash"),
-    ("", None, "empty url"),
-    ("nonsense", None, "single segment"),
-]
-
-
-def check_slug(case) -> bool:
-    url, expected, label = case
-    got = lib.origin_slug(url)
-    ok = got == expected
-    print(f"{'PASS' if ok else 'FAIL'}: {label} (expected {expected}, got {got})")
-    return ok
-
-
-fails += _testlib.run_cases(SLUG_CASES, check_slug)
 
 # --- git_dash_c_path: Windows paths must survive tokenizing ---
 
@@ -77,7 +53,8 @@ def make_repo(root: Path, name: str, origin: str) -> Path:
     repo.mkdir()
     git(repo, "init", "-q")
     git(repo, "remote", "add", "origin", origin)
-    (repo / "f.txt").write_text("x", encoding="utf-8")
+    # Per-repo content: identical trees committed in the same second share a sha, and so a marker.
+    (repo / "f.txt").write_text(name, encoding="utf-8")
     git(repo, "add", "f.txt")
     git(repo, "commit", "-q", "-m", "init")
     return repo
@@ -100,10 +77,7 @@ def expect(label: str, got, expected) -> None:
 
 with tempfile.TemporaryDirectory() as tmp:
     tmpdir = Path(tmp)
-    client_list = tmpdir / "client-repos.txt"
-    client_list.write_text("# comment line\nZirtue-Corp/ZNG-App\n", encoding="utf-8")
-    lib.CLIENT_LIST_PATH = client_list
-    lib.MARKER_DIR = tmpdir / ".client-push-ok"
+    guard.MARKER_DIR = tmpdir / ".push-ok"
 
     client = make_repo(tmpdir, "zng-app-followup", "git@github-work:zirtue-corp/zng-app.git")
     personal = make_repo(tmpdir, "mine", "https://github.com/SirBepy/mine.git")
@@ -111,20 +85,16 @@ with tempfile.TemporaryDirectory() as tmp:
     elsewhere.mkdir()
 
     expect("client repo push with no marker is blocked", call_main("git push", client), 2)
-    expect("non-push git command in a client repo passes", call_main("git status", client), 0)
-    expect("personal repo push passes", call_main("git push", personal), 0)
+    expect("personal repo push with no marker is blocked", call_main("git push", personal), 2)
+    expect("non-push git command passes", call_main("git status", personal), 0)
     expect("push outside any repo fails open", call_main("git push", elsewhere), 0)
-    expect("-C into a client repo is gated even from a personal cwd", call_main(f'git -C "{client}" push', personal), 2)
-    expect("mark CLI refuses a personal repo", lib.main(["mark", str(personal), "--reason", "x"]), 2)
+    expect("mark CLI accepts a personal repo", guard.cli(["mark", str(personal), "--reason", "code-check passed, e2e: no suite"]), 0)
+    expect("personal push passes once HEAD is marked", call_main("git push", personal), 0)
+    expect("a marked repo does not clear another repo's HEAD", call_main("git push", client), 2)
+    expect("-C into an unmarked repo is gated from a marked repo's cwd", call_main(f'git -C "{client}" push', personal), 2)
 
-    lib.main(["mark", str(client), "--reason", "code-check + e2e passed"])
-    expect("push passes once HEAD is marked", call_main("git push", client), 0)
-
-    (client / "f.txt").write_text("y", encoding="utf-8")
-    git(client, "commit", "-q", "-am", "second")
-    expect("a new commit needs a fresh mark", call_main("git push", client), 2)
-
-    client_list.unlink()
-    expect("a missing client list fails open", call_main("git push", client), 0)
+    (personal / "f.txt").write_text("y", encoding="utf-8")
+    git(personal, "commit", "-q", "-am", "second")
+    expect("a new commit needs a fresh mark", call_main("git push", personal), 2)
 
 sys.exit(_testlib.summarize(fails, style="count"))

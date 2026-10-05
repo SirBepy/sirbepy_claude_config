@@ -6,21 +6,25 @@
 **Origin:** ai
 
 ## Goal
-`hooks/client-push-gate.py` checks the repo that the `git push` in the command will actually run
+`hooks/push-gate.py` checks the repo that the `git push` in the command will actually run
 in, including when the same command `cd`s first or has an unrelated `git -C` call before the push.
 
 ## Context
-The gate resolves its target at `hooks/client-push-gate.py:63`:
-`target = git_dash_c_path(command) or payload.get("cwd") or "."`. Two bypasses, both letting a
-client-repo push through with no clearance marker:
+Updated 2026-10-05: the gate was renamed from `client-push-gate.py` and now gates every repo, not
+only listed client repos. The bypass survives the change in a narrower form: it now needs the
+wrongly resolved repo to have a cleared HEAD, rather than merely being personal.
 
-1. **`cd` earlier in the same command.** From a personal cwd, `cd C:/Users/tecno/Desktop/Projects/zng-app && git push`
-   is checked against the pre-`cd` cwd (payload `cwd`), finds a personal repo, and exits 0.
+The gate resolves its target at `hooks/push-gate.py:113`:
+`target = git_dash_c_path(command) or payload.get("cwd") or "."`. Two bypasses, both letting a
+push through with no clearance marker for the repo actually pushed:
+
+1. **`cd` earlier in the same command.** From a cwd whose HEAD is already cleared, `cd C:/Users/tecno/Desktop/Projects/zng-app && git push`
+   is checked against the pre-`cd` cwd (payload `cwd`), finds that cleared HEAD, and exits 0.
    `hooks/git-workdir-guard.py:17-19` already handles this shape ("A `cd`/Set-Location earlier in
    the SAME command ... pins the effective cwd") - reuse its approach rather than re-deriving.
-2. **Chained `git -C`.** `git_dash_c_path` (`client-push-gate.py:39-54`) returns the `-C` of the
+2. **Chained `git -C`.** `git_dash_c_path` (`push-gate.py:48`) returns the `-C` of the
    FIRST `git` token in the command, not the one attached to `push`. So
-   `git -C C:/personal status && git push` (run from a client cwd) resolves to the personal repo.
+   `git -C C:/cleared status && git push` (run from an uncleared cwd) resolves to the cleared repo.
 
 Not a finding, checked 2026-09-29: using payload `cwd` as the fallback is correct. Per
 `git-workdir-guard.py:11-12` it is the live shell cwd, which is exactly where a bare `git push`
@@ -34,7 +38,7 @@ executes. The code-check reviewer flagged it as drift-unsafe; that reasoning is 
   path, mirroring `git-workdir-guard.py`.
 
 ## Acceptance
-- New cases in `hooks/test_client_push_gate.py`: `cd "<client>" && git push` from a personal cwd
-  is denied; `git -C "<personal>" status && git push` from a client cwd is denied;
-  `git -C "<client>" status && git push` from a personal cwd passes.
-- `python hooks/test_client_push_gate.py` prints ALL PASS.
+- New cases in `hooks/test_push_gate.py`: `cd "<uncleared>" && git push` from a cleared cwd
+  is denied; `git -C "<cleared>" status && git push` from an uncleared cwd is denied;
+  `git -C "<uncleared>" status && git push` from a cleared cwd passes.
+- `python hooks/test_push_gate.py` prints ALL PASS.

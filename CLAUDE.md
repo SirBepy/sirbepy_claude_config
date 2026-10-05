@@ -83,8 +83,9 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 - Before claiming done or handing to Joe: run every FAST check the project HAS (typecheck, unit, lint, build) - all must pass, no size exemption.
 - If a project has no tests, or the change is genuinely untestable by Claude (native UI, hardware, visual judgment), say so explicitly instead of skipping quietly.
 - An explicit "don't test" from Joe stands for the rest of the session, not one turn; a new task doesn't re-arm it. While in force, name what wasn't run; keep running cheap checks (typecheck, lint, analyze) unless named. Not a licence to skip on judgment alone - only an explicit dev instruction does.
-- Client repos (origin listed in `refs/client-repos.txt`) get a higher floor: `~/.claude/snippets/client-repo.md` - read once per session when working in one. New tests per change, plus extra commit and push gates that `hooks/client-push-gate.py` enforces; the full ordered step list lives only in `/commit`'s "Push pipeline" section.
-- Slow end-to-end suites (Playwright, etc.) are NOT part of this floor; opt in via `@import ~/.claude/snippets/test-e2e.md`. When worth running, say so in one summary line and stop - never run unprompted.
+- Every repo: each behavior change ships with a test that fails without it, written alongside the change; one Claude cannot test says why in the commit report. Every commit runs `/test`, every push runs `/code-check` + `/e2e` (a repo with no e2e suite notes "no suite"), and `hooks/push-gate.py` blocks the push until that is done. The full ordered step list lives only in `/commit`'s "Push pipeline" section.
+- Client repos (origin listed in `refs/client-repos.txt`) keep two extras on top: `~/.claude/snippets/client-repo.md` - read once per session when working in one.
+- Slow end-to-end suites (Playwright, etc.) are NOT part of the per-change floor: they run once per push via that pipeline, plus per handover in a project that imports `~/.claude/snippets/test-e2e.md`. Never unprompted otherwise.
 - `/test` means the normal (fast) tests; end-to-end runs are the separate `/e2e` command. Both stay fast-only.
 
 ## UI & visual changes

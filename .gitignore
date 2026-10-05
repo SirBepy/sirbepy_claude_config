@@ -58,8 +58,8 @@ skills/commit/watch-build.pid
 # is written - never commit, even though todos/ above is tracked
 .claude/todos/*-.reserved
 
-# Per-commit push clearances written by hooks/_client_repo.py mark, machine-local state
-hooks/.client-push-ok/
+# Per-commit push clearances written by hooks/push-gate.py mark, machine-local state
+hooks/.push-ok/
 
 # Python bytecode cache, regenerated locally, not source
 hooks/__pycache__/

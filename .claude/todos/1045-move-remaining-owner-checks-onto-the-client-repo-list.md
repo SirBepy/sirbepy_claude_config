@@ -11,8 +11,9 @@ through `hooks/_client_repo.py`. Plus the per-commit test-coverage check becomes
 of prose.
 
 ## Context
-Since commit eddcdc6 (2026-09-29) the testing floor decides client vs personal by the explicit
-list (`refs/client-repos.txt`, `python hooks/_client_repo.py is-client <path>`). Two older checks
+Since 2026-10-05 the testing floor and push gate apply to every repo; the explicit list
+(`refs/client-repos.txt`, `python hooks/_client_repo.py is-client <path>`) now only decides the
+client-only rules in `snippets/client-repo.md` (folded tweaks, by-hand e2e on no-suite pushes). Two older checks
 still decide it by remote owner, so they now disagree for any repo outside both sets (a
 Fibo-Studio repo is personal for testing but "client/employer" for fold asks):
 
@@ -33,13 +34,13 @@ the push half is now hook-enforced, the commit half is not.
    since Fibo-Studio flips from "ask" to "never ask" if it does. Do not change branch 2 without
    his answer.
 2. On yes: swap both owner checks for `_client_repo.py is-client`.
-3. Add a `coverage-tests` refusal to `skills/commit/commit-pathspec.sh`, active only when
-   `is-client` prints `client`, overridable with `--force` like the other judgement checks, and
-   add it to the script's valid `--force` names.
+3. Add a `coverage-tests` refusal to `skills/commit/commit-pathspec.sh`, active in every repo
+   (step 6b is universal since 2026-10-05), overridable with `--force` like the other judgement
+   checks, and add it to the script's valid `--force` names.
 
 ## Acceptance
 - Grep for `SirBepy` in `skills/commit/SKILL.md` and `skills/cleanup-todos/SKILL.md` returns only
   the account-mapping mention, or none.
-- `skills/commit/test_commit_pathspec.sh` has a case where a client repo commit touching only
-  `src/x.ts` is refused, and passes with `--force coverage-tests`.
+- `skills/commit/test_commit_pathspec.sh` has a case where a commit touching only `src/x.ts` is
+  refused, and passes with `--force coverage-tests`.
 - `python ci/run_all.py` shows no new failures versus HEAD.

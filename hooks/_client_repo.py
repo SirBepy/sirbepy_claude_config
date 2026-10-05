@@ -1,25 +1,21 @@
-"""Client-repo detection plus the pushable marker client-push-gate.py checks.
+"""Client-repo detection, for the client-only rules in snippets/client-repo.md.
 
 A repo is a client repo when its origin's `owner/repo` slug is listed in
-refs/client-repos.txt. Markers live in hooks/.client-push-ok/<HEAD sha>, one
-file per pushable commit, holding the stated reason, so every override Joe
-approved stays on disk as a record.
+refs/client-repos.txt. The testing floor and push gate apply to every repo;
+only the rules that snippet lists still key off this.
 
 CLI, for skills and scripts that cannot import this:
   python _client_repo.py is-client [path]            prints client|personal
-  python _client_repo.py mark [path] --reason "..."  records HEAD as pushable
 """
 
 import argparse
 import re
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 _HOOKS_DIR = Path(__file__).resolve().parent
 CLIENT_LIST_PATH = _HOOKS_DIR.parent / "refs" / "client-repos.txt"
-MARKER_DIR = _HOOKS_DIR / ".client-push-ok"
 GIT_TIMEOUT_SECONDS = 10
 
 
@@ -65,42 +61,14 @@ def client_slug(path) -> str | None:
     return slug if slug and slug in load_client_slugs() else None
 
 
-def head_sha(path) -> str | None:
-    return _git(path, "rev-parse", "HEAD")
-
-
-def is_pushable(sha: str) -> bool:
-    return bool(sha) and (MARKER_DIR / sha).exists()
-
-
-def mark_pushable(path, reason: str) -> str:
-    sha = head_sha(path)
-    if not sha:
-        raise SystemExit(f"ERROR: {path} has no HEAD commit to mark")
-    MARKER_DIR.mkdir(parents=True, exist_ok=True)
-    stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
-    (MARKER_DIR / sha).write_text(f"{stamp} {reason}\n", encoding="utf-8")
-    return sha
-
-
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="_client_repo.py")
     sub = parser.add_subparsers(dest="cmd", required=True)
     p_is = sub.add_parser("is-client")
     p_is.add_argument("path", nargs="?", default=".")
-    p_mark = sub.add_parser("mark")
-    p_mark.add_argument("path", nargs="?", default=".")
-    p_mark.add_argument("--reason", required=True)
     args = parser.parse_args(argv)
 
-    if args.cmd == "is-client":
-        print("client" if client_slug(args.path) else "personal")
-        return 0
-    if not client_slug(args.path):
-        print(f"ERROR: {args.path} is not a listed client repo, nothing to mark")
-        return 2
-    sha = mark_pushable(args.path, args.reason)
-    print(f"marked {sha[:7]} pushable: {args.reason}")
+    print("client" if client_slug(args.path) else "personal")
     return 0
 
 
