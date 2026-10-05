@@ -77,3 +77,4 @@ six commits pushed unasked) is still live.
 ## Notes
 
 - Root cause confirmed by code read (/cleanup-todos 2026-10-05, folded from archived duplicate 1070): `hooks/write-session-marker.ps1` Remove-DeadSessionMarkers lists every file in `.session-markers/` and keys liveness on the bare filename, so any prefixed marker (`push-gate-passed-<id>`, `read-auto-commit-<id>`) never matches a live session id and is pruned on the next marker write, the session's own included.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane D2, test-first (RED against HEAD, then GREEN).

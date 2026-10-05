@@ -99,6 +99,62 @@ with tempfile.TemporaryDirectory() as tmp:
     if not _testlib.report(live_marker.exists(), "marker whose registry record points at a live pid survives"):
         fails.append("live survives")
 
+# --- A prefixed marker is judged by the session id it EMBEDS, not its literal
+# filename (todo 1029): push-read-gate.py's read-auto-commit-<id>/
+# push-gate-passed-<id> and send-message-stop-guard.py's silent-turns-<id> never
+# equal a bare registry key, so a literal-filename lookup always treated them as
+# dead and pruned them on every call, including a live session's own. ---
+
+with tempfile.TemporaryDirectory() as tmp:
+    tmpdir = Path(tmp)
+    marker_dir = tmpdir / ".session-markers"
+    registry_dir = tmpdir / "sessions"
+    marker_dir.mkdir()
+
+    live_id = "live-session-under-test"
+    dead_id = "dead-session-under-test"
+    live_prefixed = [
+        marker_dir / f"read-auto-commit-{live_id}",
+        marker_dir / f"push-gate-passed-{live_id}",
+        marker_dir / f"silent-turns-{live_id}",
+    ]
+    for m in live_prefixed:
+        m.touch()
+    write_registry_record(registry_dir, "live", live_id, os.getpid())
+
+    dead_prefixed = marker_dir / f"read-auto-commit-{dead_id}"
+    dead_prefixed.touch()
+    write_registry_record(registry_dir, "dead", dead_id, exited_pid())
+
+    proc = run_script("own-writer-session", marker_dir, registry_dir)
+    if not _testlib.report(proc.returncode == 0, f"script exits 0 (stderr: {proc.stderr!r})"):
+        fails.append("prefixed: exit code")
+    for m in live_prefixed:
+        label = f"prefixed marker for a LIVE session survives ({m.name})"
+        if not _testlib.report(m.exists(), label):
+            fails.append(label)
+    label = "prefixed marker for a DEAD session is pruned"
+    if not _testlib.report(not dead_prefixed.exists(), label):
+        fails.append(label)
+
+# --- A prefixed marker belonging to the WRITING session itself is never pruned,
+# even before the registry has caught up with its own new record. ---
+
+with tempfile.TemporaryDirectory() as tmp:
+    tmpdir = Path(tmp)
+    marker_dir = tmpdir / ".session-markers"
+    registry_dir = tmpdir / "sessions"
+    marker_dir.mkdir()
+
+    own_id = "own-session-with-prefixed-marker"
+    own_prefixed = marker_dir / f"push-gate-passed-{own_id}"
+    own_prefixed.touch()
+
+    proc = run_script(own_id, marker_dir, registry_dir)
+    label = "the writing session's own prefixed marker survives its own write call"
+    if not _testlib.report(proc.returncode == 0 and own_prefixed.exists(), label):
+        fails.append(label)
+
 # --- Malformed registry entries are skipped, not treated as proof of death ---
 
 with tempfile.TemporaryDirectory() as tmp:

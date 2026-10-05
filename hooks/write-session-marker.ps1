@@ -38,6 +38,18 @@
   Remove-DeadSessionMarkers, which treats "not proven live" as distinct
   from "proven dead" only through those two checks, never through absence
   of information.
+
+  Marker filenames are not all bare session ids (todo 1029): push-read-gate.py
+  writes `read-auto-commit-<id>` and `push-gate-passed-<id>`,
+  send-message-stop-guard.py writes `silent-turns-<id>`. A liveness lookup
+  keyed on the literal filename never matches a registry entry (which is
+  always keyed by the bare id), so every prefixed marker looked dead on
+  every call and was pruned, including the writing session's own. Liveness
+  is therefore judged by the session id EMBEDDED in the filename - the
+  filename itself if it equals a known id exactly, or its trailing
+  "-<id>" suffix otherwise, since every current prefix ends in a hyphen
+  immediately before the id and a bare marker has no prefix at all. See
+  Get-EmbeddedSessionId.
 .PARAMETER SessionId
   Defaults to $env:CLAUDE_CODE_SESSION_ID. Errors (does not write) if empty, or if
   it still contains a literal '$' - a resolved session id can never contain one, so
@@ -79,10 +91,33 @@ Set-Content -Path $markerPath -Value 'x'
 
 Write-Output "Session marker written: $markerPath"
 
+function Get-EmbeddedSessionId {
+    <#
+    Returns the id in $CandidateIds that $MarkerName resolves to - an exact
+    match (the bare-marker case) or a "-<id>" suffix match (every known
+    prefixed-marker case) - or $null if it matches none. Candidates are
+    tried longest-first so a short id can never win a suffix match that a
+    longer, more specific id also satisfies; with the uuid-shaped ids this
+    registry actually holds that case can't arise, so this is defence only,
+    never exercised.
+    #>
+    param(
+        [Parameter(Mandatory)] [string]$MarkerName,
+        [string[]]$CandidateIds
+    )
+    foreach ($id in ($CandidateIds | Sort-Object Length -Descending)) {
+        if ($MarkerName -eq $id -or $MarkerName.EndsWith("-$id")) {
+            return $id
+        }
+    }
+    return $null
+}
+
 function Remove-DeadSessionMarkers {
     <#
-    Deletes every marker in $MarkerDir, other than $OwnSessionId's own, whose
-    session id resolves to a provably dead (or provably absent) session in
+    Deletes every marker in $MarkerDir, other than one embedding
+    $OwnSessionId, whose embedded session id (see Get-EmbeddedSessionId)
+    resolves to a provably dead (or provably absent) session in
     $RegistryDir. Returns the number pruned. A per-file delete failure is
     swallowed - a concurrent writer/pruner may have already removed the same
     file, and losing that race is not an error.
@@ -112,14 +147,20 @@ function Remove-DeadSessionMarkers {
         }
     }
 
+    # The writing session is alive by definition, regardless of whether the
+    # registry has caught up with it yet - same guarantee the old bare-filename
+    # check gave the session's own marker, extended to any prefixed marker of
+    # its own that might be sitting alongside it.
+    $candidateIds = @($OwnSessionId) + @($liveBySessionId.Keys)
+
     $prunedCount = 0
     foreach ($markerFile in (Get-ChildItem -Path $MarkerDir -File -ErrorAction SilentlyContinue)) {
-        $markerSessionId = $markerFile.Name
-        if ($markerSessionId -eq $OwnSessionId) { continue }
+        $embeddedId = Get-EmbeddedSessionId -MarkerName $markerFile.Name -CandidateIds $candidateIds
+        if ($embeddedId -eq $OwnSessionId) { continue }
 
         $isLive = $false
-        if ($liveBySessionId.ContainsKey($markerSessionId)) {
-            $ownerPid = $liveBySessionId[$markerSessionId]
+        if ($embeddedId -and $liveBySessionId.ContainsKey($embeddedId)) {
+            $ownerPid = $liveBySessionId[$embeddedId]
             if (Get-Process -Id $ownerPid -ErrorAction SilentlyContinue) {
                 $isLive = $true
             }
