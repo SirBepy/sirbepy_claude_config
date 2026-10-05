@@ -37,3 +37,7 @@ injection.
 - The hook's self-test gets a case where the flagged name appears only inside a
   `<conductor-slash-context>` block, and it asserts no injection.
 - A flagged name typed by Joe outside the block still fires.
+
+## Notes
+
+- Completed by /loop-todos cycle 1 (2026-10-05), test-first (RED against HEAD, then GREEN).

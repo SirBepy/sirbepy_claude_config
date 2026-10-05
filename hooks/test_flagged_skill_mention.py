@@ -52,6 +52,23 @@ CASES = [
      True, "todo 891 repro: /handoff mid-line on the last line, must fire"),
     ("I closed the laptop, did a review of the pickup truck listing, no slash anywhere",
      False, "false-positive regression: bare skill-like words in prose, no leading slash, must not fire"),
+    (
+        "/iterate-it and /brainstorm please\n\n"
+        "<conductor-slash-context>\n"
+        "/iterate-it: Converges a hypothesis through two phases. Also invoked as a bounded "
+        "nested step by /autopilot and /auto-do-todos.\n"
+        "</conductor-slash-context>",
+        False,
+        "todo 1047: flagged names quoted only inside Conductor's own slash-context block, must not fire",
+    ),
+    (
+        "please run /autopilot on this\n\n"
+        "<conductor-slash-context>\n"
+        "/unrelated-skill: some other skill's description text.\n"
+        "</conductor-slash-context>",
+        True,
+        "todo 1047: flagged name typed by Joe outside the block still fires",
+    ),
 ]
 
 

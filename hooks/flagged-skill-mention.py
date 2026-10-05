@@ -20,6 +20,14 @@ _normalized = _ZERO_WIDTH_RE.sub('', prompt).lstrip()
 if _normalized.startswith('[SYSTEM NOTIFICATION') or _ENVELOPE_TAG_RE.match(_normalized):
     sys.exit(0)
 
+# Conductor appends this block itself, quoting skill descriptions verbatim
+# (e.g. "/autopilot" inside /iterate-it's own description text) - matching
+# inside it means Joe's own words never need to mention a skill at all.
+_CONDUCTOR_SLASH_CONTEXT_RE = re.compile(
+    r'<conductor-slash-context>.*?</conductor-slash-context>', re.DOTALL
+)
+_match_text = _CONDUCTOR_SLASH_CONTEXT_RE.sub('', prompt)
+
 # Resolve relative to this file first: the hook lives next to skills/ in the
 # same config tree, and $HOME/~ has no ".claude" in CI or a fresh clone.
 skills_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'skills')
@@ -49,7 +57,7 @@ for path in sorted(glob.glob(os.path.join(skills_dir, '*', 'SKILL.md'))):
     # in the prompt is not checked (todo 891): mid-line mentions on later
     # lines are real invocations too, e.g. "and then /close up".
     _name_pattern = r'(?<![\w/-])/' + re.escape(name) + r'(?![\w-])'
-    if not re.search(_name_pattern, prompt, re.IGNORECASE):
+    if not re.search(_name_pattern, _match_text, re.IGNORECASE):
         continue
 
     contexts.append(
