@@ -1,6 +1,6 @@
 ---
 name: preview
-description: Pushes a static HTML mockup, one or more markdown files/a directory rendered into a single navigable page, or one or more images inlined as a gallery page, into Claude Conductor's in-app preview panel via its localhost hook endpoint - replacing the localhost-server + browser-tab flow and, for images, replacing SendUserFile in a session that doesn't have it.
+description: Pushes an HTML mockup, markdown, or images into Conductor's in-app preview panel. Replaces local server or SendUserFile.
 argument-hint: "<file.html | file.md... | image.png... | dir | inline html> [--slug <name>] [--title <text>]"
 ---
 
@@ -45,9 +45,9 @@ When the input is one or more image paths, or a directory of them, build a galle
 
 1. Run the builder to produce one self-contained HTML file, same pattern as the markdown branch's `render_markdown.py`:
    ```powershell
-   python "C:\Users\tecno\.claude\skills\preview\build_gallery.py" <image...|dir> [--slug <name>] [--title "<text>"] [--budget-mb 1.5] [--post]
+   python "C:\Users\tecno\.claude\skills\preview\build_gallery.py" <image...|dir> [--slug <name>] [--title "<text>"] [--budget-mb 1.5] [--check] [--post]
    ```
-   It expands a directory arg to its `.png/.jpg/.jpeg/.gif/.webp` files (sorted), inlines them capping by RAW byte size before encoding (base64 adds ~33%, so the 1.5MB default raw budget lands just under the endpoint's ~2MB cap), and once a file would push the running total over budget drops it and every file after it. It prints the output HTML path and `included: N dropped: [...]` - report every dropped filename to the dev before pushing, never silently truncate. On a budget drop it also prints a ready-to-run follow-up command for the remainder (same script, remaining files, `--slug <slug>-2`), so a second gallery is copy-paste, not re-authoring. Pass `--post` to have the script send the POST itself (same body shape as step 2 below, reading `session_id` from `$env:CLAUDE_CODE_SESSION_ID`) and skip straight to its printed `HTTP <status>: <body>` line instead of doing step 2 by hand.
+   It expands a directory arg to its `.png/.jpg/.jpeg/.gif/.webp` files (sorted), inlines them capping by RAW byte size before encoding (base64 adds ~33%, so the 1.5MB default raw budget lands just under the endpoint's ~2MB cap), and once a file would push the running total over budget drops it and every file after it. It prints the output HTML path and `included: N dropped: [...]` - report every dropped filename to the dev before pushing, never silently truncate. On a budget drop it also prints a ready-to-run follow-up command for the remainder (same script, remaining files, `--slug <slug>-2`), so a second gallery is copy-paste, not re-authoring. The built page ships a click-to-zoom lightbox by default (pure inline CSS+JS, no external deps): clicking any thumbnail opens it full-size in an overlay, left/right arrow keys or the on-screen `‹`/`›` arrows step between images, and Esc or a click on the backdrop closes it. Pass `--check` to load the built HTML headless before posting and fail (non-zero exit, printing the page error) if it throws - catches the class of bug where a page renders fine from `file://` but errors once served through the panel's own page. Pass `--post` to have the script send the POST itself (same body shape as step 2 below, reading `session_id` from `$env:CLAUDE_CODE_SESSION_ID`) and skip straight to its printed `HTTP <status>: <body>` line instead of doing step 2 by hand.
    - **No-Python fallback** (Python unavailable): build the gallery by hand with the inline node-builder-plus-curl ritual - write a `.mjs` body-builder to a scratch file (image attributes embed `"`, so this can never be a quote-free `node -e` argument; `\"` inside a native-command argument gets stripped by PowerShell 5.1 before node runs, leaving `SyntaxError: Unexpected token ':'`), run it, delete it:
      ```powershell
      # Write to C:\tmp\preview-build.mjs (via the Write tool, not shell redirection):
@@ -76,7 +76,7 @@ When the input is one or more image paths, or a directory of them, build a galle
      ```
      Edit the `files` array for the actual paths, then tell the dev about any `dropped` entries before pushing.
 2. Default slug/title derive from the first image path's stem, or the directory name for a directory input, same convention as the markdown branch.
-3. If `--post` wasn't used, take the written HTML path and continue at step 1 of the HTML steps below exactly as if it were a hand-written mockup file. `build_gallery.py` also accepts a single existing `.html` file in place of image paths - it passes the file through unchanged and, with `--post`, pushes it the same way, so a repeatedly-republished Code-mode mockup can go through this same script instead of a hand-typed body-builder each time.
+3. If `--post` wasn't used, take the written HTML path and continue at step 1 of the HTML steps below exactly as if it were a hand-written mockup file. `build_gallery.py` also accepts a single existing `.html` file in place of image paths - it passes the file through unchanged and, with `--post`, pushes it the same way, so a repeatedly-republished Code-mode mockup can go through this same script instead of a hand-typed body-builder each time. `--check` works on this passthrough file too (same headless-load-before-posting guard), which is the case it was added for: a mockup that re-pushes the same HTML many times over a session, where a late edit introducing an inline-script error is easy to miss without a render check.
 
 ## Steps
 

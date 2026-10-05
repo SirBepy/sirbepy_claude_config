@@ -16,6 +16,7 @@ port, so this suite never depends on, or touches, the real daemon.
 import http.server
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -29,10 +30,10 @@ TIMEOUT_SECONDS = 30
 fails = []
 
 
-def run(*args: str) -> subprocess.CompletedProcess:
+def run(*args: str, env: dict = None, timeout: int = TIMEOUT_SECONDS) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(SCRIPT), *args],
-        capture_output=True, text=True, timeout=TIMEOUT_SECONDS,
+        capture_output=True, text=True, timeout=timeout, env=env,
     )
 
 
@@ -113,6 +114,112 @@ def test_missing_path_errors():
     check("missing path exits non-zero", proc.returncode != 0)
 
 
+def test_lightbox_markup(tmp):
+    """Todo 995's 2026-10-05 fold-in: Joe asked to click a gallery image to
+    open it full-size, step with arrow keys, close with Esc/backdrop click.
+    Asserts the generated page carries that markup/handlers for every
+    included image - pure inline CSS+JS, no external deps."""
+    img_dir = tmp / "lb"
+    img_dir.mkdir()
+    (img_dir / "a.png").write_bytes(b"\x89PNG" + b"0" * 100)
+    (img_dir / "b.png").write_bytes(b"\x89PNG" + b"1" * 100)
+    (img_dir / "c.png").write_bytes(b"\x89PNG" + b"2" * 100)
+
+    proc = run(str(img_dir), "--slug", "lb")
+    check("lightbox gallery exits 0", proc.returncode == 0, proc.stdout + proc.stderr)
+
+    html_text = (img_dir / "lb-gallery.html").read_text(encoding="utf-8")
+    check("lightbox overlay markup present", 'id="lightbox"' in html_text)
+    check("lightbox image slot present", 'id="lightbox-img"' in html_text)
+    check(
+        "every one of the 3 images is clickable into the lightbox",
+        html_text.count('class="gallery-img"') == 3,
+        html_text.count('class="gallery-img"'),
+    )
+    for i in range(3):
+        check(f"image {i} wired to openLightbox({i})", f"openLightbox({i})" in html_text)
+    check("left/right arrow key stepping wired", "ArrowLeft" in html_text and "ArrowRight" in html_text)
+    check("Esc closes the lightbox", "Escape" in html_text and "closeLightbox" in html_text)
+    check("on-screen prev/next arrows present", "lightbox-prev" in html_text and "lightbox-next" in html_text)
+    check("backdrop click closes the lightbox", "lbBackdropClick" in html_text)
+
+
+def test_check_flag_cli(tmp):
+    """The 2026-10-03 fold-in: --check POSTs the html to /hooks/preview-render, loads
+    /hooks/preview-render/<id> headless, and fails on a page error (a doc that rendered fine
+    from file:// once threw an inline-script parse error only in the panel). Proven here
+    against a scratch HTTP server standing in for /hooks/preview-render - BUILD_GALLERY_RENDER_CHECK_ENDPOINT
+    overrides the script's endpoint so this never reaches the real 127.0.0.1:27182 daemon, same
+    safety rule as test_post_against_scratch_server above."""
+    store = {}
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            length = int(self.headers["Content-Length"])
+            payload = json.loads(self.rfile.read(length))
+            html_in = payload.get("html", "")
+            page_id = "bad" if "THROW_MARKER" in html_in else "good"
+            store[page_id] = html_in
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"id": page_id}).encode("utf-8"))
+
+        def do_GET(self):
+            page_id = self.path.rsplit("/", 1)[-1]
+            html_out = store.get(page_id, "<html><body>missing</body></html>")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(html_out.encode("utf-8"))
+
+        def log_message(self, *a):
+            pass
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    port = server.server_address[1]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    env = dict(os.environ)
+    env["BUILD_GALLERY_RENDER_CHECK_ENDPOINT"] = f"http://127.0.0.1:{port}/hooks/preview-render"
+
+    good_html = tmp / "good.html"
+    good_html.write_text("<!doctype html><html><body>fine</body></html>", encoding="utf-8")
+    bad_html = tmp / "bad.html"
+    bad_html.write_text(
+        "<!doctype html><html><body><script>/*THROW_MARKER*/undefinedFn();</script></body></html>",
+        encoding="utf-8",
+    )
+
+    try:
+        proc_good = run(str(good_html), "--check", env=env, timeout=45)
+        unavailable = any(
+            marker in (proc_good.stdout + proc_good.stderr)
+            for marker in ("playwright not found", "chromium revision", "not installed")
+        )
+        if unavailable:
+            print("SKIP --check cases: playwright/chromium unavailable on this machine")
+            print(proc_good.stdout + proc_good.stderr)
+        else:
+            check(
+                "--check passes a page with no JS error",
+                proc_good.returncode == 0 and "check OK" in proc_good.stdout,
+                proc_good.stdout + proc_good.stderr,
+            )
+
+            proc_bad = run(str(bad_html), "--check", env=env, timeout=45)
+            check(
+                "--check fails a page that throws",
+                proc_bad.returncode != 0 and "check FAILED" in (proc_bad.stdout + proc_bad.stderr),
+                proc_bad.stdout + proc_bad.stderr,
+            )
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+        server.server_close()
+
+
 def test_post_against_scratch_server(tmp):
     """Proves the --post body shape and response handling without ever
     reaching 127.0.0.1:27182 - a throwaway HTTPServer on an ephemeral port
@@ -163,6 +270,8 @@ def main() -> int:
         test_budget_drop(tmp)
         test_html_passthrough(tmp)
         test_post_against_scratch_server(tmp)
+        test_lightbox_markup(tmp)
+        test_check_flag_cli(tmp)
     test_missing_path_errors()
 
     if fails:

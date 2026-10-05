@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-05, complexity=HARD, worth=6, reconfirm-count=1, content-hash=33a49b33 -->
+<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=7, reconfirm-count=2, content-hash=33a49b33 -->
 <!-- duplicate-checked: no live or done todo covers the preview skill's image branch; the render_markdown.py script covers markdown only -->
 # /preview image branch needs a real gallery script instead of a hand-typed builder per push
 
@@ -16,6 +16,8 @@ Observed 2026-09-12 in `wedding_invitation` (session `98ea81a3`): seven separate
 
 Repeated manual step by the /close retrospective's definition (same action 2+ times by hand). `render_markdown.py` next to the skill is the pattern to copy.
 
+Seen again 2026-10-05 in `mc_plugins_tag` (spawn-market session `4dd74c84`): five hand-written gallery builders in one session, and Joe asked "let me click the images on the /preview window". The fix was a small inline lightbox (click an image to open it full-size, arrow keys step, Esc or click closes), verified with the screenshot helper (overlay `display:flex`, image 960x540). The gallery script should ship that lightbox by default.
+
 ## Approach
 
 - Add `skills/preview/build_gallery.py` (or `.mjs`, either is fine; Python matches the sibling script) taking `<image...|dir> [--slug] [--title] [--budget-mb 1.5] [--post]`. It expands directories, sorts, applies the raw-byte budget (drop that file and everything after, report every dropped name), writes the gallery HTML, and with `--post` sends the JSON body itself (title, slug, html, source "terminal", session_id from `CLAUDE_CODE_SESSION_ID`) and prints the response id and status.
@@ -27,6 +29,7 @@ Repeated manual step by the /close retrospective's definition (same action 2+ ti
 
 - `python skills/preview/build_gallery.py a.png b.png --slug x --title y --post` pushes one gallery and prints `included: 2 dropped: [] HTTP 200`.
 - Over-budget input prints the dropped names and the follow-up command; nothing is truncated.
+- Clicking a gallery image opens it full-size in an overlay (arrows step, Esc/click closes).
 - `ci/run_all.py` green; the skill description stays within its word budget.
 
 ## Notes
@@ -38,3 +41,4 @@ Repeated manual step by the /close retrospective's definition (same action 2+ ti
   `--check` that POSTs the html to `/hooks/preview-render`, loads `/hooks/preview-render/<id>`
   headless (`screenshot/screenshot-helper.cjs`), and fails on a page error: a doc that rendered
   fine from `file://` threw an inline-script parse error in the panel that same session.
+- Done in loop-todos cycle 2 (2026-10-06): gallery pages get an inline lightbox (click to open, arrows/keys to step, Esc or backdrop to close), verified headless in chromium; --check POSTs to /hooks/preview-render and loads /hooks/preview-render/<id> headless, failing on a page error before --post (endpoint and {id} shape confirmed in claude_usage_in_taskbar hooks_server/preview_render.rs:30-36). 29/29 tests pass.

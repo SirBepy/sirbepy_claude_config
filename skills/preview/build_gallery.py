@@ -15,6 +15,7 @@ import json
 import mimetypes
 import os
 import re
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -23,6 +24,64 @@ from pathlib import Path
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 ENDPOINT = "http://127.0.0.1:27182/hooks/preview"
 DEFAULT_BUDGET_MB = 1.5
+# Test-only override (todo 995's 2026-10-03 fold-in): never set this for a real push. It exists
+# so tools/test_build_gallery.py can point --check at a scratch HTTP server instead of the live
+# Conductor daemon on 27182.
+RENDER_CHECK_ENDPOINT = os.environ.get(
+    "BUILD_GALLERY_RENDER_CHECK_ENDPOINT", "http://127.0.0.1:27182/hooks/preview-render"
+)
+_RESOLVER_PATH = Path(__file__).resolve().parent.parent / "_shared" / "playwright-resolve.cjs"
+
+# Pure inline CSS+JS, no external deps (todo 995, 2026-10-05 fold-in: Joe asked to click a
+# gallery image to open it full-size). Reuses each thumbnail's own data-URI <img src> instead of
+# duplicating the base64 payload into a JS array, so the lightbox adds no bytes toward the
+# raw-byte budget this script already caps.
+_LIGHTBOX_CSS = (
+    ".gallery-img{cursor:pointer}"
+    "#lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);"
+    "align-items:center;justify-content:center;z-index:1000}"
+    "#lightbox.open{display:flex}"
+    "#lightbox img{max-width:90vw;max-height:90vh}"
+    "#lightbox .lightbox-arrow{position:absolute;top:50%;transform:translateY(-50%);"
+    "font-size:3rem;color:#fff;cursor:pointer;user-select:none;padding:0 24px}"
+    ".lightbox-prev{left:0}.lightbox-next{right:0}"
+    "#lightbox .lightbox-close{position:absolute;top:16px;right:24px;font-size:2rem;"
+    "color:#fff;cursor:pointer;user-select:none}"
+)
+
+_LIGHTBOX_HTML = (
+    '<div id="lightbox" onclick="lbBackdropClick(event)">'
+    '<span class="lightbox-close" onclick="closeLightbox()">&times;</span>'
+    '<span class="lightbox-arrow lightbox-prev" onclick="event.stopPropagation();lbNav(-1)">'
+    "&#8249;</span>"
+    '<img id="lightbox-img" src="" alt="">'
+    '<span class="lightbox-arrow lightbox-next" onclick="event.stopPropagation();lbNav(1)">'
+    "&#8250;</span>"
+    "</div>"
+    "<script>"
+    "var lbIndex=0;"
+    "function lbImgs(){return document.querySelectorAll('.gallery-img');}"
+    "function openLightbox(i){"
+    "lbIndex=i;"
+    "document.getElementById('lightbox-img').src=lbImgs()[i].src;"
+    "document.getElementById('lightbox').classList.add('open');"
+    "}"
+    "function closeLightbox(){document.getElementById('lightbox').classList.remove('open');}"
+    "function lbNav(delta){"
+    "var n=lbImgs().length;"
+    "lbIndex=(lbIndex+delta+n)%n;"
+    "document.getElementById('lightbox-img').src=lbImgs()[lbIndex].src;"
+    "}"
+    "function lbBackdropClick(e){if(e.target.id==='lightbox')closeLightbox();}"
+    "document.addEventListener('keydown',function(e){"
+    "var lb=document.getElementById('lightbox');"
+    "if(!lb.classList.contains('open'))return;"
+    "if(e.key==='Escape')closeLightbox();"
+    "else if(e.key==='ArrowLeft')lbNav(-1);"
+    "else if(e.key==='ArrowRight')lbNav(1);"
+    "});"
+    "</script>"
+)
 
 
 def slugify(text):
@@ -60,21 +119,28 @@ def build_gallery_html(files, title, budget_bytes):
         included.append(f)
 
     figs = []
-    for f in included:
+    for idx, f in enumerate(included):
         mime = mimetypes.guess_type(str(f))[0] or "image/png"
         b64 = base64.b64encode(f.read_bytes()).decode("ascii")
         figs.append(
-            f'<figure><img src="data:{mime};base64,{b64}" style="max-width:100%">'
+            f'<figure><img class="gallery-img" data-idx="{idx}" '
+            f'onclick="openLightbox({idx})" '
+            f'src="data:{mime};base64,{b64}" style="max-width:100%">'
             f"<figcaption>{html_mod.escape(f.name)}</figcaption></figure>"
         )
 
+    lightbox = _LIGHTBOX_HTML if included else ""
+
     page = (
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
-        f"<title>{html_mod.escape(title)}</title></head>"
+        f"<title>{html_mod.escape(title)}</title>"
+        f"<style>{_LIGHTBOX_CSS}</style>"
+        "</head>"
         '<body style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;'
         'background:#fbfcfd;margin:0;padding:24px">'
         f"<h1>{html_mod.escape(title)}</h1>"
         + "".join(figs)
+        + lightbox
         + "</body></html>"
     )
     return page, included, dropped
@@ -118,6 +184,57 @@ def post_preview(html_text, title, slug, endpoint=ENDPOINT):
         return None, str(e.reason)
 
 
+# Loads a URL headless via the same shared chromium resolver screenshot-helper.cjs uses, and
+# reports a page error. Guards the 2026-10-03 incident: a doc that rendered fine from file://
+# threw an inline-script parse error only once served through the panel's own page.
+_PAGE_ERROR_CHECK_JS = """
+const { getChromium } = require(process.argv[1]);
+const url = process.argv[2];
+(async () => {
+  const chromium = getChromium();
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  let pageError = null;
+  page.on('pageerror', (err) => { pageError = pageError || err.message; });
+  try {
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 15000 });
+  } catch (e) {
+    pageError = pageError || e.message;
+  }
+  await browser.close();
+  if (pageError) {
+    console.error('PAGE_ERROR: ' + pageError);
+    process.exitCode = 1;
+    return;
+  }
+  console.log('PAGE_OK');
+})();
+"""
+
+
+def post_render_check(html_text, endpoint=RENDER_CHECK_ENDPOINT):
+    """POSTs to the render-check hook (distinct from /hooks/preview - this one never shows up in
+    the panel) and returns its parsed {"id": ...} response, for --check to then load headless."""
+    body = json.dumps({"html": html_text}).encode("utf-8")
+    req = urllib.request.Request(
+        endpoint, data=body, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.loads(resp.read().decode("utf-8", "replace"))
+
+
+def check_rendered_page(url, resolver_path=_RESOLVER_PATH, timeout=30):
+    """Loads `url` in headless chromium and returns (ok, message). ok is False on either a page
+    error or a chromium-launch failure (message then explains why, e.g. playwright missing)."""
+    proc = subprocess.run(
+        ["node", "-e", _PAGE_ERROR_CHECK_JS, str(resolver_path), url],
+        capture_output=True, text=True, timeout=timeout,
+    )
+    if proc.returncode == 0:
+        return True, proc.stdout.strip()
+    return False, (proc.stderr or proc.stdout).strip()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -129,6 +246,10 @@ def main():
     parser.add_argument("--out", help="Write the built gallery HTML here (default: sibling file)")
     parser.add_argument(
         "--post", action="store_true", help="POST the built/given HTML to the preview endpoint"
+    )
+    parser.add_argument(
+        "--check", action="store_true",
+        help="Before posting, load the built HTML headless and fail if it throws a page error",
     )
     args = parser.parse_args()
 
@@ -176,6 +297,20 @@ def main():
                 f"follow-up: python \"{script}\" {remainder} "
                 f'--slug {slug}-2 --title "{title} (2)" --post'
             )
+
+    if args.check:
+        try:
+            render_resp = post_render_check(html_text)
+        except (urllib.error.URLError, OSError) as e:
+            print(f"check: could not reach render-check endpoint: {e}", file=sys.stderr)
+            sys.exit(1)
+        render_id = render_resp.get("id")
+        render_url = f"{RENDER_CHECK_ENDPOINT.rstrip('/')}/{render_id}"
+        ok, message = check_rendered_page(render_url)
+        if not ok:
+            print(f"check FAILED: {message}", file=sys.stderr)
+            sys.exit(1)
+        print(f"check OK: {render_url}")
 
     if args.post:
         status, resp_body = post_preview(html_text, title, slug)
