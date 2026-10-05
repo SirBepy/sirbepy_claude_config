@@ -39,6 +39,11 @@ SCRIPT = Path(os.environ.get(
 ))
 TIMEOUT_SECONDS = 60
 
+# The GitHub Windows runner's TEMP is an 8.3 short path (C:\Users\RUNNER~1\...)
+# while `git worktree list` reports the long form, so the script's registration
+# check failed every worktree built there. resolve() expands the short name.
+tempfile.tempdir = str(Path(tempfile.gettempdir()).resolve())
+
 fails = []
 
 
