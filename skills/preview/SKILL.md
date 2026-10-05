@@ -43,37 +43,40 @@ When the input is one or more `.md` paths, or a directory of them, render first,
 
 When the input is one or more image paths, or a directory of them, build a gallery HTML page first, then fall through to the same HTML steps below - this is the path for "show Joe this screenshot" when the session has no `SendUserFile` tool.
 
-1. Expand a directory arg to its `.png/.jpg/.jpeg/.gif/.webp` files (sorted) first. Then inline them, capping by RAW byte size before encoding (base64 adds ~33%, so a 1.5MB raw budget lands just under the endpoint's ~2MB cap): once a file would push the running total over budget, drop it and every file after it, and report every dropped filename - never truncate what made it in, and never let the POST hit 413.
-
-   This builder's HTML has embedded `"` (image attributes), so it can never be written as a single quote-free `node -e` argument - a `node -e` one-liner here is a parse error in PowerShell 5.1 before node ever runs (`\"` inside a native-command argument gets stripped, leaving `SyntaxError: Unexpected token ':'`). Write the builder to a file instead, run it, delete it:
+1. Run the builder to produce one self-contained HTML file, same pattern as the markdown branch's `render_markdown.py`:
    ```powershell
-   # Write to C:\tmp\preview-build.mjs (via the Write tool, not shell redirection):
-   #   import fs from "fs";
-   #   import path from "path";
-   #   const files = ["C:/path/shot1.png", "C:/path/shot2.png"];
-   #   const mime = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp" };
-   #   const BUDGET = 1.5 * 1024 * 1024;
-   #   let used = 0, included = [], dropped = [];
-   #   for (const f of files) {
-   #     const size = fs.statSync(f).size;
-   #     if (used + size > BUDGET) { dropped.push(f); continue; }
-   #     used += size;
-   #     included.push(f);
-   #   }
-   #   const figs = included.map(f => {
-   #     const ext = path.extname(f).toLowerCase();
-   #     const b64 = fs.readFileSync(f).toString("base64");
-   #     return `<figure><img src="data:${mime[ext] || "image/png"};base64,${b64}" style="max-width:100%"><figcaption>${path.basename(f)}</figcaption></figure>`;
-   #   }).join("\n");
-   #   const html = `<!doctype html><html><body style="font-family:sans-serif">${figs}</body></html>`;
-   #   fs.writeFileSync("C:/tmp/preview-images.html", html);
-   #   console.log("out:", "C:/tmp/preview-images.html", "included:", included.length, "dropped:", dropped);
-   node C:\tmp\preview-build.mjs
-   Remove-Item C:\tmp\preview-build.mjs
+   python "C:\Users\tecno\.claude\skills\preview\build_gallery.py" <image...|dir> [--slug <name>] [--title "<text>"] [--budget-mb 1.5] [--post]
    ```
-   Edit the `files` array for the actual paths, then tell the dev about any `dropped` entries before pushing.
+   It expands a directory arg to its `.png/.jpg/.jpeg/.gif/.webp` files (sorted), inlines them capping by RAW byte size before encoding (base64 adds ~33%, so the 1.5MB default raw budget lands just under the endpoint's ~2MB cap), and once a file would push the running total over budget drops it and every file after it. It prints the output HTML path and `included: N dropped: [...]` - report every dropped filename to the dev before pushing, never silently truncate. On a budget drop it also prints a ready-to-run follow-up command for the remainder (same script, remaining files, `--slug <slug>-2`), so a second gallery is copy-paste, not re-authoring. Pass `--post` to have the script send the POST itself (same body shape as step 2 below, reading `session_id` from `$env:CLAUDE_CODE_SESSION_ID`) and skip straight to its printed `HTTP <status>: <body>` line instead of doing step 2 by hand.
+   - **No-Python fallback** (Python unavailable): build the gallery by hand with the inline node-builder-plus-curl ritual - write a `.mjs` body-builder to a scratch file (image attributes embed `"`, so this can never be a quote-free `node -e` argument; `\"` inside a native-command argument gets stripped by PowerShell 5.1 before node runs, leaving `SyntaxError: Unexpected token ':'`), run it, delete it:
+     ```powershell
+     # Write to C:\tmp\preview-build.mjs (via the Write tool, not shell redirection):
+     #   import fs from "fs";
+     #   import path from "path";
+     #   const files = ["C:/path/shot1.png", "C:/path/shot2.png"];
+     #   const mime = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp" };
+     #   const BUDGET = 1.5 * 1024 * 1024;
+     #   let used = 0, included = [], dropped = [];
+     #   for (const f of files) {
+     #     const size = fs.statSync(f).size;
+     #     if (used + size > BUDGET) { dropped.push(f); continue; }
+     #     used += size;
+     #     included.push(f);
+     #   }
+     #   const figs = included.map(f => {
+     #     const ext = path.extname(f).toLowerCase();
+     #     const b64 = fs.readFileSync(f).toString("base64");
+     #     return `<figure><img src="data:${mime[ext] || "image/png"};base64,${b64}" style="max-width:100%"><figcaption>${path.basename(f)}</figcaption></figure>`;
+     #   }).join("\n");
+     #   const html = `<!doctype html><html><body style="font-family:sans-serif">${figs}</body></html>`;
+     #   fs.writeFileSync("C:/tmp/preview-images.html", html);
+     #   console.log("out:", "C:/tmp/preview-images.html", "included:", included.length, "dropped:", dropped);
+     node C:\tmp\preview-build.mjs
+     Remove-Item C:\tmp\preview-build.mjs
+     ```
+     Edit the `files` array for the actual paths, then tell the dev about any `dropped` entries before pushing.
 2. Default slug/title derive from the first image path's stem, or the directory name for a directory input, same convention as the markdown branch.
-3. Take the written HTML path and continue at step 1 of the HTML steps below exactly as if it were a hand-written mockup file.
+3. If `--post` wasn't used, take the written HTML path and continue at step 1 of the HTML steps below exactly as if it were a hand-written mockup file. `build_gallery.py` also accepts a single existing `.html` file in place of image paths - it passes the file through unchanged and, with `--post`, pushes it the same way, so a repeatedly-republished Code-mode mockup can go through this same script instead of a hand-typed body-builder each time.
 
 ## Steps
 
