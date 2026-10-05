@@ -16,6 +16,17 @@
   prune` fallback for long-path failures); (4) print `git status --short` in the main checkout
   as the script's own proof that nothing outside the worktree was touched.
 
+  Todo 981, a partly-succeeded `git worktree remove --force`: reproduced live (a file held
+  open under an exclusive lock inside the worktree) that git deletes a worktree's own ".git"
+  file and deregisters the worktree from `git worktree list` BEFORE it discovers the directory
+  still isn't empty and fails - so by the time anything could inspect the leftover, there is no
+  surviving git-side fingerprint (no ".git" file, no ".git\worktrees\<name>" admin entry) to
+  tell "git vouched for this a moment ago" apart from "an arbitrary directory that happens to
+  contain reparse points", the exact confusion the registration guard exists to prevent. No
+  signal survives to safely widen the guard on, so it stays exactly as it was; the refusal
+  message below instead names this specific failure mode and the manual recovery steps, so the
+  state is diagnosable instead of a bare "not a worktree, refusing."
+
 .PARAMETER WorktreePath
   Path to the worktree to remove.
 
@@ -87,7 +98,15 @@ $registeredPaths = $worktreeList | Where-Object { $_ -match '^worktree\s+(.+)$' 
     if (Test-Path $p) { (Resolve-Path $p).Path }
 }
 if ($resolvedWorktree -notin $registeredPaths) {
-    Write-Fail "'$resolvedWorktree' is not a worktree registered to '$resolvedRoot' per 'git worktree list' - refusing. Registered: $($registeredPaths -join ', ')"
+    # Reproduced live for todo 981 (a file held open under an exclusive lock inside the
+    # worktree, then `git worktree remove --force`): git deletes the worktree's own ".git"
+    # file and drops the entry from `git worktree list` BEFORE it discovers the directory
+    # still isn't empty and fails. By the time this guard runs, there is no git-side
+    # fingerprint left to tell that apart from an arbitrary directory that happens to
+    # contain reparse points - the exact confusion this guard exists to prevent - so it
+    # stays exactly as strict as before. The only improvement a real repro could support is
+    # naming the likely cause and the manual recovery, not touching the refusal itself.
+    Write-Fail "'$resolvedWorktree' is not a worktree registered to '$resolvedRoot' per 'git worktree list' - refusing. Registered: $($registeredPaths -join ', '). If this path WAS a worktree a moment ago, a prior 'git worktree remove --force' may have deregistered it while failing to delete a locked file inside it (todo 981) - git leaves no record of this once it happens, so this script cannot safely tell that apart from an arbitrary directory and will not act on it either way. Find and close whatever still holds a file open under '$resolvedWorktree' (Resource Monitor's 'Associated Handles', or restart the process that opened it), then remove the directory by hand."
 }
 
 # --- Step 1: find every reparse point under the worktree (junctions, symlinks) ---

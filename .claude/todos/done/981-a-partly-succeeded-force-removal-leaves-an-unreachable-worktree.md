@@ -71,3 +71,4 @@ script exists to stop anyone reaching for.
 - Related: `ci/run_all.py` discovers no tests under `skills/close/`, so there is currently no way to
   land a regression test for any of this. That gap is worth naming in whatever fix lands, and may be
   worth its own todo about widening CI discovery.
+- Completed by /loop-todos cycle 1 (2026-10-05), lane C, test-first via tools/test_close_*.py (RED against HEAD copies, then GREEN).
