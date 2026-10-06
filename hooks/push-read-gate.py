@@ -38,7 +38,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, tokenize_command
+    from _hooklib import read_payload, deny, tokenize_command, basename
 except Exception as e:
     sys.stderr.write(f"[push-read-gate] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -103,12 +103,6 @@ def _is_auto_commit_snippet(file_path: str) -> bool:
     return parts[-2:] == AUTO_COMMIT_SUFFIX
 
 
-def _shell_command_name(tok: str) -> str:
-    """Last path segment of `tok`, case-folded - strips a `/bin/cat`-style
-    prefix the same way a bare `cat` would match."""
-    return re.split(r"[\\/]", tok)[-1].lower()
-
-
 def is_shell_read_of_auto_commit(command: str) -> bool:
     """True if any chain segment of `command` runs a known read command
     (cat, head, tail, sed, less, more, Get-Content, gc) with a later
@@ -120,7 +114,7 @@ def is_shell_read_of_auto_commit(command: str) -> bool:
         tokens = tokenize_command(segment)
         if not tokens:
             continue
-        if _shell_command_name(tokens[0]) not in SHELL_READ_COMMANDS:
+        if basename(tokens[0]) not in SHELL_READ_COMMANDS:
             continue
         if any(_is_auto_commit_snippet(tok) for tok in tokens[1:]):
             return True
