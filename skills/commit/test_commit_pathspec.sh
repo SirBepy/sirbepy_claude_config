@@ -883,6 +883,29 @@ else
   echo "PASS: regression guard - a wholly untracked directory still commits all its files"
 fi
 
+# --- a non-ASCII new file inside a tracked-directory pathspec: git quotes such paths
+# ("d/\304\215vor.txt") unless core.quotePath is off, and a quoted name cannot be staged,
+# which used to abort the whole commit ---
+r33=$(new_repo); tmp_dirs+=("$r33")
+mkdir -p "$r33/d"
+printf 'tracked\n' > "$r33/d/t.txt"
+git -C "$r33" add d/t.txt
+git -C "$r33" commit -q -m "seed d/t.txt"
+branch=$(git -C "$r33" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r33" rev-parse HEAD)
+printf 'tracked EDITED\n' > "$r33/d/t.txt"
+printf 'novo\n' > "$r33/d/čvor.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r33" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "dir pathspec with a non-ASCII new file" -- d 2>&1); rc=$?
+check "a non-ASCII new file inside a tracked-directory pathspec commits (unquoted path)" \
+  0 'd/čvor\.txt: untracked' 'REFUSED|ERROR' "$out" "$rc"
+if ! git -C "$r33" -c core.quotePath=false ls-files --error-unmatch -- "d/čvor.txt" >/dev/null 2>&1; then
+  echo "FAIL: the non-ASCII new file inside the tracked-dir pathspec was not committed"
+  fail=1
+else
+  echo "PASS: the non-ASCII new file inside the tracked-dir pathspec landed"
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else

@@ -235,13 +235,15 @@ done
 for f in "${files[@]}"; do
   [ "${class_of[$f]}" = "live" ] || continue
   [ -d "$repo_root/$f" ] || continue
-  while IFS= read -r newf; do
+  # -z plus quotePath off: a default listing C-quotes non-ASCII names ("d/\304\215vor.txt"),
+  # which then cannot be staged and aborts the whole commit.
+  while IFS= read -r -d '' newf; do
     [ -z "$newf" ] && continue
     [ -n "${class_of[$newf]:-}" ] && continue
     class_of["$newf"]=untracked
     files+=("$newf")
     diffable_files+=("$newf")
-  done < <(git_c ls-files --others --exclude-standard -- "$f")
+  done < <(git_c -c core.quotePath=false ls-files -z --others --exclude-standard -- "$f")
 done
 
 echo "=== commit-pathspec: $repo_root ==="
