@@ -129,7 +129,7 @@ def _decoy_send_message_text(transcript_path: str) -> str:
 def _last_real_user_text(transcript_path: str) -> str:
     """Text of the most recent `type: user` transcript entry that is a real
     prompt: not a wrapped tool_result, and not a harness-injected mid-turn
-    notification (hand-back/task-notification/stop-hook feedback - same
+    notification (hand-back/task-notification; Stop hook feedback still counts - same
     distinction _hooklib's own iter_turn_tool_uses draws for its turn
     boundary, todo 1081). A `[daemon-meta]` relay entry is deliberately NOT
     filtered here - _is_relay_input below still needs to see it when it IS
