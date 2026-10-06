@@ -226,10 +226,15 @@ def post_render_check(html_text, endpoint=RENDER_CHECK_ENDPOINT):
 def check_rendered_page(url, resolver_path=_RESOLVER_PATH, timeout=30):
     """Loads `url` in headless chromium and returns (ok, message). ok is False on either a page
     error or a chromium-launch failure (message then explains why, e.g. playwright missing)."""
-    proc = subprocess.run(
-        ["node", "-e", _PAGE_ERROR_CHECK_JS, str(resolver_path), url],
-        capture_output=True, text=True, timeout=timeout,
-    )
+    try:
+        proc = subprocess.run(
+            ["node", "-e", _PAGE_ERROR_CHECK_JS, str(resolver_path), url],
+            capture_output=True, text=True, timeout=timeout,
+        )
+    except FileNotFoundError:
+        return False, "node not found on PATH, cannot run the headless render check"
+    except subprocess.TimeoutExpired:
+        return False, f"headless render check timed out after {timeout}s"
     if proc.returncode == 0:
         return True, proc.stdout.strip()
     return False, (proc.stderr or proc.stdout).strip()

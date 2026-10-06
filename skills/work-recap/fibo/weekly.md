@@ -53,10 +53,10 @@ If output is empty, record "no commits this week".
 result (todo 1040): resolve the repo first.
 
 ```
-gh repo view Fibo-Studio/fibo --json name >/dev/null || echo "PRs: UNVERIFIED (gh could not resolve Fibo-Studio/fibo)"
+gh repo view Fibo-Studio/fibo --json name
 ```
 
-If that fails, report the PRs section as `PRs: UNVERIFIED (gh could not resolve Fibo-Studio/fibo)`
+If that exits non-zero (works the same in Bash and PowerShell), report the PRs section as `PRs: UNVERIFIED (gh could not resolve Fibo-Studio/fibo)`
 instead of an empty list.
 
 Three calls:

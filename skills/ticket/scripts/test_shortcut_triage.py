@@ -280,6 +280,13 @@ class TestConsensusMedian(unittest.TestCase):
         result = st.tally_median([j1, j2], field="estimate")
         self.assertEqual(set(result.keys()), {"sc-1", "sc-2"})
 
+    def test_judge_listing_a_key_twice_counts_once(self):
+        j1 = [{"key": "sc-1", "estimate": 2}, {"key": "sc-1", "estimate": 2}]
+        j2 = [{"key": "sc-1", "estimate": 8}]
+        result = st.tally_median([j1, j2], field="estimate")
+        self.assertEqual(result["sc-1"]["values"], [2, 8])
+        self.assertEqual(result["sc-1"]["judge_count"], 2)
+
 
 class TestArgumentParsing(unittest.TestCase):
     def test_search_subcommand(self):

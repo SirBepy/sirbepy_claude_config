@@ -273,8 +273,30 @@ def test_post_against_scratch_server(tmp):
     )
 
 
+def test_render_check_launch_failures_are_messages():
+    """A missing node or a hung chromium returns (False, message) instead of a traceback."""
+    mod = load_module()
+    real_run = mod.subprocess.run
+    try:
+        def missing(*a, **k):
+            raise FileNotFoundError("node")
+
+        def hung(*a, **k):
+            raise subprocess.TimeoutExpired("node", 1)
+
+        mod.subprocess.run = missing
+        ok, msg = mod.check_rendered_page("http://127.0.0.1:1/x")
+        check("render check reports a missing node as a message", not ok and "node not found" in msg, msg)
+        mod.subprocess.run = hung
+        ok, msg = mod.check_rendered_page("http://127.0.0.1:1/x", timeout=1)
+        check("render check reports a timeout as a message", not ok and "timed out" in msg, msg)
+    finally:
+        mod.subprocess.run = real_run
+
+
 def main() -> int:
     test_script_exists()
+    test_render_check_launch_failures_are_messages()
     with tempfile.TemporaryDirectory(prefix="build_gallery_test_") as tmp_str:
         tmp = Path(tmp_str)
         test_basic_gallery(tmp)

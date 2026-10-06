@@ -418,8 +418,10 @@ def tally_median(all_decisions, field, key_field="key"):
     """
     by_key = defaultdict(list)
     for decisions in all_decisions:
-        for d in decisions:
-            by_key[d[key_field]].append(d)
+        # One estimate per judge per key, same rule as tally_vote.
+        per_judge = {d[key_field]: d for d in decisions}
+        for key, d in per_judge.items():
+            by_key[key].append(d)
     summary = {}
     for key, ds in by_key.items():
         values = sorted(d[field] for d in ds)
