@@ -59,3 +59,4 @@ Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens
 Do not retry `npx impeccable update` a 4th time without a state change first (Node bump, or a
 fix from issue #479) - three attempts with two different failure signatures is enough to call this
 non-transient.
+- 2026-10-06 (loop-todos cycle 2): todo 984 trimmed impeccable's description to fit the listing budget and removed it from `LEGACY_OVER_BUDGET_DEBT` in ci/check_skill_frontmatter.py. A successful `npx impeccable update` would restore the upstream ~895-char description and turn CI red; re-trim the description after any update.
