@@ -298,24 +298,24 @@ def _entry_text(entry: dict) -> str:
 
 # Prefixes marking a `type: user` transcript entry the harness injected
 # mid-turn rather than a human/queued prompt: a cross-session subagent
-# hand-back relay, a background-task completion notification, or a Stop
-# hook's own re-prompt after it blocked. None of these starts a new human
-# turn, so a turn-boundary scan must look past one rather than treating it
-# as "this turn" starting here (todo 1081 - a send_message made before one
-# of these arrived was getting hidden, falsely tripping the silent-turn
-# counter in send-message-stop-guard.py even though the turn DID send).
-# `<agent-message from="...">` is the same hand-back marker
+# hand-back relay or a background-task completion notification. Neither
+# starts a new human turn, so a turn-boundary scan must look past one rather
+# than treating it as "this turn" starting here (todo 1081 - a send_message
+# made before one of these arrived was getting hidden, falsely tripping the
+# silent-turn counter in send-message-stop-guard.py even though the turn DID
+# send). `<agent-message from="...">` is the same hand-back marker
 # hooks/_outbound_verify_transcript.py's AGENT_MESSAGE_RE already parses,
-# confirmed against a real transcript (session 6a91451f, line 392 etc.) and
-# `<task-notification>` / "Stop hook feedback:" the same way (lines 603 and
-# 1086 of that same transcript). Deliberately excludes the `[daemon-meta]`
-# peer-relay prefix (send-message-stop-guard.py's own _is_relay_input /
-# _RELAY_TAG_RE): a relay-only turn is meant to count as its own boundary,
-# since the Stop guard's relay exemption (todo 410/1032) depends on that.
+# confirmed against a real transcript (session 6a91451f, lines 392 and 603).
+# Two prefixes stay boundaries on purpose. "Stop hook feedback:" does:
+# Stop hooks that never check stop_hook_active (ui-screenshot-reminder.py)
+# rely on it closing the window, or an edit before it re-blocks every Stop,
+# and a stale send_message before it must not keep re-triggering the
+# send-message guard's content checks. The `[daemon-meta]` peer-relay prefix
+# does too: the Stop guard's relay exemption (todo 410/1032) depends on a
+# relay-only turn counting as its own turn.
 _INJECTED_USER_ENTRY_RE = re.compile(
     r"^(?:Another Claude session sent a message:\s*<agent-message\b"
-    r"|<task-notification>"
-    r"|Stop hook feedback:)"
+    r"|<task-notification>)"
 )
 
 

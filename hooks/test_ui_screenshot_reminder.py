@@ -378,6 +378,34 @@ def run_multirepo_freshness_regression() -> list[str]:
     return fails
 
 
+def run_stop_feedback_boundary_regression() -> list[str]:
+    """A Stop hook's own re-prompt ("Stop hook feedback:") still ends the turn
+    window. This hook never checks stop_hook_active, so if the re-prompt stopped
+    being a boundary, a UI edit made before it would re-block on every Stop."""
+    fails: list[str] = []
+    tmp = Path(tempfile.mkdtemp(prefix="ui-reminder-stopfb-"))
+    try:
+        repo = tmp / "repo"
+        repo.mkdir()
+        init_repo(repo)
+        ui_file = repo / "src" / "App.tsx"
+        touch(ui_file, time.time())
+        transcript = write_transcript(repo, [("Edit", {"file_path": str(ui_file)})])
+        with open(transcript, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"type": "user", "message": {"content": [
+                {"type": "text", "text": "Stop hook feedback:\n[ui-screenshot-reminder] take a screenshot"}]}}) + "\n")
+            f.write(json.dumps({"type": "assistant", "message": {"content": [
+                {"type": "text", "text": "No screenshot needed for this change."}]}}) + "\n")
+        proc = run_hook(str(repo), f"test-{uuid.uuid4()}", str(transcript))
+        silent = '"decision"' not in proc.stdout and proc.returncode == 0
+        print(f"[{'PASS' if silent else 'FAIL'}] stop-hook feedback still ends the turn window (no re-block loop) -> exit={proc.returncode} stdout={proc.stdout.strip()!r}")
+        if not silent:
+            fails.append("stop-hook feedback boundary")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return fails
+
+
 def run() -> int:
     fails = (
         _testlib.run_cases(UNIT_CASES, check_unit)
@@ -386,6 +414,7 @@ def run() -> int:
         + run_readonly_regression()
         + run_cwd_drift_regression()
         + run_multirepo_freshness_regression()
+        + run_stop_feedback_boundary_regression()
     )
     return _testlib.summarize(fails)
 

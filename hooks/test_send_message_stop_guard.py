@@ -350,15 +350,30 @@ with tempfile.TemporaryDirectory() as tmp:
     ok = all('"decision"' not in o for o in outs)
     fails += [] if _testlib.report(ok, f"{label} -> outs={outs!r}") else [label]
 
-    label = "todo 1081: send_message before a mid-turn stop-hook feedback re-prompt is not hidden by it"
-    t = write_transcript_with_injected(
-        tmpdir, "t14.jsonl", "keep building",
-        ["mcp__cc_conductor__send_message"], STOP_HOOK_FEEDBACK,
-        ["mcp__cc_conductor__report_turn_status"],
-    )
-    outs = [run_stop(t, "sess-stop-feedback")[1] for _ in range(3)]
-    ok = all('"decision"' not in o for o in outs)
-    fails += [] if _testlib.report(ok, f"{label} -> outs={outs!r}") else [label]
+    label = "stop-hook feedback stays a turn boundary: a decoy sent before it does not keep re-blocking after a proper send"
+    entries = [{"type": "user", "message": {"content": [{"type": "text", "text": "explain the tags"}]}}]
+    calls = [
+        ("send", {"text": "Answered inline: went through all 7 script tags... Full breakdown is in the chat reply."}),
+        ("inject", STOP_HOOK_FEEDBACK),
+        ("send", {"text": "Seven script tags load: analytics, two polyfills, the app bundle and three widgets."}),
+        ("inject", TASK_NOTIFICATION),
+        ("send", {"text": "Background agent finished; nothing changed in the tag list."}),
+    ]
+    for i, (kind, val) in enumerate(calls):
+        if kind == "inject":
+            entries.append({"type": "user", "message": {"content": [{"type": "text", "text": val}]}})
+            continue
+        entries.append({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": f"toolu_{i}", "name": "mcp__cc_conductor__send_message", "input": val}]}})
+        entries.append({"type": "user", "message": {"content": [
+            {"type": "tool_result", "tool_use_id": f"toolu_{i}", "content": "ok"}]}})
+    t = tmpdir / "t14.jsonl"
+    with open(t, "w", encoding="utf-8") as f:
+        for e in entries:
+            f.write(json.dumps(e) + "\n")
+    code, out = run_stop(t, "sess-stop-feedback")
+    ok = code == 0 and '"decision"' not in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
 
     label = "todo 1081 control: a mid-turn hand-back with no send_message anywhere still blocks on the 3rd (acceptance criterion 2)"
     t = write_transcript_with_injected(
