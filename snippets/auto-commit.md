@@ -18,6 +18,7 @@ Skip the auto-commit if:
 - Every file you touched is gitignored (nothing to stage).
 - The turn was a pure Q&A with no file changes.
 - The change is a tiny part of a clearly-in-progress larger task and the user is steering step by step.
+- It is a client repo (`refs/client-repos.txt`) and the local time is 23:00-10:59. `hooks/commit-window-guard.py` denies the commit anyway. Ask Joe through the question card if he is around. If he is not, leave the changes uncommitted, schedule a one-shot wake-up for 11:00 (Conductor `schedule`, `target: this_chat`), and commit then by pathspec with fresh checks and a real timestamp, never `--date`. A push still needs his OK.
 
 Commit is **the last action** of the turn. Test first, commit last. Do not commit and then keep editing.
 

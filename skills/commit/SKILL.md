@@ -128,6 +128,8 @@ The full ordered sequence for `/commit push`, `/commit pushbump` and `/commit pu
 6. **Post-push ticket move** - every ticket the push shipped goes to Testing.
 7. **Build watch** - `skills/commit/build-watch.md`.
 
+**Client-repo commit window.** In a client repo (`refs/client-repos.txt`), `hooks/commit-window-guard.py` denies every commit and push (step 8 and step 5 alike, including `commit-pathspec.sh` and `/mega-todos` builders' raw `git commit`) from 23:00 to 10:59 local, unless Joe approved it in this session. On a denial, follow its message: ask Joe, or defer to an 11:00 wake-up. Never route around it, and never shift a timestamp out of the window.
+
 ## Pre-push todo sweep
 
 Runs first for `/commit push`, `/commit pushbump`, and `/commit pushnbump`, before the transcript check and pre-push gate below - it can change what the push ships, so both of those must see the final range. Catches a small backlog todo sitting in the exact files the push already touches, while folding it in is still free.

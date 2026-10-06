@@ -362,6 +362,16 @@
         "hooks": [
           {
             "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\commit-window-guard.py\"",
+            "statusMessage": "Checking client-repo commit window"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
             "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\pr-guard.py\"",
             "statusMessage": "Checking pr-guard marker"
           }

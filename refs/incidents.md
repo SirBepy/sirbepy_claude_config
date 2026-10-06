@@ -13,6 +13,18 @@ always-loaded budget without moving a single rule.
 
 ---
 
+## Git Commits - the client-repo commit window
+
+2026-10-06, about 00:40 local: Claude pushed zng-app sc-56157 in the middle of the night. Joe:
+
+> unless you got my permission, dont commit or push anything between 11PM and 11AM, it doesnt
+> look good on me if i work around midnight
+
+He floated committing "for the future (at 11AM)" with a faked timestamp; Claude declined, and he
+chose a real commit at 11:00 instead. That is why `hooks/commit-window-guard.py` also refuses date
+overrides in client repos. The 11:00 wake re-commits by pathspec rather than trusting the index,
+because a 7h wait had already seen staged files drift back to unstaged.
+
 ## Shell Commands - never write file CONTENT through the shell
 
 Two incidents, both the UTF-8 BOM that Windows PowerShell 5.1 prepends even with `-Encoding utf8`:

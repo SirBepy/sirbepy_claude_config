@@ -61,6 +61,9 @@ skills/commit/watch-build.pid
 # Per-commit push clearances written by hooks/push-gate.py mark, machine-local state
 hooks/.push-ok/
 
+# Session-scoped night-commit approvals written by hooks/commit-window-guard.py allow, machine-local state
+hooks/.commit-window-ok/
+
 # Python bytecode cache, regenerated locally, not source
 hooks/__pycache__/
 hooks/__pycache__/**

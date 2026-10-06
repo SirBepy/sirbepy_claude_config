@@ -82,3 +82,4 @@ leaves them at `.git/lint-staged_unstaged.patch` - apply with `git apply`
   - Example: user says "27 minutes after the previous commit" → don't use exactly :45:00; use :43:17, :46:52, etc.
 - Apply the same timestamp to both author and committer dates: `GIT_COMMITTER_DATE="..." git ... commit --date="..." ...`.
 - Confirm the resulting timestamp back to the user after committing.
+- **Client repos** (`refs/client-repos.txt`): backdating is only for a time Joe explicitly names, and never into 23:00-10:59 or as a way to move a night commit out of that window. `hooks/commit-window-guard.py` refuses `--date`/`GIT_*_DATE` there whenever the value lands in the window, has no readable HH:MM, or the commit runs inside the window. A `/commit fold` replaying a commit that really was made at night needs Joe's approval and the hook's `allow` first.

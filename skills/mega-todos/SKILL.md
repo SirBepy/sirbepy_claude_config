@@ -457,6 +457,8 @@ HARD RULES, no exceptions:
 - NEVER `git stash`, `git reset`, `git checkout`, or `git revert` on ANY path. To see clean state,
   use `git show HEAD:<file>`.
 - NEVER bump a version. Plain commit only, no `v` / `bump` / `push` variant. Do not push.
+- A `[commit-window]` denial (client repo, 23:00-10:59 local) is a STOP: leave your work
+  uncommitted and report it. Never retry with `--date` or `GIT_*_DATE`, never run its `allow`.
 - NEVER write under `.claude/todos/` AT ALL, not just `PLAN.md`/`done/` - `hooks/agent-todo-write-guard.py`
   hard-blocks every Write/Edit a dispatched agent makes there (todo 1018). This includes a
   decide-or-won't-fix ending for the todo you were dispatched from: put that decision in a
