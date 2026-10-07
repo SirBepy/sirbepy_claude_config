@@ -48,13 +48,9 @@ would be an overreach.
 - A clear, confirmed reason is recorded for why it can't be updated on this machine right now
   (e.g. "blocked on Node upgrade, Joe deferred it").
 
-## Open questions
-
-Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
-
-- [ ] [TOOLING] `npx impeccable update` needs Node >= 22.18.0 (machine has 22.13.0), and bumping Node affects every Node tool on the machine. Options: bump Node now / wait on upstream issue #479 / drop the update.
-
 ## Notes
+
+- Phase 0 answer (Joe): bump Node now to >= 22.18.0, re-run `npx impeccable update`, then re-trim the description for the listing budget. (2026-10-07, /loop-todos Phase 0)
 
 Do not retry `npx impeccable update` a 4th time without a state change first (Node bump, or a
 fix from issue #479) - three attempts with two different failure signatures is enough to call this

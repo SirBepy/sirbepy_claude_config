@@ -28,8 +28,6 @@ Decide with Joe which rule wins for the vault specifically. If the vault is mean
 
 The three documents give the same answer, and a vault commit made from a vault session either pushes or doesn't without any rule contradicting it.
 
-## Open questions
+## Notes
 
-Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
-
-- [ ] [ARCH] The vault's CLAUDE.md says every commit is pushed at once, while auto-commit.md says a push always needs Joe's ask, and obsidian-git has been dead since 2026-08-25. Options: a named vault exception in auto-commit.md (Claude pushes vault commits) / drop the vault's push rule (vault commits stay local until Joe pushes).
+- Phase 0 answer (Joe): vault exception, Claude pushes vault commits straight away; auto-commit.md gets a named carve-out pointing at refs/global-knowledge-vault.md. (2026-10-07, /loop-todos Phase 0)

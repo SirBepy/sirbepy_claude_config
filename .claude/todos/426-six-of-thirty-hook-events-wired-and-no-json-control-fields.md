@@ -88,13 +88,16 @@ The `Stop` + `decision: block` field is what todo 427 depends on, so read that o
   reason text reaches the model.
 - No existing hook's behavior regresses: all 13 current hook tests still pass, real output pasted.
 
-## Open questions
+<!-- loop-skip: dev deferred 2026-10-07 -->
+## Deferred questions
 
 Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
 
 - [ ] [SEC] Wire a `PermissionRequest` hook, which changes what every concurrent session may do. Options: wire it now with Joe watching / keep deferred / drop.
 
 ## Notes
+
+- Phase 0 answer (Joe): keep the PermissionRequest hook deferred. (2026-10-07, /loop-todos Phase 0)
 
 Do not wire events speculatively. Three events with a reason beat ten wired because they exist.
 

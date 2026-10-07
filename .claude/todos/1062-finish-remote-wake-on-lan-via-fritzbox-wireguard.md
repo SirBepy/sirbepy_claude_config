@@ -119,7 +119,8 @@ retries a failed password), `wol-sniff.ps1` (UDP 7/9 listener, self-tested), `wo
 - [ ] `powershell -File C:\tmp\fritz.ps1 -Password <ask Joe> -Page shareWireguard -Out C:\tmp\fritz-wg.json`, then check whether `userConnections`/`boxConnections` are still empty
 - [ ] Compare the router WAN IP (TR-064 `GetExternalIPAddress` on `:49000/igdupnp/control/WANIPConn1`) with `https://api.ipify.org` to confirm there's still no CGNAT
 
-## Open questions
+<!-- loop-skip: dev deferred 2026-10-07 -->
+## Deferred questions
 
 Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
 
@@ -127,6 +128,7 @@ Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens
 
 ## Notes
 
+- Phase 0 answer (Joe): not now, keep parked; the FRITZ!Box button press stays Joe's. (2026-10-07, /loop-todos Phase 0)
 - Joe ended the session with `/create-todo to finish this` then `/close` on 2026-10-02, almost a
   month after the work was done. Joe may already have finished the WireGuard step by hand, so check
   `userConnections` before redoing anything.

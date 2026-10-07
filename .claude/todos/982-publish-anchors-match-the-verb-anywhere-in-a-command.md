@@ -74,14 +74,9 @@ the rest of the session.
   every concurrent session runs on every Bash command.
 - `python ci/run_all.py` passes.
 
-## Open questions
-
-Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
-
-- [ ] [SEC] Finish steps 3 and 5 (stop a verb inside quoted text or a heredoc from matching the destructive-command guard). It loosens a core safety guard, so it needs Joe present. Options: fix it in an attended session / leave it as a documented gap.
-
 ## Notes
 
+- Phase 0 answer (Joe): fix steps 3 and 5 in this loop, with tests covering both the false positives and the true positives the guard must keep catching. (2026-10-07, /loop-todos Phase 0)
 - Do not widen the bypass env var as the fix. It disables every destructive check at once, which is
   the opposite of what a false positive should cost.
 - `hooks/destructive-command-guard.py` is tiered (CORE denies, MIDDLE asks). A false positive in the

@@ -43,14 +43,9 @@ wrong story list feeds outbound work the dev sends as his own words.
 - Both call sites use the settled form, or the canonical ref explicitly blesses both.
 - `refs/shortcut-api.md` records the answer so it is not re-derived.
 
-## Open questions
-
-Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
-
-- [ ] [TOOLING] Run the two read-only Shortcut `search/stories` calls (literal `+` vs `%20`) in an attended session; an unattended run declines a credentialed call to a client tracker. Options: run them attended / drop the footnote and keep both forms documented.
-
 ## Notes
 
+- Phase 0 answer (Joe): run the two read-only search/stories calls (literal `+` vs `%20`) in this loop; Joe approved the credentialed read-only call. (2026-10-07, /loop-todos Phase 0)
 - **Q parked 2026-09-04 (does Shortcut's `search/stories` treat a literal `+` as a space, and should it be settled from a zng session) - dev delegated to autopilot on 2026-09-10** via /loop-todos Phase 0. Autopilot's call: do not hand Joe a task in another session. Attempt the two read-only calls from wherever a token is actually reachable; if none is, record both forms in `refs/shortcut-api.md` as an explicitly unverified fork so the next reader inherits the question instead of re-deriving it.
 
 - Do not hardcode a token anywhere. Read it from the environment as the existing recipes do.

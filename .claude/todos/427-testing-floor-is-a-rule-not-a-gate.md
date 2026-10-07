@@ -76,13 +76,9 @@ JSON form is better.
 - A deliberately unfixable failure terminates at the cap instead of looping.
 - All existing Stop hooks (`em-dash-guard.py`, ui-screenshot reminder) still fire correctly.
 
-## Open questions
-
-Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
-
-- [ ] [SEC] Wire the testing-floor Stop gate into settings.json; it can block every turn from ending while a fast check is red. Options: wire it now with Joe watching / keep unwired / drop.
-
 ## Notes
+
+- Phase 0 answer (Joe): wire the testing-floor Stop gate now, Joe watching; verify a few turns still end after wiring. (2026-10-07, /loop-todos Phase 0)
 
 This is the highest-risk todo in the harvest set. A misfiring Stop hook affects every single turn,
 and the failure mode is a session that cannot end. Build the activation gate and the escape hatch

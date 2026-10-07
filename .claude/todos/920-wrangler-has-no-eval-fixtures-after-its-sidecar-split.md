@@ -53,8 +53,6 @@ the run, and say in the report what it cost.
   the same class of decision as changing a permission posture, so this was parked rather than
   autopiloted. Nothing is blocked; it needs an attended run that accepts the cost.
 
-## Open questions
+## Notes
 
-Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
-
-- [ ] [TOOLING] Run one bounded wrangler eval pass, which spends real API money and network. Options: run it once attended / keep parked / drop.
+- Phase 0 answer (Joe): run one bounded wrangler eval pass in this loop (real API spend approved). (2026-10-07, /loop-todos Phase 0)

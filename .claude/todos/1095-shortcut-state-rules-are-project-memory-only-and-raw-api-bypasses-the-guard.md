@@ -28,13 +28,7 @@ Every zng-* session follows the same Shortcut state rules without depending on w
 - A Shortcut state or owner write made outside the MCP tools is either blocked or checked by the same rule as the hook, or the docs say plainly that it isn't and route writes through `/ticket`.
 - The zng-app/zng-admin memories no longer carry their own copy of the rule.
 
-## Open questions
-
-Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
-
-- [ ] [SEC] Rule for other people's Shortcut tickets: Options: requester == Joe, unless Joe names the ticket in this session / requester == Joe, no exception / differs per project.
-- [ ] [SEC] Guard raw-API Shortcut writes mechanically? Options: add a Bash/PowerShell PreToolUse matcher on `api.app.shortcut.com` PUT/POST (misses writes from inside a Python file) / docs only (shipped 2026-10-06) / both.
-
 ## Notes
 
+- Phase 0 answers (Joe): (1) others' Shortcut tickets: requester must be Joe, unless Joe names that ticket in the current session. (2) add the PreToolUse hook on raw `api.app.shortcut.com` PUT/POST from Bash/PowerShell, on top of the shipped docs. (2026-10-07, /loop-todos Phase 0)
 - loop-todos cycle 2, 2026-10-06: Approach step 1 and the docs branch of step 2 shipped: `skills/ticket/shortcut.md` "State ladder" section (ids checked against refs/shortcut-api.md:25-30) is the one global home, and its Ownership paragraph points at it. Left open: step 3 and the mechanical-guard half of step 2 (see Open questions), and the zng-app/zng-admin memory files still carry their own copy; once step 3 is answered, replace each with a one-line pointer to the State ladder section.

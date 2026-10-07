@@ -46,8 +46,6 @@ the push half is now hook-enforced, the commit half is not.
   refused, and passes with `--force coverage-tests`.
 - `python ci/run_all.py` shows no new failures versus HEAD.
 
-## Open questions
+## Notes
 
-Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
-
-- [ ] [ARCH] Should the /commit fold-ask and the /cleanup-todos worth cap read the shared client-repo list instead of their own `SirBepy` check? Unifying flips Fibo-Studio repos from asking to never asking. Options: unify / keep the two checks separate.
+- Phase 0 answer (Joe): unify on refs/client-repos.txt for both the /commit fold-ask and the /cleanup-todos worth cap, accepting that Fibo-Studio repos flip to never-ask. (2026-10-07, /loop-todos Phase 0)

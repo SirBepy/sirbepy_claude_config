@@ -42,12 +42,7 @@ the right default.
 Run each subcommand against countoff (`generic-sirbepy-project`). `rules` should report the
 2026-09-30 release as matching the repo's `firestore.rules`.
 
-## Open questions
-
-Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
-
-- [ ] [SEC] The auto-mode classifier blocked a builder writing a read-only helper that reads the firebase-tools token cache. Options: Joe allows that file kind for one builder run / Joe builds it himself / drop the helper.
-
 ## Notes
 
+- Phase 0 answer (Joe): allow tools/firebase-live.cjs (read-only helper reading the firebase-tools token cache) for one builder run in this loop. (2026-10-07, /loop-todos Phase 0)
 - /loop-todos 2026-10-05: BLOCKED. A builder's Write of tools/firebase-live.cjs (read-only GET/runQuery helper reading the firebase-tools configstore token) was denied by the auto-mode classifier as Credential Exploration; not retried. Needs Joe to allow that file kind, or to build it himself.

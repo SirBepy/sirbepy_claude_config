@@ -51,14 +51,9 @@ Where the rules live today:
 - `skills/autopilot/SKILL.md` has the Reporting section; a dry read of it gives an unambiguous
   answer to "do I send a bubble for this commit?".
 
-## Open questions
-
-Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
-
-- [ ] [UX] During an /autopilot or /loop-todos run, which events should earn a chat bubble? Options: only blockers, reversible decisions and the final summary (everything else in write_plan) / also each commit / also each todo closed.
-
 ## Notes
 
+- Phase 0 answer (Joe): during /autopilot and /loop-todos runs a chat bubble is earned only by blockers, decisions, and the final summary; everything else goes in write_plan. The send-message Stop guard gets a matching exemption. (2026-10-07, /loop-todos Phase 0)
 - Conflicting enforcement to reconcile: the Conductor `send-message-stop-guard` Stop hook (todo 410)
   blocks a turn after 3-4 consecutive turns end with only `report_turn_status`. During the same
   2026-09-29 run, right after Joe asked for fewer bubbles, that guard forced a bubble on turns that

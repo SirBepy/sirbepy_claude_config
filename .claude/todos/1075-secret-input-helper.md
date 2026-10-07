@@ -18,8 +18,6 @@ Either (a) promote the script to a global tool (e.g. `~/.claude/tools/set-secret
 ## Acceptance
 - A session asked for a secret uses the standard helper without inventing one, and the value never appears in the transcript.
 
-## Open questions
+## Notes
 
-Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
-
-- [ ] [SEC] How should Claude collect a secret from Joe without it entering the transcript? Options: (a) promote the WinForms prompt script to a global `tools/set-secret.ps1` / (b) file a Conductor MCP `request_secret` tool in claude_usage_in_taskbar's backlog / drop.
+- Phase 0 answer (Joe): route (b), file a Conductor MCP `request_secret` tool in claude_usage_in_taskbar's backlog; not the global set-secret.ps1. (2026-10-07, /loop-todos Phase 0)

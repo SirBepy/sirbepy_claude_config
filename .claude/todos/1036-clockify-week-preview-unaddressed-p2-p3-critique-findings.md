@@ -58,14 +58,9 @@ result does, per this session's own back-and-forth pattern.
 - `.chip-old` has a non-default accent color.
 - Joe has seen and approved (or explicitly declined) each change live in the preview panel.
 
-## Open questions
-
-Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens with these.
-
-- [ ] [UX] Approve the clockify week card shown 2026-10-05, and say whether the remaining type-scale and empty-weekend hatch items are wanted. Options: approve and do both / approve and drop both / list changes.
-
 ## Notes
 
+- Phase 0 answer (Joe): approve the 2026-10-05 week card, and do both the type-scale pass and the empty-weekend hatch. (2026-10-07, /loop-todos Phase 0)
 - /loop-todos 2026-10-05: dot glyph for 8-14px blocks, hour gridlines, brighter column borders and the chip-old tint shipped (99dc39a); shown to Joe as a show_preview card on sample data. Open: Joe's approval, plus the undecided type-scale and empty-weekend hatch items.
 
 Joe's own priority call on this list is unknown - ask before batching all four into one session,
