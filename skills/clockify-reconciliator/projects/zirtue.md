@@ -8,7 +8,7 @@ repos:
   - C:/Users/tecno/Desktop/Projects/zng-api
   - C:/Users/tecno/Desktop/Projects/zng-biller
 ticket_regex: ^(\d{4,6}):
-weekly_target_hours: 30
+weekly_target_hours: 20
 hubstaff_org_id: 410414
 hubstaff_user_id: 4023312
 hubstaff_project_label: Zirtue Engineering - Web Application - [CINNAMON]
