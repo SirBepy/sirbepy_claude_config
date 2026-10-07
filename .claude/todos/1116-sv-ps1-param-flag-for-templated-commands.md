@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-08, complexity=EASY, worth=5, reconfirm-count=1, content-hash=95a4c552 -->
 <!-- duplicate-checked: 857 is about dynamic PORT overriding a server's default; this is variant selection for templated commands -->
 # sv.ps1 ensure: add -Param k=v so an agent can pick a server_supervisor command variant
 

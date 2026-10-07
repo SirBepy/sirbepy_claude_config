@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=9, reconfirm-count=1, content-hash=20fc6441 -->
+<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=9, reconfirm-count=2, content-hash=20fc6441 -->
 <!-- duplicate-checked: no live todo mentions the mutation guard, the Testing ceiling, or raw-API Shortcut writes (grep 2026-10-05) -->
 # Shortcut state rules live only in zng-app/zng-admin memory, and raw-API writes skip the mutation guard
 

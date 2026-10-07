@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-08, complexity=EASY, worth=8, reconfirm-count=1, content-hash=b2bf33cb -->
 <!-- duplicate-checked: 2026-10-06; done/265 and done/279 are the same shape for the commit-guard marker, not the push-gate mark. No open todo covers this. -->
 # /commit's Pre-push gate should say the push-gate mark runs in its own tool call
 

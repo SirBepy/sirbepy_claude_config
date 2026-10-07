@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-08, complexity=EASY, worth=7, reconfirm-count=1, content-hash=4f85e91e -->
 <!-- duplicate-checked: 2026-10-06; 1085 (done) added the update-ref matcher this extends; no live todo covers chained calls. -->
 # commit-guard inspects only the first `git update-ref` in a chained command
 

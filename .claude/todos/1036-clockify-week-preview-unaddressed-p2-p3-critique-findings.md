@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-06, complexity=EASY, worth=5, reconfirm-count=2, content-hash=d2e17e7f -->
+<!-- cleanup: last-checked 2026-10-08, complexity=EASY, worth=5, reconfirm-count=3, content-hash=d2e17e7f -->
 <!-- duplicate-checked: 1035 is about hardcoding "Joe" in skill prose, 997 is about generating the calendar and caching the hubstaff token - both distinct from this visual-critique-followup list, only sharing "clockify/week/preview" vocabulary -->
 # clockify-week preview: unaddressed P2/P3 findings from the 2026-09-28 impeccable critique
 

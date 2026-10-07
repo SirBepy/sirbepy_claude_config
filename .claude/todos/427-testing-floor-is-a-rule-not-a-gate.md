@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=8, reconfirm-count=6, content-hash=589349fb -->
+<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=8, reconfirm-count=7, content-hash=589349fb -->
 <!-- duplicate-checked -->
 # The testing floor is a rule Claude must remember, not a gate it cannot pass
 

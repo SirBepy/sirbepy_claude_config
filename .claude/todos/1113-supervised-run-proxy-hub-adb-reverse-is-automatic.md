@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-08, complexity=EASY, worth=6, reconfirm-count=1, content-hash=6863de07 -->
 <!-- duplicate-checked: 226 (done) is the hub-port HTTP route; this is the adb reverse limitation bullet, a different surface -->
 # Update supervised-run's proxy-hub doc: adb reverse is now automatic
 

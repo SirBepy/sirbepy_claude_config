@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=8, reconfirm-count=1, content-hash=ae7f9326 -->
 <!-- duplicate-checked: 2026-10-06; grepped backlog + done/ for "per-commit review" and "review each unpushed", no hit. -->
 # Script the per-commit review fan-out a reviewed push keeps rebuilding by hand
 

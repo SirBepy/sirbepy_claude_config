@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-08, complexity=EASY, worth=7, reconfirm-count=1, content-hash=ecb0429b -->
 <!-- duplicate-checked: 2026-10-06; grepped commit-pathspec.sh and the backlog for "--todo" and todo-archive pathspec handling, no hits. -->
 # commit-pathspec.sh should take a todo id and add that todo's archive paths itself
 
