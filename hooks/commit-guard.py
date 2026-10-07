@@ -110,11 +110,12 @@ def _tokenize(command: str) -> list[str] | None:
         return None
 
 
-def _subcommand_index(tokens: list[str], name: str) -> int | None:
-    """Index of the `name` token in a `git <name>` invocation, walking past
-    global flags (skipping their values for flags like -C), or None."""
+def _subcommand_index(tokens: list[str], name: str, start: int = 0) -> int | None:
+    """Index of the `name` token in a `git <name>` invocation at or after
+    `start`, walking past global flags (skipping their values for flags like
+    -C), or None."""
     for i, tok in enumerate(tokens):
-        if tok != "git":
+        if i < start or tok != "git":
             continue
         j = i + 1
         while j < len(tokens) and tokens[j].startswith("-"):
@@ -164,20 +165,24 @@ def _is_branch_update_ref_invocation(tokens: list[str]) -> bool:
     `HEAD` or `refs/heads/*` - the half of the commit-tree + update-ref pair
     that actually lands a commit by moving a branch pointer. An update-ref
     to any other ref (notes, tags-as-refs, etc.) or a `--stdin`-fed call
-    with no positional ref argument is left alone - it's not a commit."""
+    with no positional ref argument is left alone - it's not a commit.
+
+    Every update-ref in a chained command is checked, since a notes update
+    first and a branch move second still lands a commit."""
     idx = _subcommand_index(tokens, "update-ref")
-    if idx is None:
-        return False
-    k = idx + 1
-    while k < len(tokens) and tokens[k].startswith("-"):
-        if tokens[k] in _UPDATE_REF_VALUE_FLAGS:
-            k += 2
-        else:
-            k += 1
-    if k >= len(tokens):
-        return False
-    ref = tokens[k]
-    return ref == "HEAD" or ref.startswith("refs/heads/")
+    while idx is not None:
+        k = idx + 1
+        while k < len(tokens) and tokens[k].startswith("-"):
+            if tokens[k] in _UPDATE_REF_VALUE_FLAGS:
+                k += 2
+            else:
+                k += 1
+        if k < len(tokens):
+            ref = tokens[k]
+            if ref == "HEAD" or ref.startswith("refs/heads/"):
+                return True
+        idx = _subcommand_index(tokens, "update-ref", idx + 1)
+    return False
 
 
 def is_commit_landing_invocation(command: str) -> bool:

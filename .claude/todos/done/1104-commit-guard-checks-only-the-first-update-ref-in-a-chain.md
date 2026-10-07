@@ -27,3 +27,7 @@ to `LANDING_CASES` in `hooks/test_commit_guard.py` as a must-gate case.
 ## Acceptance
 - The chained input above returns True; the existing 9 LANDING_CASES still pass.
 - `python hooks/test_commit_guard.py` passes.
+
+## Notes
+
+- Completed 2026-10-08 (loop-todos cycle 1): _is_branch_update_ref_invocation loops over every update-ref via a start index on _subcommand_index; two chained cases added to LANDING_CASES.

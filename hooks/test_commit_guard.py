@@ -69,6 +69,16 @@ LANDING_CASES = [
     ("git update-ref refs/notes/commits new old", False, "update-ref to a non-branch ref is unrelated"),
     ("git log", False, "unrelated read-only git subcommand"),
     ("git update-ref -d refs/heads/old-branch", True, "deleting a branch ref still mutates history pointers"),
+    (
+        "git update-ref refs/notes/x a && git update-ref refs/heads/master b",
+        True,
+        "a branch-moving update-ref chained after a notes one still lands a commit",
+    ),
+    (
+        "git update-ref refs/notes/x a && git update-ref refs/notes/y b",
+        False,
+        "two chained non-branch update-refs stay ungated",
+    ),
 ]
 
 
