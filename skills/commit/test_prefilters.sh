@@ -359,6 +359,11 @@ out=$(cd "$tr1" && "$gate" .claude/todos/scratch.py); rc=$?
 check "todo-ref.sh exempts anything under .claude/todos/" \
   0 '' 'todo-ref\.sh' "$out" "$rc"
 
+printf 'function z() {\n  // see todo 11255 for why\n}\n' > "$tr1/code3.js"
+out=$(cd "$tr1" && "$gate" code3.js); rc=$?
+check "todo-ref.sh flags a five-digit todo id" \
+  1 'todo-ref\.sh' '' "$out" "$rc"
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else

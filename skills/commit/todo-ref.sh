@@ -28,7 +28,7 @@ BEGIN { IGNORECASE = 1 }
   if (f ~ /\.(md|mdx)$/) next
   if (f ~ /(^|\/)\.claude\/todos\//) next
   l=substr($0,2)
-  if (l ~ /^[[:space:]]*(\/\/|#|\/\*|\*|--)[[:space:]].*\ytodo[ -]?#?[0-9]{1,4}\y/) {
+  if (l ~ /^[[:space:]]*(\/\/|#|\/\*|\*|--)[[:space:]].*\ytodo[ -]?#?[0-9]+\y/) {
     printf "%s: %s\n", f, l
   }
   next
