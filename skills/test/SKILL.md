@@ -1,7 +1,6 @@
 ---
 name: test
-description: Runs a project's fast checks - unit tests plus whatever typecheck/lint/build the detected command already covers - with the stack inferred from the repo rather than named.
-disable-model-invocation: true
+description: Runs a repo's fast checks (unit, typecheck, lint, build), stack inferred. /test, or the floor before a commit.
 argument-hint: "[free-form scope - a file, a package, or 'full']"
 ---
 

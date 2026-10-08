@@ -32,6 +32,10 @@ same check for `/e2e`.
 - A loop-todos cycle can run its Phase 2 gate without the Skill tool refusing and without a
   rule-breaking manual replication.
 
+## Notes
+
+- Fixed 2026-10-08: Joe removed the lock by giving Claude direct permission in the todo-questions chat; skills/test/SKILL.md no longer carries disable-model-invocation, so /test is in the Skill listing and loop-todos Phase 2 and /commit step 6b can call it.
+
 ## Open questions
 
 Written by /auto-do-todos on 2026-10-08 (loop-todos cycle 1). The next run opens with these.
