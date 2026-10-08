@@ -122,8 +122,7 @@ and the out-of-scope-findings channel below are the only guards.
   to run them and report the actual output, not a claim of success.
 - The commit prefilters as part of that verify floor, scoped to the builder's own diff, with the
   per-script treatment split: fix an em dash, rewrite a comment-tense hit, STOP on a secret.
-  Comment-noise still runs but is informational only and never gates, since todo 922 demoted it on
-  2026-09-05. Verbatim text and the exact `prefilter-gate.sh` invocation live in
+  There is no comment line-count scan; the comment rule judges content, not length. Verbatim text and the exact `prefilter-gate.sh` invocation live in
   `refs/builder-preamble.md`'s static block, not restated here so the two never drift apart - that
   drift is what let a builder ship three em dashes past a green CI on 2026-08-25, because the
   requirement lived only in this prose while the block every dispatch actually pastes said nothing

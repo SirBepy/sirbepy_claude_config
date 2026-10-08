@@ -294,29 +294,13 @@ with tempfile.TemporaryDirectory() as tmp:
     subprocess.run(["git", "add", "README.md"], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=repo, check=True)
 
-    # Baseline for the verbatim-move case below: HEAD already holds this exact
-    # 5-line comment block under a different path. Text deliberately distinct from
-    # noisy.py's below - a coincidental match would silently exempt genuine new noise too.
-    (repo / "source_move.py").write_text(
-        "# m1\n# m2\n# m3\n# m4\n# m5\nprint('keep')\n", encoding="utf-8"
-    )
-    subprocess.run(["git", "add", "source_move.py"], cwd=repo, check=True)
-    subprocess.run(["git", "commit", "-q", "-m", "add source_move"], cwd=repo, check=True)
-
-    # An em dash trips em-dash.sh, which gates this 5-line comment block.
+    # An em dash trips em-dash.sh.
     # Written as an escape, never a literal: em-dash.sh's exempt marker only covers
     # .claude/todos/, so a literal one would make this file uncommittable.
     (repo / "noisy.py").write_text(
         "print('a \u2014 b')\n", encoding="utf-8"
     )
     (repo / "clean.py").write_text("print('ok')\n", encoding="utf-8")
-
-    # Move the block out of source_move.py into moved.py, same commit's pathspec -
-    # the gate must not re-flag lines already present at HEAD under another path (todo 899).
-    (repo / "source_move.py").write_text("print('keep')\n", encoding="utf-8")
-    (repo / "moved.py").write_text(
-        "# m1\n# m2\n# m3\n# m4\n# m5\nprint('moved')\n", encoding="utf-8"
-    )
 
     guard.MARKER_DIR = repo
     guard.SESSION_MARKER_DIR = repo / ".session-markers"
@@ -353,24 +337,6 @@ with tempfile.TemporaryDirectory() as tmp:
     label = "a pathspec-less commit is not force-checked (fails open, decided: accepted gap, todo 868)"
     got = run_main("git commit -m 'x'", session_id="sess-gate", cwd=str(repo))
     if not _testlib.report(got == 0, f"{label} (got exit={got})"):
-        fails.append(label)
-
-    label = "a verbatim comment-block move across files in the same commit is not re-flagged"
-    got = run_main(
-        "git commit -m 'x' -- source_move.py moved.py",
-        session_id="sess-gate",
-        cwd=str(repo),
-    )
-    if not _testlib.report(got == 0, f"{label} (got exit={got})"):
-        fails.append(label)
-
-    label = "a verbatim move alongside a genuinely flagged file still blocks"
-    got = run_main(
-        "git commit -m 'x' -- source_move.py moved.py noisy.py",
-        session_id="sess-gate",
-        cwd=str(repo),
-    )
-    if not _testlib.report(got == 2, f"{label} (got exit={got})"):
         fails.append(label)
 
 # --- todo 917: an expired legacy marker is pruned on the next commit attempt ---
