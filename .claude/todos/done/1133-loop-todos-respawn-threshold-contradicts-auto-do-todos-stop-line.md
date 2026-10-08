@@ -23,3 +23,7 @@ Make Phase 4's respawn line match Step 6: respawn whenever ctx used is at or abo
 
 ## Acceptance
 - loop-todos Phase 4 and auto-do-todos Step 6 name the same boundary, one pointing at the other.
+
+## Notes
+
+- loop-todos Phase 4 now respawns at /auto-do-todos Step 6's HARD_STOP_AT (40% used) and points at Step 6 instead of copying the number.

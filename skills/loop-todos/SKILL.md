@@ -112,8 +112,10 @@ After Phase 2, before the next cycle, run:
 node ~/.claude/skills/context-left/context-left.mjs
 ```
 
-At or above 35% remaining, start the next cycle in this chat. Below 35%, run `/respawn` so the
-successor carries the loop on.
+Below `/auto-do-todos` Step 6's `HARD_STOP_AT` (40% used), start the next cycle in this chat. At or
+above it, run `/respawn` so the successor carries the loop on: a cycle started past that line takes
+no todos, so Phase 3's zero-progress stop would end the loop instead. The boundary lives in Step 6;
+read it there rather than copying the number here.
 
 **The handoff prompt's FIRST characters must be the literal re-invocation**, because a slash
 command only expands at the very start of a turn. Everything `/respawn` Phase 4 normally composes
