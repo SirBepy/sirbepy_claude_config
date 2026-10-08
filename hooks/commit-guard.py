@@ -321,18 +321,24 @@ def _deny_prefilter_failure() -> None:
 # Same two patterns commit-pathspec.sh refuses, for the by-hand `git commit -m` fallback.
 _AI_TRAILER_RE = re.compile(r"^co-authored-by:.*(claude|anthropic)", re.IGNORECASE)
 _AI_GENERATED_RE = re.compile(r"generated with \[?claude code", re.IGNORECASE)
+# -m, or -m bundled after git commit's boolean short flags (`-am`, `-avm`), with the
+# value either attached or in the next token.
+_SHORT_MESSAGE_RE = re.compile(r"^-[aenqsv]*m(.*)$", re.DOTALL)
 
 
 def commit_messages(tokens: list[str]) -> list[str]:
     """Every -m / --message value in the command, however it is spelled."""
     messages = []
     for i, tok in enumerate(tokens):
-        if tok in ("-m", "--message") and i + 1 < len(tokens):
+        short = _SHORT_MESSAGE_RE.match(tok)
+        if tok == "--message" and i + 1 < len(tokens):
             messages.append(tokens[i + 1])
         elif tok.startswith("--message="):
             messages.append(tok[len("--message="):])
-        elif tok.startswith("-m") and len(tok) > 2 and not tok.startswith("--"):
-            messages.append(tok[2:])
+        elif short and short.group(1):
+            messages.append(short.group(1))
+        elif short and i + 1 < len(tokens):
+            messages.append(tokens[i + 1])
     return messages
 
 
