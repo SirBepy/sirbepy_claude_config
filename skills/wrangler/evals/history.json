@@ -1,0 +1,301 @@
+{
+  "skill_name": "wrangler",
+  "runs": [
+    {
+      "label": "f1-intact",
+      "parent": null,
+      "recorded_at": "2026-10-08T00:26:16Z",
+      "skill_name": "wrangler",
+      "fixture_set_version": 1,
+      "fixture_set_hash": "b6e8ae40d040041d",
+      "skill_hash": "13329c52fa9d410d",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\wrangler",
+      "fixture_ids": [
+        1
+      ],
+      "model": "sonnet",
+      "repeat": 1,
+      "summary": {
+        "passed": 5,
+        "failed": 0,
+        "unverifiable": 0,
+        "total": 5,
+        "pass_rate": 1.0,
+        "errored_fixtures": []
+      },
+      "stability": null,
+      "cost_usd": 0.3,
+      "run_dir": "C:\\tmp\\skill-eval\\wrangler\\f1-intact",
+      "per_fixture": [
+        {
+          "id": 1,
+          "rep": 1,
+          "label": "config-and-dev-remote-bindings-and-vitest",
+          "passed": 5,
+          "total": 5,
+          "error": null
+        }
+      ],
+      "verdict": "baseline"
+    },
+    {
+      "label": "f1-cut",
+      "parent": "f1-intact",
+      "recorded_at": "2026-10-08T00:27:30Z",
+      "skill_name": "wrangler",
+      "fixture_set_version": 1,
+      "fixture_set_hash": "b6e8ae40d040041d",
+      "skill_hash": "9fab6e7dc538404c",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\wrangler",
+      "fixture_ids": [
+        1
+      ],
+      "model": "sonnet",
+      "repeat": 1,
+      "summary": {
+        "passed": 3,
+        "failed": 2,
+        "unverifiable": 0,
+        "total": 5,
+        "pass_rate": 0.6,
+        "errored_fixtures": []
+      },
+      "stability": null,
+      "cost_usd": 0.4,
+      "run_dir": "C:\\tmp\\skill-eval\\wrangler\\f1-cut",
+      "per_fixture": [
+        {
+          "id": 1,
+          "rep": 1,
+          "label": "config-and-dev-remote-bindings-and-vitest",
+          "passed": 3,
+          "total": 5,
+          "error": null
+        }
+      ],
+      "verdict": "lost"
+    },
+    {
+      "label": "f2-intact",
+      "parent": null,
+      "recorded_at": "2026-10-08T00:28:25Z",
+      "skill_name": "wrangler",
+      "fixture_set_version": 1,
+      "fixture_set_hash": "b6e8ae40d040041d",
+      "skill_hash": "13329c52fa9d410d",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\wrangler",
+      "fixture_ids": [
+        2
+      ],
+      "model": "sonnet",
+      "repeat": 1,
+      "summary": {
+        "passed": 4,
+        "failed": 0,
+        "unverifiable": 0,
+        "total": 4,
+        "pass_rate": 1.0,
+        "errored_fixtures": []
+      },
+      "stability": null,
+      "cost_usd": 0.33,
+      "run_dir": "C:\\tmp\\skill-eval\\wrangler\\f2-intact",
+      "per_fixture": [
+        {
+          "id": 2,
+          "rep": 1,
+          "label": "deploy-and-ops-secret-and-rollback",
+          "passed": 4,
+          "total": 4,
+          "error": null
+        }
+      ],
+      "verdict": "baseline"
+    },
+    {
+      "label": "f2-cut",
+      "parent": "f2-intact",
+      "recorded_at": "2026-10-08T00:29:54Z",
+      "skill_name": "wrangler",
+      "fixture_set_version": 1,
+      "fixture_set_hash": "b6e8ae40d040041d",
+      "skill_hash": "020166367b72bb10",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\wrangler",
+      "fixture_ids": [
+        2
+      ],
+      "model": "sonnet",
+      "repeat": 1,
+      "summary": {
+        "passed": 4,
+        "failed": 0,
+        "unverifiable": 0,
+        "total": 4,
+        "pass_rate": 1.0,
+        "errored_fixtures": []
+      },
+      "stability": null,
+      "cost_usd": 0.39,
+      "run_dir": "C:\\tmp\\skill-eval\\wrangler\\f2-cut",
+      "per_fixture": [
+        {
+          "id": 2,
+          "rep": 1,
+          "label": "deploy-and-ops-secret-and-rollback",
+          "passed": 4,
+          "total": 4,
+          "error": null
+        }
+      ],
+      "verdict": "tied"
+    },
+    {
+      "label": "f3-intact",
+      "parent": null,
+      "recorded_at": "2026-10-08T00:30:32Z",
+      "skill_name": "wrangler",
+      "fixture_set_version": 1,
+      "fixture_set_hash": "b6e8ae40d040041d",
+      "skill_hash": "13329c52fa9d410d",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\wrangler",
+      "fixture_ids": [
+        3
+      ],
+      "model": "sonnet",
+      "repeat": 1,
+      "summary": {
+        "passed": 3,
+        "failed": 0,
+        "unverifiable": 0,
+        "total": 3,
+        "pass_rate": 1.0,
+        "errored_fixtures": []
+      },
+      "stability": null,
+      "cost_usd": 0.29,
+      "run_dir": "C:\\tmp\\skill-eval\\wrangler\\f3-intact",
+      "per_fixture": [
+        {
+          "id": 3,
+          "rep": 1,
+          "label": "storage-bindings-vectorize-preset-and-d1-remote-migrations",
+          "passed": 3,
+          "total": 3,
+          "error": null
+        }
+      ],
+      "verdict": "baseline"
+    },
+    {
+      "label": "f3-cut",
+      "parent": "f3-intact",
+      "recorded_at": "2026-10-08T00:32:05Z",
+      "skill_name": "wrangler",
+      "fixture_set_version": 1,
+      "fixture_set_hash": "b6e8ae40d040041d",
+      "skill_hash": "5472e8cf05c05620",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\wrangler",
+      "fixture_ids": [
+        3
+      ],
+      "model": "sonnet",
+      "repeat": 1,
+      "summary": {
+        "passed": 2,
+        "failed": 1,
+        "unverifiable": 0,
+        "total": 3,
+        "pass_rate": 0.6667,
+        "errored_fixtures": []
+      },
+      "stability": null,
+      "cost_usd": 0.48,
+      "run_dir": "C:\\tmp\\skill-eval\\wrangler\\f3-cut",
+      "per_fixture": [
+        {
+          "id": 3,
+          "rep": 1,
+          "label": "storage-bindings-vectorize-preset-and-d1-remote-migrations",
+          "passed": 2,
+          "total": 3,
+          "error": null
+        }
+      ],
+      "verdict": "lost"
+    },
+    {
+      "label": "f4-intact",
+      "parent": null,
+      "recorded_at": "2026-10-08T00:33:23Z",
+      "skill_name": "wrangler",
+      "fixture_set_version": 1,
+      "fixture_set_hash": "b6e8ae40d040041d",
+      "skill_hash": "13329c52fa9d410d",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\wrangler",
+      "fixture_ids": [
+        4
+      ],
+      "model": "sonnet",
+      "repeat": 1,
+      "summary": {
+        "passed": 3,
+        "failed": 0,
+        "unverifiable": 0,
+        "total": 3,
+        "pass_rate": 1.0,
+        "errored_fixtures": []
+      },
+      "stability": null,
+      "cost_usd": 0.28,
+      "run_dir": "C:\\tmp\\skill-eval\\wrangler\\f4-intact",
+      "per_fixture": [
+        {
+          "id": 4,
+          "rep": 1,
+          "label": "other-bindings-queues-consumer-and-workflows-params",
+          "passed": 3,
+          "total": 3,
+          "error": null
+        }
+      ],
+      "verdict": "baseline"
+    },
+    {
+      "label": "f4-cut",
+      "parent": "f4-intact",
+      "recorded_at": "2026-10-08T00:34:38Z",
+      "skill_name": "wrangler",
+      "fixture_set_version": 1,
+      "fixture_set_hash": "b6e8ae40d040041d",
+      "skill_hash": "48c632d5a841fdb8",
+      "hashed_dir": "C:\\Users\\tecno\\.claude\\skills\\wrangler",
+      "fixture_ids": [
+        4
+      ],
+      "model": "sonnet",
+      "repeat": 1,
+      "summary": {
+        "passed": 1,
+        "failed": 2,
+        "unverifiable": 0,
+        "total": 3,
+        "pass_rate": 0.3333,
+        "errored_fixtures": []
+      },
+      "stability": null,
+      "cost_usd": 0.37,
+      "run_dir": "C:\\tmp\\skill-eval\\wrangler\\f4-cut",
+      "per_fixture": [
+        {
+          "id": 4,
+          "rep": 1,
+          "label": "other-bindings-queues-consumer-and-workflows-params",
+          "passed": 1,
+          "total": 3,
+          "error": null
+        }
+      ],
+      "verdict": "lost"
+    }
+  ]
+}

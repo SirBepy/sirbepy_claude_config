@@ -56,3 +56,4 @@ the run, and say in the report what it cost.
 ## Notes
 
 - Phase 0 answer (Joe): run one bounded wrangler eval pass in this loop (real API spend approved). (2026-10-07, /loop-todos Phase 0)
+- Completed 2026-10-08 (loop-todos cycle 1, Joe approved the spend): 4 fixtures in skills/wrangler/evals/ (one per sidecar), bounded intact+cut pass, results in RESULTS.md. Fixtures 1, 3, 4 degrade when their sidecar is cut (5->3, 3->2, 3->1); fixture 2 (secret put, rollback) does not, flagged. Cost 2.84 USD over 8 claude -p runs. skill_eval --cut-section fence bug filed as 1130.

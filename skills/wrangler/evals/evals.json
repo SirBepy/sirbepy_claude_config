@@ -1,0 +1,75 @@
+{
+  "skill_name": "wrangler",
+  "fixture_set_version": 1,
+  "notes": [
+    "One fixture per sidecar (config-and-dev, deploy-and-ops, storage-bindings, other-bindings),",
+    "added by todo 920 after todo 477 split SKILL.md into progressive-disclosure sidecars. Each",
+    "fixture asks about facts that live in exactly one sidecar, so a routing failure (SKILL.md's",
+    "router table pointing at the wrong or an unreachable sidecar) shows up as a score drop rather",
+    "than a pass, instead of being invisible because the model already knew the answer.",
+    "Each fixture's own sidecar is probed with --cut-file/--cut-section (todo 478's mutate-and-",
+    "restore mode) rather than --skill-under-test, so the live skill is mutated for exactly one",
+    "run and restored byte-for-byte afterward - see skills/wrangler/evals/RESULTS.md for the",
+    "before/after scores and the cut-section arguments used per fixture.",
+    "Prompts invoke /wrangler directly; task_for_grader avoids the word 'skill' and the slash form",
+    "but does say 'Wrangler', since Wrangler is the actual subject of the question, not a hidden",
+    "skill identity - unlike rate-it, nothing here turns on the grader not knowing the domain."
+  ],
+  "fixtures": [
+    {
+      "id": 1,
+      "label": "config-and-dev-remote-bindings-and-vitest",
+      "mode": "solo",
+      "timeout_seconds": 300,
+      "prompt": "/wrangler I'm building a Cloudflare Worker that binds AI, Vectorize, and R2, and I want to run `wrangler dev` locally against real resources where possible. Two things: (1) which of my bindings should use `remote: true` during local dev per Cloudflare's own recommendation, and what's the exact config field name for that; (2) what npm package and vitest.config.ts setup wires Vitest to run tests against this Worker via its wrangler config file?",
+      "task_for_grader": "The assistant was asked, for a Cloudflare Worker binding AI, Vectorize, and R2 and running `wrangler dev` locally: (1) which bindings are recommended to run against real remote resources during local dev, and the exact config field that enables that per binding; and (2) what npm package and Vitest config setup wires Vitest tests to the Worker runtime via its wrangler config file.",
+      "expectations": [
+        "The response names the exact config field `remote: true` (or `\"remote\": true` in JSON) as the mechanism for pointing a binding at the real remote resource during local dev.",
+        "The response includes AI among the bindings recommended to run remote during local dev.",
+        "The response names at least one more of Vectorize, Browser Rendering, mTLS, or Images as also recommended to run remote, not just AI alone.",
+        "The response names the npm package `@cloudflare/vitest-pool-workers` (or clearly identifies it, e.g. 'vitest-pool-workers') as the package that wires Vitest to the Worker runtime.",
+        "The response names `defineWorkersConfig` or otherwise describes a vitest.config.ts exporting from `@cloudflare/vitest-pool-workers/config` that points Vitest at the wrangler config file."
+      ]
+    },
+    {
+      "id": 2,
+      "label": "deploy-and-ops-secret-and-rollback",
+      "mode": "solo",
+      "timeout_seconds": 300,
+      "prompt": "/wrangler I need to rotate a production secret called API_KEY for a deployed Worker without the value ever touching my shell history or logs, and separately I need to roll a bad deploy back to one specific earlier version. What are the exact commands for both, and what's the security guidance on how NOT to set the secret value?",
+      "task_for_grader": "The assistant was asked for the exact command to set a Worker secret named API_KEY without the value touching shell history or logs, the security guidance on how the value should NOT be supplied, and the exact command to roll a Worker back to one specific earlier version (not just the most recent previous version).",
+      "expectations": [
+        "The response gives the command `wrangler secret put API_KEY` as the way to set the secret.",
+        "The response states the secret value should be entered via an interactive prompt (or piped in from a file), not passed as a command-line argument.",
+        "The response explicitly warns against passing the secret value as a command argument or piping it via `echo`.",
+        "The response gives a `wrangler rollback <VERSION_ID>` form (naming a version id argument), distinct from a bare `wrangler rollback` with no version, as the way to roll back to one specific earlier version."
+      ]
+    },
+    {
+      "id": 3,
+      "label": "storage-bindings-vectorize-preset-and-d1-remote-migrations",
+      "mode": "solo",
+      "timeout_seconds": 300,
+      "prompt": "/wrangler I want to create a Vectorize index that's pre-configured to match the embedding dimensions and distance metric of a specific Workers AI embedding model, without me having to look up and pass the dimensions and metric myself. I also have pending D1 migrations I need to apply to the remote database, not just locally. What are the exact commands for both?",
+      "task_for_grader": "The assistant was asked for the exact command to create a Vectorize index that auto-configures its dimensions and metric from a named Workers AI embedding model, and the exact command to apply pending D1 migrations to a database's remote copy rather than its local copy.",
+      "expectations": [
+        "The response gives a `wrangler vectorize create` command using a `--preset` flag naming a specific embedding model (such as `@cf/baai/bge-base-en-v1.5`), rather than a command that requires manually specifying `--dimensions` and `--metric`.",
+        "The response gives the command `wrangler d1 migrations apply <database> --remote` (naming the database and the `--remote` flag) to apply pending migrations to the remote database.",
+        "The response distinguishes applying migrations to remote from applying them locally, rather than only giving the `--local` form."
+      ]
+    },
+    {
+      "id": 4,
+      "label": "other-bindings-queues-consumer-and-workflows-params",
+      "mode": "solo",
+      "timeout_seconds": 300,
+      "prompt": "/wrangler I have an existing Cloudflare Queue called my-queue and I need to attach my-worker as a consumer of it. Separately I have a Workflow called my-workflow that I need to trigger with a specific JSON input payload, not just a bare trigger with no input. What are the exact commands for both?",
+      "task_for_grader": "The assistant was asked for the exact command to add an existing Worker as a consumer of an existing Cloudflare Queue, and the exact command to trigger a Cloudflare Workflow instance while passing it a JSON parameters payload rather than triggering it with no input.",
+      "expectations": [
+        "The response gives the command `wrangler queues consumer add my-queue my-worker` (queue name then worker name, in that order) to attach the consumer.",
+        "The response gives a `wrangler workflows trigger <workflow> --params '<json>'` form naming the `--params` flag, rather than a bare `wrangler workflows trigger` with no parameters flag.",
+        "The response does not substitute a Workflow instance-management command (such as `instances list` or `instances describe`) for triggering a new run."
+      ]
+    }
+  ]
+}
