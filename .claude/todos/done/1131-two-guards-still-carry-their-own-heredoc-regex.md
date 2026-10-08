@@ -31,3 +31,7 @@ run the matching test file right after.
   shell-content-write-guard keeps its own).
 - `python hooks/test_destructive_command_guard.py` and `python hooks/test_shell_content_write_guard.py`
   pass.
+
+## Notes
+
+- _hooklib builds HEREDOC_BODY_RE and a QUOTED_HEREDOC_BODY_RE variant from one template; _destructive_guard_shared and shell-content-write-guard import them and their own copies are gone. destructive, shell-content-write, unbounded-scan and shortcut-raw-write suites all pass.

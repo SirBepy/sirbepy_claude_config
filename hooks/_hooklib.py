@@ -360,7 +360,11 @@ def iter_turn_tool_uses(transcript_path: str):
 
 
 # A heredoc (quoted or bare tag) or a PowerShell here-string body is data, not commands.
-HEREDOC_BODY_RE = re.compile(r"<<-?[ \t]*(['\"]?)(\w+)\1[^\n]*\n.*?\n[ \t]*\2[ \t]*(?=\n|$)", re.DOTALL)
+# The quoted-tag-only variant serves shell-content-write-guard.py: an unquoted body still
+# expands $vars, so that guard keeps it in scope. One template, so a fix lands in both.
+_HEREDOC_TEMPLATE = r"<<-?[ \t]*({quote})(\w+)\1[^\n]*\n.*?\n[ \t]*\2[ \t]*(?=\n|$)"
+HEREDOC_BODY_RE = re.compile(_HEREDOC_TEMPLATE.format(quote="['\"]?"), re.DOTALL)
+QUOTED_HEREDOC_BODY_RE = re.compile(_HEREDOC_TEMPLATE.format(quote="['\"]"), re.DOTALL)
 HERESTRING_BODY_RE = re.compile(r"@(['\"])\r?\n.*?\r?\n\1@", re.DOTALL)
 
 

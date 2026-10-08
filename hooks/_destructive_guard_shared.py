@@ -5,6 +5,8 @@ splitting, and the leading-prefix stripping every matcher builds on.
 
 import re
 
+from _hooklib import HEREDOC_BODY_RE
+
 # Statement split (no pipe): used only where a pipe must stay intact, i.e.
 # pipe_to_shell (the pipe IS the thing being matched) and the SQL rules
 # (piping SQL output elsewhere doesn't change whether the SQL itself ran).
@@ -17,8 +19,12 @@ LEADING_SUDO_RE = re.compile(r"^sudo\s+", re.IGNORECASE)
 LEADING_ENV_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=\S*\s+")
 # Wrappers that run another command as their argument, so the real verb sits
 # behind them: `xargs -I{} rm -rf ~` was ALLOWED before this list existed.
+# PowerShell may put any flags (including value-taking ones like
+# `-ExecutionPolicy Bypass`) before `-Command`/`-c`, so it skips whole tokens
+# lazily up to the first one; `-File` runs a script and is not a wrapper.
 LEADING_WRAPPER_RE = re.compile(
-    r"^(xargs(\s+-\S+)*|env|time|nohup|nice(\s+-n\s*-?\d+)?|command|(sh|bash|zsh|dash)\s+-c)\s+",
+    r"^(xargs(\s+-\S+)*|env|time|nohup|nice(\s+-n\s*-?\d+)?|command|(sh|bash|zsh|dash)\s+-c"
+    r"|(powershell|pwsh)(\.exe)?(\s+\S+)*?\s+-(command|c))\s+",
     re.IGNORECASE,
 )
 
@@ -30,29 +36,20 @@ GIT_STASH_ANCHOR_RE = re.compile(r"^git\s+(?:-[^\s]+\s+)*stash\b", re.IGNORECASE
 GIT_STASH_SAFE_SUBCMD_RE = re.compile(
     r"^git\s+(?:-[^\s]+\s+)*stash\s+(list|show|pop|apply|drop|clear|branch)\b", re.IGNORECASE)
 
-# A heredoc body is data piped to the preceding command's stdin, never
-# executed as shell text, so a verb/path token inside it is never at command
-# position no matter how many `\n`s the body contains. Generalizes shell-
-# content-write-guard.py's HEREDOC_RE (todo 476) by making the tag quote
-# optional: that guard only strips a QUOTED tag because it still needs to
-# scan an unquoted body for $var expansion, but this guard's anchors only
-# care about position, so both tag forms strip the same way (todo 982 step
-# 3 - a python heredoc listing publish-verb strings as test-case data was
-# denied as a real `npm publish`, because split_outside_quotes had no concept
-# of heredocs and read each body line's bare newline as a statement break,
-# making "npm publish" its own fake command-position segment).
-HEREDOC_RE = re.compile(r"<<-?\s*(['\"]?)(\w+)\1[^\n]*\n.*?^[ \t]*\2[ \t]*$", re.MULTILINE | re.DOTALL)
-
 
 def strip_heredoc_bodies(command: str) -> str:
     """Collapse each heredoc, from its operator through the closing
     delimiter line, to a single inert placeholder - before any statement or
-    segment split runs. Must run first, as a pre-pass on the raw string: a
-    heredoc's own quote pair (`<<'EOF'`) would otherwise desync
-    split_outside_quotes's quote-state tracker, which has no concept of
-    heredocs and would read past the real closing quote looking for a match.
+    segment split runs. A heredoc body is data piped to the preceding
+    command's stdin, never executed as shell text, so a verb inside it is
+    never at command position (todo 982 step 3: a python heredoc listing
+    publish-verb strings as test data was denied as a real `npm publish`).
+    Must run first, as a pre-pass on the raw string: a heredoc's own quote
+    pair (`<<'EOF'`) would otherwise desync split_outside_quotes's quote-state
+    tracker, which has no concept of heredocs. Both tag forms strip, since
+    this guard's anchors only care about position.
     """
-    return HEREDOC_RE.sub("<<HEREDOC>>", command)
+    return HEREDOC_BODY_RE.sub("<<HEREDOC>>", command)
 
 
 def split_statements(command: str) -> list:

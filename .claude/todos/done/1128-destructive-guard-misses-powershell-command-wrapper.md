@@ -25,3 +25,7 @@ session runs: write the module in one complete edit and run the test file right 
 - `powershell -Command "Remove-Item -Recurse -Force C:\"` is denied.
 - `powershell -NoProfile -Command "Get-ChildItem"` passes.
 - `python hooks/test_destructive_command_guard.py` passes.
+
+## Notes
+
+- LEADING_WRAPPER_RE now unwraps powershell/pwsh(.exe) with any flags before -Command/-c; 5 new cases (3 deny, 2 clean incl. -File) RED then GREEN in hooks/test_destructive_command_guard.py.

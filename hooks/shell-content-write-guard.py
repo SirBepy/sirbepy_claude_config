@@ -37,7 +37,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny as _lib_deny, git_repo_root, is_command_position
+    from _hooklib import read_payload, deny as _lib_deny, git_repo_root, is_command_position, QUOTED_HEREDOC_BODY_RE
 except Exception as e:
     sys.stderr.write(f"[shell-content-write-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -84,11 +84,8 @@ REDIRECT_RE = re.compile(r"(?<![=\-!<])(\d)?(>{1,2})(?!=)(&\d)?\s*(\S*)")
 # command's stdin byte-for-byte, no shell interpretation, so it is stripped before
 # any other scan runs (todo 476). An unquoted `<<TAG` still expands `$vars`, so it
 # stays in scope for the other checks.
-HEREDOC_RE = re.compile(r"<<-?\s*(['\"])(\w+)\1[^\n]*\n.*?^[ \t]*\2[ \t]*$", re.MULTILINE | re.DOTALL)
-
-
 def strip_heredocs(command: str) -> str:
-    return HEREDOC_RE.sub("HEREDOC_BODY", command)
+    return QUOTED_HEREDOC_BODY_RE.sub("HEREDOC_BODY", command)
 
 
 NULL_TARGETS = {"$null", "/dev/null", "nul", "null", ""}
