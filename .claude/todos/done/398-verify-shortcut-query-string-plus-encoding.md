@@ -58,3 +58,4 @@ wrong story list feeds outbound work the dev sends as his own words.
   unattended run should make, and the payoff is settling a documentation footnote. The two calls are
   a couple of minutes of work in an attended session. Nothing about the question changed; only who
   should press the button.
+- Completed 2026-10-08 (loop-todos cycle 1, Joe authorized the read-only calls 2026-10-07): live search/stories with + and %20 both HTTP 200, total=86, identical first-page ids; %2B control returned 0. Both call sites are correct as-is; answer recorded in refs/shortcut-api.md.
