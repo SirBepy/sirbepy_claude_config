@@ -177,6 +177,7 @@
     ]
   },
   "model": "Opus",
+  "cleanupPeriodDays": 36500,
   "skillOverrides": {
     "apply-styleguide": "name-only",
     "favicon": "name-only",
