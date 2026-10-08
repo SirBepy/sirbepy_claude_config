@@ -37,7 +37,6 @@ successor link, and closes nothing.
 
 ## What this is NOT
 
-- **No `/code-check`.** Backlog sweeps are deliberate work Joe runs himself. Skipped by design.
 - **No commits.** Respawn's own invocation takes a freeform note/model override, never a chained
   command, so `/close`'s Phase 5 (run chained commands, where `/commit` would live) never fires
   here. The successor inherits the same dirty tree and continues the same work, so nothing is at
@@ -46,9 +45,11 @@ successor link, and closes nothing.
 - **No handoff file.** If Joe wants a durable record instead of a live pickup, that's `/handoff`,
   which is a different gesture: defer without picking up.
 
-## Phases 0-3 - run /close verbatim, minus code review
+## Phases 0-3 - run the full /close
 
-Run `/close --skip-review --dont-close`'s Phases 0, 1, 3, and 4 exactly as written in
+A respawn is a full `/close` that starts a new chat in its place (Joe, 2026-10-08: "/respawn should
+always also do /code-check ... basically do the full /close, but then just start a new chat in its
+place"). Run `/close --dont-close`'s Phases 0, 1, 2, 3 and 4 exactly as written in
 `~/.claude/skills/close/SKILL.md` - no respawn-specific overrides:
 
 - **Phase 0 - Safe-to-close check.** Same AskUserQuestion prompt when Joe is watching an
@@ -57,6 +58,9 @@ Run `/close --skip-review --dont-close`'s Phases 0, 1, 3, and 4 exactly as writt
   live on top of that, it doesn't replace the todo.
 - **Phase 1 - Retrospective.** Including the transcript-grounding step for long sessions. Print
   nothing here - Phases 3 and 4 (of this skill) consume it.
+- **Phase 2 - Code health review.** `/code-check` over this session's own commits, with `/close`'s
+  own skip rules (under 50 added lines, no code files). Its findings land in the backlog before the
+  successor starts, so the successor's handoff can name them.
 - **Phase 3 - Persist.** All three steps: memory writes through the rubric gate, todo files for
   every qualifying item, and the screenshot summary count.
 - **Phase 4 - Counter summary.** Print the one-line counter, same format as a normal close.
