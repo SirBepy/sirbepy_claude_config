@@ -66,3 +66,4 @@ prompt-only change.
   happening because Y" line is a factual claim about the system and needs its own receipt. If the
   only support is the other claims, mark it UNVERIFIABLE, which fails the round. That forces the
   draft to hedge it ("looks like it's getting dropped after the app, can you check...").
+- Completed 2026-10-08 (loop-todos cycle 1): outbound-verify.md verifier template gains a provenance line, causal-claim handling, and a Ship review step (non-text fields vs tracker reality, batch consistency, ambiguous wording; any finding fails). Dry run against a live wrong-team draft not run (no staged tracker draft); verified by inspection.

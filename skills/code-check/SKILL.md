@@ -43,6 +43,16 @@ Stage your changes but do NOT commit. The main agent will run /commit after your
 `run_in_background` is FORBIDDEN in this dispatch: run every command synchronously and finish
 before ending your turn.
 
+If this review needs a clean-tree baseline (prettier --check, knip, a rerun of a repo-wide
+command), use `git worktree add` to a scratch path rather than touching the shared tree, and never
+copy a `node_modules` containing `link:`/`workspace:` entries into it. Remove that worktree with
+`~/.claude/skills/close/safe-remove-worktree.ps1 -WorktreePath <path> -RepoRoot <repo root>`, never
+`git worktree remove --force` or `rm -rf` - both follow a reparse point or junction inside the
+worktree into whatever it targets, including a `node_modules` junction back to the main checkout,
+and delete that target too, even though it lives outside the worktree (fibo, 2026-10-07: a
+baseline worktree's junctioned `node_modules` was removed this way and the main checkout's own
+`node_modules/.bin` went with it, failing 59 tests until `npm install` restored it).
+
 You are reviewing code you did not write, and you are not being told who wrote it or why.
 
 Scope: <scope arg>

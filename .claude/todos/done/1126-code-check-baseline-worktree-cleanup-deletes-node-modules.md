@@ -40,3 +40,7 @@ pastes only three marker lines, not the preamble, so its reviewer never sees the
 
 - A `/code-check` reviewer that builds a baseline worktree with a node_modules junction leaves the
   main checkout's `node_modules` untouched (file count before and after).
+
+## Notes
+
+- Completed 2026-10-08 (loop-todos cycle 1): root cause traced to git worktree remove --force after a node_modules junction (fibo session dff4aee1); code-check SKILL.md reviewer dispatch now carries the worktree-removal safety paragraph.

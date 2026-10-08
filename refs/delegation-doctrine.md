@@ -73,9 +73,17 @@ file changes on disk - as a failed dispatch needing a scope split, never a same-
 return a condensed SPEC PACK, not a narrative: exact contracts (signatures, types, payload
 shapes), `file:line` pointers, and the specific gotchas a builder would otherwise trip on. The
 spec pack is what the builder prompt embeds, so the builder never has to re-derive the map. When
-the spec pack must outlive the session (a successor, a builder fan-out), the dispatch also names
-an output file under `docs/research/` for the scout to write with the Write tool, allowing that
-single file inside an otherwise `READ-ONLY DISPATCH`: a report living only in context is gone at
+the spec pack must outlive the session (a successor, a builder fan-out), the ORCHESTRATOR writes
+it to a file under `docs/research/` itself from the scout's returned text - a scout carrying the
+`READ-ONLY DISPATCH` marker cannot reliably write that file itself: one told to write
+`.for_bepy/impeccable-sweep/REPORT.md` had the call refused outright with "Subagents should return
+findings as text, not write report files", and a repo-wide grep of `hooks/*.py` found no hook that
+emits that string, so it is a harness-level restriction tied to the subagent carrying that marker,
+not something this repo can patch (2026-10-03, fibo session 88f76f6a). Sibling dispatches in the
+same run that carried no `READ-ONLY DISPATCH` line wrote their own findings files without trouble,
+so a scout that genuinely must persist its own output skips the read-only opt-out and pastes the
+normal preamble (screenshot-id line included, even though it writes no screenshots) instead - see
+`refs/builder-preamble.md`'s read-only opt-out section. A report living only in context is gone at
 the next respawn boundary, so anything a successor needs has to already be on disk before then
 (2026-09-05, head_soccer_v_fable_oneshot). Use `subagent_type: general-purpose` for that
 dispatch, never `Explore`: `Explore` strips the `Write` tool entirely, so a scout told to write a

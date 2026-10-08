@@ -64,6 +64,13 @@ varied lenses made the verdict flip every round), `model: "sonnet"`, `subagent_t
 pointers only, never the conclusions or reasoning that produced it - the point is a check that
 does not share the drafting context's assumptions.
 
+Step 3 of the template below (ship review) exists because a plain fact-check round passed 3/3 on
+text that still looked sloppy: zng-admin, 2026-10-05/06, a batch of 5 writes had a wrong team
+field and an inconsistent batch, caught only when Joe asked for a second round framed as "a
+skeptical teammate, don't let me look like an idiot". The causal-claim line in steps 1-2 is the
+same fix for a different miss, zng-app 2026-10-06/07 (sc-56167): a "so X is happening because Y"
+line passed as "a deduction, not an independent claim" and the conclusion turned out unproven.
+
 ```
 READ-ONLY DISPATCH
 
@@ -78,19 +85,29 @@ against what seems plausible.
 
 Repo: <absolute path>. Tracked branch: origin/<branch> (run `git fetch --quiet` first and read
 files with `git show origin/<branch>:<path>`, not the working tree). Pointers: <files, ticket ids,
-PR numbers, endpoints the text talks about>.
+PR numbers, endpoints the text talks about>. Provenance: <who asked for this posting, and what it
+descends from - a todo id, a ticket, a PR>.
 
 <<<OUTBOUND-DRAFT
 <the exact text, verbatim>
 OUTBOUND-DRAFT>>>
 
 1. List every factual claim in the draft: what code does, what exists or is missing, numbers,
-   names, states, who did what. Skip opinions and proposals.
+   names, states, who did what. Skip opinions and proposals. A causal or "so X" / "X is happening
+   because Y" conclusion is itself a factual claim about the system, not a deduction exempt from
+   receipts - list it too.
 2. For each claim, one line: CONFIRMED (receipt: file:line at the tracked branch, command output,
    or API response), WRONG (receipt, plus the corrected wording), or UNVERIFIABLE (what you would
-   need to check it).
-3. Verdict: PASS only if every factual claim is CONFIRMED. Any WRONG or UNVERIFIABLE claim is a
-   FAIL. End your report with exactly one of these lines, alone on its own line:
+   need to check it). A causal claim whose only support is the other claims above is UNVERIFIABLE,
+   not CONFIRMED - confirming the inputs does not confirm the conclusion drawn from them.
+3. Ship review, beyond the prose: judge the planned non-text fields of the call (team/group, epic,
+   owner, custom fields, state moves, links) against the tracker's real values and the nearest
+   precedent ticket; for a batch, check the items are consistent with each other; flag wording a
+   teammate could misread even when it is factually true. Any finding here is a FAIL, the same as
+   a WRONG claim.
+4. Verdict: PASS only if every factual claim is CONFIRMED and step 3 found nothing. Any WRONG,
+   UNVERIFIABLE, or ship-review finding is a FAIL. End your report with exactly one of these
+   lines, alone on its own line:
 OUTBOUND-VERDICT: PASS
 OUTBOUND-VERDICT: FAIL
 ```

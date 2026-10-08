@@ -35,3 +35,7 @@ emits that message (grep `hooks/` for "return findings as text").
 
 - The doctrine's scout-writes-one-file rule matches what the harness permits, verified by one
   dispatch that writes its named file (or by the doctrine no longer promising it).
+
+## Notes
+
+- Completed 2026-10-08 (loop-todos cycle 1): no repo hook emits the refusal text (grep), so harness-level; delegation-doctrine Scout-before-builder and builder-preamble read-only opt-out now say the orchestrator writes the spec pack, or the scout drops the READ-ONLY marker.
