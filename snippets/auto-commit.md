@@ -2,6 +2,8 @@
 
 Scope: this policy governs committing only. It grants nothing about pushing - a push always needs the dev's explicit ask in the current session, regardless of any "per project policy" wording elsewhere.
 
+One named exception: the Obsidian vault (`C:\Users\tecno\Documents\ObsidianVault`). Claude pushes its own vault commits straight away, no ask (Joe, 2026-10-07: obsidian-git has been dead since 2026-08-25, so an unpushed vault commit has no backup). The vault has no code, so clear the push gate with `python C:/Users/tecno/.claude/hooks/push-gate.py mark C:/Users/tecno/Documents/ObsidianVault --reason "vault notes repo: no code-check or e2e applies"` in its own tool call, then push. Details: `refs/global-knowledge-vault.md` "Writing and backup".
+
 Universal default: unconditionally imported from global CLAUDE.md's Git Commits section, applies to every project, personal and client alike. **Never ask "should I commit this?" or "want me to commit?" before running `/commit`** - the answer is already yes whenever the criteria below are met. Asking defeats the entire point of this policy; if you notice yourself about to ask, that's the signal to just run `/commit` instead.
 
 ## When to commit

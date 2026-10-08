@@ -32,12 +32,11 @@ not the vault - that folder is already global and already checked on first encou
 
 ## Writing and backup
 
-Write directly, same as native memory - no confirmation gate. The vault's own `obsidian-git`
-plugin auto-backs-up on its own schedule; Claude never runs git commands inside this repo.
-**Fallback:** if the plugin is verifiably dead (newest commit older than ~7 days AND `git status`
-shows dirty files), a manual backup commit+push is allowed - message style `vault backup: <date>
-(manual - obsidian-git plugin dead since <last-auto-commit-date>)` - and tell Joe the plugin needs
-fixing.
+Write directly, same as native memory - no confirmation gate. The `obsidian-git` plugin that used
+to auto-back-up the vault has been dead since 2026-08-25, so Claude commits its own vault edits by
+pathspec (never `git add .`; other sessions' notes may be mid-write) and pushes straight away. That
+push needs no ask: it is the one named exception in `snippets/auto-commit.md` (Joe, 2026-10-07).
+Leave another session's uncommitted notes for that session to commit.
 
 ## Concurrent-write discipline
 

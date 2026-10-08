@@ -31,3 +31,4 @@ The three documents give the same answer, and a vault commit made from a vault s
 ## Notes
 
 - Phase 0 answer (Joe): vault exception, Claude pushes vault commits straight away; auto-commit.md gets a named carve-out pointing at refs/global-knowledge-vault.md. (2026-10-07, /loop-todos Phase 0)
+- Completed 2026-10-08 (loop-todos cycle 1): auto-commit.md names the vault as the one push exception (with the push-gate mark line), global-knowledge-vault.md Writing and backup rewritten to commit-by-pathspec-and-push, vault CLAUDE.md drops git add . and points at the exception.
