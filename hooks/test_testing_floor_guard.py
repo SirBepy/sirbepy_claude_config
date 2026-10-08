@@ -844,11 +844,21 @@ def infra_failure_checks() -> list:
     def real_failure(argv, **kwargs):
         return FakeProc(1, stdout="FAIL src/a.test.ts")
 
+    def bash_cannot_find_pm(argv, **kwargs):
+        return FakeProc(127, stderr="bash: line 1: pnpm: command not found")
+
+    # A suite whose own test shells out to a missing tool prints the same
+    # phrase but exits 1, and that is a real failure of the edit under test.
+    def failure_mentioning_command_not_found(argv, **kwargs):
+        return FakeProc(1, stdout="FAIL src/a.test.ts\nError: sh: ffprobe: command not found")
+
     with tempfile.TemporaryDirectory(prefix="testing-floor-infra-") as tmp:
         for label, runner, expect_ok in (
             ("a shim cmd.exe cannot launch is not verified, not failed", unlaunchable, True),
             ("a timed-out check is not verified, not failed", hangs, True),
             ("a real test failure still fails", real_failure, False),
+            ("bash reporting the package manager missing (exit 127) is not verified", bash_cannot_find_pm, True),
+            ("a failing suite that merely prints 'command not found' still fails", failure_mentioning_command_not_found, False),
         ):
             ok, summary = lib.run_stack_check("node", ["npm", "test"], Path(tmp), 300, runner)
             good = ok == expect_ok

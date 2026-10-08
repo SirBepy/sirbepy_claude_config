@@ -504,7 +504,12 @@ def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner, pa
         return True, f"{label}: check timed out after {timeout}s; not verified"
 
     output = "\n".join(s for s in (proc.stdout, proc.stderr) if s)
-    if proc.returncode != 0 and any(marker in output for marker in _UNLAUNCHABLE_MARKERS):
+    # bash's phrase only counts with bash's own exit 127: a suite whose test
+    # shells out to a missing tool prints it too, but exits 1 as a real failure.
+    unlaunchable = (proc.returncode != 0 and _UNLAUNCHABLE_MARKERS[0] in output) or (
+        proc.returncode == 127 and _UNLAUNCHABLE_MARKERS[1] in output
+    )
+    if unlaunchable:
         # Either cmd.exe couldn't run a .cmd shim, or (bash launch) the
         # resolved shell itself reported the package manager missing -
         # neither says anything about the edit under test.
