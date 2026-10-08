@@ -84,7 +84,10 @@ def main() -> None:
     root = git_repo_root(str(Path(file_path).parent)) or payload.get("cwd") or "."
     state_dir = resolve_state_dir()
     flag_path = state_dir / session_id
-    paths = list(read_state(flag_path).get("paths") or [])
+    previous = read_state(flag_path)
+    # The gate checks one root, so a path list that spans two repos would
+    # py_compile the other repo's files against this one's.
+    paths = list(previous.get("paths") or []) if previous.get("root") == root else []
     if file_path not in paths:
         paths.append(file_path)
     write_state(flag_path, {"attempts": 0, "root": root, "paths": paths})

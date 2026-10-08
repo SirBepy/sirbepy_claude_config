@@ -228,6 +228,24 @@ def integration_checks() -> list:
         if not ok9:
             fails.append("same path edited twice dedupes")
 
+        # Case 10: an edit in a second repo restarts the path list, since the
+        # gate checks one root and a foreign path would py_compile against it.
+        state_dir10 = tmp_path / "state10"
+        session_id10 = "sess-two-repos"
+        repo_one, repo_two = tmp_path / "repo-one", tmp_path / "repo-two"
+        path_one, path_two = str(repo_one / "a.py"), str(repo_two / "b.py")
+        for cwd, path in ((repo_one, path_one), (repo_two, path_two)):
+            run_hook(
+                {"session_id": session_id10, "cwd": str(cwd), "tool_name": "Write",
+                 "tool_input": {"file_path": path, "content": "x"}},
+                state_dir10,
+            )
+        state10 = json.loads((state_dir10 / session_id10).read_text(encoding="utf-8"))
+        ok10 = state10.get("paths") == [path_two] and Path(state10.get("root")) == repo_two
+        print(f"[{'PASS' if ok10 else 'FAIL'}] integration: a second repo restarts the path list -> {state10!r}")
+        if not ok10:
+            fails.append("a second repo restarts the path list")
+
         # Case 7: malformed stdin -> exits 0, does not crash.
         proc7 = subprocess.run(
             [sys.executable, str(_HOOK_PATH)],
