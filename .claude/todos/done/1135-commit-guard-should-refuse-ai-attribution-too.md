@@ -27,3 +27,7 @@ Co-Authored-By, and an allowed "Player Claude" subject.
 - `git commit -m "X" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"` is denied by the hook.
 - `git commit -m "FIX: Player Claude listener"` is allowed.
 - `python hooks/test_commit_guard.py` passes.
+
+## Notes
+
+- commit-guard.py denies a git commit / commit-tree whose -m, -mX, --message or --message= value has a line matching commit-pathspec.sh's two AI-attribution patterns, checked before the bypass env var; 5 cases RED then GREEN in hooks/test_commit_guard.py. A first edit missed 'import re' for under a minute, during which the guard failed open (module-level NameError), fixed and re-tested.

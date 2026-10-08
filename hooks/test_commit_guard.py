@@ -360,4 +360,29 @@ with tempfile.TemporaryDirectory() as tmp:
     if not _testlib.report(got == 2 and pruned_ok, f"{label} (deny exit={got}, pruned={pruned_ok})"):
         fails.append(label)
 
+# --- AI attribution: refused even from a session that holds a marker ---
+
+with tempfile.TemporaryDirectory() as tmp:
+    tmpdir = Path(tmp)
+    guard.MARKER_DIR = tmpdir
+    guard.SESSION_MARKER_DIR = tmpdir / ".session-markers"
+    guard.SESSION_MARKER_DIR.mkdir(parents=True)
+    (guard.SESSION_MARKER_DIR / "sess-attr").touch()
+
+    for label, command, expect in (
+        ("a Co-Authored-By: Claude trailer is refused",
+         "git commit -m 'X' -m 'Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>'", 2),
+        ("a trailer inside one multi-line -m is refused",
+         "git commit -m 'X\n\nco-authored-by: Someone <a@anthropic.com>'", 2),
+        ("a --message= Generated with Claude Code line is refused",
+         "git commit --message='X Generated with [Claude Code](https://claude.com)'", 2),
+        ("a human Co-Authored-By is allowed",
+         "git commit -m 'X' -m 'Co-Authored-By: Jane Doe <jane@example.com>'", 0),
+        ("a subject that only mentions Claude in prose is allowed",
+         "git commit -m 'FIX: Player Claude listener'", 0),
+    ):
+        got = run_main(command, session_id="sess-attr")
+        if not _testlib.report(got == expect, f"{label} (got exit={got}, want {expect})"):
+            fails.append(label)
+
 sys.exit(_testlib.summarize(fails, style="count"))

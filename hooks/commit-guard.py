@@ -58,6 +58,7 @@ this guard's own allow/deny decision.
 """
 
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -317,6 +318,32 @@ def _deny_prefilter_failure() -> None:
     )
 
 
+# Same two patterns commit-pathspec.sh refuses, for the by-hand `git commit -m` fallback.
+_AI_TRAILER_RE = re.compile(r"^co-authored-by:.*(claude|anthropic)", re.IGNORECASE)
+_AI_GENERATED_RE = re.compile(r"generated with \[?claude code", re.IGNORECASE)
+
+
+def commit_messages(tokens: list[str]) -> list[str]:
+    """Every -m / --message value in the command, however it is spelled."""
+    messages = []
+    for i, tok in enumerate(tokens):
+        if tok in ("-m", "--message") and i + 1 < len(tokens):
+            messages.append(tokens[i + 1])
+        elif tok.startswith("--message="):
+            messages.append(tok[len("--message="):])
+        elif tok.startswith("-m") and len(tok) > 2 and not tok.startswith("--"):
+            messages.append(tok[2:])
+    return messages
+
+
+def ai_attribution_line(tokens: list[str]) -> str | None:
+    for message in commit_messages(tokens):
+        for line in message.splitlines():
+            if _AI_TRAILER_RE.search(line.strip()) or _AI_GENERATED_RE.search(line):
+                return line.strip()
+    return None
+
+
 def main() -> None:
     payload = read_payload()
     command = (payload.get("tool_input") or {}).get("command", "") or ""
@@ -326,10 +353,19 @@ def main() -> None:
 
     _prune_expired_legacy_markers()
 
+    tokens = _tokenize(command) or []
+
+    # Before the bypass: /commit's Rules allow no AI attribution, ever.
+    attribution = ai_attribution_line(tokens)
+    if attribution:
+        deny(
+            "[commit-guard] This commit message carries AI attribution, which /commit's "
+            f"Rules never allow: `{attribution}`. Drop that line and retry; no part of "
+            "this call ran."
+        )
+
     if os.environ.get(OVERRIDE_ENV):
         sys.exit(0)
-
-    tokens = _tokenize(command) or []
 
     session_id = payload.get("session_id") or ""
     if session_id and (
