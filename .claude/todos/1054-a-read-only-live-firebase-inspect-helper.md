@@ -42,7 +42,15 @@ the right default.
 Run each subcommand against countoff (`generic-sirbepy-project`). `rules` should report the
 2026-09-30 release as matching the repo's `firestore.rules`.
 
+## Open questions
+
+Written by /auto-do-todos on 2026-10-08 (loop-todos cycle 1). The next run opens with these.
+
+- [ ] [SEC] Joe's 2026-10-07 approval did not clear the auto-mode classifier: on 2026-10-08 a builder's Write of `tools/firebase-live.cjs` was denied again (no reason given), and an inline `node -e` token read before it was denied as Credential Exploration. Only Joe can clear it: add an allow rule for that file kind and re-run, build the file himself, or drop the helper.
+
 ## Notes
+
+- loop-todos cycle 1, 2026-10-08: the builder had the full implementation ready (GET-only plus `:runQuery` POST allowlist enforced before any fetch, token never printed, refresh via `firebase projects:list` only when expired). It confirmed the token cache shape (`tokens.access_token`, `tokens.expires_at` in epoch ms), that countoff (`C:\Users\tecno\Desktop\Projects\countoff`, project `generic-sirbepy-project`) has firestore.rules/storage.rules/firestore.indexes.json, and that the best home for the pointer line is `skills/flutter-e2e/references/firebase-emulators.md`. Nothing was written to disk.
 
 - Phase 0 answer (Joe): allow tools/firebase-live.cjs (read-only helper reading the firebase-tools token cache) for one builder run in this loop. (2026-10-07, /loop-todos Phase 0)
 - /loop-todos 2026-10-05: BLOCKED. A builder's Write of tools/firebase-live.cjs (read-only GET/runQuery helper reading the firebase-tools configstore token) was denied by the auto-mode classifier as Credential Exploration; not retried. Needs Joe to allow that file kind, or to build it himself.

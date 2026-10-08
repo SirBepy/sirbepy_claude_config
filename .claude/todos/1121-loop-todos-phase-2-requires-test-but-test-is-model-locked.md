@@ -31,3 +31,9 @@ same check for `/e2e`.
 
 - A loop-todos cycle can run its Phase 2 gate without the Skill tool refusing and without a
   rule-breaking manual replication.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-08 (loop-todos cycle 1). The next run opens with these.
+
+- [ ] [TOOLING] The auto-mode classifier denied removing `disable-model-invocation: true` from `skills/test/SKILL.md` as Self-Modification (2026-10-08). Only Joe can clear it: make the edit yourself (the trimmed description that fits the listing budget is `Runs a repo's fast checks (unit, typecheck, lint, build), stack inferred. /test, or the floor before a commit.`) / let loop-todos Phase 2 and /commit step 6b name the fast-check floor (`python ci/run_all.py` here) instead of the slash command / keep as is. Note: /e2e is NOT model-locked; only /test is.

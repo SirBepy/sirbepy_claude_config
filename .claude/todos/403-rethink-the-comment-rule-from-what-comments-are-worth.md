@@ -74,6 +74,12 @@ policy is settled. Do not answer them independently and let them disagree.
 - `comment-noise.sh` and `/create-pr`'s check enforce exactly what the new rule says, no more.
 - `399` is either closed by this or explicitly scoped as the leftover mechanism piece.
 
+## Open questions
+
+Written by /auto-do-todos on 2026-10-08 (loop-todos cycle 1). The next run opens with these.
+
+- [ ] [ARCH] The line cap this todo objects to is already gone (todo 922 retired it 2026-09-05; CLAUDE.md now judges comments by "a constraint, gotcha, or measurement the code can't show") and done/399 closed the docstring gap. Options: close as superseded / keep open narrowed to the org-vs-reader split you floated / still run the full dedicated session.
+
 ## Notes
 
 - **Q parked 2026-09-04 (split the comment rule by reader, by repo org, by both, or keep the flat cap) - dev delegated to autopilot on 2026-09-10** via /loop-todos Phase 0. Autopilot's call: pick none of them. Joe asked on 2026-08-19 for this to be its own `/brainstorm` session and that gate still stands, so the todo stays live and unexecuted by any unattended run, and 399 stays gated behind it.

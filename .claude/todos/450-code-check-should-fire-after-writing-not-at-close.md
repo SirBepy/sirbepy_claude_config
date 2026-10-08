@@ -75,6 +75,12 @@ are needed for either to matter, and 451 is the more important of the two.
   verified, not before.
 - The per-turn token cost is measured and reported.
 
+## Decided
+
+Decided by /auto-do-todos on 2026-10-08.
+
+- [x] [ARCH] Reattempt the post-write /code-check trigger on 427's Stop-hook signal now, or wait? - decided **wait one cycle after 427 is wired and stable**, because stacking a second new Stop hook behind one just switched on compounds risk for no urgent gain.
+
 ## Notes
 
 Do not "improve" this by having the authoring session review its own diff before dispatching. The
