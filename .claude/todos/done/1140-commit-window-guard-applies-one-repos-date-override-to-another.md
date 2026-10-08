@@ -32,6 +32,10 @@ that applies to the whole command. Add the two-repo chain above as a test in
 - `git -C <client-repo> commit --date="2026-10-06 02:30:00" -m y` at 14:00 is still denied.
 - `python hooks/test_commit_window_guard.py` passes.
 
+## Notes
+
+- Done 2026-10-08: commit-window-guard pairs each chained segment's landing targets with that segment's own --date overrides (segmented_landing_targets); GIT_AUTHOR_DATE/GIT_COMMITTER_DATE env overrides stay whole-command on purpose, since a PowerShell env assignment persists across statements. Test: the two-repo chain at 14:00 is allowed, a single in-window --date is still denied.
+
 ## Answers 2026-10-08
 
 - Joe, 2026-10-08 (todo-questions chat): approved to build as written. 1150 targets the same file; build them in one lane, one commit each.

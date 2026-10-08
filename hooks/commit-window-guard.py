@@ -11,11 +11,24 @@ What counts as landing, per shell-visible invocation (Bash and PowerShell):
   flags the way push-gate.py does, so `git -C <repo> commit` is gated
   against <repo>, not the payload cwd. `--abort`/`--quit` never land a
   commit and always pass, so a half-done rebase can still be backed out.
+  A flag value that opens a quote not at the start of its own shell word
+  (git's own `-c core.editor="git commit -m x"`) gets read back to the
+  token that closes the quote, not just the next token - shlex's
+  posix=False tokenizer only protects whitespace inside a quote that
+  opens a word, so a mid-word quote otherwise splits the value apart and
+  exposes its tail words (literally "commit" here) as if they followed
+  the flag directly.
 - `/commit`'s commit-pathspec.sh (its -C/--repo) and `split-hunks.py commit`
   (its --repo), whose own git calls run in a child process this hook never
   sees.
 - A `cd`/Set-Location earlier in the same command pins the cwd for every
   later segment, same rule as push-gate.py.
+- A token after a real shell's own `-c`/`-lc`/`-Command`/`/c` flag (`bash -c
+  "git commit ..."`) is itself a command line and gets scanned too - but
+  only when the token right before the flag is a shell (bash, sh, zsh,
+  powershell, pwsh, cmd, cmd.exe); git's own `-c key=value` and `-C <dir>`
+  fold to the same lowercase flag text but never follow a shell name, so
+  they're never mistaken for a nested command.
 
 Timestamps stay real. In a client repo, `--date` and GIT_AUTHOR_DATE /
 GIT_COMMITTER_DATE are refused outright inside the window (an approved
@@ -24,6 +37,16 @@ value lands inside the window or has no readable HH:MM - unless an allow
 marker exists, which is how a `/commit fold` replaying a commit that really
 was made at night gets through. The hour is read off the value literally,
 in whatever offset it was written.
+
+Override scope: a `--date` flag is read off the one chained
+segment it appears in and only checked against that segment's own targets,
+so `git -C <a> commit --date=... && git -C <b> commit` never denies <b> for
+<a>'s override. GIT_AUTHOR_DATE/GIT_COMMITTER_DATE stay a whole-command scan
+instead - a bash inline prefix only covers the one command it sits in front
+of, but PowerShell's `$env:GIT_AUTHOR_DATE = ...;` persists for every later
+statement in the same invocation, and telling those two apart from the raw
+command text isn't reliable, so this half of the check stays a superset
+that can over-block but never misses a real override.
 
 Override, only after Joe says yes through the ask_user_question card, in
 its own tool call (the hook reads the whole command before any of it runs,
@@ -76,8 +99,18 @@ HHMM_RE =re.compile(r"(?<!\d)(\d{1,2}):(\d{2})")
 EPOCH_RE = re.compile(r"^@(\d+)")
 _SAFE_SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 # A token after one of these is itself a command line (`bash -c "git commit
-# ..."`), so it gets scanned too; a quoted commit message or PR body never does.
+# ..."`), so it gets scanned too - but only when it follows a real shell
+# (see SHELL_NAMES below); a quoted commit message or PR body never does,
+# and neither does git's own same-spelled `-c key=value` / `-C <dir>`.
 INLINE_COMMAND_FLAGS = {"-c", "-lc", "-command", "/c"}
+# Shells whose own `-c`/`-lc`/`-Command`/`/c` flag takes a nested command
+# line. Matched against basename()'s already-lowercased output.
+SHELL_NAMES = {
+    "bash", "sh", "zsh",
+    "powershell", "powershell.exe",
+    "pwsh", "pwsh.exe",
+    "cmd", "cmd.exe",
+}
 
 # Swapped out by the tests to pin the clock.
 now_fn = datetime.now
@@ -117,6 +150,26 @@ def _tokenize(segment: str) -> list[str]:
         return segment.split()
 
 
+def _value_end(tokens: list[str], start: int) -> int:
+    """Index just past a (possibly multi-token) flag value beginning at
+    `start`. A value like `core.editor="git commit -m x"` isn't quoted at
+    the start of its own shell word, so shlex's posix=False tokenizer
+    (whitespace inside a quote is only protected when the quote opens the
+    word) splits it on the inner spaces - swallow tokens through the one
+    that closes the quote so the flag's value is read whole, rather than
+    exposing its tail words as if they followed the flag directly."""
+    if start >= len(tokens):
+        return start
+    quote = next((q for q in ("\"", "'") if tokens[start].count(q) % 2 == 1), None)
+    end = start + 1
+    while quote and end < len(tokens):
+        closes = tokens[end].count(quote) % 2 == 1
+        end += 1
+        if closes:
+            break
+    return end
+
+
 def _value_after(tokens: list[str], names: set[str]) -> str | None:
     for i, tok in enumerate(tokens):
         if tok in names and i + 1 < len(tokens):
@@ -139,9 +192,9 @@ def _segment_landings(tokens: list[str]) -> list[tuple[str, str | None, list[str
             while j < len(tokens) and tokens[j].startswith("-"):
                 if tokens[j] == "-C" and j + 1 < len(tokens):
                     dash_c = tokens[j + 1]
-                    j += 2
+                    j = _value_end(tokens, j + 1)
                 elif tokens[j] in VALUE_FLAGS and "=" not in tokens[j]:
-                    j += 2
+                    j = _value_end(tokens, j + 1)
                 else:
                     j += 1
             if j < len(tokens) and tokens[j] in LANDING_SUBCOMMANDS:
@@ -157,39 +210,61 @@ def _segment_landings(tokens: list[str]) -> list[tuple[str, str | None, list[str
     return found
 
 
-def landing_targets(command: str, payload_cwd: str) -> list[tuple[str, str, list[str]]]:
-    """(kind, effective_path, args) for every commit/push-landing invocation
-    in `command`. A quoted token holding its own command (`bash -c "git
-    commit ..."`) is scanned one level deep too."""
+def segmented_landing_targets(command: str, payload_cwd: str) -> list[tuple[list[tuple[str, str, list[str]]], list[str]]]:
+    """Walks `command` the same way landing_targets does, but keeps each
+    chained segment's targets paired with that segment's own `--date`
+    overrides, so a date flag attached to one segment's commit is never
+    checked against a different segment's repo. Each entry is
+    (targets_in_segment, segment_date_overrides)."""
     effective_cwd = payload_cwd or "."
-    targets = []
+    segments = []
     for segment in CHAIN_SPLIT_RE.split(command or ""):
         tokens = _tokenize(segment)
         if not tokens:
             continue
         landings = _segment_landings(tokens)
-        for prev, tok in zip(tokens, tokens[1:]):
-            if prev.lower() in INLINE_COMMAND_FLAGS:
+        for i in range(len(tokens) - 1):
+            prev, tok = tokens[i], tokens[i + 1]
+            if prev.lower() in INLINE_COMMAND_FLAGS and i > 0 and basename(tokens[i - 1]) in SHELL_NAMES:
                 for inner in CHAIN_SPLIT_RE.split(tok):
                     landings += _segment_landings(_tokenize(inner))
+        targets = []
         for kind, repo, args in landings:
             path = repo or effective_cwd
             if repo and not ABS_PATH_RE.match(repo):
                 path = os.path.join(effective_cwd, repo)
             targets.append((kind, path, args))
+        if targets:
+            segments.append((targets, segment_date_overrides(segment, targets)))
         cd_pin = _pinned_cd(tokens)
         if cd_pin:
             effective_cwd = cd_pin
+    return segments
+
+
+def landing_targets(command: str, payload_cwd: str) -> list[tuple[str, str, list[str]]]:
+    """(kind, effective_path, args) for every commit/push-landing invocation
+    in `command`, flattened across all chained segments - for callers that
+    only need detection, not the per-segment date-override scoping below."""
+    targets = []
+    for seg_targets, _overrides in segmented_landing_targets(command, payload_cwd):
+        targets.extend(seg_targets)
     return targets
 
 
-def date_overrides(command: str, targets) -> list[str]:
-    # Regex over the raw command, not tokens: posix=False splits
-    # `--date="2026-10-06 14:30:00"` at the space inside the quotes.
-    values = [strip_quotes(m.group(1)) for m in ENV_DATE_RE.finditer(command or "")]
-    if any(kind == "commit" for kind, _path, _args in targets):
-        values += [strip_quotes(m.group(1)) for m in DATE_FLAG_RE.finditer(command or "")]
-    return values
+def date_overrides(command: str) -> list[str]:
+    """GIT_AUTHOR_DATE / GIT_COMMITTER_DATE values, scanned across the whole
+    command (see the module docstring on why this half stays a superset,
+    unlike the `--date` flag below)."""
+    return [strip_quotes(m.group(1)) for m in ENV_DATE_RE.finditer(command or "")]
+
+
+def segment_date_overrides(segment: str, segment_targets) -> list[str]:
+    """`--date` values scoped to one chained segment, only when that segment
+    itself lands a commit."""
+    if not any(kind == "commit" for kind, _path, _args in segment_targets):
+        return []
+    return [strip_quotes(m.group(1)) for m in DATE_FLAG_RE.finditer(segment or "")]
 
 
 def override_hour(value: str) -> int | None:
@@ -263,48 +338,52 @@ def _window_reason(root: str, now: datetime) -> str:
 def main() -> None:
     payload = read_payload()
     command = (payload.get("tool_input") or {}).get("command", "") or ""
-    targets = landing_targets(command, payload.get("cwd") or "")
-    if not targets:
+    segments = segmented_landing_targets(command, payload.get("cwd") or "")
+    if not any(targets for targets, _overrides in segments):
         sys.exit(0)
 
     now = now_fn()
     session_id = payload.get("session_id") or ""
-    overrides = date_overrides(command, targets)
-    checked = set()
-    for _kind, path, _args in targets:
-        root = git_repo_root(path)
-        if not root or root in checked:
-            continue
-        checked.add(root)
-        if not client_slug(root):
-            continue
-        name = Path(root).name
+    env_overrides = date_overrides(command)
+    checked_window = set()
+    for targets, segment_overrides in segments:
+        overrides = env_overrides + segment_overrides
+        for _kind, path, _args in targets:
+            root = git_repo_root(path)
+            if not root:
+                continue
+            if not client_slug(root):
+                continue
+            name = Path(root).name
 
-        if overrides and in_window(now):
-            deny(
-                f"[commit-window] {name} is a client repo: a commit timestamp override "
-                f"({', '.join(overrides)}) is refused inside the 23:00-10:59 window, approved or not - "
-                "commit timestamps always stay real. Drop the override."
-            )
-        if overrides and not is_allowed(session_id, root, now):
-            hours = [override_hour(v) for v in overrides]
-            if any(h is None or in_window_hour(h) for h in hours):
+            if overrides and in_window(now):
                 deny(
-                    f"[commit-window] {name} is a client repo: timestamp override ({', '.join(overrides)}) "
-                    "lands inside the 23:00-10:59 window or has no readable HH:MM. Commit timestamps stay "
-                    "real. The one legitimate case is /commit fold replaying a commit that really was made "
-                    "at night: ask Joe through ask_user_question, and only on a yes run in its own tool "
-                    f"call: {_allow_cmd(root)}"
+                    f"[commit-window] {name} is a client repo: a commit timestamp override "
+                    f"({', '.join(overrides)}) is refused inside the 23:00-10:59 window, approved or not - "
+                    "commit timestamps always stay real. Drop the override."
                 )
+            if overrides and not is_allowed(session_id, root, now):
+                hours = [override_hour(v) for v in overrides]
+                if any(h is None or in_window_hour(h) for h in hours):
+                    deny(
+                        f"[commit-window] {name} is a client repo: timestamp override ({', '.join(overrides)}) "
+                        "lands inside the 23:00-10:59 window or has no readable HH:MM. Commit timestamps stay "
+                        "real. The one legitimate case is /commit fold replaying a commit that really was made "
+                        "at night: ask Joe through ask_user_question, and only on a yes run in its own tool "
+                        f"call: {_allow_cmd(root)}"
+                    )
 
-        if in_window(now) and not is_allowed(session_id, root, now):
-            reason = _window_reason(root, now)
-            if "commit-window-guard.py allow" in command:
-                reason += (
-                    " This command already chains the allow call: the hook reads the whole command "
-                    "before any of it runs, so run the allow in its own tool call first."
-                )
-            deny(reason)
+            if root in checked_window:
+                continue
+            checked_window.add(root)
+            if in_window(now) and not is_allowed(session_id, root, now):
+                reason = _window_reason(root, now)
+                if "commit-window-guard.py allow" in command:
+                    reason += (
+                        " This command already chains the allow call: the hook reads the whole command "
+                        "before any of it runs, so run the allow in its own tool call first."
+                    )
+                deny(reason)
     sys.exit(0)
 
 

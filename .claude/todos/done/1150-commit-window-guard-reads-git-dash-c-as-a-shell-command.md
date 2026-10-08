@@ -29,6 +29,10 @@ landing target. Live guard: one complete edit, run its test file right after.
 - `bash -c "git commit -m x"` in a client repo inside the window is still denied.
 - `python hooks/test_commit_window_guard.py` passes.
 
+## Notes
+
+- Done 2026-10-08: the -c/-lc/-command//c rescan fires only after a shell basename, and a new _value_end() reads a git -c/-C value whole even when shlex(posix=False) split it at a mid-word quote, a second independent path to the same false deny. Test: git -c core.editor="git commit -m x" status yields no landing target; bash -c "git commit -m x" still does.
+
 ## Answers 2026-10-08
 
 - Joe, 2026-10-08 (todo-questions chat): approved with the 1139-1144 batch. Same file as 1140; one lane, one commit each.

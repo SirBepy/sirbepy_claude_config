@@ -50,6 +50,8 @@ DETECT_CASES = [
     ("git commit-graph write", [], "commit-graph is not commit"),
     ('echo "remember to git push later"', [], "quoted prose mentioning git push"),
     ('gh pr create --body "then git commit and git push"', [], "PR body mentioning git commit"),
+    ('git -c core.editor="git commit -m x" status', [], "git's own -c key=value is not a nested shell command"),
+    ('git -C "C:/work/zng-app" -c core.editor="git commit -m x" status', [], "git -c after -C still is not a landing"),
 ]
 
 
@@ -200,6 +202,24 @@ with tempfile.TemporaryDirectory() as tmp:
     expect("--date on a push is not a timestamp override", call_main('git push origin main', client, day), 0)
     expect("--date into the window in a personal repo passes", call_main('git commit --date="2026-10-06T01:00:00" -m x', personal, day), 0)
     expect("any --date inside the window is denied even with an allow", call_main('git commit --date="2026-10-06 14:00:00" -m x', client, at(0, 50)), 2)
+
+    # --date is scoped to its own chained segment: one repo's
+    # override never gets checked against a different repo's own commit.
+    expect(
+        "a client repo in the SAME segment as an in-window --date is still denied",
+        call_main(f'git -C "{personal}" commit --date="2026-10-06 02:30:00" -m x && git -C "{client}" commit --date="2026-10-06 02:30:00" -m y', personal, day),
+        2,
+    )
+    expect(
+        "a different repo's --date in an earlier chained segment does not deny this one",
+        call_main(f'git -C "{personal}" commit --date="2026-10-06 02:30:00" -m x && git -C "{client}" commit -m y', personal, day),
+        0,
+    )
+    expect(
+        "a single client-repo commit with its own in-window --date is still denied",
+        call_main('git commit --date="2026-10-06 02:30:00" -m y', client, day),
+        2,
+    )
     allow(client, at(14, 0))
     expect(
         "allowed fold replay of a real night timestamp passes in daytime",
