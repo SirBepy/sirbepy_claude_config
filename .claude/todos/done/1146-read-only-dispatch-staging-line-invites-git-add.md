@@ -40,6 +40,10 @@ this session (`skills/code-check/SKILL.md` "The analysis runs in a fresh subagen
 - No read-only dispatch template in `~/.claude` contains "Stage your changes".
 - `python ci/run_all.py` green.
 
+## Notes
+
+- Done 2026-10-08 per Joe (templates + guard): read-only dispatch blocks in code-check, review-unpushed, iterate-it/templates.md and rate-it/panel.md (2) now paste "Leave all changes unstaged. Never run `git add`." and refs/builder-preamble.md states the rule; dispatch-preamble-guard.py denies READ-ONLY DISPATCH combined with "Stage your changes", 3 new test cases. Follow-up: build-dispatch.ps1 -NoCommitBlock still defaults to the stage line with no read-only switch.
+
 ## Answers 2026-10-08
 
 - Joe, 2026-10-08 (todo-questions chat): templates AND guard. Read-only templates paste "Leave all changes unstaged. Never run `git add`.", and `hooks/dispatch-preamble-guard.py` rejects a `READ-ONLY DISPATCH` prompt that also says "Stage your changes", with a self-test.

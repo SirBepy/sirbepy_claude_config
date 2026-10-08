@@ -55,9 +55,7 @@ Each dispatch prompt:
 ```
 READ-ONLY DISPATCH
 
-Stage your changes but do NOT commit. The main agent will run /commit after your report-back.
-(For a repo sharing a git index with concurrent sessions, use instead: "Leave all changes
-unstaged. The main agent will run /commit by pathspec after your report-back.")
+Leave all changes unstaged. Never run `git add`. The main agent will run /commit by pathspec after your report-back.
 
 `run_in_background` is FORBIDDEN in this dispatch: run every command synchronously and finish
 before ending your turn.

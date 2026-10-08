@@ -137,6 +137,13 @@ from the dispatch's content: `hooks/dispatch-preamble-guard.py` checks for that 
 never guesses whether a dispatch is read-only. Never add the marker to a dispatch that does capture
 screenshots.
 
+A `READ-ONLY DISPATCH` always pastes `<STAGING_LINE>`'s "Leave all changes unstaged. Never run
+`git add`. The main agent will run /commit by pathspec after your report-back." variant, never the
+"Stage your changes but do NOT commit" one - a dispatch marked read-only has nothing to stage, so
+the stage-and-wait wording invites exactly the `git add -A` it should never run (2026-10-08, a
+`/cleanup-memory` deep-pass subagent staged two unrelated untracked files this way). `hooks/dispatch-preamble-guard.py` enforces this: a prompt carrying both the `READ-ONLY DISPATCH`
+line and "Stage your changes" is rejected outright.
+
 The marker exempts the screenshot-id requirement and nothing else. The prefilter paragraph stays in
 the block unconditionally, read-only dispatches included: one that changed no files gets an empty
 diff and the gate is a no-op, so making it a placeholder only adds a per-dispatch judgment call,

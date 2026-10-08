@@ -14,6 +14,7 @@ guard = _testlib.load_module(
 )
 
 STAGING = "Stage your changes but do NOT commit. The main agent will run /commit after your report-back."
+UNSTAGED = "Leave all changes unstaged. Never run `git add`. The main agent will run /commit by pathspec after your report-back."
 BACKGROUND = "`run_in_background` is FORBIDDEN in builder subagents"
 SCREENSHOT = "save them under `.for_bepy/screenshots/12345-6789/`"
 FULL_PROMPT = f"{STAGING}\n\n{BACKGROUND}\n\n{SCREENSHOT}\n\nDo the task."
@@ -24,8 +25,15 @@ CASES = [
     (FULL_PROMPT.replace(STAGING, ""), True, "staging line missing"),
     (FULL_PROMPT.replace(BACKGROUND, ""), True, "run_in_background/FORBIDDEN line missing"),
     (FULL_PROMPT.replace(SCREENSHOT, ""), True, "screenshot id line missing"),
-    (f"{STAGING}\n\n{BACKGROUND}\n\nREAD-ONLY DISPATCH\n\nDo the task.", False, "READ-ONLY DISPATCH opts out of screenshot marker"),
+    (f"{UNSTAGED}\n\n{BACKGROUND}\n\nREAD-ONLY DISPATCH\n\nDo the task.", False, "READ-ONLY DISPATCH opts out of screenshot marker"),
     ("do the thing, no markers at all", True, "nothing present"),
+    (f"READ-ONLY DISPATCH\n\n{STAGING}\n\n{BACKGROUND}\n\nDo the task.", True, "read-only + Stage your changes is denied"),
+    (
+        f"READ-ONLY DISPATCH\n\n{UNSTAGED}\n\n{BACKGROUND}\n\nDo the task.",
+        False,
+        "read-only + Leave all changes unstaged passes",
+    ),
+    (FULL_PROMPT, False, "non-read-only + Stage your changes passes"),
 ]
 
 

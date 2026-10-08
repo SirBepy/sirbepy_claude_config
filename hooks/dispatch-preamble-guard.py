@@ -36,6 +36,10 @@ STAGING_A = "Stage your changes but do NOT commit"
 STAGING_B = "Leave all changes unstaged"
 SCREENSHOT_MARKER = ".for_bepy/screenshots/"
 READONLY_MARKER = "READ-ONLY DISPATCH"
+READONLY_REPLACEMENT_LINE = (
+    "Leave all changes unstaged. Never run `git add`. "
+    "The main agent will run /commit by pathspec after your report-back."
+)
 
 
 def missing_markers(prompt: str) -> list[str]:
@@ -46,6 +50,15 @@ def missing_markers(prompt: str) -> list[str]:
         missing.append("run_in_background ... FORBIDDEN line")
     if READONLY_MARKER not in prompt and SCREENSHOT_MARKER not in prompt:
         missing.append(f"{SCREENSHOT_MARKER} id line (or the READ-ONLY DISPATCH opt-out)")
+    # A READ-ONLY DISPATCH has nothing to stage - "Stage your changes" invites
+    # exactly the `git add -A` it should never run (2026-10-08: a
+    # /cleanup-memory deep-pass subagent staged two unrelated untracked files
+    # this way). Use the always-true unstaged variant instead.
+    if READONLY_MARKER in prompt and STAGING_A in prompt:
+        missing.append(
+            f"READ-ONLY DISPATCH combined with the \"{STAGING_A}\" staging line - "
+            f"replace it with: \"{READONLY_REPLACEMENT_LINE}\""
+        )
     return missing
 
 
