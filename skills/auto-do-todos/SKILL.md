@@ -170,6 +170,11 @@ is for.
 Also scan every todo for an existing `## Open questions` block written by a previous run. Those are
 pre-crystallized DEV questions and they feed Step 5 directly, no re-derivation.
 
+`## Deferred questions` is NOT scanned here. That heading, and its `loop-skip` comment, are
+`/loop-todos` Phase 0's own state - a bare `/auto-do-todos` run leaves it untouched, and reading it
+back is Phase 0's job alone, so there is one source of truth for when a deferred question
+resurfaces.
+
 ## Step 5 - The one question round
 
 **Trigger.** Run this round if and only if EITHER:
@@ -244,6 +249,13 @@ then diff reported ids against it after return - a set difference, never a count
 again for whatever Step 7's re-triage adds later). Drop any id the batch reports lost to a live
 session or hitting a genuine error, and continue with what's left - this replaces a per-todo claim
 call with the one remembered call the contract requires.
+
+**Skip this call entirely inside a `/loop-todos` cycle.** Its Phase 1 step 2 already claimed every
+backlog id (minus its skip list) before this run started, under the same session. Reissuing the
+claim here would hit that same-session claim and get misread as lost to a live session -
+`claim-todo.ps1` only checks pid/session liveness to decide staleness, not whether the session
+asking is the same one that already holds it (todo 1147). Outside a loop, this call stands as
+written above.
 
 Per todo:
 

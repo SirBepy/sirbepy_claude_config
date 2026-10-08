@@ -26,7 +26,7 @@ and already commits through `/commit`. This skill is a driver, not a second impl
 ## Precedence
 
 Everything in `/auto-do-todos`'s own Precedence section stays in force for each cycle: CLAUDE.md,
-`/commit` only, every `/autopilot` Hard Stop. This skill adds exactly one override, and only for
+`/commit` only, every `/autopilot` Hard Stop. This skill adds exactly two overrides, both only for
 cycles running inside a loop:
 
 **`/auto-do-todos` Step 5's second trigger (a todo carrying a pre-written `## Open questions`
@@ -34,6 +34,12 @@ block) is SUPPRESSED.** Phase 0 below is the loop's compliance with the global f
 it leaves no `## Open questions` heading behind for that trigger to fire on anyway. Step 5's FIRST
 trigger (empty AUTO queue) is not suppressed, but inside a loop it means "nothing left I can
 decide", which is the loop's stop condition, so the loop ends rather than asking again.
+
+**`/auto-do-todos` Step 6's own claim call is SUPPRESSED.** Phase 1 step 2 below claims every
+backlog id (minus the skip list) before the cycle starts, which is this skill's own compliance with
+the claim-before-edit contract (todo 1147). Reissuing Step 6's claim inside the same session would
+hit that same-session claim and read as a conflict with a live session - `claim-todo.ps1` keys
+staleness off pid liveness, not which session holds a claim - so Step 6 skips its own call here.
 
 Questions Step 8 parks DURING the loop belong to the NEXT `/loop-todos` invocation's Phase 0. They
 are never asked mid-loop.
@@ -43,13 +49,21 @@ are never asked mid-loop.
 Skipped entirely on a `--resumed` run (see Phase 4).
 
 1. **Collect.** Grep the backlog for `## Open questions` blocks and read every unchecked `- [ ]`
-   item in full, with its todo's Goal and Context.
-2. **Filter before asking.** A question carrying a defensible default is a decision, not a
+   item in full, with its todo's Goal and Context. Also grep for `## Deferred questions` blocks
+   (each carries a `<!-- loop-skip: dev deferred <date> -->` comment above it) and read those the
+   same way, noting each one's defer date.
+2. **Deferred gate, only if step 1 found any `## Deferred questions` blocks.** Ask ONE coarse
+   question before anything else: "We have N deferred questions from earlier runs (deferred <date>,
+   <date>, ...) - answer them now?" Yes: fold every one into the survivor pool below, exactly like a
+   freshly-collected `## Open questions` item - same filter, same ask, same write-back. No: leave
+   them exactly as they are (still `## Deferred questions`, still `loop-skip`) and they are offered
+   again next run.
+3. **Filter before asking.** A question carrying a defensible default is a decision, not a
    question. Ask only what genuinely blocks: personal taste with no defensible default, a hard stop
    (credentials, destructive, physical action), or a large hard-to-reverse blast radius. Everything
-   else is silently routed to autopilot in step 4. Same bar as `/auto-do-todos` Step 4's triage,
+   else is silently routed to autopilot in step 5. Same bar as `/auto-do-todos` Step 4's triage,
    applied to already-written questions.
-3. **Ask.** ONE `mcp__cc_conductor__ask_user_question` call with every survivor (that tool has no
+4. **Ask.** ONE `mcp__cc_conductor__ask_user_question` call with every survivor (that tool has no
    4-question cap). Each question carries its domain tag, 2-4 concrete options with a
    recommendation, plus two standing options:
    - **"you decide - autopilot it"** - hands the fork straight back to bounded `/iterate-it`.
@@ -57,26 +71,36 @@ Skipped entirely on a `--resumed` run (see Phase 4).
 
    If the card times out with no answer (roughly 30 minutes), treat every question as autopiloted.
    An unanswered card means the dev walked away, which is what this skill is for.
-4. **Write the answers back, and remove the heading.** Per todo file:
+5. **Write the answers back, and remove the heading.** Per todo file:
 
    | Outcome | Edit |
    |---|---|
-   | Answered | Delete the checkbox, add the answer + date as a bullet under `## Notes` (the contract's freeform-carryover section; create it if absent) |
-   | Autopilot | Delete the checkbox, add `- <question> - dev delegated to autopilot on <date>` under `## Notes` |
-   | Skipped | Rename the heading to `## Deferred questions` and add `<!-- loop-skip: dev deferred <date> -->` above it |
+   | Answered | Delete the checkbox, add the answer + date as a bullet under `## Notes` (the contract's freeform-carryover section; create it if absent). If this was a `## Deferred questions` block, also drop that heading and its `loop-skip` comment - same end state as a freshly-answered `## Open questions` block. |
+   | Autopilot | Delete the checkbox, add `- <question> - dev delegated to autopilot on <date>` under `## Notes`. Same `## Deferred questions` cleanup as above when it was deferred. |
+   | Skipped (first time, or "no" at the deferred gate) | Rename the heading to `## Deferred questions` and add `<!-- loop-skip: dev deferred <date> -->` above it; a "no" answer leaves an existing one untouched. |
 
-   No touched file may keep a `## Open questions` heading. That heading is the mid-loop stall.
-5. **Build the skip list.** Every todo id matching `grep -l 'loop-skip' .claude/todos/*.md`. It is
-   excluded from every cycle's triage and reported at the end.
+   No touched file may keep a `## Open questions` heading, and no file resolved this round
+   (Answered or Autopilot) may keep its `## Deferred questions` heading either - that heading is the
+   mid-loop stall this skill exists to avoid.
+6. **Build the skip list.** Every todo id matching `grep -l 'loop-skip' .claude/todos/*.md`,
+   re-checked after step 5's edits land - a deferred todo resolved this round no longer matches, so
+   it is no longer excluded. The list is excluded from every cycle's triage and reported at the end.
 
 ## Phase 1 - Cycle
 
 Repeat until a Phase 3 stop condition fires. Per cycle:
 
 1. Record `CYCLE_START_SHA` (`git rev-parse HEAD`).
-2. Run `/auto-do-todos` unattended, under the Precedence override above, with the skip list
+2. **Claim before anything else runs.** Every todo id still in the backlog, minus the skip list, in
+   one batch call, printed as the cycle's first action, before `/auto-do-todos` touches a file:
+   `~/.claude/skills/close/claim-todo.ps1 -Id "<id1>,<id2>,..."`. Drop any id the call reports lost
+   to a live session or hitting a genuine error and continue with what's left, the same tolerance
+   Step 6's own batch-claim already used before this skill suppressed it (see Precedence). This is
+   what closes todo 1147: a tiny backlog collapses `/auto-do-todos` Steps 3-5 to nothing, so without
+   a claim here the cycle could reach an edit before any claim exists.
+3. Run `/auto-do-todos` unattended, under the Precedence overrides above, with the skip list
    excluded from triage.
-3. Note which todo ids completed, so Phase 3 can tell a productive cycle from a stalled one.
+4. Note which todo ids completed, so Phase 3 can tell a productive cycle from a stalled one.
 
 ## Phase 2 - Verify between cycles
 
@@ -154,7 +178,9 @@ and the final `/test` + `/e2e` result.
 
 - This skill dispatches no subagents of its own except Phase 4.5's review-unpushed fan-out; every
   other dispatch happens inside `/auto-do-todos` under `refs/delegation-doctrine.md`.
-- It never commits directly and never claims a todo. `/auto-do-todos` owns both.
+- It never commits directly - `/auto-do-todos` owns that. It does claim, once per cycle (Phase 1
+  step 2), since todo 1147; `/auto-do-todos` Step 6 relies on that claim instead of making its own
+  inside a loop.
 - Backlog source of truth: `.claude/todos/` per `close/ai-todos-format.md`, resolved from the repo
   root of the session's own cwd.
 - Reporting cadence (a chat bubble only for a blocker, a decision, or the final summary; every

@@ -26,6 +26,10 @@ Rejected: restating "claim first" in more prose; that is the failure 484 already
 
 - A `/loop-todos` run over a 1-todo backlog shows the claim call before the first Edit to that todo's target files.
 
+## Notes
+
+- Done 2026-10-08 per Joe's answer: loop-todos Phase 1 step 2 claims every backlog id in one claim-todo.ps1 call as the cycle's first action, and /auto-do-todos Step 6 skips its own claim inside a loop (claim-todo.ps1 would misread its own session's claim as held by a live peer, it compares pid liveness, not session ids).
+
 ## Answers 2026-10-08
 
 - Joe, 2026-10-08 (todo-questions chat): claim in the cycle driver. `/loop-todos` Phase 1 prints the `claim-todo.ps1 -Id <ids>` call as the cycle's first action. No advisory hook.

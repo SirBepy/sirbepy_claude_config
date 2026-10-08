@@ -36,6 +36,7 @@ Also decide whether an unattended run's auto-skip should mutate the file at all.
 ## Notes
 
 - Filed from ssy-mobile `/close` on 2026-10-08. The two ssy-mobile todos above currently carry `## Deferred questions`; revert them to `## Open questions` once this is fixed, or by hand if Joe wants them asked sooner.
+- Done 2026-10-08 per Joe's answer: loop-todos Phase 0 step 1 also collects ## Deferred questions, a new step 2 asks one coarse 'we have N deferred questions, answer them now?' first, answered deferred blocks drop their heading and loop-skip marker, and the skip list is re-read after write-back. /auto-do-todos Step 4 states deferred blocks are loop-todos Phase 0's state only. The two ssy-mobile todos (0003, 0004) will now be offered on that repo's next /loop-todos run.
 
 ## Answers 2026-10-08
 
