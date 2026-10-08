@@ -32,3 +32,7 @@ code-check by language, SRI hash pins); `skills/VENDORED.md` now records both as
 ## Acceptance
 - A recorded observation of the 4.5.0 Stop hook across consecutive turns, with the outcome.
 - `settings.json` no longer references `scripts/hook.mjs`.
+
+## Notes
+
+- Fed impeccable 4.5.0's native 'hook' simulated PostToolUse/Stop payloads (same session id) over an HTML file with 3 findings: the per-edit pass reported them once, a re-edit gave a one-line 'still has N findings flagged earlier' reminder, and three consecutive Stop passes stayed silent, so the 1f9eb1d re-flag bug does not reproduce. 4.5.0's new-work.md already moves the direction contract into a surface brief, so 540c946's patch is not needed. Removed both dead hook.mjs entries from settings.json; VENDORED.md updated.

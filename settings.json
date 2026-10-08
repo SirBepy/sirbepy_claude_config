@@ -215,17 +215,6 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ ! -f \"C:\\\\Users\\\\tecno\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\hook.mjs\" ] || node \"C:\\\\Users\\\\tecno\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\hook.mjs\"",
-            "timeout": 5,
-            "statusMessage": "Checking UI changes"
-          }
-        ]
-      },
-      {
         "matcher": "Bash|PowerShell",
         "hooks": [
           {
@@ -681,16 +670,6 @@
             "type": "command",
             "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\ui-screenshot-reminder.py\"",
             "statusMessage": "Checking for a UI screenshot reminder"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ ! -f \"C:\\\\Users\\\\tecno\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\hook.mjs\" ] || node \"C:\\\\Users\\\\tecno\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\hook.mjs\"",
-            "timeout": 30,
-            "statusMessage": "Design deep pass"
           }
         ]
       },

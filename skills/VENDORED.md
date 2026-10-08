@@ -38,7 +38,7 @@ frontmatter carries one (`impeccable` does; the Cloudflare skills don't).
 | web-perf | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | **Yes** - flag only |
 | workers-best-practices | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | **Yes** - flag only |
 | wrangler | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | **Yes** - flag only |
-| impeccable | github.com/pbakaus/impeccable (npm package `impeccable`, author Paul Bakaus) | 4.5.0 (via `npx impeccable@4.1.0 update`, 2026-10-08) | 2026-10-08 (commit 80dd5a5) | **Only the trimmed `description`** - the update overwrote the earlier local patches (`540c946`'s `reference/new-work.md` changes and `1f9eb1d`'s stop-hook fix); whether they are still needed is todo 1129 |
+| impeccable | github.com/pbakaus/impeccable (npm package `impeccable`, author Paul Bakaus) | 4.5.0 (via `npx impeccable@4.1.0 update`, 2026-10-08) | 2026-10-08 (commit 80dd5a5) | **Only the trimmed `description`** - the update overwrote the earlier local patches (`540c946`'s `reference/new-work.md` changes and `1f9eb1d`'s stop-hook fix), and neither is needed on 4.5.0: its `new-work.md` already moves the direction contract out of the inline HTML comment into a surface brief, and its native Stop pass stayed silent on consecutive turns over unchanged findings (simulated hook payloads, 2026-10-08, todo 1129) |
 
 ## The "flag only" patch, 2026-08-18
 
