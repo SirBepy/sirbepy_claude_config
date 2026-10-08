@@ -330,6 +330,35 @@ out=$(cd "$crlf" && "$gate" f.txt 2>&1); rc=$?
 check "prefilter-gate.sh suppresses the LF/CRLF conversion warning, exit code unchanged" \
   0 '' 'will be replaced by CRLF|will be replaced by LF' "$out" "$rc"
 
+# --- todo-ref.sh: a numbered todo-id comment is flagged, a bare marker is not (backlog item
+# number eleven-twenty-five, spelled out so this comment doesn't trip its own new check) ---
+tr1=$(new_repo); tmp_dirs+=("$tr1")
+printf 'function x() {\n  // todo 44 fix: something\n}\n' > "$tr1/code.js"
+out=$(cd "$tr1" && "$gate" code.js); rc=$?
+check "todo-ref.sh flags an added '// todo NN' comment" \
+  1 'todo-ref\.sh' '' "$out" "$rc"
+
+printf 'function y() {\n  // TODO: handle null\n}\n' > "$tr1/code2.js"
+out=$(cd "$tr1" && "$gate" code2.js); rc=$?
+check "todo-ref.sh does not flag a bare TODO marker with no number" \
+  0 '' 'todo-ref\.sh' "$out" "$rc"
+
+printf 'See todo 44 for context.\n' > "$tr1/notes.md"
+out=$(cd "$tr1" && "$gate" notes.md); rc=$?
+check "todo-ref.sh exempts markdown files" \
+  0 '' 'todo-ref\.sh' "$out" "$rc"
+
+printf 'def f():\n    # Todo #12 handle edge case\n    pass\n' > "$tr1/code.py"
+out=$(cd "$tr1" && "$gate" code.py); rc=$?
+check "todo-ref.sh flags a 'Todo #NN' python comment case-insensitively" \
+  1 'todo-ref\.sh' '' "$out" "$rc"
+
+mkdir -p "$tr1/.claude/todos"
+printf '# todo 44 inside the todos tree\n' > "$tr1/.claude/todos/scratch.py"
+out=$(cd "$tr1" && "$gate" .claude/todos/scratch.py); rc=$?
+check "todo-ref.sh exempts anything under .claude/todos/" \
+  0 '' 'todo-ref\.sh' "$out" "$rc"
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else

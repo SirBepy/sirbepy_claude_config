@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Prefilter gate: runs comment-tense.sh, em-dash.sh, secret-scan.sh; exits non-zero if any
-# prints or errors, so `prefilter-gate.sh <files> && git commit ...` structurally blocks a
-# flagged diff. Wraps those scripts unchanged - they still work standalone. Todo 356.
+# Prefilter gate: runs comment-tense.sh, em-dash.sh, secret-scan.sh, todo-ref.sh; exits non-zero
+# if any prints or errors, so `prefilter-gate.sh <files> && git commit ...` structurally blocks a
+# flagged diff. Wraps those scripts unchanged - they still work standalone. todo-ref.sh flags an
+# added code comment that names a backlog item by its numeric id; like comment-tense.sh it is
+# fix-and-continue, not a STOP like secret-scan.sh.
 # comment-noise.sh also runs but is informational only (demoted, todo 922): its output is
 # printed for visibility but never sets the exit status, so a long comment block never blocks
 # a commit; the measurement stays available for todo 403's brainstorm.
@@ -135,7 +137,7 @@ elif [ "${1:-}" != "--range" ] && [ $# -gt 0 ]; then
     readarray -t rels <<<"${group_paths[$repo_key]}"
     paths=()
     for r in "${rels[@]}"; do [ -n "$r" ] && paths+=("$r"); done
-    for script in comment-tense.sh em-dash.sh secret-scan.sh; do
+    for script in comment-tense.sh em-dash.sh secret-scan.sh todo-ref.sh; do
       if [ "$repo_key" = "$cwd_repo" ]; then
         out=$(bash "$dir/$script" "${paths[@]}")
       else
@@ -171,7 +173,7 @@ elif [ "${1:-}" != "--range" ] && [ $# -gt 0 ]; then
   exit $status
 fi
 
-for script in comment-tense.sh em-dash.sh secret-scan.sh; do
+for script in comment-tense.sh em-dash.sh secret-scan.sh todo-ref.sh; do
   if [ -n "$repo" ]; then
     out=$(bash "$dir/$script" --repo "$repo" "$@")
   else

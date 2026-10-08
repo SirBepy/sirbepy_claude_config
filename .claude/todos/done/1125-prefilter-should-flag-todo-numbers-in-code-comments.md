@@ -47,3 +47,7 @@ That is the same "a flag is a fix, never a louder restatement of the rule" situa
 - `bash ~/.claude/skills/commit/prefilter-gate.sh <file>` exits 1 on a file whose diff adds
   `// todo 44 fix: ...`, and exits 0 on `// TODO: handle null`.
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- New skills/commit/todo-ref.sh wired into prefilter-gate.sh (fix-and-continue, exit 1): flags an added code comment citing a todo by number, exempts .md/.mdx and .claude/todos/, ignores bare TODO markers. 5 cases in test_prefilters.sh, RED against HEAD's gate then GREEN; builder-preamble.md names it with em-dash's treatment. SKILL.md step 5a line applied after the commit lane frees up.

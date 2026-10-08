@@ -75,12 +75,12 @@ repo-relative one silently fails to resolve; the file arguments themselves can b
 absolute, the gate resolves each one's own repo independently (a submodule path resolves to the
 submodule's root, not the parent's), so a mix of parent-repo and submodule paths in one call is
 fine (todo 412). Exit 0 is clean. Exit 2 means the gate could not run (bad path, no repo found) -
-fix the invocation and rerun, it is not a finding. Exit 1 means em-dash or secret-scan flagged
-something (comment-noise.sh also prints, labeled `(informational, non-blocking)`, but never causes
-exit 1 - it stopped gating commits 2026-09-05, todo 922), and the two do NOT get the same
-treatment: em-dash = fix the flagged added lines now, do not ask; secret-scan = STOP, never
-auto-fix it and never work around it, leave your work as it stands and report the hit naming the
-file.
+fix the invocation and rerun, it is not a finding. Exit 1 means em-dash, secret-scan, or todo-ref.sh
+flagged something (comment-noise.sh also prints, labeled `(informational, non-blocking)`, but never
+causes exit 1 - it stopped gating commits 2026-09-05, todo 922), and these do NOT all get the same
+treatment: em-dash and todo-ref.sh (a comment citing a backlog item by numeric id) = fix the
+flagged added lines now, do not ask; secret-scan = STOP, never auto-fix it and never work around
+it, leave your work as it stands and report the hit naming the file.
 
 Never print the whole environment while probing or debugging - secret-scan reads diffs, not tool
 output, so it never catches this. Checking whether a variable is set is fine (a boolean presence
