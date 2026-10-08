@@ -72,6 +72,7 @@ try:
         resolve_skip_flag_path,
         resolve_state_dir,
         run_checks,
+        running_background_agents,
         write_state,
     )
 except Exception as e:
@@ -87,6 +88,7 @@ def evaluate(
     cap: int,
     run_checks_fn=run_checks,
     env: dict | None = None,
+    running_agents_fn=running_background_agents,
 ):
     """Pure decision core: returns a dict to print+block on, or None to
     allow the turn to end silently. Every dependency (state dir, skip-flag
@@ -122,6 +124,13 @@ def evaluate(
     attempts = int(state.get("attempts") or 0)
     root = state.get("root") or "."
     paths = state.get("paths") or []
+
+    # This session's own background builders are still editing: their files
+    # are half-written, so defer. The flag stays, and the first turn ending
+    # after they all report runs the check.
+    transcript_path = payload.get("transcript_path")
+    if transcript_path and running_agents_fn(transcript_path):
+        return None
 
     if attempts >= cap:
         # Retry cap already spent on this unfixed edit - release rather

@@ -18,6 +18,8 @@ in-session way to flip it off.
 
 import json
 import os
+import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -153,6 +155,71 @@ def is_agent_call(payload: dict) -> bool:
         spec.loader.exec_module(module)
         _is_agent_call_fn = module.is_agent_call
     return _is_agent_call_fn(payload)
+
+
+_LAUNCHED_AGENT_RE = re.compile(r"Async agent launched.*?agentId: (a[0-9a-f]+)", re.DOTALL)
+_RESUMED_AGENT_RE = re.compile(r'resumedAgentId[\\"]*:\s*[\\"]*(a[0-9a-f]+)')
+_NOTIFIED_TASK_RE = re.compile(r"<task-id>([A-Za-z0-9_-]+)</task-id>")
+_AGENT_TOOLS = ("Agent", "Task")
+_RESUME_TOOLS = ("SendMessage",)
+
+
+def running_background_agents(transcript_path: str) -> set:
+    """Agent ids of this session's background builders still running: the
+    last event per agent wins, where a launch or a SendMessage resume
+    means running and a task-notification naming it means stopped.
+    Subagents write under the parent's session id, so a turn that ends
+    mid-fan-out would otherwise run the floor over builders' half-written
+    files (cueline 2026-10-08: a rust check timed out against a builder's
+    concurrent cargo build). Only results of the session's own Agent and
+    SendMessage calls count, so a Bash output quoting an agent id does not.
+    An unreadable transcript means none running, so the gate keeps working.
+    """
+    tool_names, running = {}, {}
+    try:
+        with open(transcript_path, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                if "agentId" not in line and "AgentId" not in line \
+                        and "<task-notification>" not in line and '"tool_use"' not in line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except ValueError:
+                    continue
+                kind = entry.get("type")
+                content = (entry.get("message") or {}).get("content")
+                blocks = content if isinstance(content, list) else []
+                if kind == "assistant":
+                    for block in blocks:
+                        if isinstance(block, dict) and block.get("type") == "tool_use":
+                            tool_names[block.get("id")] = block.get("name")
+                    continue
+                results = [b for b in blocks if isinstance(b, dict) and b.get("type") == "tool_result"]
+                for block in results:
+                    name = tool_names.get(block.get("tool_use_id"))
+                    text = json.dumps(block.get("content"))
+                    if name in _AGENT_TOOLS:
+                        for agent_id in _LAUNCHED_AGENT_RE.findall(text):
+                            running[agent_id] = True
+                    elif name in _RESUME_TOOLS:
+                        for agent_id in _RESUMED_AGENT_RE.findall(text):
+                            running[agent_id] = True
+                # The harness records a task-notification as queue-operation
+                # and attachment entries, never inside a tool result.
+                if not results and "<task-notification>" in line:
+                    for task_id in _NOTIFIED_TASK_RE.findall(line):
+                        if task_id in running:
+                            running[task_id] = False
+    except (OSError, TypeError):
+        return set()
+    return {agent_id for agent_id, alive in running.items() if alive}
+
+
+def resolve_launcher(argv: list, which=shutil.which) -> list:
+    """npm, pnpm and yarn are .cmd shims on Windows, which subprocess cannot
+    launch by bare name without a shell, so the check never ran at all."""
+    resolved = which(argv[0]) if argv else None
+    return [resolved, *argv[1:]] if resolved else list(argv)
 
 
 def npm_cmd(root: Path) -> str:
@@ -350,7 +417,7 @@ def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner, pa
         return run_scripts_repo_check(root, timeout, runner, paths)
 
     try:
-        proc = runner(argv, cwd=str(root), capture_output=True, text=True, timeout=timeout)
+        proc = runner(resolve_launcher(argv), cwd=str(root), capture_output=True, text=True, timeout=timeout)
     except FileNotFoundError as e:
         # The checker tool itself isn't on PATH - an environment gap, not a
         # code failure. Blocking a turn for that would trap the session over

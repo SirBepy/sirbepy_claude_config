@@ -470,7 +470,7 @@ def dual_stack_checks() -> list:
         def fake_runner(argv, **kwargs):
             # rust passes, node fails - distinguishable per-stack outcomes
             # so a joined summary/ok that ignored one stack is detectable.
-            if argv[0] == "cargo":
+            if Path(argv[0]).stem.lower() == "cargo":
                 return FakeProc(0, "RUST-MARKER: cargo test passed")
             return FakeProc(1, "NODE-MARKER: npm test failed")
 
@@ -585,6 +585,129 @@ def node_test_script_checks() -> list:
     return fails
 
 
+def _write_transcript(path: Path, entries: list) -> None:
+    path.write_text("\n".join(json.dumps(e) for e in entries) + "\n", encoding="utf-8")
+
+
+def _tool_call(tool_use_id: str, name: str, result_text: str) -> list:
+    return [
+        {"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": tool_use_id, "name": name, "input": {"prompt": "x"}},
+        ]}},
+        {"type": "user", "message": {"content": [
+            {"type": "tool_result", "tool_use_id": tool_use_id, "content": [{"type": "text", "text": result_text}]},
+        ]}},
+    ]
+
+
+def _agent_launch(tool_use_id: str, result_text: str) -> list:
+    return _tool_call(tool_use_id, "Agent", result_text)
+
+
+def _notification(*agent_ids: str) -> dict:
+    ids = "".join(f"<task-id>{a}</task-id>\n" for a in agent_ids)
+    text = f"<task-notification>\n{ids}<tool-use-id>toolu_X</tool-use-id>\n<status>completed</status>\n</task-notification>"
+    # The real transcript shape: the harness writes it as a queue-operation entry.
+    return {"type": "queue-operation", "operation": "enqueue", "content": text}
+
+
+def background_agent_checks() -> list:
+    """A turn that ends while this session's own background builders are
+    still editing must not run the floor over their half-written output:
+    the gate defers (allows the turn, keeps the flag) until they report."""
+    fails = []
+    lib = _testlib.load_module("testing_floor_lib_for_bg_test", _HOOKS_DIR / "_testing_floor_lib.py")
+    launched = "Async agent launched successfully.\nagentId: a1f00 (internal ID)\nThe agent is working in the background."
+    resumed = json.dumps({"success": True, "resumedAgentId": "a1f00"})
+
+    def check(label, ok, detail):
+        print(f"[{'PASS' if ok else 'FAIL'}] background agents: {label} -> {detail}")
+        if not ok:
+            fails.append(f"background agents: {label}")
+
+    with tempfile.TemporaryDirectory(prefix="testing-floor-bg-") as tmp:
+        tmp_path = Path(tmp)
+        running_t = tmp_path / "running.jsonl"
+        _write_transcript(running_t, _agent_launch("toolu_A", launched))
+        done_t = tmp_path / "done.jsonl"
+        _write_transcript(done_t, _agent_launch("toolu_A", launched) + [_notification("a1f00")])
+        fg_t = tmp_path / "foreground.jsonl"
+        _write_transcript(fg_t, _agent_launch("toolu_B", "Builder report: all green."))
+        resumed_t = tmp_path / "resumed.jsonl"
+        _write_transcript(
+            resumed_t,
+            _agent_launch("toolu_A", launched) + [_notification("a1f00", "a2bad")]
+            + _tool_call("toolu_S", "SendMessage", resumed),
+        )
+        quoted_t = tmp_path / "quoted.jsonl"
+        _write_transcript(
+            quoted_t,
+            _agent_launch("toolu_A", launched) + [_notification("a1f00")]
+            + _tool_call("toolu_Q", "Bash", launched),
+        )
+
+        got = lib.running_background_agents(str(running_t))
+        check("unreported async launch counts as running", got == {"a1f00"}, got)
+        got = lib.running_background_agents(str(done_t))
+        check("a task-notification for it means finished", got == set(), got)
+        got = lib.running_background_agents(str(resumed_t))
+        check("a SendMessage resume after its notification counts as running again", got == {"a1f00"}, got)
+        got = lib.running_background_agents(str(quoted_t))
+        check("a Bash output quoting the launch text does not count", got == set(), got)
+        got = lib.running_background_agents(str(fg_t))
+        check("a foreground agent never counts", got == set(), got)
+        got = lib.running_background_agents(str(tmp_path / "missing.jsonl"))
+        check("an unreadable transcript counts as none running", got == set(), got)
+
+        state_dir = tmp_path / "state"
+        for label, transcript, expect_block in (
+            ("running builder defers a failing check", running_t, False),
+            ("finished builder lets a failing check block", done_t, True),
+        ):
+            state_dir.mkdir(exist_ok=True)
+            flag = state_dir / "s1"
+            flag.write_text(json.dumps({"attempts": 0, "root": tmp, "paths": []}), encoding="utf-8")
+            got = guard.evaluate(
+                {"session_id": "s1", "transcript_path": str(transcript)},
+                state_dir=state_dir,
+                skip_flag_path=tmp_path / "no-skip",
+                cap=3,
+                run_checks_fn=fake_run_checks(False),
+                env={},
+            )
+            check(label, (got is not None) == expect_block, got)
+            if not expect_block:
+                check("deferral keeps the flag for the next turn", flag.is_file(), flag.is_file())
+    return fails
+
+
+def launcher_resolution_checks() -> list:
+    """Windows ships npm/pnpm/yarn as .cmd shims; subprocess without a
+    shell cannot launch a bare `npm`, so the check silently never ran."""
+    fails = []
+    lib = _testlib.load_module("testing_floor_lib_for_launcher_test", _HOOKS_DIR / "_testing_floor_lib.py")
+    for label, which, expect in (
+        ("a .cmd shim on PATH replaces the bare name", lambda n: r"C:\nodejs\npm.cmd", [r"C:\nodejs\npm.cmd", "test"]),
+        ("nothing on PATH leaves argv as is", lambda n: None, ["npm", "test"]),
+    ):
+        got = lib.resolve_launcher(["npm", "test"], which=which)
+        ok = got == expect
+        print(f"[{'PASS' if ok else 'FAIL'}] launcher: {label} -> {got!r}")
+        if not ok:
+            fails.append(f"launcher: {label}")
+    return fails
+
+
+def _guarded(fn):
+    def _run():
+        try:
+            return fn()
+        except Exception as e:
+            print(f"[FAIL] {fn.__name__} raised: {e!r}")
+            return [fn.__name__]
+    return _run
+
+
 def run() -> int:
     fails = (
         unit_checks()
@@ -593,6 +716,8 @@ def run() -> int:
         + dual_stack_checks()
         + scripts_repo_targeting_checks()
         + node_test_script_checks()
+        + _guarded(background_agent_checks)()
+        + _guarded(launcher_resolution_checks)()
     )
     return _testlib.summarize(fails)
 
