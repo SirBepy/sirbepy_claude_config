@@ -22,14 +22,11 @@ _ENVELOPE_TAG_RE = re.compile(r'^(\[[^\[\]\n]+\]\s*)+')
 # `<agent-message from="...">` followed by a newline, then a line starting
 # `[Subagent hand-back]`; one captured hand-back carried the harness's own
 # neutralized form `<\agent-message` instead of the raw tag, so both are
-# checked. The hand-back marker line is checked across the first 3 lines
-# (not just line 2) so an envelope with extra leading blank/whitespace lines
-# still matches.
+# checked. The marker alone never counts: a typed prompt can quote it.
 _normalized = _ZERO_WIDTH_RE.sub('', prompt).lstrip()
 _is_handback_envelope = (
     _normalized.startswith('<agent-message ')
     or _normalized.startswith('<\\agent-message')
-    or any('[Subagent hand-back]' in line for line in _normalized.split('\n', 3)[:3])
 )
 if (
     _normalized.startswith('[SYSTEM NOTIFICATION')

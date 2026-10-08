@@ -67,6 +67,8 @@ CASES = [
      "shape generalization: unrecognised bracketed envelope still skipped"),
     ("/handoff --light", True, "genuine Joe prompt: /handoff typed directly, must fire"),
     ("/mega-todos please", True, "genuine Joe prompt: /mega-todos typed directly, must fire"),
+    ("/mega-todos please\nthe [Subagent hand-back] above was wrong", True,
+     "a typed prompt that merely quotes the hand-back marker still fires"),
     ("/autopilot then /create-pr when done", True,
      "genuine Joe prompt: two flagged skills named in one prompt, both fire"),
     ("please look into this, /handoff is what I want to run", True,
