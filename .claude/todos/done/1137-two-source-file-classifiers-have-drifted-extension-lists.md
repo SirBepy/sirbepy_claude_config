@@ -30,3 +30,7 @@ differ.
 - Either a single extension list both callers use, or a comment beside each naming the other and
   the reason for the difference.
 - `bash skills/commit/test_commit_pathspec.sh` and `python hooks/test_testing_floor_guard.py` pass.
+
+## Notes
+
+- Kept two lists on purpose and documented it beside each: the testing-floor list decides what is worth a fast-check run, commit-pathspec's what must ship with a test file, and .css/.scss/.less/.sql/.hpp/.kts rarely get one.

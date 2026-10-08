@@ -71,7 +71,9 @@ EXCLUDED_SUFFIXES = {
 
 # Deliberately an allowlist, not a denylist: an unrecognised extension stays
 # OFF (activation gate biases toward silence - "most turns edit prose and
-# must not trigger anything", the todo's own framing).
+# must not trigger anything", the todo's own framing). Broader on purpose than
+# skills/commit/commit-pathspec.sh's is_source_file(), which decides what must ship
+# with a test file; a .css or .sql edit is still worth a fast-check run.
 SOURCE_SUFFIXES = {
     ".py", ".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx",
     ".rs", ".dart", ".lua", ".luau", ".go", ".rb",

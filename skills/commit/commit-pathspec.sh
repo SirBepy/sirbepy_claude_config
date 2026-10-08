@@ -726,6 +726,9 @@ fi
 # touches no test file" rule, mechanised instead of applied by eye per commit.
 # Deleted paths count as changed - $files already holds them (classify_path above), and removing
 # a source file untested is the same unverified-change shape as editing one.
+# Deliberately narrower than hooks/_testing_floor_lib.py's SOURCE_SUFFIXES: that list decides what
+# is worth a fast-check run, this one what must ship with a test file, and stylesheets, SQL,
+# C++ headers and Gradle scripts rarely get a test file of their own.
 is_source_file() {
   case "$1" in
     .claude/todos/*|*/.claude/todos/*) return 1 ;;
