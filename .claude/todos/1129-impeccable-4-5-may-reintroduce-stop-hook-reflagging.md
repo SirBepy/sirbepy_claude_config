@@ -17,7 +17,9 @@ v4.5.0: the JS hook scripts are gone, and the hooks now run a signed native bina
 (`scripts/bin/windows-x64/impeccable.exe hook`, wired by the installer into the gitignored
 `settings.local.json`). The local patch and its test no longer exist; the Python wrapper was deleted
 because it only checked a file that is gone. Nobody has checked whether upstream fixed the same bug.
-Also: the tracked `settings.json` still has two impeccable hook entries pointing at the deleted
+The same update also overwrote commit 540c946's local edits to `reference/new-work.md` (scoping
+code-check by language, SRI hash pins); `skills/VENDORED.md` now records both as lost. Check whether
+4.5.0's `new-work.md` still needs them. Also: the tracked `settings.json` still has two impeccable hook entries pointing at the deleted
 `scripts/hook.mjs`; they no-op (`[ ! -f ... ] ||`) and can be removed.
 
 ## Approach

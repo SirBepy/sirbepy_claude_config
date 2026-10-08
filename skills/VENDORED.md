@@ -38,7 +38,7 @@ frontmatter carries one (`impeccable` does; the Cloudflare skills don't).
 | web-perf | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | **Yes** - flag only |
 | workers-best-practices | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | **Yes** - flag only |
 | wrangler | github.com/cloudflare/skills | unknown | 2026-08-12 (commit 4cc2977) | **Yes** - flag only |
-| impeccable | github.com/pbakaus/impeccable (npm package `impeccable`, author Paul Bakaus) | 4.0.4 (from the skill's own frontmatter, not independently verified against current upstream) | 2026-08-12 (commit 4cc2977) | **Yes** - `reference/new-work.md`, commit `540c946 FIX: scope code-check by language, unbloat impeccable's contract, pin SRI hashes (94, 106, 248, 282)` |
+| impeccable | github.com/pbakaus/impeccable (npm package `impeccable`, author Paul Bakaus) | 4.5.0 (via `npx impeccable@4.1.0 update`, 2026-10-08) | 2026-10-08 (commit 80dd5a5) | **Only the trimmed `description`** - the update overwrote the earlier local patches (`540c946`'s `reference/new-work.md` changes and `1f9eb1d`'s stop-hook fix); whether they are still needed is todo 1129 |
 
 ## The "flag only" patch, 2026-08-18
 
