@@ -17,6 +17,11 @@ send_message, resets to 0 the moment one lands, and blocks only once the
 streak reaches SILENT_TURN_THRESHOLD. That is what makes a lone quiet turn
 pass while a whole quiet chat does not.
 
+A turn that updated `write_plan` resets the counter the same way a
+`send_message` does: during an autopilot or loop run Joe wants progress in the
+plan checklist and a bubble only for blockers, decisions and the final
+summary (his answer, 2026-10-07), so a plan update is the turn's report.
+
 Relay exception (410's own carve-out): a turn whose only real input was a
 `[daemon-meta]` peer relay is exempt from both the block AND the counter, but
 only when its own tool calls are limited to RELAY_SAFE_SUFFIXES - a relay turn
@@ -225,6 +230,10 @@ def main() -> None:
                 "substance inlined, not a pointer to it. (todo 782)"
                 % (decoy_text[:200],)
             )
+        _reset_counter(session_id)
+        sys.exit(0)
+
+    if "write_plan" in suffixes:
         _reset_counter(session_id)
         sys.exit(0)
 

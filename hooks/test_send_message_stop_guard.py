@@ -212,6 +212,26 @@ with tempfile.TemporaryDirectory() as tmp:
     ok = ok1 and ok2
     fails += [] if _testlib.report(ok, f"{label} -> ok1={ok1} ok2={ok2}") else [label]
 
+    # --- integration: a write_plan update counts as reporting ---
+
+    label = "write_plan turns never build a streak: three in a row all pass"
+    t_plan = write_transcript(
+        tmpdir, "t3c.jsonl", "keep building",
+        ["mcp__cc_conductor__write_plan", "mcp__cc_conductor__report_turn_status"],
+    )
+    results = [run_stop(t_plan, "sess-plan") for _ in range(3)]
+    ok = all(code == 0 and '"decision"' not in out for code, out in results)
+    fails += [] if _testlib.report(ok, f"{label} -> {results!r}") else [label]
+
+    label = "a write_plan turn resets a prior silent streak"
+    t_silent_p = write_transcript(tmpdir, "t3d.jsonl", "keep building", ["mcp__cc_conductor__report_turn_status"])
+    run_stop(t_silent_p, "sess-plan2")
+    run_stop(t_silent_p, "sess-plan2")
+    run_stop(t_plan, "sess-plan2")
+    code, out = run_stop(t_silent_p, "sess-plan2")
+    ok = code == 0 and '"decision"' not in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
+
     # --- integration: relay exception (todo 410's own carve-out) ---
 
     label = "a relay-only turn (report_turn_status only) is exempt, even on the 3rd streak position"
