@@ -14,6 +14,11 @@ asserts on the emitted HTML:
 - todo 1036 (P2s): a sub-14px block keeps a visible dot glyph instead of a
   blank div, hour gridlines exist on the day columns, and .chip-old carries
   a non-default accent color.
+- todo 1036 (P3): rendering a full Mon-Sun week where only Monday has
+  entries puts the diagonal hatch class on the two empty weekend columns
+  (Sat, Oct 3 / Sun, Oct 4) and nowhere else - the four empty weekdays in
+  between (Tue-Fri) stay plain, since an empty weekday is the thing the
+  hatch exists to NOT look like.
 - the actual "safe path" this suite exists to pin down: a description
   containing HTML metacharacters comes out of escHtml escaped, never
   injected raw - nothing else in the skill exercises that against an
@@ -56,7 +61,7 @@ def render(tmp_dir: Path) -> str:
     entries_path.write_text(json.dumps(ENTRIES), encoding="utf-8")
     result = subprocess.run(
         ["node", str(SCRIPT), "--entries", str(entries_path), "--out", str(out_path),
-         "--project", "TestProj", "--week-start", "2026-09-28", "--week-end", "2026-09-28",
+         "--project", "TestProj", "--week-start", "2026-09-28", "--week-end", "2026-10-04",
          "--target-hours", "8"],
         capture_output=True, text=True, cwd=str(ROOT), timeout=TIMEOUT_SECONDS,
     )
@@ -88,6 +93,13 @@ def main() -> int:
     check("34px" in html, "the gridline step matches HOUR_PX (34)")
 
     check(".chip-old { color:#8fd6ab; }" in html, ".chip-old carries the critique's non-default accent color")
+
+    # 2026-09-28 is a Monday; the --week-end 2026-10-04 above runs the grid through that Sunday, so
+    # Sat 10/3 and Sun 10/4 are the only two columns with zero entries AND a weekend date. Match the
+    # div's class attribute specifically - "v2-colbody-hatch" alone also matches its own CSS rule
+    # selector earlier in the same document, which would overcount by one.
+    check(html.count('class="v2-colbody v2-colbody-hatch"') == 2, "exactly the two empty weekend columns (Sat, Sun) get the hatch class")
+    check(html.count('class="v2-colbody"') == 5, "Monday (has data) and the four empty weekdays (Tue-Fri) stay plain, no hatch class")
 
     check('<script>alert(1)</script>' not in html, "raw HTML in a description never reaches the output unescaped")
     check('&lt;script&gt;alert(1)&lt;/script&gt;' in html, "the same description comes out escaped")

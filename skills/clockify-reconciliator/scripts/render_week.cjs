@@ -118,7 +118,7 @@ function heroHtml() {
         <circle cx="70" cy="70" r="${r}" fill="none" stroke="${ringColor}" stroke-width="12"
           stroke-dasharray="${dash} ${c - dash}" stroke-linecap="round"
           transform="rotate(-90 70 70)"/>
-        <text x="70" y="64" text-anchor="middle" font-size="26" font-weight="700" fill="#e6e8ec">${fmtHM(totalMin)}</text>
+        <text x="70" y="64" text-anchor="middle" font-size="27" font-weight="700" fill="#e6e8ec">${fmtHM(totalMin)}</text>
         <text x="70" y="86" text-anchor="middle" font-size="11" fill="#7d8492">${hasTarget ? 'of ' + fmtHM(targetMin) + ' target' : 'this window'}</text>
       </svg>
     </div>
@@ -187,10 +187,16 @@ function timelineHtml() {
     }).join('');
     const t = dayTotals[d] || { old: 0, edit: 0, new: 0, meeting: 0 };
     const total = t.old + t.edit + t.new + t.meeting;
+    // An empty Sat/Sun column is a normal, expected shape (the dev doesn't usually log weekends);
+    // an empty weekday column is more often a sign the fetch missed something. The hatch (2026-09-28
+    // critique P3) marks only the former so the two don't read as the same "nothing here" blank.
+    const dow = new Date(d + 'T00:00:00Z').getUTCDay();
+    const isWeekend = dow === 0 || dow === 6;
+    const hatchClass = isWeekend && total === 0 ? ' v2-colbody-hatch' : '';
     // Background gridline step matches HOUR_PX so each line lands exactly on an hour boundary
     // (2026-09-28 critique P2: unmarked column body made tracing a block back to its hour in a
     // far-right column an eyeballing exercise across most of the card's width).
-    return `<div class="v2-col"><div class="v2-colhead"><span class="v2-dname">${dayLabel(d)}</span><span class="v2-ddate">${dateLabel(d)}</span><span class="v2-dtot">${total > 0 ? fmtHM(total) : '-'}</span></div><div class="v2-colbody" style="height:${gridHeight}px;background-image:repeating-linear-gradient(to bottom, #262c38 0, #262c38 1px, transparent 1px, transparent ${HOUR_PX}px)">${blocks}<div class="v2-other-lane">${otherBlocks}</div></div></div>`;
+    return `<div class="v2-col"><div class="v2-colhead"><span class="v2-dname">${dayLabel(d)}</span><span class="v2-ddate">${dateLabel(d)}</span><span class="v2-dtot">${total > 0 ? fmtHM(total) : '-'}</span></div><div class="v2-colbody${hatchClass}" style="height:${gridHeight}px;background-image:repeating-linear-gradient(to bottom, #262c38 0, #262c38 1px, transparent 1px, transparent ${HOUR_PX}px)">${blocks}<div class="v2-other-lane">${otherBlocks}</div></div></div>`;
   }).join('');
 
   let hourLabels = '';
@@ -225,6 +231,9 @@ const html = `<!doctype html>
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
 <style>
   * { box-sizing: border-box; }
+  /* Modular type scale, ratio 1.25 rounded to whole px. Every font size maps onto a step, so the
+     hierarchy stays wider than the flat 1.7:1 a 2026-09-28 critique flagged. */
+  :root { --fs-xs:9px; --fs-sm:11px; --fs-md:14px; --fs-lg:18px; --fs-xl:22px; --fs-xxl:27px; }
   html { scrollbar-width:thin; scrollbar-color:#363c48 #0b0d11; }
   html::-webkit-scrollbar { width:10px; }
   html::-webkit-scrollbar-track { background:#0b0d11; }
@@ -234,18 +243,18 @@ const html = `<!doctype html>
   .card { border:1px solid #262a33; border-radius:10px; padding:20px; background:#0f1115; max-width:1300px; }
 
   .hero { display:flex; gap:22px; align-items:center; padding-bottom:18px; border-bottom:1px solid #20242d; margin-bottom:18px; }
-  .hero-title { font-size:15px; font-weight:600; }
-  .hero-target { font-size:12.5px; color:#7d8492; margin:2px 0 10px; }
+  .hero-title { font-size:var(--fs-md); font-weight:600; }
+  .hero-target { font-size:var(--fs-sm); color:#7d8492; margin:2px 0 10px; }
   .hero-target .over { color:#e0a94c; }
   .hero-chips { display:flex; gap:10px; flex-wrap:wrap; }
-  .chip { display:inline-flex; align-items:center; gap:5px; font-size:11.5px; padding:4px 9px; border-radius:12px; background:#1a1e26; color:#c3c8d1; }
-  .chip i { font-size:12px; }
+  .chip { display:inline-flex; align-items:center; gap:5px; font-size:var(--fs-sm); padding:4px 9px; border-radius:12px; background:#1a1e26; color:#c3c8d1; }
+  .chip i { font-size:var(--fs-sm); }
   .chip-new { color:#5eead4; }
   .chip-edit { color:#8fb8ff; }
   .chip-meeting { color:#c9b6f5; }
   .chip-old { color:#8fd6ab; }
 
-  .legend { display:flex; gap:16px; margin-top:14px; font-size:12px; color:#c3c8d1; }
+  .legend { display:flex; gap:16px; margin-top:14px; font-size:var(--fs-sm); color:#c3c8d1; }
   .legend-item { display:flex; align-items:center; gap:6px; }
   .sw { width:11px; height:11px; border-radius:2px; display:inline-block; }
   .sw-old { background:#3f7a56; }
@@ -261,15 +270,22 @@ const html = `<!doctype html>
   .v2-cal::-webkit-scrollbar-thumb:hover { background:#454c5a; }
   .v2-gutter { width:40px; flex-shrink:0; position:sticky; left:0; z-index:1; background:#12151b; }
   .v2-hourcol { position:relative; }
-  .v2-hourlabel { position:absolute; right:6px; transform:translateY(-6px); font-size:9px; color:#5b616d; }
+  .v2-hourlabel { position:absolute; right:6px; transform:translateY(-6px); font-size:var(--fs-xs); color:#5b616d; }
   .v2-cols { display:flex; flex:1; min-width:760px; }
   .v2-col { flex:1; border-left:1px solid #2a3040; position:relative; }
   .v2-colhead { display:flex; flex-direction:column; padding:6px 6px 4px; background:#12151b; border-bottom:1px solid #20242d; }
-  .v2-dname { font-size:11px; font-weight:700; }
-  .v2-ddate { font-size:9px; color:#5b616d; }
-  .v2-dtot { font-size:10.5px; color:#5fd99a; font-weight:600; margin-top:1px; }
+  .v2-dname { font-size:var(--fs-sm); font-weight:700; }
+  .v2-ddate { font-size:var(--fs-xs); color:#5b616d; }
+  .v2-dtot { font-size:var(--fs-sm); color:#5fd99a; font-weight:600; margin-top:1px; }
   .v2-colbody { position:relative; }
-  .v2-block { position:absolute; left:2px; right:10px; border-radius:3px; font-size:9px; line-height:1.15; cursor:default; }
+  /* Diagonal hatch overlay (2026-09-28 critique P3): a Sat/Sun column with zero entries is an
+     expected shape, not a missed fetch, so it gets a visual marker a weekday-empty column doesn't -
+     a pseudo-element layer keeps it independent of the hour-gridline background set inline above. */
+  .v2-colbody-hatch::before {
+    content: ''; position:absolute; inset:0; pointer-events:none;
+    background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.045) 0, rgba(255,255,255,0.045) 1px, transparent 1px, transparent 9px);
+  }
+  .v2-block { position:absolute; left:2px; right:10px; border-radius:3px; font-size:var(--fs-xs); line-height:1.15; cursor:default; }
   .v2-block-inner { height:100%; padding:2px 4px; overflow:hidden; }
   .v2-old { background:#2d5940; color:#cfe8da; }
   .v2-edit { background:#274870; border-left:3px solid #8fb8ff; color:#dbe8fb; }
@@ -277,17 +293,17 @@ const html = `<!doctype html>
   .v2-meeting { background: repeating-linear-gradient(45deg,#5b4390,#5b4390 4px,#4a3577 4px,#4a3577 8px); color:#ece6fb; }
   .v2-time { display:block; font-weight:600; opacity:0.85; }
   .v2-desc { display:block; }
-  .v2-dot { display:block; text-align:center; font-size:8px; line-height:1; opacity:0.85; }
+  .v2-dot { display:block; text-align:center; font-size:8px; line-height:1; opacity:0.85; } /* below --fs-xs on purpose: the smallest glyph that still fits an 8px-tall block */
   .v2-other-lane { position:absolute; top:0; right:0; bottom:0; width:6px; }
   .v2-other-block { position:absolute; left:0; right:0; border:1px dashed #4a4f5c; border-radius:2px; background:transparent; }
   .v2-block[data-tip]:hover::after {
     content: attr(data-tip); white-space: pre-line; position:absolute; left:105%; top:0; z-index:10;
     background:#1c1f27; border:1px solid #333a47; color:#e6e8ec; padding:8px 10px; border-radius:6px;
-    font-size:11px; width:220px; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    font-size:var(--fs-sm); width:220px; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
   }
   .v2-block.v2-tip-up[data-tip]:hover::after { top:auto; bottom:0; }
   .v2-block.v2-tip-left[data-tip]:hover::after { left:auto; right:105%; }
-  .footer { margin-top:10px; font-size:11px; color:#7d8492; }
+  .footer { margin-top:10px; font-size:var(--fs-sm); color:#7d8492; }
 </style>
 </head>
 <body>

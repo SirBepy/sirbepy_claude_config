@@ -65,3 +65,4 @@ result does, per this session's own back-and-forth pattern.
 
 Joe's own priority call on this list is unknown - ask before batching all four into one session,
 since he may only want a subset (same pattern as the P1-only pick earlier in this same session).
+- Completed 2026-10-08 (loop-todos cycle 1): render_week.cjs 1.25 modular type scale and a diagonal hatch on empty Sat/Sun columns, 2 new test_render_week checks; shown to Joe as show_preview card clockify-week-1036 on sample data.

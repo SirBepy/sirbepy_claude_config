@@ -44,3 +44,7 @@ In `C:\Users\tecno\.claude\skills\clockify-reconciliator\SKILL.md` step 9a:
 - Step 9a forbids the endpoint whenever `show_preview` exists and cites this incident.
 - If the minify option is taken, the rendered card is visually unchanged (check it once via
   `show_preview`).
+
+## Notes
+
+- Completed 2026-10-08 (loop-todos cycle 1): step 9a forbids the HTTP preview fallback whenever show_preview exists, deferred or loaded, citing the 2026-10-07 incident.

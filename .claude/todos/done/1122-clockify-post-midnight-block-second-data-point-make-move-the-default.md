@@ -45,3 +45,7 @@ Edit `C:\Users\tecno\.claude\skills\clockify-reconciliator\SKILL.md` step 7's la
 - Step 7 lists both data points with dates and states the move-by-default rule.
 - Step 9 no longer asks a separate post-midnight placement question.
 - A 22:00-00:00 block is still explicitly out of scope for the move.
+
+## Notes
+
+- Completed 2026-10-08 (loop-todos cycle 1): clockify SKILL.md step 7 makes the post-midnight move the default (both data points dated), step 9 asks no separate placement question.

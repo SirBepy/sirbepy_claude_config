@@ -281,18 +281,18 @@ For each target:
 - If a matched commit subject hits `ticket_regex`, strip the matched ticket prefix from the description body (don't repeat it in the text) and append ` (53794)` using just the captured number, once, at the end only. Never leave the ticket number both leading the body and trailing in parens.
 - **Never use the same description verbatim on two chunks.** If all commits land in one chunk leaving others empty, split the description on semicolons: assign the pre-semicolon part to the first chunk and the post-semicolon part(s) to the remaining chunk(s). If there are more chunks than semicolon-delimited parts, the last non-ticket part fills the extras.
 - If a day has zero commits at all across all repos, ask the dev what was done before proposing.
-- **A block starting between roughly 00:00 and 06:00 local is a placement decision, not a
-  mechanical one** - unlike a late-evening block (e.g. `22:00-00:00`), which renders untouched with
-  no question asked. Flag it for step 9's `AskUserQuestion` instead of silently rendering it at its
-  real small-hours time: keep it at the real hour, or move it into that day's daytime hours (the dev
-  names the slot). Neither can be defaulted silently - the skill has no way to know whether the true
-  hour matters to whoever reads this Clockify project, keeping it forces step 9a's calendar crop
-  down to 01:00 (a multi-hour empty band paid for one short block), and moving it without asking
-  invents a time the evidence doesn't support. The commit still counts on its own calendar day
-  either way (step 6's late-night-spillover split is unchanged); whichever boundary results still
-  lands on a 5-minute mark. One data point so far (2026-09-25: dev rejected a rendered `01:45-02:25`
-  block in favor of `13:30-14:15`) - if a second run confirms the dev always wants these moved,
-  replace this question with that default and record both data points here first.
+- **A block starting between roughly 00:00 and 06:00 local moves by default** - unlike a
+  late-evening block (e.g. `22:00-00:00`), which still renders untouched, no move, no question.
+  Move the small-hours block into that day's daytime gap nearest the start of the day's real work,
+  keeping its real duration and landing both boundaries on a 5-minute mark; shrink/shift around a
+  same-project entry rather than overlapping it (step 4a's overlap rule still applies). The commit
+  still counts on its own calendar day either way (step 6's late-night-spillover split is
+  unchanged). Report the move in step 9's plan text (e.g. "00:36-00:57 activity moved to
+  13:05-13:25") - the dev can still override it at the apply/some/cancel gate, no separate question
+  needed to get there. Two data points backed this default, both to the SAME day's afternoon, not
+  the next working day: (2026-09-25, done/1016): dev rejected a rendered `01:45-02:25` block in
+  favor of `13:30-14:15`. (2026-10-07, Zirtue week of 2026-10-05): two sessions resumed Tue
+  00:36-00:57; dev picked "Tue afternoon" over "drop" and "keep real time", written as `13:05-13:25`.
 
 ### 7a. Dual-bound sanity check (mandatory before presenting)
 
@@ -358,9 +358,8 @@ admin and zng biller?" after a sweep that had already checked both, because noth
 
 Show a table: date, start-end, duration, proposed split, proposed description(s). Precede it with
 the step 9a hero-card-plus-timeline preview (its column headers carry the day-by-day totals, so
-there is no separate day-summary table to print here). If step 7 flagged a post-midnight block,
-resolve its placement (real small-hours time vs a dev-named daytime slot) as its own
-`AskUserQuestion` before the apply/some/cancel question below, not folded into it. Use
+there is no separate day-summary table to print here). A post-midnight block moved per step 7's
+default shows its moved time in this table directly - no separate placement question. Use
 AskUserQuestion:
 
 - Apply all
@@ -397,10 +396,16 @@ hand.
 - `--out <path.html>`: where the rendered card is written. Read it back and push its contents with
   the `show_preview` MCP tool: `{ slug: "clockify-week", html, title }`. Re-pushing the same slug in
   step 13 replaces the card in place, so the step 9 proposal and the step 13 final state are ONE
-  card, not two. If the tool is unavailable (a plain terminal session, or an app build predating
-  it), fall back to `POST http://127.0.0.1:27182/hooks/preview` with the same slug; connection
-  refused means skip silently, the tables in step 9's own text are the deliverable there and no
-  error is surfaced to the dev.
+  card, not two. **If `show_preview` is in the tool list at all (deferred or already loaded), it is
+  the ONLY allowed transport - never the HTTP fallback, not even to save the tokens of inlining
+  ~16KB of HTML.** The fallback (`POST http://127.0.0.1:27182/hooks/preview` with the same slug) is
+  for sessions where the tool genuinely does not exist, full stop; connection refused there means
+  skip silently, the tables in step 9's own text are the deliverable and no error is surfaced to the
+  dev. 2026-10-07, Zirtue week of 2026-10-05: with `show_preview` already loaded, the run read
+  `render_week.cjs`'s output file and POSTed it to the HTTP endpoint instead to dodge inlining the
+  HTML. The endpoint answered 200 with an id, the run told the dev the card was up, and the dev never
+  saw anything ("i dont see the preview man"). A 200 from the endpoint is not proof the dev saw
+  anything - it proves nothing past "the local listener accepted bytes."
 
 Build this every run - the only path that skips it is a failed push after both transports above
 have been tried. Judging it optional for any other reason (a short window, a simple week, a sense
