@@ -24,7 +24,7 @@ collision set is the sharp end of this, not the regex.
 ## Context
 
 Reproduced 2026-08-22 in `claude_usage_in_taskbar`, two concurrent Conductor sessions on the repo
-channel. A peer's `post_message` body opened with the words "/mega-todos session — FYI, I touched
+channel. A peer's `post_message` body opened with the words "/mega-todos session â€” FYI, I touched
 one file", and that turn's context arrived carrying:
 
 > Skill "mega-todos" (disable-model-invocation: true, NOT shown in your Skill tool listing) was
@@ -37,18 +37,18 @@ on their own, so an auto-triggered run writes to the repo.
 **The hook already has a guard for exactly this** (lines 12-21): it strips zero-width characters,
 then exits 0 if the prompt starts with `[SYSTEM NOTIFICATION` or a run of bracketed `[tag]` markers.
 Conductor's relayed messages do carry that envelope - the transcript shows every one of them
-beginning `​[daemon-meta]​[repo-channel] <author>: <body>`, and `​` is in the hook's
+beginning `â€‹[daemon-meta]â€‹[repo-channel] <author>: <body>`, and `â€‹` is in the hook's
 strip set. So the guard looks like it should hold.
 
 Measured, this session, against the real hook:
 
 | input | fires? |
 |---|---|
-| `​[daemon-meta]​[repo-channel] … /mega-todos session - FYI.` | **no** |
-| `[daemon-meta][repo-channel] … /mega-todos session - FYI.` | **no** |
-| `​[daemon-meta]​[repo-channel] … Verified all three of your points.` | no |
+| `â€‹[daemon-meta]â€‹[repo-channel] â€¦ /mega-todos session - FYI.` | **no** |
+| `[daemon-meta][repo-channel] â€¦ /mega-todos session - FYI.` | **no** |
+| `â€‹[daemon-meta]â€‹[repo-channel] â€¦ Verified all three of your points.` | no |
 | `/mega-todos please` | yes |
-| `⁠[daemon-meta]⁠[repo-channel] … /mega-todos session - FYI.` | **yes** |
+| `â [daemon-meta]â [repo-channel] â€¦ /mega-todos session - FYI.` | **yes** |
 
 So the guard DOES hold against the exact text the transcript stores. Yet it fires in production.
 
@@ -65,7 +65,7 @@ against an enveloped prompt and both got "no fire". So:
 Conductor daemon, by "carrying the envelope into `payload['prompt']`". The daemon already does that.
 `daemon/methods/channel.rs:115` builds `[repo-channel] {author}: {text}`, and
 `daemon/repo_channel_wake.rs:69` sends it via `send_message_with_respawn(..., is_meta: true)`, which
-prepends `DAEMON_META_SENTINEL` (`​[daemon-meta]​`). The CLI's own transcript proves it
+prepends `DAEMON_META_SENTINEL` (`â€‹[daemon-meta]â€‹`). The CLI's own transcript proves it
 arrives intact - every relayed message is persisted starting with those exact bytes.
 
 So the envelope is present on the CLI's stdin and absent from the hook's payload. **By elimination
@@ -79,11 +79,11 @@ run suppresses the hook, so if only `DAEMON_META_SENTINEL` had been stripped, wh
 
 | payload's first line begins | fires? |
 |---|---|
-| `[repo-channel] Author: /mega-todos …` | no |
-| `[repo-channel] /mega-todos …` | no |
-| `[daemon-meta][repo-channel] Author: /mega-todos …` | no |
-| `Author: /mega-todos …` (author kept, brackets gone) | **yes** |
-| `/mega-todos …` (bare body) | **yes** |
+| `[repo-channel] Author: /mega-todos â€¦` | no |
+| `[repo-channel] /mega-todos â€¦` | no |
+| `[daemon-meta][repo-channel] Author: /mega-todos â€¦` | no |
+| `Author: /mega-todos â€¦` (author kept, brackets gone) | **yes** |
+| `/mega-todos â€¦` (bare body) | **yes** |
 
 So the payload's first line begins with something that is not a bracketed tag. The last two rows are
 both consistent with what was observed, so this narrows the loss to "the whole leading `[tag]` run is
@@ -181,6 +181,7 @@ sender.** Every `post_message` returned `ok: true` and looked normal from its si
 its messages were injecting a skill into another session because that session told it.
 
 - /loop-todos 2026-10-05: step 4 (wording) confirmed already shipped (test check_wording passes). Steps 1-3 still need a raw UserPromptSubmit payload captured during a LIVE peer relay landing on the session itself, which a builder subagent cannot manufacture; left open.
+- Done 2026-10-08 per Joe (capture + fix). The capture recorded 10 real false fires in session 24016c48 within minutes, all from SUBAGENT HAND-BACKS: payload keys are cwd, hook_event_name, permission_mode, prompt, prompt_id, session_id, transcript_path (no distinguishing field), but every prompt begins with an <agent-message from=...> / [Subagent hand-back] envelope, which survives into payload.prompt. The hook now skips that envelope (and the neutralized <\agent-message form). Live proof: the very next hand-back, which quoted /auto-do-todos and /mega-todos, injected nothing. Conductor peer-channel relays now arrive as a bodiless [daemon-meta] read_messages notification, so the original peer-relay trigger no longer reaches the hook at all. Capture moved to the gitignored hooks/.flagged-skill-capture.jsonl, since write-session-marker.ps1 prunes non-session files in .session-markers/. Raw evidence saved in .for_bepy/screenshots/33628-134359307865973543/flagged-skill-capture-saved.jsonl. The todo-342 corpus regression run was not repeated.
 
 ## Answers 2026-10-08
 

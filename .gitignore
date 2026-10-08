@@ -88,6 +88,7 @@ hooks/.pr-marker*
 hooks/.outbound-marker*
 hooks/.shortcut-marker*
 hooks/.session-markers/
+hooks/.flagged-skill-capture.jsonl
 hooks/.ui-screenshot-reminder-session-*
 hooks/.testing-floor-pending/
 hooks/.testing-floor-skip
