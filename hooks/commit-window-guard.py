@@ -191,8 +191,9 @@ def _segment_landings(tokens: list[str]) -> list[tuple[str, str | None, list[str
             dash_c = None
             while j < len(tokens) and tokens[j].startswith("-"):
                 if tokens[j] == "-C" and j + 1 < len(tokens):
-                    dash_c = tokens[j + 1]
-                    j = _value_end(tokens, j + 1)
+                    end = _value_end(tokens, j + 1)
+                    dash_c = " ".join(tokens[j + 1:end]).replace('"', "")
+                    j = end
                 elif tokens[j] in VALUE_FLAGS and "=" not in tokens[j]:
                     j = _value_end(tokens, j + 1)
                 else:
@@ -225,7 +226,9 @@ def segmented_landing_targets(command: str, payload_cwd: str) -> list[tuple[list
         landings = _segment_landings(tokens)
         for i in range(len(tokens) - 1):
             prev, tok = tokens[i], tokens[i + 1]
-            if prev.lower() in INLINE_COMMAND_FLAGS and i > 0 and basename(tokens[i - 1]) in SHELL_NAMES:
+            # Any earlier shell word in the segment counts, not just the token
+            # before the flag: `powershell -NoProfile -Command "..."` puts flags between them.
+            if prev.lower() in INLINE_COMMAND_FLAGS and any(basename(t).lower() in SHELL_NAMES for t in tokens[:i]):
                 for inner in CHAIN_SPLIT_RE.split(tok):
                     landings += _segment_landings(_tokenize(inner))
         targets = []

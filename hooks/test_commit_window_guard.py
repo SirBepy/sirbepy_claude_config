@@ -52,6 +52,9 @@ DETECT_CASES = [
     ('gh pr create --body "then git commit and git push"', [], "PR body mentioning git commit"),
     ('git -c core.editor="git commit -m x" status', [], "git's own -c key=value is not a nested shell command"),
     ('git -C "C:/work/zng-app" -c core.editor="git commit -m x" status', [], "git -c after -C still is not a landing"),
+    ('powershell -NoProfile -Command "git commit -m x"', ["commit"], "a flag between the shell and -Command still nests"),
+    ('pwsh -NoProfile -ExecutionPolicy Bypass -Command "git push origin main"', ["push"], "several flags between the shell and -Command still nest"),
+    ('cmd /d /c "git commit -m x"', ["commit"], "cmd /d /c still nests"),
 ]
 
 
@@ -64,6 +67,13 @@ def check_detect(case) -> bool:
 
 
 fails += _testlib.run_cases(DETECT_CASES, check_detect)
+
+# A -C value split by a mid-word quote resolves to the whole path, not its first fragment.
+_paths = [path for _kind, path, _args in guard.landing_targets('git -C real_repo"/sub dir" commit -m x', "C:/somewhere")]
+_ok = len(_paths) == 1 and _paths[0].replace("\\", "/").endswith("real_repo/sub dir")
+print(f"{'PASS' if _ok else 'FAIL'}: a mid-word-quoted -C value resolves whole (got {_paths})")
+if not _ok:
+    fails.append("mid-word-quoted -C value")
 
 expect(
     "git -C path is the target, not the cwd",
