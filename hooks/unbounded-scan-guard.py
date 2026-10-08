@@ -49,7 +49,7 @@ elif _HOME:
 
 _WRAPPERS = {"sudo", "time", "nice", "command", "exec", "nohup"}
 _GREP_NAMES = {"grep", "egrep", "fgrep"}
-_GREP_VALUE_FLAGS = {"-e", "-f", "-m", "-a", "-b", "-c", "--regexp", "--file", "--max-count",
+_GREP_VALUE_FLAGS = {"-e", "-f", "-m", "-A", "-B", "-C", "--regexp", "--file", "--max-count",
                      "--after-context", "--before-context", "--context", "--include", "--exclude",
                      "--exclude-dir", "--label"}
 _GREP_PATTERN_FLAGS = {"-e", "-f", "--regexp", "--file"}
@@ -105,7 +105,7 @@ def _find_root(args: list[str]) -> str | None:
 def _grep_root(args: list[str]) -> str | None:
     recursive = any(
         a in ("-r", "-R", "--recursive", "--dereference-recursive")
-        or (re.match(r"^-[A-Za-z]+$", a) and re.search(r"[rR]", a))
+        or (re.match(r"^-[A-Za-z]+\d*$", a) and re.search(r"[rR]", a))
         for a in args
     )
     if not recursive:
