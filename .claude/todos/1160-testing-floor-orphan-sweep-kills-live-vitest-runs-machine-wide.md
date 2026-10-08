@@ -20,16 +20,19 @@ Where-Object { $_.CommandLine -match 'vitest|turbo|tinypool' } | ForEach-Object 
 -Id $_.ProcessId -Force }` (line ~540). That matches every such process on the machine, whoever
 owns it.
 
-Found 2026-10-08 in cueline, where it is the most likely cause of cueline todo 52 ("vitest run
+Found 2026-10-08 in cueline, where it is a likely (UNVERIFIED) cause of cueline todo 52 ("vitest run
 dies with exit 127 / -1 partway through the suite"):
 
 - A backgrounded `node node_modules/vitest/vitest.mjs run` died at about 19:31:10, 58 s into it,
   with exit code 4294967295 (-1), no error on stderr, and no JSON report. Its stderr file was
   last written 19:31:09.
-- The same session ended a turn that had edited source files right after a commit at 19:26:06.
-  The floor hook therefore ran cueline's node check (`npm test`, typecheck plus a full vitest
-  run) with `DEFAULT_TIMEOUT_SECONDS = 300`, and the sweep runs once that check returns. 19:26:30
-  plus 300 s is about 19:31:30, matching the death to within seconds.
+- The same session ended a turn that had edited source files shortly after a commit at
+  19:26:06 (exact turn-end time not recorded). The floor hook therefore ran cueline's node check
+  (`npm test`, typecheck plus a full vitest run) with `DEFAULT_TIMEOUT_SECONDS = 300`, and the
+  sweep runs once that check returns, roughly 19:31:06-19:31:40. The death fits only if the turn
+  ended within about 4 s of the commit, so this timing is suggestive, not proof (UNVERIFIED); a
+  sweep from another session's hook would look identical. What IS verified from the code: the
+  sweep's filter is machine-wide and does not check process ownership.
 - The other two runs in the same batch, and an earlier 775 s run, finished normally. UNVERIFIED
   that no source-editing turn ended while those ran (likely, from the session's own timeline).
   The earlier deaths reported in cueline todo 52 (exit 127 through npx/Git Bash, "about 100 s"
