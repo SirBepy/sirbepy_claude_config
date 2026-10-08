@@ -64,7 +64,7 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 ## Code Style
 
 - On first encounter with a project's stack, check `~/.claude/code-style/` for a matching file (e.g. `luau.md`, `react.md`) and follow its preferences. Read once per session.
-- **Comments say why, not what.** Earn a comment's place with a constraint, gotcha, or measurement the code can't show (`74px rail, 36px avatar, so 7px centres it`); never narrate the next line, restate a name, or park design rationale in code - that belongs in the PR body or commit message. Opaque code (a dense regex, bit-twiddling, a non-obvious algorithm) can earn a one-line WHAT, when a competent reader would otherwise be surprised or waste time. States what IS, never what changed: `// Mutex serializes cache access`, never `// Added mutex to fix race condition`. No numeric cap (retired 2026-09-05, todo 922).
+- **Comments say why, not what.** A comment earns its place with what code can't show: why an odd-looking choice is deliberate, a constraint, a gotcha, a measurement (`74px rail, 36px avatar, so 7px centres it`). Keep it in the code, not just the commit: the next reader, human or AI, reads the file cold. Opaque code (dense regex, bit-twiddling) can earn a one-line WHAT. A wrong comment is worse than none (AI readers trust it), so fix or delete it when its subject changes. State what IS, never what changed: `// Mutex serializes cache access`, not `// Added mutex to fix a race`. Same rule in every repo; no numeric cap.
 
 ## Execution Discipline
 
