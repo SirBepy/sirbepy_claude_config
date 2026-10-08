@@ -722,14 +722,14 @@ def git_bash_launcher_checks() -> list:
         # git.exe resolves to <root>/cmd/git.exe (the common PATH shape) ->
         # bash.exe is found as the sibling of cmd's PARENT's bin dir.
         got = lib.resolve_git_bash(which=lambda n: str(git_exe_in_cmd) if n == "git" else None)
-        ok = got == str(real_bash)
+        ok = got is not None and os.path.samefile(got, real_bash)
         print(f"[{'PASS' if ok else 'FAIL'}] git-bash: resolves via git.exe in a sibling cmd/ dir -> {got!r}")
         if not ok:
             fails.append("git-bash: resolve via sibling cmd/ dir")
 
         # git.exe resolves directly inside bin/ (bash.exe's own directory).
         got2 = lib.resolve_git_bash(which=lambda n: str(git_exe_in_bin) if n == "git" else None)
-        ok2 = got2 == str(real_bash)
+        ok2 = got2 is not None and os.path.samefile(got2, real_bash)
         print(f"[{'PASS' if ok2 else 'FAIL'}] git-bash: resolves via git.exe in the same bin/ dir -> {got2!r}")
         if not ok2:
             fails.append("git-bash: resolve via same bin/ dir")
