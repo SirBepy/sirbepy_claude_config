@@ -127,4 +127,5 @@ still caught, both compound traps still caught, and a real preflight still allow
   but were left alone too: whether a help flag is meaningful for those tools was not verified.
 - Data point 3 already settles the question step 5 poses: the over-match is in the matching layer,
   not in the publish table, so the eventual fix belongs there rather than repeated per anchor family.
+- Completed 2026-10-08 (loop-todos cycle 1, Joe authorized 2026-10-07): root cause was split_outside_quotes/split_statements in _destructive_guard_shared.py splitting heredoc bodies into fake command-position segments; strip_heredoc_bodies() now runs first, so every matcher inherits it. 174 -> 181 cases (4 false positives cleared, 3 true positives pinned incl. bash -c). Data point 3 was already fixed by done/869. powershell -Command wrapping filed as its own todo.
 
