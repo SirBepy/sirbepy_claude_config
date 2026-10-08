@@ -531,6 +531,16 @@
         "hooks": [
           {
             "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\unbounded-scan-guard.py\"",
+            "statusMessage": "Checking for a recursive scan from a drive root or home"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
             "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\dev-server-guard.py\"",
             "statusMessage": "Checking for a raw long-lived dev-server launch"
           }

@@ -26,3 +26,7 @@ way, and tells the caller to scope to the repo or a cache dir. Add a self-test i
 - `find / -name x` is denied with a message naming the narrower alternative.
 - `find ./src -name x` and `find C:/Users/tecno/.gradle/caches -name x` pass.
 - `python ci/run_all.py` is green.
+
+## Notes
+
+- Completed 2026-10-08 (loop-todos cycle 1): new hooks/unbounded-scan-guard.py (find/grep -r/rg/Get-ChildItem -Recurse rooted at a drive root or home; -maxdepth/-Depth bounded passes; quoted text and heredoc bodies ignored), 33-case hooks/test_unbounded_scan_guard.py, wired PreToolUse Bash|PowerShell in settings.json; live deny proven with find / -maxdepth 0 before the maxdepth carve-out.
