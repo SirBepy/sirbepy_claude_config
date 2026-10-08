@@ -1320,6 +1320,13 @@ out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r49" --ex
 check "a path under .claude/todos/ is exempt from the coverage-tests check regardless of extension (todo 1045)" \
   0 'coverage-tests-check.*clean' 'coverage-tests-check.*REFUSED' "$out" "$rc"
 
+# An empty -m fails fast at argument parsing, before any gate runs.
+r50=$(new_repo); tmp_dirs+=("$r50")
+printf 'x\n' > "$r50/notes.md"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r50" --expect-branch master \
+  --expect-sha "$(git -C "$r50" rev-parse HEAD)" -m "" -- notes.md 2>&1); rc=$?
+check "an empty -m is refused at argument parsing" 2 'all required' 'prefilter-gate' "$out" "$rc"
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else

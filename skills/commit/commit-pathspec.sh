@@ -121,7 +121,7 @@ done
 # The files-non-empty half of this check runs further down (after --todo resolution): a
 # --todo-only call legitimately has zero explicit files at parse time, filling the pathspec
 # entirely from the ids' own archive paths.
-if [ -z "$expect_branch" ] || [ -z "$expect_sha" ] || [ "${#messages[@]}" -eq 0 ]; then
+if [ -z "$expect_branch" ] || [ -z "$expect_sha" ] || [ -z "$(printf '%s' "${messages[@]}" | tr -d '[:space:]')" ]; then
   printf 'ERROR: --expect-branch, --expect-sha and -m are all required\n'
   exit 2
 fi
