@@ -31,6 +31,10 @@ separate `git commit -- <path>` after `git rm --cached` inside the script is the
   still on disk and untracked afterwards.
 - `bash skills/commit/test_commit_pathspec.sh` passes.
 
+## Notes
+
+- Done 2026-10-08: commit-pathspec classifies a HEAD-tracked, index-absent, on-disk path as index-removed and, when one is present, builds the commit tree in a throwaway index (read-tree HEAD, replay each path, write-tree, commit-tree, old-value-checked update-ref), so the untracking lands and the file stays on disk. Test r51.
+
 ## Answers 2026-10-08
 
 - Joe, 2026-10-08 (todo-questions chat): approved to build as written.

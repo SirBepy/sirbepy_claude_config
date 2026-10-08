@@ -1,0 +1,14 @@
+# Local-only-tests repos: a repo listed here must never get Claude's own tests committed - the
+# team doesn't track them, so they stay on disk only. commit-pathspec.sh's [coverage-tests-check]
+# refuses an untracked test file in the pathspec outright and requires a recently touched local
+# test file (not committed) in place of the usual "a test file is in the pathspec" pass condition.
+# One `owner/repo` origin slug per line, matched case-insensitively against
+# `git remote get-url origin` - same format and matching as refs/client-repos.txt.
+#
+# Fibo-Studio repos are deliberately NOT listed yet: Joe has not confirmed whether that team
+# tracks tests, so they default to today's behavior (a test file in the pathspec, same as any
+# other repo) until he does.
+
+zirtue-corp/zng-app
+zirtue-corp/zng-admin
+zirtue-corp/zng-biller

@@ -1327,6 +1327,204 @@ out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r50" --ex
   --expect-sha "$(git -C "$r50" rev-parse HEAD)" -m "" -- notes.md 2>&1); rc=$?
 check "an empty -m is refused at argument parsing" 2 'all required' 'prefilter-gate' "$out" "$rc"
 
+# --- an index-only removal: a `git rm --cached` path (present in HEAD, absent from the index, still on
+# disk) is classified "index-removed", excluded from the diff-based checks, and commits the
+# removal cleanly through the temp-index/commit-tree path even when a fresh .gitignore line for
+# it rides in the same pathspec - a plain `git add` on it (the old "untracked" classification)
+# would refuse outright once that ignore rule exists. A second, already-tracked file (keep.txt)
+# is edited in the SAME commit to prove the plumbing path still carries an ordinary live-file
+# change correctly, not only the removal ---
+r51=$(new_repo); tmp_dirs+=("$r51")
+printf 'hello\n' > "$r51/tracked.txt"
+printf 'keepme\n' > "$r51/keep.txt"
+git -C "$r51" add tracked.txt keep.txt
+git -C "$r51" commit -q -m "seed tracked.txt keep.txt"
+branch=$(git -C "$r51" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r51" rev-parse HEAD)
+git -C "$r51" rm -q --cached tracked.txt
+printf 'tracked.txt\n' > "$r51/.gitignore"
+git -C "$r51" add .gitignore
+printf 'keepme EDITED\n' > "$r51/keep.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r51" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "untrack tracked.txt via rm --cached" -- .gitignore tracked.txt keep.txt 2>&1); rc=$?
+check "an index-only removal (git rm --cached) is classified separately and commits cleanly (todo 1141)" \
+  0 'tracked\.txt: index-removed \(excluded' 'REFUSED|ERROR' "$out" "$rc"
+if [ "$(git -C "$r51" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: todo 1141 - the index-only-removal commit did not land"
+  fail=1
+else
+  echo "PASS: todo 1141 - the index-only-removal commit landed"
+fi
+if git -C "$r51" ls-files --error-unmatch -- tracked.txt >/dev/null 2>&1; then
+  echo "FAIL: todo 1141 - tracked.txt is still tracked after the commit"
+  fail=1
+else
+  echo "PASS: todo 1141 - tracked.txt's untracking landed"
+fi
+if [ ! -e "$r51/tracked.txt" ]; then
+  echo "FAIL: todo 1141 - tracked.txt was deleted from disk, should remain untouched"
+  fail=1
+else
+  echo "PASS: todo 1141 - tracked.txt remains on disk, untracked"
+fi
+if [ -n "$(git -C "$r51" status --porcelain)" ]; then
+  echo "FAIL: todo 1141 - working tree not clean after the commit: $(git -C "$r51" status --porcelain)"
+  fail=1
+else
+  echo "PASS: todo 1141 - working tree clean after the commit"
+fi
+if [ "$(git -C "$r51" show HEAD:keep.txt)" != "keepme EDITED" ]; then
+  echo "FAIL: todo 1141 - the ordinary live-file edit (keep.txt) riding alongside the removal did not land"
+  fail=1
+else
+  echo "PASS: todo 1141 - the ordinary live-file edit (keep.txt) landed alongside the removal"
+fi
+
+# --- directory pathspec expansion: a directory pathspec entry with 2+ changed files must get own-range derivation
+# and foreign-hunk-check run once PER FILE, not once for the whole directory concatenated into
+# one `git diff` stream. Without the fix, foreign-hunk-check.sh (which has no file-boundary
+# handling) misreads the `+++ b/<next file>` header line between files as real added content at
+# a stale line number left over from the PREVIOUS file's last hunk, bleeding a bogus foreign hit
+# into that file's own, entirely-own hunk - the exact 2026-10-08 mc_plugins_tag incident shape ---
+r52=$(new_repo); tmp_dirs+=("$r52")
+mkdir -p "$r52/dirs"
+printf 'a%02d\n' $(seq 1 30) > "$r52/dirs/fileA.txt"
+printf 'b%02d\n' $(seq 1 30) > "$r52/dirs/fileB.txt"
+git -C "$r52" add dirs/fileA.txt dirs/fileB.txt
+git -C "$r52" commit -q -m "seed dirs/fileA.txt dirs/fileB.txt"
+branch=$(git -C "$r52" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r52" rev-parse HEAD)
+sed -i '3s/.*/a03 CHANGED/' "$r52/dirs/fileA.txt"
+sed -i '20s/.*/b20 CHANGED/' "$r52/dirs/fileB.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r52" --expect-branch "$branch" --expect-sha "$sha" \
+  --force coverage-tests -m "directory pathspec, two own files" -- dirs 2>&1); rc=$?
+check "a directory pathspec's own-range derivation prints one line for fileA (todo 1149)" \
+  0 'dirs/fileA\.txt: auto-derived own-range 1-6' '' "$out" "$rc"
+check "a directory pathspec's own-range derivation prints a SEPARATE line for fileB (todo 1149)" \
+  0 'dirs/fileB\.txt: auto-derived own-range 17-23' '' "$out" "$rc"
+check "the directory pathspec passes foreign-hunk-check per file, no merged-range false hit (todo 1149)" \
+  0 'foreign-hunk-check.*clean' 'foreign-hunks-inside-your-hunk|foreign-hunk-check.*REFUSED' "$out" "$rc"
+if [ "$(git -C "$r52" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: todo 1149 - the directory-pathspec commit did not land"
+  fail=1
+else
+  echo "PASS: todo 1149 - the directory-pathspec commit landed"
+fi
+
+# --- coverage-tests-check test-path patterns: the new basename (*-probe.*, *-unit.*) and path-segment (verify/)
+# test patterns, countoff's own convention, satisfy the coverage-tests check with no --force ---
+r53=$(new_repo); tmp_dirs+=("$r53")
+branch=$(git -C "$r53" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r53" rev-parse HEAD)
+mkdir -p "$r53/src" "$r53/verify"
+printf 'export const y = 2;\n' > "$r53/src/y.ts"
+printf 'probe\n' > "$r53/verify/y-probe.cjs"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r53" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "src/y.ts plus verify/y-probe.cjs" -- src/y.ts verify/y-probe.cjs 2>&1); rc=$?
+check "a verify/*-probe.* test file satisfies the coverage-tests check with no force (todo 1138)" \
+  0 'coverage-tests-check.*clean' 'coverage-tests-check.*REFUSED' "$out" "$rc"
+
+r54=$(new_repo); tmp_dirs+=("$r54")
+branch=$(git -C "$r54" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r54" rev-parse HEAD)
+mkdir -p "$r54/src"
+printf 'export const z = 3;\n' > "$r54/src/z.ts"
+printf 'unit test\n' > "$r54/dropped-work-unit.mjs"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r54" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "src/z.ts plus a top-level *-unit.mjs test" -- src/z.ts dropped-work-unit.mjs 2>&1); rc=$?
+check "a *-unit.* basename test file (no verify/ path segment) satisfies coverage-tests-check (todo 1138)" \
+  0 'coverage-tests-check.*clean' 'coverage-tests-check.*REFUSED' "$out" "$rc"
+
+# --- local-only-tests policy: local-only-tests repos (refs/local-only-tests.txt) - origin set to a
+# listed slug (zirtue-corp/zng-app), no push needed since detection only reads the local
+# `remote.origin.url`, same as the client-repo detection it mirrors ---
+new_listed_repo() {
+  local d
+  d=$(new_repo)
+  git -C "$d" remote add origin "https://github.com/zirtue-corp/zng-app.git"
+  printf '%s' "$d"
+}
+
+# (i) an UNTRACKED test file in the pathspec is refused outright in a listed repo, and the
+# refusal is NOT lifted by --force coverage-tests - forcing past it would still commit exactly
+# the file this check exists to keep local.
+r55=$(new_listed_repo); tmp_dirs+=("$r55")
+branch=$(git -C "$r55" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r55" rev-parse HEAD)
+mkdir -p "$r55/src"
+printf 'export const x = 1;\n' > "$r55/src/x.ts"
+printf 'test x\n' > "$r55/src/x.test.ts"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r55" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "src/x.ts plus a brand-new test, listed repo" -- src/x.ts src/x.test.ts 2>&1); rc=$?
+check "a local-only-tests repo refuses an UNTRACKED test file in the pathspec, naming .git/info/exclude (todo 1138)" \
+  1 'coverage-tests-check.*REFUSED.*tests stay local.*\.git/info/exclude' '' "$out" "$rc"
+if [ "$(git -C "$r55" rev-parse HEAD)" = "$sha" ]; then
+  echo "PASS: todo 1138 - refused untracked-test commit left HEAD untouched"
+else
+  echo "FAIL: todo 1138 - a refused untracked-test commit must not have committed anything"
+  fail=1
+fi
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r55" --expect-branch "$branch" --expect-sha "$sha" \
+  --force coverage-tests -m "same, forced" -- src/x.ts src/x.test.ts 2>&1); rc=$?
+check "the untracked-test refusal in a local-only-tests repo is NOT overridable by --force coverage-tests (todo 1138)" \
+  1 'coverage-tests-check.*REFUSED.*tests stay local' 'OVERRIDDEN' "$out" "$rc"
+
+# (ii) a recently (24h) modified untracked test file elsewhere in the repo substitutes for "a
+# test file is in the pathspec" in a listed repo - the source-only commit passes, the test stays
+# on disk, uncommitted.
+r56=$(new_listed_repo); tmp_dirs+=("$r56")
+branch=$(git -C "$r56" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r56" rev-parse HEAD)
+mkdir -p "$r56/src"
+printf 'export const x = 1;\n' > "$r56/src/x.ts"
+printf 'test x\n' > "$r56/src/x.test.ts"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r56" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "src/x.ts only, a recent local untracked test exists on disk" -- src/x.ts 2>&1); rc=$?
+check "a recently modified untracked test file elsewhere satisfies coverage-tests-check in a local-only-tests repo (todo 1138)" \
+  0 'coverage-tests-check.*clean.*src/x\.test\.ts.*last 24h' 'REFUSED' "$out" "$rc"
+if [ "$(git -C "$r56" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: todo 1138 - the source-only commit (with a local test on disk) did not land"
+  fail=1
+else
+  echo "PASS: todo 1138 - the source-only commit landed, the local test file stayed uncommitted"
+fi
+if git -C "$r56" ls-files --error-unmatch -- src/x.test.ts >/dev/null 2>&1; then
+  echo "FAIL: todo 1138 - the local test file must not have been committed"
+  fail=1
+else
+  echo "PASS: todo 1138 - the local test file remained untracked, as intended"
+fi
+
+# (iii) with no recent local test anywhere, a listed repo still refuses exactly like an
+# unlisted one, and that refusal IS overridable with --force coverage-tests.
+r57=$(new_listed_repo); tmp_dirs+=("$r57")
+branch=$(git -C "$r57" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r57" rev-parse HEAD)
+mkdir -p "$r57/src"
+printf 'export const x = 1;\n' > "$r57/src/x.ts"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r57" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "src/x.ts only, no local test anywhere" -- src/x.ts 2>&1); rc=$?
+check "no test file in the pathspec and no recent local test refuses exactly as an unlisted repo would (todo 1138)" \
+  1 'coverage-tests-check.*REFUSED: pathspec changes non-test' '' "$out" "$rc"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r57" --expect-branch "$branch" --expect-sha "$sha" \
+  --force coverage-tests -m "same, forced" -- src/x.ts 2>&1); rc=$?
+check "that ordinary refusal IS overridable with --force coverage-tests in a local-only-tests repo (todo 1138)" \
+  0 'OVERRIDDEN \(--force coverage-tests\)' 'REFUSED' "$out" "$rc"
+
+# --- local-only-tests regression guard: an UNLISTED repo's untracked test file in the pathspec is
+# never hard-refused - the new non-overridable refusal only applies to a repo on
+# refs/local-only-tests.txt, unlisted repos behave exactly as before ---
+r58=$(new_repo); tmp_dirs+=("$r58")
+branch=$(git -C "$r58" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r58" rev-parse HEAD)
+mkdir -p "$r58/src"
+printf 'export const x = 1;\n' > "$r58/src/x.ts"
+printf 'test x\n' > "$r58/src/x.test.ts"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r58" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "src/x.ts plus a brand-new test, UNLISTED repo" -- src/x.ts src/x.test.ts 2>&1); rc=$?
+check "an unlisted repo's untracked test file in the pathspec is never hard-refused (todo 1138 regression guard)" \
+  0 '\[commit\] committed' 'tests stay local' "$out" "$rc"
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else

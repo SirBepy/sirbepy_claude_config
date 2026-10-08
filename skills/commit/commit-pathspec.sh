@@ -300,15 +300,26 @@ print_taken_hunks() {
   printf '%s' "$out"
 }
 
-# live/untracked/deleted-staged/deleted-unstaged/unknown. Neither overlap-check.sh nor
-# foreign-hunk-check.sh understands a deleted path (both crash or misreport on one, the second
+# live/untracked/index-removed/deleted-staged/deleted-unstaged/unknown. Neither overlap-check.sh
+# nor foreign-hunk-check.sh understands a deleted path (both crash or misreport on one, the second
 # defect this script exists to remove) - deleted-staged and deleted-unstaged both leave nothing
 # in the working tree to diff, whether the deletion was ever `git rm`'d or not (todo 1033 item
 # 2), so both are excluded from both checks' file lists below but still reach the commit pathspec.
+# index-removed is the `git rm --cached` shape: present in HEAD, absent from the
+# index, still on disk - a plain `git commit -- <path>` cannot express it (it records the named
+# path's CURRENT WORKING-TREE content, which is unchanged, silently undoing the untrack), so it
+# gets its own commit path below rather than being folded into "untracked" (which would try to
+# `git add` it back, failing outright once a fresh .gitignore line covers it).
 classify_path() {
   local f="$1"
   if [ -e "$repo_root/$f" ]; then
-    if git_c ls-files --error-unmatch -- "$f" >/dev/null 2>&1; then echo live; else echo untracked; fi
+    if git_c ls-files --error-unmatch -- "$f" >/dev/null 2>&1; then
+      echo live
+    elif file_has_head_blob "$f"; then
+      echo index-removed
+    else
+      echo untracked
+    fi
     return
   fi
   if [ "$(git_c diff --cached --name-status -- "$f" 2>/dev/null | cut -f1)" = "D" ]; then
@@ -329,23 +340,63 @@ for f in "${files[@]}"; do
     printf 'ERROR: %s is not on disk, not in the index, and not staged for deletion in %s\n' "$f" "$repo_root"
     exit 2
   fi
-  [ "$c" != "deleted-staged" ] && [ "$c" != "deleted-unstaged" ] && diffable_files+=("$f")
+  [ "$c" != "deleted-staged" ] && [ "$c" != "deleted-unstaged" ] && [ "$c" != "index-removed" ] && diffable_files+=("$f")
 done
 
-# Directory pathspec expansion (todo 1101): an already-tracked directory entry (classified
-# "live" above, since `git ls-files --error-unmatch` matched at least one tracked path inside
-# it) still leaves a brand-new file in that directory as a plain untracked path that
-# `git commit -- <dir>` never adds - git's own pathspec match follows tracked content only, so
-# the file stayed `??` while the script printed "[commit] committed". List every untracked file
-# under the directory and treat each one exactly like a named new file from here on: classified,
-# diffed, staged and committed alongside it. A wholly-untracked directory entry is already
+# Directory pathspec expansion: an already-tracked directory entry
+# (classified "live" above, since `git ls-files --error-unmatch` matched at least one tracked
+# path inside it) gets expanded into every CHANGED file under it, two ways:
+#   - a brand-new file in that directory is a plain untracked path that
+#     `git commit -- <dir>` never adds - git's own pathspec match follows tracked content only,
+#     so the file stayed `??` while the script printed "[commit] committed".
+#   - handing the bare directory itself to own-range derivation and
+#     foreign-hunk-check.sh concatenates every file under it into ONE multi-file `git diff`
+#     stream keyed under the single directory name. foreign-hunk-check.sh has no file-boundary
+#     handling at all - its line-by-line parser only resets on a literal `@@` header, so the
+#     `+++ b/<nextfile>` header line between two files' hunks gets misread as real added
+#     CONTENT (it starts with `+`) at whatever stale line number the PREVIOUS file's last hunk
+#     ended on, and that bogus classification gets folded into the previous hunk's own/foreign
+#     tally on the next `flush_hunk`. A real incident (2026-10-08, mc_plugins_tag) turned an
+#     entirely-own multi-file directory commit into a false `foreign-hunks-inside-your-hunk`
+#     REFUSED. Diffing and checking each file on its own, exactly as if it had been named
+#     directly in the pathspec, has no multi-file stream to misparse.
+# Each expanded file is classified, added to `files` (so the per-file classification line below
+# is visible) and added to `diffable_files` in the directory's place, which is first stripped of
+# the bare directory entry itself - own-range derivation and foreign-hunk-check then run once per
+# file instead of once for the whole directory. The commit itself still uses the ORIGINAL
+# pathspec (the directory entry stays in `files` for that), since `git commit -- <dir>` already
+# covers every file inside it correctly on its own. A wholly-untracked directory entry is already
 # classified "untracked" above and `git add -- <dir>` already recurses into it on its own, so it
 # is skipped here to avoid double-processing the same files under a second code path.
 for f in "${files[@]}"; do
   [ "${class_of[$f]}" = "live" ] || continue
   [ -d "$repo_root/$f" ] || continue
-  # -z plus quotePath off: a default listing C-quotes non-ASCII names ("d/\304\215vor.txt"),
-  # which then cannot be staged and aborts the whole commit.
+
+  # Strip the bare directory entry from diffable_files - its per-file replacements below take
+  # its place.
+  stripped_diffable=()
+  for df in "${diffable_files[@]}"; do
+    [ "$df" = "$f" ] && continue
+    stripped_diffable+=("$df")
+  done
+  diffable_files=("${stripped_diffable[@]}")
+
+  # Already-tracked files CHANGED under this directory - staged or unstaged, added,
+  # modified or deleted; `git diff HEAD` is the union of both. classify_path (not a bare "live")
+  # so a deletion nested in the directory still gets excluded from the diff-based checks exactly
+  # like a top-level deleted pathspec entry does.
+  while IFS= read -r -d '' changedf; do
+    [ -z "$changedf" ] && continue
+    [ -n "${class_of[$changedf]:-}" ] && continue
+    c2=$(classify_path "$changedf")
+    class_of["$changedf"]="$c2"
+    files+=("$changedf")
+    [ "$c2" != "deleted-staged" ] && [ "$c2" != "deleted-unstaged" ] && [ "$c2" != "index-removed" ] && diffable_files+=("$changedf")
+  done < <(git_c diff -z --name-only HEAD -- "$f")
+
+  # Brand-new untracked files under this directory. -z plus quotePath off: a
+  # default listing C-quotes non-ASCII names ("d/\304\215vor.txt"), which then cannot be staged
+  # and aborts the whole commit.
   while IFS= read -r -d '' newf; do
     [ -z "$newf" ] && continue
     [ -n "${class_of[$newf]:-}" ] && continue
@@ -359,7 +410,7 @@ echo "=== commit-pathspec: $repo_root ==="
 printf '[pathspec] classification:\n'
 for f in "${files[@]}"; do
   note=""
-  { [ "${class_of[$f]}" = "deleted-staged" ] || [ "${class_of[$f]}" = "deleted-unstaged" ]; } && note=" (excluded from overlap-check/foreign-hunk-check - nothing left to diff)"
+  { [ "${class_of[$f]}" = "deleted-staged" ] || [ "${class_of[$f]}" = "deleted-unstaged" ] || [ "${class_of[$f]}" = "index-removed" ]; } && note=" (excluded from overlap-check/foreign-hunk-check - nothing left to diff)"
   printf '  - %s: %s%s\n' "$f" "${class_of[$f]}" "$note"
 done
 
@@ -741,14 +792,89 @@ is_source_file() {
 is_test_path() {
   local base
   base=$(basename -- "$1")
+  # *-probe.* / *-unit.*: countoff's own convention, a repo that keeps every test
+  # under verify/ as *-probe.cjs and *-unit.mjs instead of any basename pattern already covered.
   case "$base" in
-    test_*|*_test.*|*.test.*|*.spec.*) return 0 ;;
+    test_*|*_test.*|*.test.*|*.spec.*|*-probe.*|*-unit.*) return 0 ;;
   esac
+  # */verify/*: the path-segment half of the same countoff convention.
   case "/$1/" in
-    */test/*|*/tests/*|*/__tests__/*|*/spec/*) return 0 ;;
+    */test/*|*/tests/*|*/__tests__/*|*/spec/*|*/verify/*) return 0 ;;
   esac
   return 1
 }
+
+# Local-only-tests repos (Joe's 2026-10-08 reframing): some repos must never get
+# Claude's own tests committed - the team doesn't track them there, so they stay on disk only.
+# Listed in refs/local-only-tests.txt, matched with the exact origin-slug algorithm
+# hooks/_client_repo.py already uses for refs/client-repos.txt (split the origin url on every
+# `/` or `:`, take the last two non-empty parts as owner/repo, strip a trailing `.git`,
+# lowercase) - reimplemented here in bash rather than adding a second list-path argument to that
+# file's CLI, which is off limits while another session edits it and whose `is-client`
+# subcommand has no way to point at a second list file anyway.
+local_only_tests_path="$dir/../../refs/local-only-tests.txt"
+origin_slug_bash() {
+  local url="$1" parts owner repo
+  parts=$(printf '%s' "$url" | tr '/:' '\n' | grep -v '^$')
+  [ "$(printf '%s\n' "$parts" | grep -c .)" -lt 2 ] && return 1
+  owner=$(printf '%s\n' "$parts" | tail -n2 | head -n1)
+  repo=$(printf '%s\n' "$parts" | tail -n1)
+  repo="${repo%.git}"
+  { [ -z "$owner" ] || [ -z "$repo" ]; } && return 1
+  printf '%s/%s' "$owner" "$repo" | tr '[:upper:]' '[:lower:]'
+}
+is_local_only_tests_repo() {
+  local url slug
+  [ -f "$local_only_tests_path" ] || return 1
+  url=$(git_c remote get-url origin 2>/dev/null) || return 1
+  slug=$(origin_slug_bash "$url") || return 1
+  [ -z "$slug" ] && return 1
+  grep -v '^[[:space:]]*#' "$local_only_tests_path" | grep -v '^[[:space:]]*$' \
+    | tr '[:upper:]' '[:lower:]' | sed 's/[[:space:]]*$//' | grep -qxF "$slug"
+}
+# An untracked-or-ignored test-path file modified within the last 24h, anywhere in the repo -
+# the (ii) pass condition below in a local-only-tests repo substitutes for "a test file is
+# named in THIS pathspec", since the whole point of such a repo is that a test file is never
+# meant to reach the pathspec at all. `git ls-files --others` with no `--exclude-standard`
+# lists every path outside the index regardless of ignore status - the exact "untracked-or-
+# ignored" union needed, since a file added to `.git/info/exclude` per this check's own (i)
+# message is exactly as invisible to `--exclude-standard` as a plain `.gitignore` entry.
+find_recent_local_test() {
+  local f mtime now cutoff
+  now=$(date +%s)
+  cutoff=$((now - 86400))
+  while IFS= read -r -d '' f; do
+    is_test_path "$f" || continue
+    [ -e "$repo_root/$f" ] || continue
+    mtime=$(date -r "$repo_root/$f" +%s 2>/dev/null) || continue
+    if [ "$mtime" -ge "$cutoff" ]; then
+      printf '%s' "$f"
+      return 0
+    fi
+  done < <(git_c ls-files -z --others -- .)
+  return 1
+}
+local_only_repo=0
+is_local_only_tests_repo && local_only_repo=1
+
+if [ "$local_only_repo" -eq 1 ]; then
+  # (i) an UNTRACKED test file in the pathspec is a new test Claude just wrote,
+  # about to land in a repo whose team never tracks tests at all - never overridable, since
+  # forcing past this one would still commit exactly the file it exists to keep off the team's
+  # history. Modifying an already-tracked team test file is unaffected: that path classifies
+  # "live", not "untracked".
+  untracked_tests=()
+  for f in "${files[@]}"; do
+    if [ "${class_of[$f]}" = "untracked" ] && is_test_path "$f"; then
+      untracked_tests+=("$f")
+    fi
+  done
+  if [ "${#untracked_tests[@]}" -gt 0 ]; then
+    printf '[coverage-tests-check] REFUSED: tests stay local in this repo, never committed - add %s to .git/info/exclude instead (never the team'"'"'s .gitignore); not overridable: %s\n' "${untracked_tests[0]}" "${untracked_tests[*]}"
+    exit 1
+  fi
+fi
+
 has_source=0
 has_test=0
 for f in "${files[@]}"; do
@@ -756,7 +882,17 @@ for f in "${files[@]}"; do
   is_source_file "$f" && has_source=1
 done
 if [ "$has_source" -eq 1 ] && [ "$has_test" -eq 0 ]; then
-  if has_force coverage-tests; then
+  recent_local_test=""
+  if [ "$local_only_repo" -eq 1 ]; then
+    # (ii) the ordinary "no test file in the pathspec" refusal below does not apply
+    # the same way in a local-only-tests repo, since a test there is BY DESIGN never meant to
+    # reach the pathspec - it is replaced with "a local test file was touched recently", proof
+    # Claude did write and run one, just not commit it.
+    recent_local_test=$(find_recent_local_test) || true
+  fi
+  if [ -n "$recent_local_test" ]; then
+    printf '[coverage-tests-check] clean (local-only-tests repo: %s was modified in the last 24h, untracked/ignored and deliberately kept off the pathspec)\n' "$recent_local_test"
+  elif has_force coverage-tests; then
     printf '[coverage-tests-check] OVERRIDDEN (--force coverage-tests): pathspec changes non-test source file(s) and touches no test file\n'
   else
     printf '[coverage-tests-check] REFUSED: pathspec changes non-test source file(s) and touches no test file - write the test that fails without this change, or rerun with --force coverage-tests if the change is untestable: %s\n' "${files[*]}"
@@ -767,21 +903,89 @@ else
 fi
 
 # --- commit by pathspec, never stage-then-commit ---
-for f in "${files[@]}"; do
-  if [ "${class_of[$f]}" = "untracked" ]; then
-    if ! git_c add -- "$f" >/dev/null 2>&1; then
-      printf '[commit] ERROR: could not stage untracked file %s\n' "$f"
-      exit 2
-    fi
-  fi
-done
 # Each -m lands as its own paragraph (git joins them with a blank line), matching
 # `git commit -m A -m B`'s own subject+body shape - todo 1109.
 commit_msg_args=()
 for m in "${messages[@]}"; do commit_msg_args+=(-m "$m"); done
-if ! commit_out=$(git_c commit "${commit_msg_args[@]}" -- "${files[@]}" 2>&1); then
-  printf '[commit] ERROR: git commit failed:\n%s\n' "$commit_out"
-  exit 2
+
+has_index_removed=0
+for f in "${files[@]}"; do
+  [ "${class_of[$f]}" = "index-removed" ] && has_index_removed=1
+done
+
+if [ "$has_index_removed" -eq 1 ]; then
+  # A plain `git commit -- <pathspec>` cannot express an index-only removal - it
+  # records the NAMED paths' current WORKING-TREE content, never the index, so a `git rm
+  # --cached` path whose file is still on disk unchanged comes back exactly as it was (the
+  # untrack never lands), and if the path is also newly gitignored, staging it via `git add`
+  # first (the plain "untracked" path below) fails outright. Build the target tree by hand
+  # instead: seed a throwaway index from HEAD, replay each pathspec file's intended end state
+  # into it (working-tree content for a live/untracked file, a removed entry for anything
+  # deleted OR index-only-removed), write-tree, commit-tree with HEAD as the parent, then move
+  # the branch ref with the same old-value-checked `update-ref` form as the atomic recipe in
+  # `snippets/auto-commit.md`'s Case A. `git reset -- <files>` afterward syncs the REAL index's
+  # entries for just these paths to the new HEAD - the same partial-commit side effect a normal
+  # pathspec commit already has - without reading or touching anything else a peer may have
+  # staged in that same real index.
+  tmp_index=$(mktemp) || { printf '[commit] ERROR: could not create a temporary index file\n'; exit 2; }
+  rm -f "$tmp_index"
+  if ! GIT_INDEX_FILE="$tmp_index" git_c read-tree HEAD; then
+    printf '[commit] ERROR: could not seed a temporary index from HEAD\n'
+    rm -f "$tmp_index"
+    exit 2
+  fi
+  plumbing_err=0
+  for f in "${files[@]}"; do
+    case "${class_of[$f]}" in
+      live|untracked)
+        if ! GIT_INDEX_FILE="$tmp_index" git_c add -- "$f" >/dev/null 2>&1; then
+          printf '[commit] ERROR: could not stage %s into the temporary index\n' "$f"
+          plumbing_err=1
+        fi
+        ;;
+      deleted-staged|deleted-unstaged|index-removed)
+        if ! GIT_INDEX_FILE="$tmp_index" git_c rm --cached --ignore-unmatch -- "$f" >/dev/null 2>&1; then
+          printf '[commit] ERROR: could not remove %s from the temporary index\n' "$f"
+          plumbing_err=1
+        fi
+        ;;
+    esac
+  done
+  if [ "$plumbing_err" -eq 1 ]; then
+    rm -f "$tmp_index"
+    exit 2
+  fi
+  new_tree=$(GIT_INDEX_FILE="$tmp_index" git_c write-tree 2>&1)
+  rm -f "$tmp_index"
+  if [ -z "$new_tree" ]; then
+    printf '[commit] ERROR: write-tree failed:\n%s\n' "$new_tree"
+    exit 2
+  fi
+  new_commit=$(git_c commit-tree "$new_tree" -p "$actual_sha" "${commit_msg_args[@]}" 2>&1)
+  if [ -z "$new_commit" ]; then
+    printf '[commit] ERROR: commit-tree failed:\n%s\n' "$new_commit"
+    exit 2
+  fi
+  if ! git_c update-ref -m "commit-pathspec: index-only removal (todo 1141)" "refs/heads/$actual_branch" "$new_commit" "$actual_sha" >/dev/null 2>&1; then
+    printf '[commit] ERROR: update-ref failed to advance %s to %s\n' "$actual_branch" "$new_commit"
+    exit 2
+  fi
+  git_c reset -- "${files[@]}" >/dev/null 2>&1
+  printf '[commit] committed\n'
+  git_c rev-parse HEAD
+else
+  for f in "${files[@]}"; do
+    if [ "${class_of[$f]}" = "untracked" ]; then
+      if ! git_c add -- "$f" >/dev/null 2>&1; then
+        printf '[commit] ERROR: could not stage untracked file %s\n' "$f"
+        exit 2
+      fi
+    fi
+  done
+  if ! commit_out=$(git_c commit "${commit_msg_args[@]}" -- "${files[@]}" 2>&1); then
+    printf '[commit] ERROR: git commit failed:\n%s\n' "$commit_out"
+    exit 2
+  fi
+  printf '[commit] committed\n'
+  git_c rev-parse HEAD
 fi
-printf '[commit] committed\n'
-git_c rev-parse HEAD

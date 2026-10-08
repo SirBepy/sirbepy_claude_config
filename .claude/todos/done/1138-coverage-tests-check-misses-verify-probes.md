@@ -39,3 +39,7 @@ the same dulling for the sibling `[coverage-check]`.
   `--force`.
 - A pathspec of `src/lib/a.ts` alone is still refused.
 - `python ci/run_all.py` is green.
+
+## Notes
+
+- Done 2026-10-08 as reframed by Joe: is_test_path adds verify/, *-probe.*, *-unit.*; new refs/local-only-tests.txt (zng-app, zng-admin, zng-biller; Fibo-Studio deliberately not listed until Joe confirms whether Fibo tracks tests) makes coverage-tests refuse an untracked test file in the pathspec and pass instead on a recently modified local-only test. Tests r53-r58; full suite 134 PASS.

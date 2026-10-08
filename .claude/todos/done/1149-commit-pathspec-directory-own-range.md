@@ -39,3 +39,7 @@ Alternatively refuse a directory pathspec outright with a message telling the ca
   session marker is live.
 - A self-test in the commit skill's test suite (or `ci/run_all.py`) covers a directory pathspec
   with two changed files whose hunk line numbers overlap.
+
+## Notes
+
+- Done 2026-10-08: a directory pathspec entry is expanded into its changed tracked and untracked files before own-range derivation and foreign-hunk-check. Root cause: the concatenated directory diff fed foreign-hunk-check a +++ b/<next file> header that read as added content at the previous file's line numbers. Test r52 reproduces the two-file refusal and passes clean.
