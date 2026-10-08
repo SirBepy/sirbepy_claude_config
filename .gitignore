@@ -89,6 +89,8 @@ hooks/.outbound-marker*
 hooks/.shortcut-marker*
 hooks/.session-markers/
 hooks/.ui-screenshot-reminder-session-*
+hooks/.testing-floor-pending/
+hooks/.testing-floor-skip
 
 # Belt-and-suspenders: never commit secrets
 .env

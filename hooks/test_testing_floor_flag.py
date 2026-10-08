@@ -174,6 +174,60 @@ def integration_checks() -> list:
         if not ok6:
             fails.append("fresh edit resets stale attempts")
 
+        # Case 8: two source-file edits in the SAME
+        # session accumulate into state["paths"] rather than the second
+        # overwriting the first - this is what lets the scripts-repo row
+        # target every file this turn touched, not just the latest one.
+        state_dir8 = tmp_path / "state8"
+        session_id8 = "sess-accumulate"
+        path_a = str(tmp_path / "src" / "a.py")
+        path_b = str(tmp_path / "src" / "b.py")
+        proc8a = run_hook(
+            {"session_id": session_id8, "cwd": str(tmp_path), "tool_name": "Write",
+             "tool_input": {"file_path": path_a, "content": "x"}},
+            state_dir8,
+        )
+        proc8b = run_hook(
+            {"session_id": session_id8, "cwd": str(tmp_path), "tool_name": "Write",
+             "tool_input": {"file_path": path_b, "content": "x"}},
+            state_dir8,
+        )
+        flag_path8 = state_dir8 / session_id8
+        ok8 = proc8a.returncode == 0 and proc8b.returncode == 0 and flag_path8.is_file()
+        paths8 = None
+        if ok8:
+            state8 = json.loads(flag_path8.read_text(encoding="utf-8"))
+            paths8 = state8.get("paths")
+            ok8 = paths8 == [path_a, path_b] and state8.get("attempts") == 0
+        print(f"[{'PASS' if ok8 else 'FAIL'}] integration: two edits in one session accumulate both paths -> paths={paths8!r}")
+        if not ok8:
+            fails.append("two edits accumulate both paths")
+
+        # Case 9: editing the SAME path twice dedupes rather than growing.
+        state_dir9 = tmp_path / "state9"
+        session_id9 = "sess-dedupe"
+        path_c = str(tmp_path / "src" / "c.py")
+        run_hook(
+            {"session_id": session_id9, "cwd": str(tmp_path), "tool_name": "Edit",
+             "tool_input": {"file_path": path_c, "new_string": "x"}},
+            state_dir9,
+        )
+        proc9b = run_hook(
+            {"session_id": session_id9, "cwd": str(tmp_path), "tool_name": "Edit",
+             "tool_input": {"file_path": path_c, "new_string": "y"}},
+            state_dir9,
+        )
+        flag_path9 = state_dir9 / session_id9
+        ok9 = proc9b.returncode == 0 and flag_path9.is_file()
+        paths9 = None
+        if ok9:
+            state9 = json.loads(flag_path9.read_text(encoding="utf-8"))
+            paths9 = state9.get("paths")
+            ok9 = paths9 == [path_c]
+        print(f"[{'PASS' if ok9 else 'FAIL'}] integration: editing the same path twice dedupes -> paths={paths9!r}")
+        if not ok9:
+            fails.append("same path edited twice dedupes")
+
         # Case 7: malformed stdin -> exits 0, does not crash.
         proc7 = subprocess.run(
             [sys.executable, str(_HOOK_PATH)],

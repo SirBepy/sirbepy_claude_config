@@ -41,8 +41,10 @@ ORCHESTRATOR_PAYLOAD = {"session_id": "s1"}
 
 def fake_run_checks(result):
     """Builds a run_checks_fn stub: result is True (pass), False (fail), or
-    the string "raise" (fault injection for the fail-open path)."""
-    def _fn(root):
+    the string "raise" (fault injection for the fail-open path). Accepts
+    **kwargs so it tolerates evaluate()'s `paths=` forwarding (todo 427
+    defect 1) without every call site needing to know about it."""
+    def _fn(root, **kwargs):
         if result == "raise":
             raise RuntimeError("stubbed failure")
         return (result, "stubbed summary")
@@ -339,55 +341,93 @@ def subprocess_checks() -> list:
 
 def real_detection_checks() -> list:
     """Exercises the REAL detect_stack + subprocess path (no
-    TESTING_FLOOR_FAKE_CHECK stub) against a tiny fake `ci/run_all.py` that
-    genuinely exits 1 or 0 - the todo's own instruction that the gate must
-    be proven against a deliberately-broken case, not just a stubbed one.
+    TESTING_FLOOR_FAKE_CHECK stub) against a scripts-repo project - the
+    todo's own instruction that the gate must be proven against a
+    deliberately-broken case, not just a stubbed one.
+
+    Rewritten for todo 427 defect 1: every `ci/run_all.py` here is a marker
+    file only, deliberately made to FAIL if it were ever executed
+    ("SHOULD NEVER RUN" + exit 1) - the real verdict must come from the
+    targeted py_compile/self-test commands built from `paths`, never from
+    running the full suite. A case with no "paths" key at all (an old
+    state file predating this fix) must still pass even with that
+    always-fails marker present, proving there is no fallback to the full
+    suite.
     """
     fails = []
     with tempfile.TemporaryDirectory(prefix="testing-floor-guard-real-") as tmp:
         tmp_path = Path(tmp)
 
-        # A deliberately-broken "project": its ci/run_all.py always fails.
-        broken_root = tmp_path / "broken-project"
-        (broken_root / "ci").mkdir(parents=True)
-        (broken_root / "ci" / "run_all.py").write_text(
-            textwrap.dedent("""
-                import sys
-                print("FAIL: this project's fast checks are deliberately broken")
-                sys.exit(1)
-            """).strip() + "\n",
-            encoding="utf-8",
-        )
+        def make_root(name: str) -> Path:
+            root = tmp_path / name
+            (root / "ci").mkdir(parents=True)
+            (root / "ci" / "run_all.py").write_text(
+                textwrap.dedent("""
+                    import sys
+                    print("SHOULD NEVER RUN: the full suite must never execute from this hook")
+                    sys.exit(1)
+                """).strip() + "\n",
+                encoding="utf-8",
+            )
+            (root / "hooks").mkdir()
+            return root
+
+        # A deliberately-broken edited file: real py_compile on a syntax
+        # error genuinely fails.
+        broken_root = make_root("broken-project")
+        bad_py = broken_root / "hooks" / "bad.py"
+        bad_py.write_text("def f(:\n", encoding="utf-8")
         state_dir_broken = tmp_path / "state-broken"
         session_broken = "sess-broken"
         flag_broken = state_dir_broken / session_broken
         state_dir_broken.mkdir(parents=True)
-        flag_broken.write_text(json.dumps({"attempts": 0, "root": str(broken_root)}), encoding="utf-8")
-        proc = run_hook({"session_id": session_broken}, {"TESTING_FLOOR_STATE_DIR": str(state_dir_broken)})
-        ok = proc.returncode == 0 and '"decision": "block"' in proc.stdout and "deliberately broken" in proc.stdout
-        print(f"[{'PASS' if ok else 'FAIL'}] real-detection: a genuinely failing ci/run_all.py blocks the turn -> exit={proc.returncode} stdout={proc.stdout.strip()!r}")
-        if not ok:
-            fails.append("real detection: failing case blocks")
-
-        # A genuinely passing "project": its ci/run_all.py always succeeds.
-        passing_root = tmp_path / "passing-project"
-        (passing_root / "ci").mkdir(parents=True)
-        (passing_root / "ci" / "run_all.py").write_text(
-            textwrap.dedent("""
-                print("OK: all checks passed")
-            """).strip() + "\n",
+        flag_broken.write_text(
+            json.dumps({"attempts": 0, "root": str(broken_root), "paths": [str(bad_py)]}),
             encoding="utf-8",
         )
+        proc = run_hook({"session_id": session_broken}, {"TESTING_FLOOR_STATE_DIR": str(state_dir_broken)})
+        ok = (
+            proc.returncode == 0
+            and '"decision": "block"' in proc.stdout
+            and "py_compile" in proc.stdout
+            and "SHOULD NEVER RUN" not in proc.stdout
+        )
+        print(f"[{'PASS' if ok else 'FAIL'}] real-detection: a real py_compile syntax error blocks the turn, full suite never runs -> exit={proc.returncode} stdout={proc.stdout.strip()!r}")
+        if not ok:
+            fails.append("real detection: py_compile failure blocks, full suite never runs")
+
+        # A genuinely valid edited file: real py_compile succeeds.
+        passing_root = make_root("passing-project")
+        good_py = passing_root / "hooks" / "good.py"
+        good_py.write_text("x = 1\n", encoding="utf-8")
         state_dir_pass = tmp_path / "state-real-pass"
         session_pass = "sess-real-pass"
         flag_pass = state_dir_pass / session_pass
         state_dir_pass.mkdir(parents=True)
-        flag_pass.write_text(json.dumps({"attempts": 0, "root": str(passing_root)}), encoding="utf-8")
+        flag_pass.write_text(
+            json.dumps({"attempts": 0, "root": str(passing_root), "paths": [str(good_py)]}),
+            encoding="utf-8",
+        )
         proc2 = run_hook({"session_id": session_pass}, {"TESTING_FLOOR_STATE_DIR": str(state_dir_pass)})
         ok2 = proc2.returncode == 0 and proc2.stdout.strip() == "" and not flag_pass.exists()
-        print(f"[{'PASS' if ok2 else 'FAIL'}] real-detection: a genuinely passing ci/run_all.py allows the turn and clears the flag -> exit={proc2.returncode} stdout={proc2.stdout.strip()!r}")
+        print(f"[{'PASS' if ok2 else 'FAIL'}] real-detection: a valid edited .py allows the turn and clears the flag, full suite never runs -> exit={proc2.returncode} stdout={proc2.stdout.strip()!r}")
         if not ok2:
-            fails.append("real detection: passing case allows")
+            fails.append("real detection: passing py_compile case allows")
+
+        # An old state file with no "paths" key at all (predates this fix):
+        # the scripts-repo row has nothing targeted, so it passes even
+        # though its ci/run_all.py marker would fail if it ever ran.
+        nopaths_root = make_root("nopaths-project")
+        state_dir_nopaths = tmp_path / "state-nopaths"
+        session_nopaths = "sess-nopaths"
+        flag_nopaths = state_dir_nopaths / session_nopaths
+        state_dir_nopaths.mkdir(parents=True)
+        flag_nopaths.write_text(json.dumps({"attempts": 0, "root": str(nopaths_root)}), encoding="utf-8")
+        proc3 = run_hook({"session_id": session_nopaths}, {"TESTING_FLOOR_STATE_DIR": str(state_dir_nopaths)})
+        ok3 = proc3.returncode == 0 and proc3.stdout.strip() == "" and not flag_nopaths.exists()
+        print(f"[{'PASS' if ok3 else 'FAIL'}] real-detection: old state file with no \"paths\" key passes, never falls back to the full suite -> exit={proc3.returncode} stdout={proc3.stdout.strip()!r}")
+        if not ok3:
+            fails.append("real detection: no-paths state falls back to pass, not the full suite")
 
     return fails
 
@@ -409,7 +449,10 @@ def dual_stack_checks() -> list:
     with tempfile.TemporaryDirectory(prefix="testing-floor-dual-stack-") as tmp:
         root = Path(tmp)
         (root / "Cargo.toml").write_text('[package]\nname = "x"\n', encoding="utf-8")
-        (root / "package.json").write_text("{}", encoding="utf-8")
+        # A real scripts.test entry - an empty/placeholder one would (correctly)
+        # be excluded by the node-row check below, which would defeat this
+        # test's actual purpose of proving BOTH stacks get checked.
+        (root / "package.json").write_text(json.dumps({"scripts": {"test": "vitest run"}}), encoding="utf-8")
 
         stacks = lib.detect_stack(root)
         labels = [label for label, _argv in stacks]
@@ -442,8 +485,115 @@ def dual_stack_checks() -> list:
     return fails
 
 
+def scripts_repo_targeting_checks() -> list:
+    """Regression for todo 427 defect 1: the scripts-repo row used to run
+    the whole `ci/run_all.py` suite (all 46 `hooks/test_*.py` files,
+    roughly 10 minutes - far past DEFAULT_TIMEOUT_SECONDS) on every turn
+    that edited a hook `.py` file, which would time out and block every
+    such turn. Reproduced with an injectable runner that RECORDS every
+    argv it's called with, so the test can assert exactly which commands
+    ran - py_compile + the one matched self-test, never `ci/run_all.py`.
+    """
+    fails = []
+    lib = _testlib.load_module("testing_floor_lib_for_scripts_repo_test", _HOOKS_DIR / "_testing_floor_lib.py")
+
+    with tempfile.TemporaryDirectory(prefix="testing-floor-scripts-repo-") as tmp:
+        root = Path(tmp)
+        (root / "ci").mkdir()
+        (root / "ci" / "run_all.py").write_text("import sys; sys.exit(1)\n", encoding="utf-8")
+        (root / "hooks").mkdir()
+        (root / "hooks" / "foo-bar.py").write_text("x = 1\n", encoding="utf-8")
+        (root / "hooks" / "test_foo_bar.py").write_text("print('ran')\n", encoding="utf-8")
+
+        calls = []
+
+        class FakeProc:
+            def __init__(self):
+                self.returncode = 0
+                self.stdout = "ok"
+                self.stderr = ""
+
+        def fake_runner(argv, **kwargs):
+            calls.append(argv)
+            return FakeProc()
+
+        ok_all, summary = lib.run_checks(root, runner=fake_runner, paths=["hooks/foo-bar.py"])
+        expected = [
+            [sys.executable, "-m", "py_compile", str(root / "hooks" / "foo-bar.py")],
+            [sys.executable, str(root / "hooks" / "test_foo_bar.py")],
+        ]
+        ok = ok_all is True and calls == expected
+        print(f"[{'PASS' if ok else 'FAIL'}] scripts-repo targeting: runs exactly py_compile + matched self-test, never ci/run_all.py -> calls={calls!r}")
+        if not ok:
+            fails.append("scripts-repo targeting: exact argv, no full suite")
+
+        # No paths at all -> nothing targeted, passes, never calls the runner.
+        def must_not_be_called(argv, **kwargs):
+            raise AssertionError("runner must not be called when no paths are recorded")
+
+        ok_empty, summary_empty = lib.run_checks(root, runner=must_not_be_called, paths=None)
+        ok2 = ok_empty is True and "nothing targeted" in summary_empty
+        print(f"[{'PASS' if ok2 else 'FAIL'}] scripts-repo targeting: no paths -> passes without running anything -> {summary_empty!r}")
+        if not ok2:
+            fails.append("scripts-repo targeting: no paths passes without running")
+
+        # hooks/_hooklib.py has no test_hooklib.py pair -> py_compile only.
+        calls2 = []
+
+        def fake_runner2(argv, **kwargs):
+            calls2.append(argv)
+            return FakeProc()
+
+        (root / "hooks" / "_hooklib.py").write_text("y = 2\n", encoding="utf-8")
+        ok_all2, _summary2 = lib.run_checks(root, runner=fake_runner2, paths=["hooks/_hooklib.py"])
+        ok3 = ok_all2 is True and calls2 == [[sys.executable, "-m", "py_compile", str(root / "hooks" / "_hooklib.py")]]
+        print(f"[{'PASS' if ok3 else 'FAIL'}] scripts-repo targeting: a hook with no test pair runs py_compile only -> calls={calls2!r}")
+        if not ok3:
+            fails.append("scripts-repo targeting: no-pair hook is py_compile only")
+
+    return fails
+
+
+def node_test_script_checks() -> list:
+    """Regression for todo 427 defect 2: the node row used to fire on bare
+    `package.json` existence, so `npm test` would exit 1 ("Missing script:
+    test") for a project that genuinely has no tests. Fixed to read
+    `scripts.test` and treat npm's own default placeholder
+    (`echo "Error: no test specified" && exit 1`) as no test script too.
+    """
+    fails = []
+    lib = _testlib.load_module("testing_floor_lib_for_node_test_script", _HOOKS_DIR / "_testing_floor_lib.py")
+
+    cases = [
+        ({}, False, "no scripts key at all"),
+        ({"scripts": {}}, False, "empty scripts object"),
+        ({"scripts": {"test": ""}}, False, "empty test script string"),
+        ({"scripts": {"test": 'echo "Error: no test specified" && exit 1'}}, False, "npm default placeholder"),
+        ({"scripts": {"test": "vitest run"}}, True, "a real test script"),
+    ]
+    for pkg, expect_node, label in cases:
+        with tempfile.TemporaryDirectory(prefix="testing-floor-node-script-") as tmp:
+            root = Path(tmp)
+            (root / "package.json").write_text(json.dumps(pkg), encoding="utf-8")
+            stacks = lib.detect_stack(root)
+            got_node = any(stack_label == "node" for stack_label, _argv in stacks)
+            ok = got_node == expect_node
+            print(f"[{'PASS' if ok else 'FAIL'}] node scripts.test: {label} -> node row present={got_node} (expected {expect_node})")
+            if not ok:
+                fails.append(f"node scripts.test: {label}")
+
+    return fails
+
+
 def run() -> int:
-    fails = unit_checks() + subprocess_checks() + real_detection_checks() + dual_stack_checks()
+    fails = (
+        unit_checks()
+        + subprocess_checks()
+        + real_detection_checks()
+        + dual_stack_checks()
+        + scripts_repo_targeting_checks()
+        + node_test_script_checks()
+    )
     return _testlib.summarize(fails)
 
 

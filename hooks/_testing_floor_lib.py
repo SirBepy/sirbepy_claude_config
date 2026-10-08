@@ -172,6 +172,18 @@ def detect_stack(root: Path):
     *and* Node); run every row it matches." An empty list means "nothing
     recognised" ("nothing to verify", not "verification failed"), so
     callers must not block on it.
+
+    The "node" row's `argv` is a placeholder label only - `run_stack_check`
+    never actually dispatches it blindly. The row is added only when
+    `package.json` parses and `scripts.test` is a real, non-placeholder
+    command (todo 427 defect 2): a package with no test script would make
+    `npm test` exit 1 with "Missing script: test", blocking a turn for a
+    project that genuinely has no tests. npm's own default placeholder
+    (`echo "Error: no test specified" && exit 1`) counts as no test script.
+
+    The "scripts repo" row's `argv` (the full `ci/run_all.py` suite) is
+    likewise never run as-is by `run_stack_check` - see
+    `build_scripts_repo_commands` for why (todo 427 defect 1).
     """
     matches = []
 
@@ -209,13 +221,116 @@ def detect_stack(root: Path):
         except OSError:
             pass
 
-    if (root / "package.json").is_file():
-        matches.append(("node", [npm_cmd(root), "test"]))
+    package_json = root / "package.json"
+    if package_json.is_file():
+        try:
+            pkg = json.loads(package_json.read_text(encoding="utf-8", errors="replace"))
+        except (OSError, ValueError):
+            pkg = {}
+        test_script = str((pkg.get("scripts") or {}).get("test") or "").strip()
+        # npm's own default placeholder ("Error: no test specified") means the
+        # project genuinely has no test script; running it is a guaranteed
+        # false failure, not a missed check.
+        is_placeholder = "no test specified" in test_script.lower()
+        if test_script and not is_placeholder:
+            matches.append(("node", [npm_cmd(root), "test"]))
 
     return matches
 
 
-def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner):
+def _scripts_repo_self_test(py_path: Path):
+    """Maps an edited `hooks/<name>.py` to its `hooks/test_<norm>.py`
+    self-test, per todo 427 defect 1's matching rule: strip a leading
+    underscore, turn `-` into `_`. Returns None when no such file exists
+    (py_compile-only - e.g. `hooks/_hooklib.py` or
+    `hooks/_destructive_guard_shared.py`, neither has a direct pair).
+    An edited `hooks/test_*.py` runs itself instead of looking for a pair.
+    """
+    if py_path.parent.name.lower() != "hooks":
+        return None
+    name = py_path.stem
+    if name.startswith("test_"):
+        return py_path if py_path.is_file() else None
+    norm = name.lstrip("_").replace("-", "_")
+    candidate = py_path.parent / f"test_{norm}.py"
+    return candidate if candidate.is_file() else None
+
+
+def build_scripts_repo_commands(root: Path, paths):
+    """Targeted replacement (todo 427 defect 1) for running the whole
+    `ci/run_all.py` suite - that suite serially runs all `hooks/test_*.py`
+    files and takes roughly 10 minutes, far past `DEFAULT_TIMEOUT_SECONDS`,
+    so every turn that edits a hook `.py` here would time out and block.
+
+    Builds, from this turn's own accumulated edited-paths list: one
+    `python -m py_compile` call over every edited `.py` path, plus one
+    self-test invocation per matched `hooks/test_<norm>.py` pair (deduped,
+    order preserved). `paths` entries may be absolute or repo-relative
+    (`testing-floor-flag.py` records them as given); relative ones are
+    resolved against `root`. No `.py` paths (including an old state file
+    with no "paths" key at all) -> an empty command list, which callers
+    read as "nothing targeted to verify" - never a fall-back to the full
+    suite.
+    """
+    py_paths = []
+    test_cmds = []
+    seen_tests = set()
+    for raw in paths or []:
+        if not raw or not str(raw).lower().endswith(".py"):
+            continue
+        p = Path(raw)
+        if not p.is_absolute():
+            p = root / p
+        py_paths.append(str(p))
+        self_test = _scripts_repo_self_test(p)
+        if self_test is not None:
+            key = str(self_test)
+            if key not in seen_tests:
+                seen_tests.add(key)
+                test_cmds.append([sys.executable, str(self_test)])
+
+    commands = []
+    if py_paths:
+        commands.append([sys.executable, "-m", "py_compile", *py_paths])
+    commands.extend(test_cmds)
+    return commands
+
+
+def run_scripts_repo_check(root: Path, timeout: int, runner, paths):
+    """Runs the targeted command list from `build_scripts_repo_commands`
+    (py_compile + matched self-tests), never the full `ci/run_all.py`
+    suite - see that function's docstring for why. `ok` is True only if
+    every targeted command exits 0 (or is skipped as "nothing to verify");
+    an empty command list (no edited `.py` paths this turn) is itself a
+    pass, not a failure.
+    """
+    commands = build_scripts_repo_commands(root, paths)
+    if not commands:
+        return True, "scripts repo: no edited .py paths recorded this turn; nothing targeted to verify"
+
+    ok_all = True
+    summaries = []
+    for argv in commands:
+        rendered = " ".join(str(a) for a in argv)
+        try:
+            proc = runner(argv, cwd=str(root), capture_output=True, text=True, timeout=timeout)
+        except FileNotFoundError as e:
+            summaries.append(f"scripts repo ({rendered}): check command not found ({e}); nothing to verify")
+            continue
+        except subprocess.TimeoutExpired:
+            ok_all = False
+            summaries.append(f"scripts repo ({rendered}): timed out after {timeout}s")
+            continue
+        output = "\n".join(s for s in (proc.stdout, proc.stderr) if s)
+        ok = proc.returncode == 0
+        ok_all = ok_all and ok
+        tail = output.strip()[-800:]
+        verdict = "passed" if ok else "failed"
+        summaries.append(f"scripts repo ({rendered}) {verdict} (exit {proc.returncode}): ...{tail}")
+    return ok_all, " | ".join(summaries)
+
+
+def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner, paths=None):
     """Runs one detected stack's fast-check command. `runner` defaults to
     `subprocess.run` in production; tests inject a fake to stay deterministic.
 
@@ -223,9 +338,16 @@ def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner):
     failing run (confirmed 2026-08-13, see skills/test/SKILL.md and
     skills/flutter-bump/references/fvm-landmines.md bug 3) - the real verdict
     has to come from stdout, never the exit code, for that one stack.
+
+    "scripts repo" is its own special case too (todo 427 defect 1): `argv`
+    is ignored and `run_scripts_repo_check` builds a targeted command list
+    from `paths` instead, so this never runs the full `ci/run_all.py` suite.
     """
     if label == "roblox":
         return True, "roblox/Luau stack detected; this hook does not run /jest-lua - verify manually"
+
+    if label == "scripts repo":
+        return run_scripts_repo_check(root, timeout, runner, paths)
 
     try:
         proc = runner(argv, cwd=str(root), capture_output=True, text=True, timeout=timeout)
@@ -270,7 +392,7 @@ def sweep_node_orphans() -> None:
         pass
 
 
-def run_checks(root: Path, timeout: int = DEFAULT_TIMEOUT_SECONDS, runner=subprocess.run):
+def run_checks(root: Path, timeout: int = DEFAULT_TIMEOUT_SECONDS, runner=subprocess.run, paths=None):
     """(ok, summary) aggregated across EVERY stack `detect_stack` matches
     under `root`, not just the first - a dual-stack repo (Tauri: Rust +
     Node; Roblox + Node) must have both checked, per `skills/test/
@@ -281,6 +403,13 @@ def run_checks(root: Path, timeout: int = DEFAULT_TIMEOUT_SECONDS, runner=subpro
     stack that caused it. `runner` defaults to a real `subprocess.run`;
     tests always inject a fake so a suite never needs a real npm/cargo/
     flutter toolchain installed.
+
+    `paths` (optional, new in todo 427 defect 1) is this turn's own
+    accumulated edited-source-paths list, forwarded to the "scripts repo"
+    row only - every other row's command is unaffected. Omitting it (the
+    pre-defect-1 call shape) is still valid: the scripts-repo row then has
+    nothing targeted to verify and passes, it never falls back to running
+    the full suite.
 
     TESTING_FLOOR_FAKE_CHECK, if set, short-circuits everything below it
     (including stack detection) - the one deliberate exception to "no test
@@ -301,7 +430,7 @@ def run_checks(root: Path, timeout: int = DEFAULT_TIMEOUT_SECONDS, runner=subpro
     if not stacks:
         return True, f"no recognised fast-check stack detected under {root}; nothing to verify"
 
-    results = [run_stack_check(label, argv, root, timeout, runner) for label, argv in stacks]
+    results = [run_stack_check(label, argv, root, timeout, runner, paths=paths) for label, argv in stacks]
     ok = all(stack_ok for stack_ok, _summary in results)
     summary = " | ".join(stack_summary for _ok, stack_summary in results)
     if any(label == "node" for label, _argv in stacks):

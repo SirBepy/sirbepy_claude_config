@@ -2,16 +2,12 @@
 check the project has before claiming done") a gate a turn cannot pass while
 red, instead of prose Claude has to remember under pressure.
 
-*** NOT WIRED INTO settings.json BY THIS DISPATCH - READ THIS BEFORE WIRING. ***
+Wired in settings.json since 2026-10-08 (Stop, plus testing-floor-flag.py on
+PostToolUse).
 A Stop hook blocks EVERY session on this machine from ending its current
-turn if it misfires. Four other live sessions share this checkout today; a
-bad matcher or a bug here would take turn-completion away from all of them
-at once, with the dev away and nobody able to edit settings.json mid-turn to
-turn it off. The todo itself calls this the highest-blast-radius item in its
-batch. This file (plus testing-floor-flag.py and _testing_floor_lib.py) is
-the complete, tested artifact; wiring it into settings.json is a decision
-for Joe to make while watching the first few live turns, not something this
-dispatch is allowed to flip on unattended.
+turn if it misfires, so any change here needs both test suites green before
+it lands, and the escape hatch below is the first thing to reach for if a
+session ever cannot end a turn.
 
 Escape hatch (must exist before any blocking logic does - see the todo's own
 ordering requirement): set the env var CLAUDE_TESTING_FLOOR_SKIP to any
@@ -125,6 +121,7 @@ def evaluate(
     state = read_state(flag_path)
     attempts = int(state.get("attempts") or 0)
     root = state.get("root") or "."
+    paths = state.get("paths") or []
 
     if attempts >= cap:
         # Retry cap already spent on this unfixed edit - release rather
@@ -133,13 +130,19 @@ def evaluate(
         clear_state(flag_path)
         return None
 
-    ok, summary = run_checks_fn(Path(root))
+    # paths: this session's accumulated edited-source-paths list (written
+    # by testing-floor-flag.py), forwarded so the "scripts repo" row can
+    # target py_compile + the matching self-test instead of running the
+    # whole ci/run_all.py suite. An old state file with no "paths" key at
+    # all (state() default [] above) means that row has nothing targeted
+    # to verify and passes - it never falls back to the full suite.
+    ok, summary = run_checks_fn(Path(root), paths=paths)
     if ok:
         clear_state(flag_path)
         return None
 
     attempts += 1
-    write_state(flag_path, {"attempts": attempts, "root": root})
+    write_state(flag_path, {"attempts": attempts, "root": root, "paths": paths})
     return {
         "decision": "block",
         "reason": (

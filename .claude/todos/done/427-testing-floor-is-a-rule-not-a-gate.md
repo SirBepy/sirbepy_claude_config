@@ -37,7 +37,7 @@ decisions worth copying exactly:
 3. Source-versus-config discrimination, so editing a `tsconfig.json` does not trigger a full run.
 
 Directly relevant hazard from this repo's own history: process hygiene. An unbounded test run from a
-Stop hook is exactly how 90+ orphan vitest processes once pegged the CPU at 100% and 90°C. The
+Stop hook is exactly how 90+ orphan vitest processes once pegged the CPU at 100% and 90Â°C. The
 concurrency cap (5) and the orphan-check requirement in `refs/process-hygiene.md` are non-negotiable
 here, and a Stop hook that spawns test processes is the highest-risk place in the whole repo to get
 that wrong.
@@ -170,3 +170,4 @@ subprocess cases including fault injection.
    regression test to add is a temp dir with two stack markers and distinguishable injected results,
    asserting the summary names BOTH. It fails today and passes after the fix.
 - loop-todos cycle 2, 2026-10-06: the dual-stack defect above is fixed. `detect_stack()` returns a list, `run_checks()` runs every matched stack and aggregates (ok = all, summaries joined), regression test `dual_stack_checks()` in hooks/test_testing_floor_guard.py RED then GREEN. Still unwired; the wiring question is in Open questions.
+- Wired 2026-10-08 (loop-todos cycle 2): PostToolUse Edit|Write|MultiEdit|NotebookEdit -> testing-floor-flag.py, Stop -> testing-floor-guard.py (timeout 660). Before wiring, fixed two defects that would have false-blocked: the scripts-repo row ran the ~10 min ci/run_all.py (now py_compile + each edited hook's own self-test, from accumulated state paths), and the node row ran npm test with no scripts.test (now gated on a real script). Flag writer proven live: a hooks/*.py edit wrote hooks/.testing-floor-pending/<session> with the path. Consecutive-Stop cap stays the conservative 3; harness ceiling still unmeasured.

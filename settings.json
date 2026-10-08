@@ -215,6 +215,16 @@
     ],
     "PostToolUse": [
       {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\testing-floor-flag.py\"",
+            "statusMessage": "Noting source edits for the testing floor"
+          }
+        ]
+      },
+      {
         "matcher": "Bash|PowerShell",
         "hooks": [
           {
@@ -688,6 +698,16 @@
             "type": "command",
             "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\send-message-stop-guard.py\"",
             "statusMessage": "Checking send_message obligation"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\testing-floor-guard.py\"",
+            "timeout": 660,
+            "statusMessage": "Running the testing floor on edited source"
           }
         ]
       }

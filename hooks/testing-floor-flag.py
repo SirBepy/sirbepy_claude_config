@@ -17,6 +17,16 @@ counter to 0 - a fresh edit deserves a fresh attempt budget, so one stubborn
 early failure can't eat the whole session's cap before Claude even tries a
 fix (see testing-floor-guard.py for how attempts are then spent).
 
+Also accumulates `state["paths"]`: every edited file path this session has
+seen so far (deduped by exact string, as received from `tool_input` -
+absolute or repo-relative, whichever the tool call gave), appended to
+across calls rather than overwritten. testing-floor-guard.py forwards this
+list to `run_checks` so the "scripts repo" row can target py_compile and
+the matching self-test at the edited files instead of running the whole
+`ci/run_all.py` suite (todo 427 defect 1). The attempts-reset above is
+unaffected: a fresh edit still resets attempts to 0 even though paths
+carries forward.
+
 Never fires for a dispatched agent (mirrors testing-floor-guard.py's own
 exclusion): a subagent's edits are covered by its own dispatch-level verify
 floor, not this session's gate, and a dispatch's session_id may not even be
@@ -42,6 +52,7 @@ try:
         EDIT_TOOL_SUFFIXES,
         is_agent_call,
         is_source_file,
+        read_state,
         resolve_state_dir,
         write_state,
     )
@@ -72,7 +83,11 @@ def main() -> None:
 
     root = git_repo_root(str(Path(file_path).parent)) or payload.get("cwd") or "."
     state_dir = resolve_state_dir()
-    write_state(state_dir / session_id, {"attempts": 0, "root": root})
+    flag_path = state_dir / session_id
+    paths = list(read_state(flag_path).get("paths") or [])
+    if file_path not in paths:
+        paths.append(file_path)
+    write_state(flag_path, {"attempts": 0, "root": root, "paths": paths})
     sys.exit(0)
 
 

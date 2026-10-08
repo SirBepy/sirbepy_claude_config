@@ -200,7 +200,6 @@ design at 3/10. 427 wants a gate, not a nudge, so that limitation is the central
 solve, not a detail. `hooks/ui-screenshot-reminder.py:110` is the live example of the mechanism and
 its once-per-session sentinel is a single boolean, not per-file state.
 
-- [ ] 427 - Stop-hook verify gate. **Runs on every turn end. Build the escape hatch first.**
 - [ ] 450 - the post-write TRIGGER half only. **Gated on 427's source-file-edited signal**; build
       it once, not twice. Full flaw list and the rejected `claude -p` alternative are in the todo.
 - [ ] 426 - PreCompact, PermissionRequest, generic PostToolUse; the unused JSON control fields
