@@ -223,7 +223,20 @@ Step 2's dedupe pairs.
    group where every member is `ai`/absent-origin is eligible for Step 7 Pass A to execute without
    asking. A group containing even one `dev`-origin member goes on Step 6's confirm list and waits -
    this step never merges on its own judgement.
-6. **No overlap, no noise.** Singleton groups produce no proposal. A backlog with no overlapping
+6. **Execution-run skip.** When this run's caller is `/auto-do-todos` Step 2 or `/loop-todos`
+   (which calls `/auto-do-todos` Step 2 each cycle) - i.e. this `/cleanup-todos` pass is the first
+   step of an execution run, not a standalone one - drop from Step 7's write queue any group that
+   is already origin-gate-eligible (step 5 above) AND whose every member's Step 4 `complexity` is
+   `EASY`: that same execution run's own queue (`/batch-todos`'s EASY batch, or `/auto-do-todos`'s
+   AUTO grind) executes every source together minutes later regardless of whether they were merged
+   first, so the merge would be written and its sources archived back-to-back for nothing - exactly
+   the wasted Pass A write and abandoned `36-.reserved` marker from the todo 34/35 incident this
+   todo was filed over. Report the group in Step 6 as `<ids> - will be executed together, merge
+   skipped` instead of a merge proposal; it never reaches Step 7's write queue. A group with any
+   `HARD`-complexity member, or any `dev`-origin member, is unaffected by this skip and proceeds
+   normally - a `HARD` todo is not guaranteed to run in this same pass, so the merge still buys
+   something there.
+7. **No overlap, no noise.** Singleton groups produce no proposal. A backlog with no overlapping
    todos reports "No file-overlap clusters found," the same shape as Step 6's existing "No
    duplicates found."
 
@@ -316,7 +329,9 @@ Contents, in order:
 2a. Merge-cluster proposals from Step 4.5: `<ids> -> one todo, shared files: <paths>, worth:
    sum=<S> max=<M>` per group, plus any hub-files excluded from grouping, or "No file-overlap
    clusters found." if zero. An all-`ai`/absent-origin group is also named in 4b (already executed
-   by Pass A); a group touching a `dev`-origin member is also named in item 5's confirm list.
+   by Pass A); a group touching a `dev`-origin member is also named in item 5's confirm list; a
+   group dropped by step 4.5's execution-run skip is named here instead as `<ids> - will be
+   executed together, merge skipped`, never in 4b, since nothing was written or archived for it.
 3. Staleness nag: "`<N>` todos not reconfirmed in `CLEANUP_STALE_DAYS` (14) days or more," computed
    from the PRE-refresh `last-checked` snapshot Step 5 recorded before overwriting it - never from
    the value Step 5 just wrote, which would always read as fresh.
@@ -401,8 +416,13 @@ every member is `ai`/absent-origin, or in Pass B after the dev's reply for a gro
    `file:line` citations, attributed by source id rather than paraphrased together, plus an `##
    Open questions` section when two sources' content actually contradicts. Reuse that shape - this
    skill does not reimplement `/pickup --merge`'s merge-writing logic, only triggers the same
-   contract from a different entry point. Delete the `<id>-.reserved` marker once this file is
-   written.
+   contract from a different entry point. Include `<!-- duplicate-checked: merge of <ids> -->`
+   somewhere in the written content: `hooks/todo-duplicate-guard.py` always fires on a merge's own
+   sources, which are still live (not archived until step 3, after this write) and by construction
+   share the merged file's vocabulary. The guard's `OVERRIDE_MARKER_RE` matches the bare marker or
+   one with a reason inlined in the same HTML comment, so writing the reason form directly is not a
+   guess - it is the guard's own documented escape. Delete the `<id>-.reserved` marker once this
+   file is written.
 3. For each source id, run `complete-todo.ps1 -Id <id> -Note "Folded into <new-id> via
    /cleanup-todos <date> (file-overlap merge: <shared files>)."` - archives it to `done/`, prunes
    its PLAN.md line, releases any claim, same mechanics as every other archival in this skill.

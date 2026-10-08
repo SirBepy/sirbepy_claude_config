@@ -42,6 +42,7 @@ merge, deleted the `36-.reserved` marker, and executed 34 + 35 directly.
 ## Notes
 
 - Filed from shop-scraper's /close on 2026-10-08.
+- Done 2026-10-08: cleanup-todos Step 7 Merge step 2 writes <!-- duplicate-checked: merge of <ids> --> (the guard's own OVERRIDE_MARKER_RE escape), and a new Step 4.5 execution-run skip drops all-ai, all-EASY groups from the write queue when /auto-do-todos or /loop-todos is the caller, reporting them as 'will be executed together'. complexity=EASY is used as the operative field since cleanup-todos never computes the AUTO bucket.
 
 ## Answers 2026-10-08
 
