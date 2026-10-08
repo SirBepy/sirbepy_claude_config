@@ -19,6 +19,7 @@ in-session way to flip it off.
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -217,7 +218,17 @@ def running_background_agents(transcript_path: str) -> set:
     return {agent_id for agent_id, alive in running.items() if alive}
 
 
-_UNLAUNCHABLE_MARKER = "is not recognized as an internal or external command"
+# cmd.exe's own "unrecognized command" text (the pnpm-managed-tools .cmd
+# shim case) plus bash's equivalent ("bash: pnpm: command not found") so a
+# check launched either way that can't actually run is still read as "not
+# verified", never a failure.
+_UNLAUNCHABLE_MARKERS = (
+    "is not recognized as an internal or external command",
+    "command not found",
+)
+_UNLAUNCHABLE_MARKER = _UNLAUNCHABLE_MARKERS[0]  # back-compat name some callers may still import
+
+BASH_EXE_ENV = "TESTING_FLOOR_BASH_EXE"  # test-only override, same pattern as the other *_ENV points
 
 
 def resolve_launcher(argv: list, which=shutil.which) -> list:
@@ -225,6 +236,49 @@ def resolve_launcher(argv: list, which=shutil.which) -> list:
     launch by bare name without a shell, so the check never ran at all."""
     resolved = which(argv[0]) if argv else None
     return [resolved, *argv[1:]] if resolved else list(argv)
+
+
+def resolve_git_bash(which=shutil.which) -> str | None:
+    """Git for Windows' bash.exe, never a bare `bash` resolved from PATH -
+    this machine also has WSL's bash on PATH, which would run the check
+    against the wrong filesystem/toolchain entirely (todo 1139). Derived
+    from git.exe's own location rather than a fixed install path, since
+    Git for Windows always ships `bash.exe` as a fixed sibling of git.exe's
+    own root (`<GitRoot>/bin/bash.exe`) regardless of whether git.exe
+    itself resolves to `<GitRoot>/cmd/git.exe` (the common PATH entry) or
+    `<GitRoot>/bin/git.exe`. The two standard install locations are a
+    last-resort fallback for when `git` itself isn't on PATH.
+    """
+    override = os.environ.get(BASH_EXE_ENV)
+    if override:
+        return override if Path(override).is_file() else None
+
+    candidates = []
+    git_exe = which("git")
+    if git_exe:
+        git_bin_dir = Path(git_exe).resolve().parent
+        candidates.append(git_bin_dir / "bash.exe")
+        candidates.append(git_bin_dir.parent / "bin" / "bash.exe")
+    candidates.append(Path(r"C:\Program Files\Git\bin\bash.exe"))
+    candidates.append(Path(r"C:\Program Files (x86)\Git\bin\bash.exe"))
+
+    for candidate in candidates:
+        try:
+            if candidate.is_file():
+                return str(candidate)
+        except OSError:
+            continue
+    return None
+
+
+def bash_launch_argv(argv: list, bash_exe: str) -> list:
+    """`bash -lc "<cmd>"` - the same shell Claude's own Bash tool uses, and
+    the reason it already runs pnpm's managed-tools shim fine (todo 1139's
+    Notes: Git bash executes the shim's extensionless target script
+    directly; cmd.exe cannot). A login shell (`-l`) so PATH is built the
+    same way an interactive Git-bash session's would be, not whatever
+    subprocess's own minimal env happens to pass through."""
+    return [bash_exe, "-lc", shlex.join(str(a) for a in argv)]
 
 
 def npm_cmd(root: Path) -> str:
@@ -402,7 +456,7 @@ def run_scripts_repo_check(root: Path, timeout: int, runner, paths):
     return ok_all, " | ".join(summaries)
 
 
-def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner, paths=None):
+def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner, paths=None, resolve_bash=resolve_git_bash):
     """Runs one detected stack's fast-check command. `runner` defaults to
     `subprocess.run` in production; tests inject a fake to stay deterministic.
 
@@ -414,6 +468,16 @@ def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner, pa
     "scripts repo" is its own special case too (todo 427 defect 1): `argv`
     is ignored and `run_scripts_repo_check` builds a targeted command list
     from `paths` instead, so this never runs the full `ci/run_all.py` suite.
+
+    "node" launcher choice (todo 1139): the row's `argv[0]` is npm/pnpm/
+    yarn, shipped on Windows as a `.cmd` shim that pnpm 12's own
+    managed-tools install can break (see `resolve_git_bash`'s and
+    `bash_launch_argv`'s docstrings). When a Git-bash executable resolves,
+    the node row runs through it instead of the plain cmd.exe-launched
+    `.cmd`, so the check actually executes rather than falling straight to
+    "not verified". `resolve_bash` is a parameter (defaulting to the real
+    `resolve_git_bash`) purely so a test can inject a fixed path or `None`
+    without touching this machine's real Git install.
     """
     if label == "roblox":
         return True, "roblox/Luau stack detected; this hook does not run /jest-lua - verify manually"
@@ -421,8 +485,14 @@ def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner, pa
     if label == "scripts repo":
         return run_scripts_repo_check(root, timeout, runner, paths)
 
+    launch_argv = resolve_launcher(argv)
+    if label == "node":
+        bash_exe = resolve_bash()
+        if bash_exe:
+            launch_argv = bash_launch_argv(argv, bash_exe)
+
     try:
-        proc = runner(resolve_launcher(argv), cwd=str(root), capture_output=True, text=True, timeout=timeout)
+        proc = runner(launch_argv, cwd=str(root), capture_output=True, text=True, timeout=timeout)
     except FileNotFoundError as e:
         # The checker tool itself isn't on PATH - an environment gap, not a
         # code failure. Blocking a turn for that would trap the session over
@@ -434,9 +504,10 @@ def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner, pa
         return True, f"{label}: check timed out after {timeout}s; not verified"
 
     output = "\n".join(s for s in (proc.stdout, proc.stderr) if s)
-    if proc.returncode != 0 and _UNLAUNCHABLE_MARKER in output:
-        # pnpm 12's managed-tools .cmd shim calls an extensionless script that
-        # cmd.exe cannot run, so the launcher itself failed before any test did.
+    if proc.returncode != 0 and any(marker in output for marker in _UNLAUNCHABLE_MARKERS):
+        # Either cmd.exe couldn't run a .cmd shim, or (bash launch) the
+        # resolved shell itself reported the package manager missing -
+        # neither says anything about the edit under test.
         return True, f"{label}: check command could not launch ({output.strip()[:200]}); not verified"
     if label == "flutter":
         ok = "All tests passed!" in output
@@ -470,7 +541,7 @@ def sweep_node_orphans() -> None:
         pass
 
 
-def run_checks(root: Path, timeout: int = DEFAULT_TIMEOUT_SECONDS, runner=subprocess.run, paths=None):
+def run_checks(root: Path, timeout: int = DEFAULT_TIMEOUT_SECONDS, runner=subprocess.run, paths=None, resolve_bash=resolve_git_bash):
     """(ok, summary) aggregated across EVERY stack `detect_stack` matches
     under `root`, not just the first - a dual-stack repo (Tauri: Rust +
     Node; Roblox + Node) must have both checked, per `skills/test/
@@ -508,7 +579,10 @@ def run_checks(root: Path, timeout: int = DEFAULT_TIMEOUT_SECONDS, runner=subpro
     if not stacks:
         return True, f"no recognised fast-check stack detected under {root}; nothing to verify"
 
-    results = [run_stack_check(label, argv, root, timeout, runner, paths=paths) for label, argv in stacks]
+    results = [
+        run_stack_check(label, argv, root, timeout, runner, paths=paths, resolve_bash=resolve_bash)
+        for label, argv in stacks
+    ]
     ok = all(stack_ok for stack_ok, _summary in results)
     summary = " | ".join(stack_summary for _ok, stack_summary in results)
     if any(label == "node" for label, _argv in stacks):

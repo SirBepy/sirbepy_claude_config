@@ -698,6 +698,131 @@ def launcher_resolution_checks() -> list:
     return fails
 
 
+def git_bash_launcher_checks() -> list:
+    """Todo 1139: the node row's package-manager command must run through
+    Git for Windows' bash.exe, never a bare `bash` off PATH (this machine
+    also has WSL's bash, which would run the wrong filesystem/toolchain),
+    and must fall back to the plain cmd.exe launcher when no bash resolves.
+    """
+    fails = []
+    lib = _testlib.load_module("testing_floor_lib_for_git_bash_test", _HOOKS_DIR / "_testing_floor_lib.py")
+
+    with tempfile.TemporaryDirectory(prefix="testing-floor-gitbash-") as tmp:
+        tmp_path = Path(tmp)
+        real_bash = tmp_path / "bin" / "bash.exe"
+        real_bash.parent.mkdir(parents=True)
+        real_bash.write_text("", encoding="utf-8")
+        git_cmd_dir = tmp_path / "cmd"
+        git_cmd_dir.mkdir()
+        git_exe_in_cmd = git_cmd_dir / "git.exe"
+        git_exe_in_cmd.write_text("", encoding="utf-8")
+        git_exe_in_bin = real_bash.parent / "git.exe"
+        git_exe_in_bin.write_text("", encoding="utf-8")
+
+        # git.exe resolves to <root>/cmd/git.exe (the common PATH shape) ->
+        # bash.exe is found as the sibling of cmd's PARENT's bin dir.
+        got = lib.resolve_git_bash(which=lambda n: str(git_exe_in_cmd) if n == "git" else None)
+        ok = got == str(real_bash)
+        print(f"[{'PASS' if ok else 'FAIL'}] git-bash: resolves via git.exe in a sibling cmd/ dir -> {got!r}")
+        if not ok:
+            fails.append("git-bash: resolve via sibling cmd/ dir")
+
+        # git.exe resolves directly inside bin/ (bash.exe's own directory).
+        got2 = lib.resolve_git_bash(which=lambda n: str(git_exe_in_bin) if n == "git" else None)
+        ok2 = got2 == str(real_bash)
+        print(f"[{'PASS' if ok2 else 'FAIL'}] git-bash: resolves via git.exe in the same bin/ dir -> {got2!r}")
+        if not ok2:
+            fails.append("git-bash: resolve via same bin/ dir")
+
+        # `which("bash")` must never even be consulted - this machine's own
+        # bare "bash" is WSL's, and resolving it would run the check against
+        # the wrong filesystem/toolchain entirely.
+        which_calls = []
+
+        def which_tracks(n):
+            which_calls.append(n)
+            if n == "bash":
+                return r"C:\Windows\System32\bash.exe"  # WSL's launcher stub
+            return None
+
+        lib.resolve_git_bash(which=which_tracks)
+        ok3 = "bash" not in which_calls
+        print(f"[{'PASS' if ok3 else 'FAIL'}] git-bash: never consults which(\"bash\") -> calls={which_calls!r}")
+        if not ok3:
+            fails.append("git-bash: never consults which(bash)")
+
+        # Env override (test-only injection point, mirrors the other *_ENV vars).
+        other_bash = tmp_path / "other-bash.exe"
+        other_bash.write_text("", encoding="utf-8")
+        os.environ["TESTING_FLOOR_BASH_EXE"] = str(other_bash)
+        try:
+            got4 = lib.resolve_git_bash(which=lambda n: None)
+        finally:
+            del os.environ["TESTING_FLOOR_BASH_EXE"]
+        ok4 = got4 == str(other_bash)
+        print(f"[{'PASS' if ok4 else 'FAIL'}] git-bash: env override wins -> {got4!r}")
+        if not ok4:
+            fails.append("git-bash: env override wins")
+
+        # bash_launch_argv shape: a login shell running the joined, quoted command.
+        argv = lib.bash_launch_argv(["pnpm", "test"], str(real_bash))
+        ok5 = argv == [str(real_bash), "-lc", "pnpm test"]
+        print(f"[{'PASS' if ok5 else 'FAIL'}] git-bash: bash_launch_argv builds `bash -lc \"pnpm test\"` -> {argv!r}")
+        if not ok5:
+            fails.append("git-bash: bash_launch_argv shape")
+
+        # run_stack_check's node row prefers the resolved bash launcher...
+        calls = []
+
+        class FakeProc:
+            def __init__(self, returncode=0, stdout="ok", stderr=""):
+                self.returncode, self.stdout, self.stderr = returncode, stdout, stderr
+
+        def recording_runner(argv, **kwargs):
+            calls.append(argv)
+            return FakeProc()
+
+        ok_result, _summary = lib.run_stack_check(
+            "node", ["pnpm", "test"], tmp_path, 300, recording_runner,
+            resolve_bash=lambda: str(real_bash),
+        )
+        ok6 = ok_result is True and calls == [[str(real_bash), "-lc", "pnpm test"]]
+        print(f"[{'PASS' if ok6 else 'FAIL'}] git-bash: run_stack_check's node row launches via the resolved bash -> calls={calls!r}")
+        if not ok6:
+            fails.append("git-bash: run_stack_check prefers resolved bash for node")
+
+        # ...and falls back to the plain (cmd.exe) launcher when no bash
+        # resolves. A nonsense command name so this check doesn't depend on
+        # whether a real "pnpm" happens to resolve via shutil.which on
+        # whatever machine runs this suite.
+        calls2 = []
+
+        def recording_runner2(argv, **kwargs):
+            calls2.append(argv)
+            return FakeProc()
+
+        ok_result2, _summary2 = lib.run_stack_check(
+            "node", ["totally-fake-pm-xyz", "test"], tmp_path, 300, recording_runner2,
+            resolve_bash=lambda: None,
+        )
+        ok7 = ok_result2 is True and calls2 == [["totally-fake-pm-xyz", "test"]]
+        print(f"[{'PASS' if ok7 else 'FAIL'}] git-bash: run_stack_check falls back to the plain launcher when no bash resolves -> calls={calls2!r}")
+        if not ok7:
+            fails.append("git-bash: run_stack_check falls back without bash")
+
+        # A non-node row (rust) must never consult resolve_bash at all.
+        def must_not_be_called():
+            raise AssertionError("resolve_bash must not be called for a non-node row")
+
+        ok_result3, _summary3 = lib.run_stack_check(
+            "rust", ["cargo", "test"], tmp_path, 300, recording_runner2,
+            resolve_bash=must_not_be_called,
+        )
+        print("[PASS] git-bash: a non-node row never consults resolve_bash")
+
+    return fails
+
+
 def infra_failure_checks() -> list:
     """A check that cannot launch or cannot finish says nothing about the
     edit, and blocking on it held peer sessions for up to 3 x 300s (cueline
@@ -753,6 +878,7 @@ def run() -> int:
         + node_test_script_checks()
         + _guarded(background_agent_checks)()
         + _guarded(launcher_resolution_checks)()
+        + _guarded(git_bash_launcher_checks)()
         + _guarded(infra_failure_checks)()
     )
     return _testlib.summarize(fails)
