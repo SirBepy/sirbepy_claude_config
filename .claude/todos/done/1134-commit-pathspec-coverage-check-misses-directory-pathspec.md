@@ -26,3 +26,7 @@ no refusal.
 ## Acceptance
 - A directory-pathspec commit of deletions under that directory passes without `--force coverage`.
 - A deletion outside every pathspec entry, sharing a directory with one, still refuses.
+
+## Notes
+
+- coverage check treats a path equal to or under a directory pathspec entry as covered; fixture reproduces the impeccable shape (two deletions plus a new file under one dir) and a regression guard keeps a same-dir deletion next to a FILE entry refusing. Suite ALL PASS.

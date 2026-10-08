@@ -49,3 +49,7 @@ hides the conflict instead of surfacing it.
 - A message mentioning "Player Claude" in its subject still commits (mc_plugins_tag has many such
   subjects).
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- commit-pathspec.sh refuses (exit 1, no --force) any -m line matching ^co-authored-by:.*(claude|anthropic) or 'generated with [claude code', before the prefilter gate; 4 new fixtures (trailer refused, human trailer and 'Player Claude' subject allowed, Generated-with refused), RED then GREEN. Optional commit-guard.py half filed as todo 1135.

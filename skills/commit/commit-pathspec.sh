@@ -125,6 +125,26 @@ if [ -z "$expect_branch" ] || [ -z "$expect_sha" ] || [ "${#messages[@]}" -eq 0 
   exit 2
 fi
 
+# --- AI attribution refusal - checked first, before the prefilter gate or any repo
+# work, so a refusal is cheap; never overridable, matching /commit SKILL.md's "never add
+# Co-authored-by: Claude or any AI attribution" with no exception. A trailer line is matched
+# case-insensitively at the start of a line so a prose mention ("FIX: Player Claude listener")
+# never matches; the "generated with" line has no anchor since that phrase is never legitimate
+# mid-sentence prose.
+for m in "${messages[@]}"; do
+  while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    if printf '%s' "$line" | grep -qiE '^co-authored-by:.*(claude|anthropic)'; then
+      printf 'REFUSED: commit message carries an AI attribution trailer, never allowed - matched line: %s\n' "$line"
+      exit 1
+    fi
+    if printf '%s' "$line" | grep -qiE 'generated with \[?claude code'; then
+      printf 'REFUSED: commit message carries an AI attribution line, never allowed - matched line: %s\n' "$line"
+      exit 1
+    fi
+  done <<<"$m"
+done
+
 if [ -n "$force_list" ]; then
   IFS=',' read -r -a force_arr <<<"$force_list"
   normalized_force=()
@@ -564,8 +584,25 @@ check_coverage_hit() {
   #     blob before this commit touched it, so an unrelated deletion sharing its basename is not
   #     "half of a move" either - without this, editing skills/foo/SKILL.md while an unrelated
   #     skills/bar/SKILL.md deletion was pending anywhere else refused on basename alone.
-  local p="$1" is_del="$2" pd pb d f
+  local p="$1" is_del="$2" pd pb d f fn
   [ -n "${in_pathspec[$p]:-}" ] && return
+  # Directory-pathspec containment: a path equal to, or nested at any depth under,
+  # a pathspec entry that is ITSELF a directory is already covered the way `git commit -- <dir>`
+  # covers it natively - this is a stronger, exact membership test, not the same-directory-level
+  # heuristic below (which only ever compares two paths' immediate dirname, so it can never match
+  # a directory pathspec entry against a file nested two or more levels under it). Backslashes are
+  # normalized and a trailing slash stripped first, matching how a caller might type a Windows-
+  # style or slash-terminated directory pathspec; $p itself never needs this since it always comes
+  # from git's own output, which is already forward-slash. Gated on -d so a FILE pathspec entry
+  # (e.g. src/new.txt) never falls into this branch and still reaches the heuristic below.
+  for f in "${files[@]}"; do
+    fn="${f//\\//}"
+    fn="${fn%/}"
+    [ -d "$repo_root/$fn" ] || continue
+    case "$p" in
+      "$fn"|"$fn"/*) return ;;
+    esac
+  done
   pd=$(dirname -- "$p")
   pb=$(basename -- "$p")
   for f in "${files[@]}"; do

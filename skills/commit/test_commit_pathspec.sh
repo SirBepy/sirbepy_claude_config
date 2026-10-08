@@ -1009,6 +1009,133 @@ else
   echo "PASS: --todo (untracked) - the done/ destination landed"
 fi
 
+# --- AI attribution refusal: a Co-Authored-By: Claude/Anthropic trailer line never lands,
+# checked before any repo work so the refusal is cheap and creates no commit ---
+r40=$(new_repo); tmp_dirs+=("$r40")
+branch=$(git -C "$r40" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r40" rev-parse HEAD)
+printf 'f\n' > "$r40/f.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r40" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "$(printf 'add f.txt\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>')" -- f.txt 2>&1); rc=$?
+check "a Co-Authored-By: Claude trailer is refused, naming the matched line (todo 1117)" \
+  1 'REFUSED.*AI attribution.*Co-Authored-By: Claude Opus 5\.5' '' "$out" "$rc"
+if [ "$(git -C "$r40" rev-parse HEAD)" != "$sha" ]; then
+  echo "FAIL: todo 1117 - an AI-attribution-trailer commit must not have landed"
+  fail=1
+else
+  echo "PASS: todo 1117 - AI-attribution-trailer commit was refused, HEAD untouched"
+fi
+
+# --- AI attribution refusal: a HUMAN Co-Authored-By trailer is unaffected ---
+r41=$(new_repo); tmp_dirs+=("$r41")
+branch=$(git -C "$r41" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r41" rev-parse HEAD)
+printf 'f\n' > "$r41/f.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r41" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "$(printf 'add f.txt\n\nCo-Authored-By: Jane Doe <jane@x.com>')" -- f.txt 2>&1); rc=$?
+check "a human Co-Authored-By trailer still commits (todo 1117)" \
+  0 '\[commit\] committed' 'REFUSED' "$out" "$rc"
+if [ "$(git -C "$r41" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: todo 1117 - the human-trailer commit did not land"
+  fail=1
+else
+  echo "PASS: todo 1117 - the human-trailer commit landed"
+fi
+
+# --- AI attribution refusal: a subject merely mentioning "Claude" in prose is unaffected -
+# mc_plugins_tag has many such subjects naming the in-game character ---
+r42=$(new_repo); tmp_dirs+=("$r42")
+branch=$(git -C "$r42" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r42" rev-parse HEAD)
+printf 'f\n' > "$r42/f.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r42" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "FIX: Player Claude listener" -- f.txt 2>&1); rc=$?
+check "a subject mentioning Claude in prose (not a trailer) still commits (todo 1117)" \
+  0 '\[commit\] committed' 'REFUSED' "$out" "$rc"
+if [ "$(git -C "$r42" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: todo 1117 - the Player-Claude-subject commit did not land"
+  fail=1
+else
+  echo "PASS: todo 1117 - the Player-Claude-subject commit landed"
+fi
+
+# --- AI attribution refusal: a "Generated with [Claude Code]" line is refused too, with or
+# without the brackets ---
+r43=$(new_repo); tmp_dirs+=("$r43")
+branch=$(git -C "$r43" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r43" rev-parse HEAD)
+printf 'f\n' > "$r43/f.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r43" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "$(printf 'add f.txt\n\nGenerated with [Claude Code]')" -- f.txt 2>&1); rc=$?
+check "a Generated with [Claude Code] line is refused, naming the matched line (todo 1117)" \
+  1 'REFUSED.*AI attribution.*Generated with \[Claude Code\]' '' "$out" "$rc"
+if [ "$(git -C "$r43" rev-parse HEAD)" != "$sha" ]; then
+  echo "FAIL: todo 1117 - a Generated-with-Claude-Code commit must not have landed"
+  fail=1
+else
+  echo "PASS: todo 1117 - Generated-with-Claude-Code commit was refused, HEAD untouched"
+fi
+
+# --- directory pathspec coverage: deleting two tracked files under a tracked dir
+# and committing with -- <dir> must pass without --force coverage. A new sibling file in the
+# SAME nested subdirectory (vendor/scripts/new.mjs) is included deliberately: it is exactly what
+# made the old same-directory heuristic fire a false REFUSED in the real incident (a co-located
+# add alongside the old heuristic's directory-level dirname match), so this fixture proves the
+# new containment check wins over that heuristic rather than merely avoiding triggering it ---
+r38=$(new_repo); tmp_dirs+=("$r38")
+mkdir -p "$r38/vendor/scripts"
+printf 'keep\n' > "$r38/vendor/scripts/keep.mjs"
+printf 'one\n' > "$r38/vendor/scripts/one.mjs"
+printf 'two\n' > "$r38/vendor/scripts/two.mjs"
+git -C "$r38" add vendor/scripts/keep.mjs vendor/scripts/one.mjs vendor/scripts/two.mjs
+git -C "$r38" commit -q -m "seed vendor/scripts"
+branch=$(git -C "$r38" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r38" rev-parse HEAD)
+rm "$r38/vendor/scripts/one.mjs" "$r38/vendor/scripts/two.mjs"
+printf 'new\n' > "$r38/vendor/scripts/new.mjs"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r38" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "directory pathspec covers deletions under it, new sibling file too" -- vendor 2>&1); rc=$?
+check "a directory pathspec covers deletions nested under it, no coverage refusal (todo 1134)" \
+  0 'coverage-check.*clean' 'coverage-check.*REFUSED' "$out" "$rc"
+if [ "$(git -C "$r38" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: todo 1134 - directory-pathspec deletion commit did not land"
+  fail=1
+else
+  echo "PASS: todo 1134 - directory-pathspec deletion commit landed"
+fi
+if git -C "$r38" ls-files --error-unmatch -- vendor/scripts/one.mjs vendor/scripts/two.mjs >/dev/null 2>&1; then
+  echo "FAIL: todo 1134 - the deleted files under vendor/scripts are still tracked after the commit"
+  fail=1
+else
+  echo "PASS: todo 1134 - the deleted files under vendor/scripts landed as deletions"
+fi
+
+# --- directory pathspec coverage regression guard: a staged deletion outside EVERY
+# pathspec entry, sharing a directory with a named FILE entry (not a directory entry), must still
+# refuse exactly as before - proves the new directory-containment check only short-circuits for
+# an actual directory pathspec entry and never swallows the pre-existing same-directory-file
+# heuristic ---
+r39=$(new_repo); tmp_dirs+=("$r39")
+mkdir -p "$r39/mixed"
+printf 'target\n' > "$r39/mixed/target.txt"
+printf 'other\n' > "$r39/mixed/other.txt"
+git -C "$r39" add mixed/target.txt mixed/other.txt
+git -C "$r39" commit -q -m "seed mixed/target.txt mixed/other.txt"
+branch=$(git -C "$r39" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r39" rev-parse HEAD)
+printf 'target EDITED\n' > "$r39/mixed/target.txt"
+git -C "$r39" rm -q mixed/other.txt
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r39" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "edit target.txt, unrelated staged delete of sibling named only as a FILE entry" -- mixed/target.txt 2>&1); rc=$?
+check "a staged deletion outside every pathspec entry, sharing a directory with a named FILE entry, still refuses (todo 1134 regression guard)" \
+  1 'coverage-check.*REFUSED.*mixed/other\.txt' '' "$out" "$rc"
+if [ "$(git -C "$r39" rev-parse HEAD)" != "$sha" ]; then
+  echo "FAIL: todo 1134 regression guard - a refused coverage-check must not have committed anything"
+  fail=1
+else
+  echo "PASS: todo 1134 regression guard - refused coverage-check left HEAD untouched"
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else
