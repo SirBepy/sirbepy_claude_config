@@ -541,6 +541,16 @@
         "hooks": [
           {
             "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\shortcut-raw-write-guard.py\"",
+            "statusMessage": "Checking a raw Shortcut API write against the requester and Testing ceiling"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
             "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\dev-server-guard.py\"",
             "statusMessage": "Checking for a raw long-lived dev-server launch"
           }

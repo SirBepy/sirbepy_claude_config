@@ -22,12 +22,13 @@ or Complete (`500018258`) by hand - QA promotes Testing to Ready for deploy, and
 `/zirtue-release-backfill` closes Ready for deploy to Complete. Won't do (`500019415`) is fine.
 "Mark sc-X done" means Testing at most - say why, don't ask.
 
-`hooks/shortcut-mutation-guard.py` checks the Shortcut MCP tools only. A raw `urllib`/`curl` script
-against `/api/v3/stories/{id}` is invisible to it - do the same requester and ceiling check by hand
-first, and name the script to Joe before running it.
+`hooks/shortcut-mutation-guard.py` checks the Shortcut MCP tools. `hooks/shortcut-raw-write-guard.py`
+applies the same requester rule and this ceiling to an inline `curl`/`Invoke-RestMethod`/`python -c`
+write against `/api/v3/stories/{id}`. A write issued from inside a script FILE is invisible to both -
+do the same requester and ceiling check by hand first, and name the script to Joe before running it.
 
-Other people's tickets: requester == Joe. An exception for tickets Joe names in the session is
-pending his confirmation (todo 1095).
+Other people's tickets: requester == Joe, unless Joe names that ticket in the current session (his
+rule, 2026-10-07). Naming a ticket never lifts the Testing ceiling.
 
 ## API
 
@@ -161,8 +162,8 @@ Include `name`, `description` and `workflow_state_id` only when they are actuall
 custom field is changing, omit `custom_fields` from the payload entirely - that is the safest PUT,
 and it is what a plain state move should send.
 
-**Ownership:** the REST path carries no automatic owner or ceiling check; see "State ladder" above.
-Use it for stories the dev named explicitly, and never mutate one whose ownership he has not confirmed.
+**Ownership:** an inline REST write is checked by `hooks/shortcut-raw-write-guard.py`, a script file
+is not; see "State ladder" above for the rule both follow.
 
 ## Pickup specifics
 
