@@ -53,6 +53,7 @@ Absorbed todos 206 during /cleanup-todos. Their full text is in `done/` - read t
 ## Notes
 
 - **Q parked 2026-09-04 (revive and build, leave parked, or archive as won't-build) - dev delegated to autopilot on 2026-09-10** via /loop-todos Phase 0. Autopilot takes the recommendation: leave it parked. Joe's 2026-08-16 answer already reframed this as a `/brainstorm` task in its own session, so archiving it as won't-build would contradict a decision he stated in his own words.
+- Done 2026-10-08 (brainstorm session eef17188): reframed as the permanent-memory question. Decided design of record in refs/permanent-memory.md. Phase 1 built: transcripts kept forever (cleanupPeriodDays 36500), skills/recall (index, search, show, activity, monthly compressor via a daily scheduled task, health warnings). This todo's original Clockify activity log is recall.py activity. Phase 2 filed as 1152-1156. Live session awareness (merged 206) dropped by Joe: Conductor list_peers covers it.
 
 ## Answers 2026-10-08
 
