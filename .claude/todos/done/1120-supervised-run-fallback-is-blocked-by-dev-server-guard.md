@@ -37,3 +37,7 @@ Pick one, then make the skill and the hook agree:
 - With the supervisor down, following `supervised-run/SKILL.md` exactly either starts the server or
   reaches a stated ask, never a hook denial.
 - A test in `hooks/test_*.py` covers the chosen path.
+
+## Notes
+
+- Completed 2026-10-08 (loop-todos cycle 1): decided resolution, no guard loosening. SKILL.md fallback and sv.ps1 Require-Supervisor now say stop and tell Joe the supervisor is down. No hook changed, so the existing test_dev_server_guard.py raw-launch cases already cover the guard side.

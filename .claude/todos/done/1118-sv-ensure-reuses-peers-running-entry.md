@@ -30,3 +30,7 @@ Skill: `C:\Users\tecno\.claude\skills\supervised-run\SKILL.md` and `sv.ps1` (`en
 - `ensure` against an already-running matching entry prints `action=reused-running`; against a
   stopped/new one prints `action=started`.
 - SKILL.md tells the caller not to stop a `reused-running` entry without a peer check.
+
+## Notes
+
+- Completed 2026-10-08 (loop-todos cycle 1): sv.ps1 ensure prints action=started|reused-running plus since=<started_at>; SKILL.md Stop step makes the list_peers check mandatory for a reused-running entry.

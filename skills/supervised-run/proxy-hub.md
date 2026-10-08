@@ -34,10 +34,15 @@ backends (local / develop / prod) without a rebuild.
   expect (and warn Joe to expect) a re-login after a swap.
 - `danger: true` on a preset (e.g. a prod URL) only gets a visual warning in the dashboard -
   nothing backend-side blocks selecting it. It is not a safety gate.
-- Doesn't help Flutter mobile out of the box: an Android emulator or physical device can't reach
-  `localhost` on the host, so a hub URL baked into a mobile build won't resolve there. The
-  workaround is `adb reverse tcp:<hub_port> tcp:<hub_port>` before running the app - the
-  supervisor does not set that tunnel up for you.
+- Flutter mobile (Android emulator, USB device) works automatically as of server_supervisor
+  v0.1.40: when the supervisor starts a Flutter proc in a project with hub presets, it runs
+  `adb reverse tcp:<hub_port> tcp:<hub_port>` for whichever device Flutter itself selected (parsed
+  from the `--machine` daemon's `app.start` event), and tears it down on stop or on the process's
+  own exit. A missing `adb`, or no device, never blocks the launch: it logs and runs without a
+  tunnel. WiFi-connected devices are NOT covered: `adb reverse` only works over USB or to an
+  emulator, and the hub stays loopback-only, so a WiFi device still cannot reach it. (Verified
+  against commit `00f2fc5`, shipped in the v0.1.40 release; if Joe's installed app predates
+  v0.1.40 this still won't apply - ask him which version is running before relying on it.)
 - Useful for Flutter web / Vite / Node frontends hitting unauthenticated endpoints that need a
   live environment swap. It is not a general-purpose environment switch for authenticated flows
   or for mobile.

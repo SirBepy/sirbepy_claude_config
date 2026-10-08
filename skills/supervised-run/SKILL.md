@@ -33,12 +33,13 @@ this app means: invoke /supervised-run") is the fallback to try next.
 
 1. **Ensure it's up - one call.** Run `sv.ps1` (next to this file) instead of re-deriving the token/health/list/reuse dance by hand:
    ```
-   powershell -File "<this skill's dir>\sv.ps1" ensure -Project <folder-name> -Cmd "<cmd>" [-Kind flutter|ephemeral] [-Restart]
+   powershell -File "<this skill's dir>\sv.ps1" ensure -Project <folder-name> -Cmd "<cmd>" [-Kind flutter|ephemeral] [-Restart] [-Param name=value ...]
    ```
    `cmd` must have `{PORT}` templated into the actual port flag - see the Port table below for the exact flag per tool. `sv.ps1` reuses a matching entry (running: left alone, or reloaded/restarted with `-Restart`; stopped/crashed: started/restarted), or `/run`s a new one if nothing matches.
    - **Reuse is matched by project name AND absolute root** (from `projects.json`), not name alone - so a git worktree of the same project (e.g. Fibo's `frontend`/`frontend-2`/`frontend-3`) never reuses another worktree's process and serves stale code.
    - **A throwaway checkout never becomes a permanent dashboard row.** Running from a worktree, a `C:\tmp` clone, a `.for_bepy` scratch folder, or a sibling copy (`<repo>-wt`, `<repo>-<n>`): pass `-Kind ephemeral`, and `sv.ps1 rm -Id <id>` the entry before the session ends. If the checkout's code is identical to the main repo, run from the main repo's root instead. Why: the supervisor's transient detection misses copies that are not git worktrees, and every miss is a duplicate `frontend`/`frontend-2` row in Joe's project list forever (2026-10-06 sweep removed 16 such rows; the app now also sweeps them at launch, but only the ones it can recognize).
-   - **Zero exit:** stdout is `<id> status=<status> port=<port>`. Note the `id` - you manage everything else by it.
+   - **Picking a variant of a templated command** (a stored command with `{DEVICE}`/`{FLAVOR}`-style named params - server_supervisor todo 0027): add `-Param name=value` once per axis, e.g. `-Param device=chrome`. It is sent as the `/run` request's `params` object. An unknown axis name or value id comes back as a 400 listing the valid ones. If the entry is already running on a DIFFERENT variant than requested, `sv.ps1` leaves it running untouched and prints `param_mismatch={"running":{...},"requested":{...}}` instead of silently restarting it into your variant - read the mismatch and decide whether to `restart` it yourself.
+   - **Zero exit:** stdout is `<id> status=<status> port=<port> action=<started|reused-running>[ since=<UTC time>][ param_mismatch=<json>]`. Note the `id` - you manage everything else by it. **Note `action`: `reused-running` means this call found the entry ALREADY running and did not start it (it may still have `-Restart`ed it) - never read that as proof this session owns the process.** `since` is the entry's own start time when the API reports one.
    - **Non-zero exit:** supervisor unreachable (or a real error) -> go to Fallback.
    - **`-Root` defaults to the current shell's cwd, not to `-Project`.** If the target repo differs
      from the session's cwd (e.g. verifying a sibling project from another project's session),
@@ -58,7 +59,7 @@ this app means: invoke /supervised-run") is the fallback to try next.
 
 4. **Manage it afterward** via `sv.ps1`:
    - Logs: `sv.ps1 logs -Id <id>`
-   - Stop: call `list_peers` first. A live peer in the same repo may depend on this entry as shared infra, not this session's own orphan - default to leaving it running and posting what you were about to stop and why, rather than assuming it's yours to kill. Port-open is not proof of life: after a process dies, `Test-NetConnection`/a raw port probe can still report it open while an actual request gets nothing back (2026-09-01, zng-app: a stopped backend looked "up" to a port check and the outage was debugged as app code for several minutes). `sv.ps1 stop -Id <id>`. **If this session took a verification screenshot** (CLAUDE.md's UI & visual changes rule), confirm `SendUserFile` was actually called for it before stopping - the server, and the cheap ability to re-capture, goes away once it's down. If not sent yet, send it now, then stop. Never delete a throwaway screenshot before it has been sent, and keep it under `.for_bepy/screenshots/`, not an arbitrary path.
+   - Stop: call `list_peers` first. A live peer in the same repo may depend on this entry as shared infra, not this session's own orphan - default to leaving it running and posting what you were about to stop and why, rather than assuming it's yours to kill. **If THIS session's own `ensure` call reported `action=reused-running` for this `id`, the `list_peers` check is not optional** - this session never started the process, so treat it as shared infra unconditionally, even when `list_peers` turns up nothing (todo 1118; `list_peers` itself is known to underreport). Port-open is not proof of life: after a process dies, `Test-NetConnection`/a raw port probe can still report it open while an actual request gets nothing back (2026-09-01, zng-app: a stopped backend looked "up" to a port check and the outage was debugged as app code for several minutes). `sv.ps1 stop -Id <id>`. **If this session took a verification screenshot** (CLAUDE.md's UI & visual changes rule), confirm `SendUserFile` was actually called for it before stopping - the server, and the cheap ability to re-capture, goes away once it's down. If not sent yet, send it now, then stop. Never delete a throwaway screenshot before it has been sent, and keep it under `.for_bepy/screenshots/`, not an arbitrary path.
    - Restart: `sv.ps1 restart -Id <id>` (full process respawn - use for non-flutter entries, or a flutter entry whose daemon isn't ready)
    - Reload (flutter only, fast path - no `sv.ps1` subcommand yet, raw API): `POST /procs/<id>/reload` with header `Authorization: Bearer <token>` - hot-restarts via the flutter daemon instead of respawning the process; for a `web-server` target this also auto-refreshes every open browser tab on the live-reload proxy port (see Port table). Prefer this over `/restart` for any flutter entry - `ensure -Restart` already does this automatically.
    - Delete (remove the entry entirely): `sv.ps1 rm -Id <id>` (stop it first if running)
@@ -152,7 +153,16 @@ Response: `{ "id": "my-app:dev", "project": "my-app", "port": 42013, "status": "
 
 ## Fallback (supervisor not reachable)
 
-Run the server the normal way (in your own background shell), and tell Joe: "server_supervisor isn't running, so I ran <cmd> directly." Never block on the supervisor being up. Do NOT try to launch the supervisor app yourself.
+Stop - there is no sanctioned way to run the server yourself here. `hooks/dev-server-guard.py`
+denies a raw dev-server launch unconditionally; its only escape is a command that invokes
+`sv.ps1` (any subcommand), so a plain background shell run can never pass it (todo 1120,
+2026-10-06: a fibo session tried exactly that and the hook denied it, blocking the session until
+Joe started the supervisor by hand).
+
+Tell Joe, naming the exact command that failed, e.g.: "server_supervisor isn't running - `sv.ps1
+ensure -Project <x> -Cmd "<cmd>"` returned 'supervisor not reachable'. Can you start
+server_supervisor?" Then stop and wait. Do NOT start the server another way, and do NOT try to
+launch the supervisor app yourself.
 
 ## Daily-driver apps - ask before touching
 

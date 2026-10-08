@@ -33,6 +33,13 @@
   (ensure) Force a running match to pick up code changes: /reload for flutter, /restart
   otherwise. Without this switch, a running match is left alone.
 
+.PARAMETER Param
+  (ensure) Repeatable "name=value" selecting a variant of a templated server_supervisor
+  command (device/flavor/env axis), sent as the `/run` request's "params" object. An
+  unknown axis name or value id comes back as a 400 from the API; a value that resolves
+  to a DIFFERENT variant than one already running is returned as "param_mismatch" rather
+  than restarted out from under you.
+
 .PARAMETER Id
   (logs|stop|restart|rm) Proc id, form "<project>:<name>".
 
@@ -40,6 +47,7 @@
   sv.ps1 ls
   sv.ps1 ensure -Project frontend -Cmd "npm run dev -- --port {PORT}"
   sv.ps1 ensure -Project frontend -Cmd "npm run dev -- --port {PORT}" -Restart
+  sv.ps1 ensure -Project app -Cmd "flutter run {DEVICE} --web-port {PORT}" -Param device=chrome
   sv.ps1 logs -Id frontend:dev
 #>
 param(
@@ -53,6 +61,7 @@ param(
     [string]$Kind = 'generic',
     [switch]$NoDynamicPort,
     [switch]$Restart,
+    [string[]]$Param,
     [string]$Id
 )
 
@@ -75,7 +84,10 @@ function Test-SupervisorHealth($cfg) {
 function Require-Supervisor {
     $cfg = Get-SupervisorConfig
     if (-not $cfg -or -not (Test-SupervisorHealth $cfg)) {
-        Write-Fail "supervisor not reachable - fall back to a plain shell run."
+        # dev-server-guard.py denies a raw launch unconditionally (its only escape is a
+        # command invoking sv.ps1), so there is no sanctioned "run it another way" -
+        # the caller must stop and ask Joe to start server_supervisor (todo 1120).
+        Write-Fail "supervisor not reachable - do not start the server another way, tell Joe server_supervisor is down."
     }
     return $cfg
 }
@@ -89,6 +101,45 @@ function Get-ProjectsRegistry {
 function Normalize-RootPath($p) {
     if (-not $p) { return $p }
     return ($p -replace '\\', '/').TrimEnd('/').ToLowerInvariant()
+}
+
+# started_at is Unix epoch millis (ProcInfo.started_at); "" when the API omitted it
+# (stopped entry, or an older server_supervisor build without the field) so callers
+# never print a bogus "since=" on every ensure.
+function Format-StartedAt($epochMs) {
+    if (-not $epochMs) { return '' }
+    $dt = [DateTimeOffset]::FromUnixTimeMilliseconds([int64]$epochMs).UtcDateTime
+    return " since=$($dt.ToString('yyyy-MM-ddTHH:mm:ssZ'))"
+}
+
+# "-Param device=chrome" (repeatable) -> @{ device = 'chrome' }. Split on the FIRST
+# '=' only, so a value containing '=' (unlikely but not impossible for a free-text
+# axis) still round-trips.
+function Get-ParamsHash($paramArgs) {
+    if (-not $paramArgs) { return $null }
+    $hash = @{}
+    foreach ($p in $paramArgs) {
+        $idx = $p.IndexOf('=')
+        if ($idx -lt 1) { Write-Fail "-Param must be name=value, got: $p" }
+        $hash[$p.Substring(0, $idx)] = $p.Substring($idx + 1)
+    }
+    return $hash
+}
+
+# Invoke-RestMethod's own exception text drops the response body, so a 400's actual
+# "unknown param/value, valid ones are: ..." message (server_supervisor
+# supervisor/crud/params.rs validate_selection) never reaches the caller without this.
+function Get-ApiErrorBody($err) {
+    $resp = $err.Exception.Response
+    if (-not $resp) { return $err.Exception.Message }
+    try {
+        $stream = $resp.GetResponseStream()
+        $reader = New-Object System.IO.StreamReader($stream)
+        $text = $reader.ReadToEnd()
+        if ($text) { return $text }
+    }
+    catch { }
+    return $err.Exception.Message
 }
 
 switch ($Command) {
@@ -126,6 +177,10 @@ switch ($Command) {
         }
 
         if ($match) {
+            # Captured BEFORE touching the entry: a match already running was never
+            # started by this call, so the caller must never treat it as its own to
+            # stop without the shared-infra list_peers check (todo 1118).
+            $wasRunning = ($match.status -eq 'running')
             if ($match.status -eq 'running') {
                 if ($Restart) {
                     if ($match.kind -eq 'flutter') { Invoke-Api $cfg 'POST' "/procs/$($match.id)/reload" | Out-Null }
@@ -139,13 +194,27 @@ switch ($Command) {
                 Invoke-Api $cfg 'POST' "/procs/$($match.id)/start" | Out-Null
             }
             $fresh = (Invoke-Api $cfg 'GET' '/procs') | Where-Object { $_.id -eq $match.id }
-            Write-Info "$($fresh.id) status=$($fresh.status) port=$($fresh.port)"
+            $action = if ($wasRunning) { 'reused-running' } else { 'started' }
+            $since = Format-StartedAt $fresh.started_at
+            Write-Info "$($fresh.id) status=$($fresh.status) port=$($fresh.port) action=$action$since"
             break
         }
 
+        $paramsHash = Get-ParamsHash $Param
         $body = @{ root = (Resolve-Path $Root).Path; cmd = $Cmd; kind = $Kind; use_dynamic_port = (-not $NoDynamicPort) }
-        $started = Invoke-Api $cfg 'POST' '/run' $body
-        Write-Info "$($started.id) status=$($started.status) port=$($started.port)"
+        if ($paramsHash) { $body.params = $paramsHash }
+        try {
+            $started = Invoke-Api $cfg 'POST' '/run' $body
+        }
+        catch {
+            Write-Fail "server_supervisor rejected /run: $(Get-ApiErrorBody $_)"
+        }
+        $since = Format-StartedAt $started.started_at
+        $mismatchSuffix = ''
+        if ($started.param_mismatch) {
+            $mismatchSuffix = " param_mismatch=$(($started.param_mismatch | ConvertTo-Json -Compress))"
+        }
+        Write-Info "$($started.id) status=$($started.status) port=$($started.port) action=started$since$mismatchSuffix"
         break
     }
 

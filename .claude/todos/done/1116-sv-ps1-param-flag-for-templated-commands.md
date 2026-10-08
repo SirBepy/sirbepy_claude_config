@@ -35,3 +35,7 @@ sv.ps1 currently ignores that field, so the caller never learns it got a differe
 
 - `sv.ps1 ensure -Cmd "<template or concrete line>" -Param device=chrome` starts the chrome
   variant; a bad value surfaces the 400 message; a running different variant prints the mismatch.
+
+## Notes
+
+- Completed 2026-10-08 (loop-todos cycle 1): sv.ps1 ensure takes repeatable -Param name=value, sends params in the /run body, surfaces the 400 message and prints param_mismatch. Optional local resolved_cmd matching left out.

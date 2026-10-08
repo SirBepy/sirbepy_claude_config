@@ -36,3 +36,4 @@ before editing, or word it as "from the release after v0.1.39".
 
 Filed 2026-10-06 from a server_supervisor `/auto-do-todos` run, per the rule that global `~/.claude`
 work goes in this repo's own backlog rather than being done from a project session.
+- Completed 2026-10-08 (loop-todos cycle 1): verified server_supervisor 00f2fc5 (adb_reverse.rs) is in HEAD 0.1.40; proxy-hub.md bullet replaced with the automatic-adb-reverse text.
