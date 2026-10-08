@@ -33,13 +33,11 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, tokenize_segment, basename
+    from _hooklib import read_payload, deny, tokenize_segment, basename, split_command_segments as split_segments
 except Exception as e:
     sys.stderr.write(f"[unbounded-scan-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
 
-_HEREDOC_RE = re.compile(r"<<-?[ \t]*(['\"]?)(\w+)\1[^\n]*\n.*?\n[ \t]*\2[ \t]*(?=\n|$)", re.DOTALL)
-_HERESTRING_RE = re.compile(r"@(['\"])\r?\n.*?\r?\n\1@", re.DOTALL)
 _DRIVE_RE = re.compile(r"^(?:[a-z]:|/[a-z]|/mnt/[a-z])$")
 
 _HOME = os.path.expanduser("~").replace("\\", "/").rstrip("/").lower()
@@ -71,28 +69,6 @@ def is_root(tok: str) -> bool:
         return True
     t = t.rstrip("/").lower()
     return bool(_DRIVE_RE.match(t)) or t in _HOME_ALIASES
-
-
-def split_segments(command: str) -> list[str]:
-    """Statements and pipeline segments, split on ; | & and newlines that sit
-    outside quotes."""
-    text = _HERESTRING_RE.sub("", _HEREDOC_RE.sub("", command))
-    segments, buf, quote = [], [], None
-    for ch in text:
-        if quote:
-            buf.append(ch)
-            if ch == quote:
-                quote = None
-        elif ch in "\"'":
-            quote = ch
-            buf.append(ch)
-        elif ch in ";|&\n":
-            segments.append("".join(buf))
-            buf = []
-        else:
-            buf.append(ch)
-    segments.append("".join(buf))
-    return [s for s in segments if s.strip()]
 
 
 def _positionals(args: list[str], value_flags: set[str]) -> list[str]:

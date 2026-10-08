@@ -91,7 +91,7 @@ dev, a decision made on his behalf that he might reverse (an `iterate-it` verdic
 real product bug found, something to look at (a screenshot), and the run's final summary.
 Everything else - each commit landing, each todo closed, a builder dispatch going out, a mechanism
 explanation - goes into `write_plan` instead: one step per todo or chunk, `detail` holding the
-commit sha, kept current at every step change rather than written once and left stale. (Joe,
+commit sha, kept current at every step change rather than written once and left stale. (The dev,
 2026-09-29, during an `/autopilot` run: "i see you write a lot more than you need to in chats like
 these ... i think this could have been more helpful if it was moreso using this kind of style of
 visualizing for me (the steps mcp)". Answered 2026-10-07.)

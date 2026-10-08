@@ -37,7 +37,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, is_tool_result_entry, is_injected_user_entry
+    from _hooklib import read_payload, deny, is_tool_result_entry, is_injected_user_entry, split_command_segments
     _spec = importlib.util.spec_from_file_location("_shortcut_mutation_guard", _HOOKS_DIR / "shortcut-mutation-guard.py")
     _mutation_guard = importlib.util.module_from_spec(_spec)
     _spec.loader.exec_module(_mutation_guard)
@@ -70,15 +70,20 @@ DATA_FLAG_RE = re.compile(r"(?:^|\s)(?:-d\b|--data(?:-raw|-binary|-urlencode)?\b
 GET_FLAG_RE = re.compile(r"(?:^|\s)(?:-G\b|--get\b)", re.IGNORECASE)
 
 
-def written_story_ids(command: str) -> list[int]:
-    """Story ids a shell command writes to, or [] if it is not a write."""
-    ids = [int(m) for m in STORY_ID_RE.findall(command)]
+def _segment_write_ids(segment: str) -> list[int]:
+    ids = [int(m) for m in STORY_ID_RE.findall(segment)]
     if not ids:
         return []
-    if not any(COMMAND_START_RE.search(command[: m.start()]) for m in HTTP_TOOL_RE.finditer(command)):
+    if not any(COMMAND_START_RE.search(segment[: m.start()]) for m in HTTP_TOOL_RE.finditer(segment)):
         return []
-    writes = WRITE_VERB_RE.search(command) or (DATA_FLAG_RE.search(command) and not GET_FLAG_RE.search(command))
-    return sorted(set(ids)) if writes else []
+    writes = WRITE_VERB_RE.search(segment) or (DATA_FLAG_RE.search(segment) and not GET_FLAG_RE.search(segment))
+    return ids if writes else []
+
+
+def written_story_ids(command: str) -> list[int]:
+    """Story ids a shell command writes to, judged per statement so one chained
+    call's flags never decide whether another call writes."""
+    return sorted({sid for seg in split_command_segments(command) for sid in _segment_write_ids(seg)})
 
 
 def real_user_texts(transcript_path: str) -> list[str]:

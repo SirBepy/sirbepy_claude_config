@@ -231,9 +231,10 @@ const html = `<!doctype html>
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
 <style>
   * { box-sizing: border-box; }
-  /* Modular type scale, ratio 1.25 rounded to whole px. Every font size maps onto a step, so the
-     hierarchy stays wider than the flat 1.7:1 a 2026-09-28 critique flagged. */
-  :root { --fs-xs:9px; --fs-sm:11px; --fs-md:14px; --fs-lg:18px; --fs-xl:22px; --fs-xxl:27px; }
+  /* Modular type scale, ratio 1.25 rounded to whole px, so the hierarchy stays wider than the flat
+     1.7:1 a 2026-09-28 critique flagged. The hero ring's 27px number is the scale's top step,
+     written as a literal because an SVG font-size attribute cannot read a custom property. */
+  :root { --fs-xs:9px; --fs-sm:11px; --fs-md:14px; }
   html { scrollbar-width:thin; scrollbar-color:#363c48 #0b0d11; }
   html::-webkit-scrollbar { width:10px; }
   html::-webkit-scrollbar-track { background:#0b0d11; }

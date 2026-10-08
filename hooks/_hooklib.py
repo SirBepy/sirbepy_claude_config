@@ -357,3 +357,31 @@ def iter_turn_tool_uses(transcript_path: str):
         for block in content:
             if isinstance(block, dict) and block.get("type") == "tool_use":
                 yield block.get("name") or "", (block.get("input") or {})
+
+
+# A heredoc (quoted or bare tag) or a PowerShell here-string body is data, not commands.
+HEREDOC_BODY_RE = re.compile(r"<<-?[ \t]*(['\"]?)(\w+)\1[^\n]*\n.*?\n[ \t]*\2[ \t]*(?=\n|$)", re.DOTALL)
+HERESTRING_BODY_RE = re.compile(r"@(['\"])\r?\n.*?\r?\n\1@", re.DOTALL)
+
+
+def split_command_segments(command: str) -> list[str]:
+    """Statements and pipeline segments of a shell command, split on ; | & and
+    newlines that sit outside quotes, with heredoc and here-string bodies
+    dropped first so text inside them never reads as a command."""
+    text = HERESTRING_BODY_RE.sub("", HEREDOC_BODY_RE.sub("", command))
+    segments, buf, quote = [], [], None
+    for ch in text:
+        if quote:
+            buf.append(ch)
+            if ch == quote:
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+            buf.append(ch)
+        elif ch in ";|&\n":
+            segments.append("".join(buf))
+            buf = []
+        else:
+            buf.append(ch)
+    segments.append("".join(buf))
+    return [s for s in segments if s.strip()]

@@ -90,6 +90,10 @@ with tempfile.TemporaryDirectory() as tmp:
         ("Bash", "git commit -m 'curl -X PUT api.app.shortcut.com/api/v3/stories/222'", plain, 0,
          "a Shortcut URL quoted in a commit message is not a write"),
         ("Edit", f'curl -X PUT "{URL}/222"', plain, 0, "non-shell tools are out of scope"),
+        ("Bash", f'curl -s "{URL}/222" -d \'name=x\' ; curl -s "{URL}/111" -G', plain, 2,
+         "a -G on a different chained curl does not hide a data write to another requester's story"),
+        ("Bash", f'curl -s "{URL}/222" ; curl -s -X PUT "{URL}/111" -d \'{{}}\'', plain, 0,
+         "a GET chained before an own-story PUT is not treated as a write"),
     ]
 
     for tool, command, transcript, expected, label in CASES:
