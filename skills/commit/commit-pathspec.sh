@@ -57,7 +57,8 @@
 # range instead - --own-since only fills the gap for files that would otherwise fall back to the
 # HEAD-relative auto-derive.
 #
-# --force values: head-guard, overlap, foreign-hunk, coverage. Never: branch-guard, prefilter.
+# --force values: head-guard, overlap, foreign-hunk, coverage, coverage-tests. Never: branch-guard,
+# prefilter.
 #
 # Exit 0: committed, full sha printed on the last line. Exit 1: a check refused (nothing
 # committed) - the printed verdict says what to decide. Exit 2: could not run (bad args/repo/git
@@ -154,12 +155,12 @@ if [ -n "$force_list" ]; then
     # second failed call the todo measured.
     [ "$c" = "overlap-check" ] && c=overlap
     case "$c" in
-      head-guard|overlap|foreign-hunk|coverage) normalized_force+=("$c") ;;
+      head-guard|overlap|foreign-hunk|coverage|coverage-tests) normalized_force+=("$c") ;;
       branch-guard|prefilter|prefilter-gate)
         printf 'ERROR: --force %s is never accepted - branch-guard and the prefilter gate are not overridable\n' "$c"
         exit 2 ;;
       *)
-        printf 'ERROR: unknown --force check name %s (valid: head-guard, overlap, foreign-hunk, coverage)\n' "$c"
+        printf 'ERROR: unknown --force check name %s (valid: head-guard, overlap, foreign-hunk, coverage, coverage-tests)\n' "$c"
         exit 2 ;;
     esac
   done
@@ -216,16 +217,16 @@ if [[ "$expect_sha" =~ ^[0-9a-fA-F]{4,40}$ ]]; then
   [ -n "$resolved_expect_sha" ] && expect_sha="$resolved_expect_sha"
 fi
 
-# Mirrors hooks/gh-account-switch.sh's own org-to-account mapping (todo 1076): any origin not
-# matching one of Joe's three client orgs, or no origin at all, is personal - the same bucket
-# that hook's own `*) acct=SirBepy` default falls into.
+# Defers to the single client-repo source of truth: refs/client-repos.txt, read through
+# hooks/_client_repo.py, the same list snippets/client-repo.md and the Pre-push gate already key
+# off. "personal" (not on the list, whoever owns it, including no remote at all) is personal;
+# anything else - "client", or the script failing to run at all (no python on PATH, a bad path) -
+# is treated as client, the stricter refusing direction, so a broken check can never silently
+# open the never-ask branch below.
 is_personal_repo() {
-  local remote
-  remote=$(git_c remote get-url origin 2>/dev/null) || return 0
-  case "$remote" in
-    *zirtue-corp/*|*Fibo-Studio/*|*revaire*) return 1 ;;
-    *) return 0 ;;
-  esac
+  local out rc
+  out=$(python "$dir/../../hooks/_client_repo.py" is-client "$repo_root" 2>/dev/null); rc=$?
+  [ "$rc" -eq 0 ] && [ "$out" = "personal" ]
 }
 
 # A path's exemption from the multi-session gate below keys on "no blob at HEAD", not on
@@ -270,6 +271,33 @@ derive_own_ranges() {
     ranges+="${c}-${end},"
   done <<<"$diff_out"
   printf '%s' "${ranges%,}"
+}
+
+# Prints every hunk header plus its first changed line for one file - the per-hunk visibility a
+# bare `--force foreign-hunk` never gave before taking an auto-derived range on trust. "First
+# changed line" is the first +/- content line after a `@@` marker; the +++/--- file headers never
+# reach here since they sit before the first `@@`.
+print_taken_hunks() {
+  local f="$1" diff="$2" line header="" first_line="" out=""
+  while IFS= read -r line; do
+    if [[ "$line" == '@@ '* ]]; then
+      if [ -n "$header" ]; then
+        out+="  - $f: $header"$'\n'
+        [ -n "$first_line" ] && out+="    $first_line"$'\n'
+      fi
+      header="$line"
+      first_line=""
+      continue
+    fi
+    if [ -n "$header" ] && [ -z "$first_line" ] && { [[ "$line" == '+'* ]] || [[ "$line" == '-'* ]]; }; then
+      first_line="$line"
+    fi
+  done <<<"$diff"
+  if [ -n "$header" ]; then
+    out+="  - $f: $header"$'\n'
+    [ -n "$first_line" ] && out+="    $first_line"$'\n'
+  fi
+  printf '%s' "$out"
 }
 
 # live/untracked/deleted-staged/deleted-unstaged/unknown. Neither overlap-check.sh nor
@@ -479,6 +507,7 @@ fh_files=()
 fh_own_args=()
 derive_notes=""
 unverified_files=()
+declare -A unverified_diff
 for f in "${diffable_files[@]}"; do
   if [ "${class_of[$f]}" = "untracked" ]; then
     diff_out=$(git_c diff --no-index -- /dev/null "$f" 2>/dev/null)
@@ -506,6 +535,7 @@ for f in "${diffable_files[@]}"; do
       derive_notes+="  - $f: auto-derived own-range $spec (derived since $own_since, trusted - own commit history, todo 978)"$'\n'
     elif [ "$multi_session" -eq 1 ] && file_has_head_blob "$f"; then
       unverified_files+=("$f")
+      unverified_diff["$f"]="$diff_out"
       derive_notes+="  - $f: auto-derived own-range $spec, UNVERIFIED ($session_marker_count live session markers - a peer may hold lines in this file, todo 924 REOPENED)"$'\n'
     else
       derive_notes+="  - $f: auto-derived own-range $spec (every current hunk assumed own, todo 924/933)"$'\n'
@@ -539,7 +569,32 @@ else
     # line for these exact unverified files, and printing that text next to a refusal would be
     # the same laundering this fix exists to remove.
     if has_force foreign-hunk; then
-      printf '[foreign-hunk-check] OVERRIDDEN (--force foreign-hunk): auto-derived own-range trusted despite %d live session markers for: %s\n%s\n' "$session_marker_count" "${unverified_files[*]}" "$fh_out"
+      # A bare --force foreign-hunk used to take a peer's in-progress lines whole, with no
+      # warning, because the override trusted an auto-derived range exactly as blindly as the
+      # UNVERIFIED verdict it was overriding. A file with 2+ hunks and no caller --own-range is
+      # refused even under --force foreign-hunk - the override needs a stated claim (--own-range
+      # per hunk) rather than a bare flag. A single-hunk file has nothing left to disambiguate (one
+      # hunk is the whole candidate), so it proceeds, but every hunk it is about to take is printed
+      # first via print_taken_hunks - the visibility the 2026-10-07 incident had none of.
+      needs_range=()
+      hunk_notes=""
+      for uf in "${unverified_files[@]}"; do
+        hunk_count=$(printf '%s\n' "${unverified_diff[$uf]}" | grep -c '^@@ ')
+        if [ "$hunk_count" -ge 2 ]; then
+          needs_range+=("$uf")
+        else
+          # Command substitution strips the trailing newline print_taken_hunks always emits
+          # (bash's own $(...) rule, not a print_taken_hunks defect) - re-add it so a second
+          # file's block does not run on to the end of this one's line.
+          hunk_notes+="$(print_taken_hunks "$uf" "${unverified_diff[$uf]}")"$'\n'
+        fi
+      done
+      if [ "${#needs_range[@]}" -gt 0 ]; then
+        printf '[foreign-hunk-check] REFUSED despite --force foreign-hunk (%d live session markers): file(s) below have 2+ auto-derived hunks with no caller --own-range - a bare --force cannot take a multi-hunk file sight-unseen, declare --own-range for each hunk you actually own and rerun: %s\n' "$session_marker_count" "${needs_range[*]}"
+        exit 1
+      fi
+      printf '[foreign-hunk-check] OVERRIDDEN (--force foreign-hunk): auto-derived own-range trusted despite %d live session markers for: %s\n' "$session_marker_count" "${unverified_files[*]}"
+      printf '[foreign-hunk-check] hunk(s) taken on trust:\n%s' "$hunk_notes"
     else
       printf '[foreign-hunk-check] UNVERIFIED, refusing (%d live session markers - a shared checkout means an auto-derived own-range cannot prove absence of a foreign hunk; declare --own-range for the file(s) below, or rerun with --force foreign-hunk to proceed anyway): %s\n' "$session_marker_count" "${unverified_files[*]}"
       exit 1
@@ -665,6 +720,47 @@ if [ "${#coverage_other[@]}" -gt 0 ]; then
 fi
 if [ "${#coverage_move[@]}" -eq 0 ] && [ "${#coverage_other[@]}" -eq 0 ]; then
   printf '[coverage-check] clean\n'
+fi
+
+# --- test-coverage check: SKILL.md step 6b's "pathspec changes non-test source files and
+# touches no test file" rule, mechanised instead of applied by eye per commit.
+# Deleted paths count as changed - $files already holds them (classify_path above), and removing
+# a source file untested is the same unverified-change shape as editing one.
+is_source_file() {
+  case "$1" in
+    .claude/todos/*|*/.claude/todos/*) return 1 ;;
+  esac
+  case "$1" in
+    *.py|*.js|*.mjs|*.cjs|*.ts|*.tsx|*.jsx|*.dart|*.rs|*.go|*.rb|*.java|*.kt|*.swift|*.c|*.cc|*.cpp|*.h|*.cs|*.php|*.lua|*.luau|*.sh|*.ps1|*.vue|*.svelte) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+is_test_path() {
+  local base
+  base=$(basename -- "$1")
+  case "$base" in
+    test_*|*_test.*|*.test.*|*.spec.*) return 0 ;;
+  esac
+  case "/$1/" in
+    */test/*|*/tests/*|*/__tests__/*|*/spec/*) return 0 ;;
+  esac
+  return 1
+}
+has_source=0
+has_test=0
+for f in "${files[@]}"; do
+  is_test_path "$f" && has_test=1
+  is_source_file "$f" && has_source=1
+done
+if [ "$has_source" -eq 1 ] && [ "$has_test" -eq 0 ]; then
+  if has_force coverage-tests; then
+    printf '[coverage-tests-check] OVERRIDDEN (--force coverage-tests): pathspec changes non-test source file(s) and touches no test file\n'
+  else
+    printf '[coverage-tests-check] REFUSED: pathspec changes non-test source file(s) and touches no test file - write the test that fails without this change, or rerun with --force coverage-tests if the change is untestable: %s\n' "${files[*]}"
+    exit 1
+  fi
+else
+  printf '[coverage-tests-check] clean\n'
 fi
 
 # --- commit by pathspec, never stage-then-commit ---

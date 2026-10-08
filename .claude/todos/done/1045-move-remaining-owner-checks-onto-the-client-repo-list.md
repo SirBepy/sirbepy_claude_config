@@ -49,3 +49,4 @@ the push half is now hook-enforced, the commit half is not.
 ## Notes
 
 - Phase 0 answer (Joe): unify on refs/client-repos.txt for both the /commit fold-ask and the /cleanup-todos worth cap, accepting that Fibo-Studio repos flip to never-ask. (2026-10-07, /loop-todos Phase 0)
+- Script half: commit-pathspec.sh's personal-repo check calls hooks/_client_repo.py is-client (failure counts as client); new coverage-tests refusal (source changed, no test file touched) with --force coverage-tests, SKILL.md step 6b says it is enforced. Prose half was b1c679b. Two fixtures faked a client repo with an unlisted org slug and were fixed to a listed one.

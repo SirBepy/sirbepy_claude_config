@@ -41,3 +41,7 @@ commit refused.
 - Re-running the 2026-10-07 shape (a file with one own hunk and one peer hunk, 2 live markers,
   `--force foreign-hunk`) either refuses or prints both hunks before committing.
 - `python ci/run_all.py` passes in `~/.claude`.
+
+## Notes
+
+- --force foreign-hunk with 2+ live markers now refuses a file with 2+ auto-derived hunks and no --own-range, and prints the single hunk it takes on trust otherwise; RED reproduced the 2026-10-07 silent sweep, GREEN refuses. SKILL.md step 8 documents it. Full test_commit_pathspec.sh and ci/run_all.py passed.

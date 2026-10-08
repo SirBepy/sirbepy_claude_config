@@ -259,8 +259,51 @@ else
   echo "PASS: UNVERIFIED foreign-hunk-check left HEAD untouched"
 fi
 out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$multi_marker_dir" "$cp" -C "$r9" --expect-branch "$branch" --expect-sha "$sha" --force foreign-hunk -m "forced through despite peers" -- multi.txt 2>&1); rc=$?
-check "--force foreign-hunk proceeds past the same UNVERIFIED auto-derived range" \
-  0 'OVERRIDDEN \(--force foreign-hunk\): auto-derived own-range trusted despite 2 live session markers' 'REFUSED' "$out" "$rc"
+# multi.txt here has TWO auto-derived hunks (line 3, line 20) and no --own-range - a bare
+# --force foreign-hunk must no longer take that whole file sight-unseen (the exact 2026-10-07
+# incident shape); it refuses and names the file instead of silently overriding.
+check "--force foreign-hunk on a 2-hunk file with no --own-range now REFUSES, never silently overridden (todo 1124)" \
+  1 'REFUSED despite --force foreign-hunk.*2 live session markers.*multi\.txt' 'OVERRIDDEN' "$out" "$rc"
+if [ "$(git -C "$r9" rev-parse HEAD)" != "$sha" ]; then
+  echo "FAIL: todo 1124 - a refused --force foreign-hunk must not have committed anything"
+  fail=1
+else
+  echo "PASS: todo 1124 - refused --force foreign-hunk (2+ hunks, no --own-range) left HEAD untouched"
+fi
+
+# --- the SAME 2-hunk file, but with --own-range declared for both hunks - a stated claim is
+# exactly what the refusal above asks for, so --force foreign-hunk now proceeds ---
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$multi_marker_dir" "$cp" -C "$r9" --expect-branch "$branch" --expect-sha "$sha" \
+  --own-range multi.txt:1-6,17-23 --force foreign-hunk -m "forced through with a declared range" -- multi.txt 2>&1); rc=$?
+check "a declared --own-range for every hunk lets --force foreign-hunk proceed (todo 1124)" \
+  0 '\[commit\] committed' 'REFUSED' "$out" "$rc"
+
+# --- a SINGLE-hunk file under the same 2-marker UNVERIFIED gate has nothing left to
+# disambiguate (one hunk is the whole candidate) - --force foreign-hunk proceeds, but prints the
+# hunk header and its first changed line first, the exact visibility the incident had none of ---
+r9b=$(new_repo); tmp_dirs+=("$r9b")
+{
+  printf 'line %02d\n' $(seq 1 30)
+} > "$r9b/single.txt"
+git -C "$r9b" add single.txt
+git -C "$r9b" commit -q -m "seed single.txt"
+branch_9b=$(git -C "$r9b" rev-parse --abbrev-ref HEAD)
+sha_9b=$(git -C "$r9b" rev-parse HEAD)
+sed -i '3s/.*/line 03 CHANGED/' "$r9b/single.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$multi_marker_dir" "$cp" -C "$r9b" --expect-branch "$branch_9b" --expect-sha "$sha_9b" \
+  --force foreign-hunk -m "single hunk, forced through with the hunk printed" -- single.txt 2>&1); rc=$?
+check "a single-hunk file under --force foreign-hunk proceeds, announcing hunks taken on trust (todo 1124)" \
+  0 'hunk\(s\) taken on trust' 'REFUSED' "$out" "$rc"
+check "the printed block names the file's hunk header (todo 1124)" \
+  0 'single\.txt: @@ -1,6 \+1,6 @@' '' "$out" "$rc"
+check "the printed hunk block also names the first changed line (todo 1124)" \
+  0 'line 03' '' "$out" "$rc"
+if [ "$(git -C "$r9b" rev-parse HEAD)" = "$sha_9b" ]; then
+  echo "FAIL: todo 1124 - the single-hunk forced commit did not land"
+  fail=1
+else
+  echo "PASS: todo 1124 - the single-hunk forced commit landed with its hunk printed first"
+fi
 
 # --- the same auto-derive path, alone in the tree (1 live marker): still commits normally, no
 # extra ceremony added for the common single-session case ---
@@ -603,8 +646,11 @@ else
 fi
 
 # --- the same overlap hit on a client-repo origin still refuses by default (todo 1076) - the
-# origin is changed to a client-org url AFTER the local push, since @{u} only needs the
-# already-fetched tracking ref, not a reachable remote ---
+# origin is changed to a client url AFTER the local push, since @{u} only needs the
+# already-fetched tracking ref, not a reachable remote. The slug must be one actually ON
+# refs/client-repos.txt (is_personal_repo now checks that exact list via hooks/_client_repo.py,
+# not an org-name wildcard - an org match alone, e.g. zirtue-corp/some-other-repo, is no longer
+# enough) ---
 r21=$(new_repo); tmp_dirs+=("$r21")
 bare21=$(mktemp -d) || { echo "FAIL: mktemp -d (bare21)"; exit 1; }
 tmp_dirs+=("$bare21")
@@ -621,7 +667,7 @@ sed -i '5s/.*/line 05 UNPUSHED/' "$r21/multi.txt"
 git -C "$r21" commit -q -am "unpushed change to line 5"
 sha=$(git -C "$r21" rev-parse HEAD)
 sed -i '5s/.*/line 05 WORKING TREE EDIT/' "$r21/multi.txt"
-git -C "$r21" remote set-url origin "https://github.com/zirtue-corp/testrepo.git"
+git -C "$r21" remote set-url origin "https://github.com/zirtue-corp/zng-app.git"
 out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r21" --expect-branch "$branch" --expect-sha "$sha" \
   -m "client repo still refuses on overlap" -- multi.txt 2>&1); rc=$?
 check "client-repo origin: an overlap hit still refuses by default" \
@@ -653,7 +699,7 @@ sed -i '5s/.*/line 05 UNPUSHED/' "$r22/multi.txt"
 git -C "$r22" commit -q -am "unpushed change to line 5"
 sha=$(git -C "$r22" rev-parse HEAD)
 sed -i '5s/.*/line 05 WORKING TREE EDIT/' "$r22/multi.txt"
-git -C "$r22" remote set-url origin "https://github.com/zirtue-corp/testrepo.git"
+git -C "$r22" remote set-url origin "https://github.com/zirtue-corp/zng-app.git"
 out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r22" --expect-branch "$branch" --expect-sha "$sha" \
   --force overlap-check -m "overlap-check alias accepted" -- multi.txt 2>&1); rc=$?
 check "--force overlap-check is accepted as an alias for --force overlap" \
@@ -1093,8 +1139,12 @@ branch=$(git -C "$r38" rev-parse --abbrev-ref HEAD)
 sha=$(git -C "$r38" rev-parse HEAD)
 rm "$r38/vendor/scripts/one.mjs" "$r38/vendor/scripts/two.mjs"
 printf 'new\n' > "$r38/vendor/scripts/new.mjs"
+# --force coverage-tests: this fixture's .mjs files make it a source-only pathspec with no test
+# file, which the test-coverage check would otherwise refuse on its own unrelated concern -
+# forced past here since this test is specifically about the
+# directory-pathspec move/deletion heuristic above, not test coverage.
 out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r38" --expect-branch "$branch" --expect-sha "$sha" \
-  -m "directory pathspec covers deletions under it, new sibling file too" -- vendor 2>&1); rc=$?
+  --force coverage-tests -m "directory pathspec covers deletions under it, new sibling file too" -- vendor 2>&1); rc=$?
 check "a directory pathspec covers deletions nested under it, no coverage refusal (todo 1134)" \
   0 'coverage-check.*clean' 'coverage-check.*REFUSED' "$out" "$rc"
 if [ "$(git -C "$r38" rev-parse HEAD)" = "$sha" ]; then
@@ -1135,6 +1185,140 @@ if [ "$(git -C "$r39" rev-parse HEAD)" != "$sha" ]; then
 else
   echo "PASS: todo 1134 regression guard - refused coverage-check left HEAD untouched"
 fi
+
+# --- is_personal_repo now defers to refs/client-repos.txt via hooks/_client_repo.py instead of
+# an org-name wildcard. A repo whose origin slug IS on that list still refuses an overlap hit by
+# default even though its org ("zirtue-corp") is the same
+# org the old wildcard matched - this fixture would have passed under the OLD check too, so the
+# real proof is r45 below (an unlisted repo under the SAME org) ---
+r44=$(new_repo); tmp_dirs+=("$r44")
+bare44=$(mktemp -d) || { echo "FAIL: mktemp -d (bare44)"; exit 1; }
+tmp_dirs+=("$bare44")
+git init -q --bare "$bare44"
+git -C "$r44" remote add origin "$bare44"
+{
+  printf 'line %02d\n' $(seq 1 30)
+} > "$r44/multi.txt"
+git -C "$r44" add multi.txt
+git -C "$r44" commit -q -m "seed multi.txt"
+branch=$(git -C "$r44" rev-parse --abbrev-ref HEAD)
+git -C "$r44" push -q -u origin "$branch"
+sed -i '5s/.*/line 05 UNPUSHED/' "$r44/multi.txt"
+git -C "$r44" commit -q -am "unpushed change to line 5"
+sha=$(git -C "$r44" rev-parse HEAD)
+sed -i '5s/.*/line 05 WORKING TREE EDIT/' "$r44/multi.txt"
+git -C "$r44" remote set-url origin "https://github.com/zirtue-corp/zng-app.git"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r44" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "a repo slug actually on refs/client-repos.txt still refuses on overlap" -- multi.txt 2>&1); rc=$?
+check "an origin slug ON refs/client-repos.txt refuses an overlap hit by default (todo 1045)" \
+  1 'overlap-check.*REFUSED' 'personal repo: proceeding' "$out" "$rc"
+if [ "$(git -C "$r44" rev-parse HEAD)" = "$sha" ]; then
+  echo "PASS: todo 1045 - listed-client-repo overlap refusal left HEAD untouched"
+else
+  echo "FAIL: todo 1045 - listed-client-repo overlap refusal should not have committed"
+  fail=1
+fi
+
+# --- the real proof: an origin under the SAME org ("zirtue-corp") but a repo
+# slug NOT on refs/client-repos.txt now proceeds as personal - the old org-wildcard
+# (`*zirtue-corp/*`) would have refused this one too, since it matched on org alone. This is
+# exactly the "Fibo-Studio repo flips from ask to never-ask" shape Joe's decision accepted ---
+r45=$(new_repo); tmp_dirs+=("$r45")
+bare45=$(mktemp -d) || { echo "FAIL: mktemp -d (bare45)"; exit 1; }
+tmp_dirs+=("$bare45")
+git init -q --bare "$bare45"
+git -C "$r45" remote add origin "$bare45"
+{
+  printf 'line %02d\n' $(seq 1 30)
+} > "$r45/multi.txt"
+git -C "$r45" add multi.txt
+git -C "$r45" commit -q -m "seed multi.txt"
+branch=$(git -C "$r45" rev-parse --abbrev-ref HEAD)
+git -C "$r45" push -q -u origin "$branch"
+sed -i '5s/.*/line 05 UNPUSHED/' "$r45/multi.txt"
+git -C "$r45" commit -q -am "unpushed change to line 5"
+sha=$(git -C "$r45" rev-parse HEAD)
+sed -i '5s/.*/line 05 WORKING TREE EDIT/' "$r45/multi.txt"
+git -C "$r45" remote set-url origin "https://github.com/zirtue-corp/some-other-unlisted-repo.git"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r45" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "same org, repo slug NOT on the list, proceeds as personal" -- multi.txt 2>&1); rc=$?
+check "same-org repo slug NOT on refs/client-repos.txt proceeds as personal, unlike the old org-wildcard (todo 1045)" \
+  0 'personal repo: proceeding' 'overlap-check.*REFUSED' "$out" "$rc"
+if [ "$(git -C "$r45" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: todo 1045 - the unlisted-same-org-repo commit did not land"
+  fail=1
+else
+  echo "PASS: todo 1045 - the unlisted-same-org-repo commit landed as personal"
+fi
+
+# --- a non-test source file alone is refused by the coverage-tests check ---
+r46=$(new_repo); tmp_dirs+=("$r46")
+branch=$(git -C "$r46" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r46" rev-parse HEAD)
+mkdir -p "$r46/src"
+printf 'export const x = 1;\n' > "$r46/src/x.ts"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r46" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "src/x.ts alone, no test" -- src/x.ts 2>&1); rc=$?
+check "a non-test source file alone is refused by the coverage-tests check (todo 1045)" \
+  1 'coverage-tests-check.*REFUSED.*src/x\.ts' '' "$out" "$rc"
+if [ "$(git -C "$r46" rev-parse HEAD)" = "$sha" ]; then
+  echo "PASS: todo 1045 - refused coverage-tests-check left HEAD untouched"
+else
+  echo "FAIL: todo 1045 - a refused coverage-tests-check must not have committed anything"
+  fail=1
+fi
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r46" --expect-branch "$branch" --expect-sha "$sha" \
+  --force coverage-tests -m "src/x.ts alone, forced through" -- src/x.ts 2>&1); rc=$?
+check "--force coverage-tests proceeds past the same untested-source hit (todo 1045)" \
+  0 'OVERRIDDEN \(--force coverage-tests\)' 'REFUSED' "$out" "$rc"
+
+# --- the source file plus its own test file passes with no force needed ---
+r47=$(new_repo); tmp_dirs+=("$r47")
+branch=$(git -C "$r47" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r47" rev-parse HEAD)
+mkdir -p "$r47/src"
+printf 'export const x = 1;\n' > "$r47/src/x.ts"
+printf 'test x\n' > "$r47/src/x.test.ts"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r47" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "src/x.ts plus src/x.test.ts" -- src/x.ts src/x.test.ts 2>&1); rc=$?
+check "a source file committed alongside its own test file passes with no force (todo 1045)" \
+  0 'coverage-tests-check.*clean' 'coverage-tests-check.*REFUSED' "$out" "$rc"
+if [ "$(git -C "$r47" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: todo 1045 - the source-plus-test commit did not land"
+  fail=1
+else
+  echo "PASS: todo 1045 - the source-plus-test commit landed"
+fi
+
+# --- a docs-only commit (no source extension at all) passes untouched ---
+r48=$(new_repo); tmp_dirs+=("$r48")
+branch=$(git -C "$r48" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r48" rev-parse HEAD)
+printf '# notes\n' > "$r48/notes.md"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r48" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "docs-only commit" -- notes.md 2>&1); rc=$?
+check "a docs-only commit (no source extension) passes the coverage-tests check with no force (todo 1045)" \
+  0 'coverage-tests-check.*clean' 'coverage-tests-check.*REFUSED' "$out" "$rc"
+if [ "$(git -C "$r48" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: todo 1045 - the docs-only commit did not land"
+  fail=1
+else
+  echo "PASS: todo 1045 - the docs-only commit landed"
+fi
+
+# --- a source file under .claude/todos/ is exempt from the coverage-tests
+# check (backlog text files, not code, even when their basename ends in an extension this check
+# would otherwise treat as source - not applicable here since .md is never a source extension
+# anyway, so this fixture instead proves a .py-extensioned path under .claude/todos/ is exempt) ---
+r49=$(new_repo); tmp_dirs+=("$r49")
+branch=$(git -C "$r49" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r49" rev-parse HEAD)
+mkdir -p "$r49/.claude/todos"
+printf 'not real code\n' > "$r49/.claude/todos/scratch.py"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r49" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "a .py-named file under .claude/todos/ is exempt from coverage-tests" -- .claude/todos/scratch.py 2>&1); rc=$?
+check "a path under .claude/todos/ is exempt from the coverage-tests check regardless of extension (todo 1045)" \
+  0 'coverage-tests-check.*clean' 'coverage-tests-check.*REFUSED' "$out" "$rc"
 
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
