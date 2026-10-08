@@ -211,6 +211,30 @@ def compare(previous: dict, current: dict) -> str:
 # --------------------------------------------------------------- mutate/restore
 
 HEADING_RE = re.compile(r"^(#{1,6})\s")
+FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
+
+
+def _fence_mask(lines: list) -> list:
+    """True for each line that sits inside an open ```/~~~ fence.
+
+    A fence closes only on the same marker character as it opened with, at a
+    length >= the opening one (CommonMark's rule) - so a 4-backtick block can
+    contain a stray ``` line without closing early, and a ``` block is never
+    closed by a ~~~ line. The fence delimiter lines themselves never match
+    HEADING_RE, so their own mask value is never consulted by callers.
+    """
+    mask, in_fence, fence_char, fence_len = [], False, None, 0
+    for line in lines:
+        mask.append(in_fence)
+        match = FENCE_RE.match(line.strip())
+        if not match:
+            continue
+        marker = match.group(1)
+        if not in_fence:
+            in_fence, fence_char, fence_len = True, marker[0], len(marker)
+        elif marker[0] == fence_char and len(marker) >= fence_len:
+            in_fence, fence_char, fence_len = False, None, 0
+    return mask
 
 
 class SectionNotFound(Exception):
@@ -230,8 +254,11 @@ def locate_section(text: str, heading: str):
     """
     target = heading.strip()
     lines = text.splitlines(keepends=True)
+    fenced = _fence_mask(lines)
     start = level = None
     for i, line in enumerate(lines):
+        if fenced[i]:
+            continue
         if line.rstrip("\r\n") == target:
             match = HEADING_RE.match(line)
             if match:
@@ -241,6 +268,8 @@ def locate_section(text: str, heading: str):
         return None
     end = len(lines)
     for j in range(start + 1, len(lines)):
+        if fenced[j]:
+            continue
         match = HEADING_RE.match(lines[j])
         if match and len(match.group(1)) <= level:
             end = j

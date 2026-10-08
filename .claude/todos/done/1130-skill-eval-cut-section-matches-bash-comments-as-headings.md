@@ -25,3 +25,7 @@ re-point the wrangler fixtures' cut targets at the real section headings if RESU
 ## Acceptance
 - Cutting a section that contains a fenced bash block with `#` comments removes the whole section.
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- locate_section() is fence-aware (CommonMark open/close rule) via a _fence_mask helper; new RED-then-GREEN case in tools/test_skill_eval.py; wrangler fixtures 2-4 re-pointed at their real ### headings, each now spanning 265-697 chars instead of the 42-char near-no-op.

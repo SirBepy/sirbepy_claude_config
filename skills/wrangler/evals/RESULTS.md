@@ -37,7 +37,7 @@ needed). Approved spend: Joe, 2026-10-07 (see todo 920's Notes).
 
 ### Fixture 2 - deploy-and-ops.md
 
-- Cut: `--cut-file skills/wrangler/deploy-and-ops.md --cut-section "# Set secret - interactive prompt (preferred, wrangler will ask for the value securely)" --cut-section "# Rollback to specific version"`
+- Cut: `--cut-file skills/wrangler/deploy-and-ops.md --cut-section "### Manage Secrets" --cut-section "### Versions and Rollback"`
 - Intact: 4/4 PASS. Cut: 4/4 PASS. Tied.
 - **Does not degrade - flagged, not rerun.** `wrangler secret put`/`wrangler rollback <VERSION_ID>`
   are common enough Wrangler knowledge (and Cloudflare's docs are public) that the model answers
@@ -47,7 +47,7 @@ needed). Approved spend: Joe, 2026-10-07 (see todo 920's Notes).
 
 ### Fixture 3 - storage-bindings.md
 
-- Cut: `--cut-file skills/wrangler/storage-bindings.md --cut-section "# Create with preset (auto-configures dimensions/metric)" --cut-section "# Apply migrations to remote"`
+- Cut: `--cut-file skills/wrangler/storage-bindings.md --cut-section "### Manage Indexes" --cut-section "### Migrations"`
 - Intact: 3/3 PASS. Cut: 2/3 PASS. The failure: the cut run gave only the `--remote` migrations
   command and never mentioned the `--local` form or contrasted the two, failing the
   remote-vs-local-distinction expectation.
@@ -55,7 +55,7 @@ needed). Approved spend: Joe, 2026-10-07 (see todo 920's Notes).
 
 ### Fixture 4 - other-bindings.md
 
-- Cut: `--cut-file skills/wrangler/other-bindings.md --cut-section "# Add consumer to queue" --cut-section "# Trigger with parameters"`
+- Cut: `--cut-file skills/wrangler/other-bindings.md --cut-section "### Manage Queues" --cut-section "### Manage Workflows"`
 - Intact: 3/3 PASS. Cut: 1/3 PASS. Both failures: the cut run invented a non-existent
   `queues consumer worker add` subcommand (instead of `queues consumer add`), and passed the
   Workflow's JSON payload as a bare positional argument instead of the `--params` flag.
@@ -91,20 +91,25 @@ the full pass) exited 0 with only `skills/wrangler/evals/` (new, untracked) show
 `git status --porcelain -- skills/wrangler/` - all four sidecar `.md` files are byte-identical to
 `HEAD` after the pass.
 
-## A tooling finding, not acted on here (out of scope for this dispatch)
+## A tooling finding, fixed under todo 1130 (workaround no longer needed)
 
-`skill_eval.py`'s `locate_section()`/`HEADING_RE` (`^(#{1,6})\s`) does not know about fenced code
-blocks: a `# comment` line inside a ```bash``` block (very common in these sidecars) is matched as
-a markdown ATX heading. For most real sections this makes a `--cut-section` on the section's own
+`skill_eval.py`'s `locate_section()`/`HEADING_RE` (`^(#{1,6})\s`) did not know about fenced code
+blocks: a `# comment` line inside a ```bash``` block (very common in these sidecars) was matched as
+a markdown ATX heading. For most real sections this made a `--cut-section` on the section's own
 heading stop at the *first* bash comment it contains, deleting only a few dozen characters (the
 heading and any intro prose) and leaving the actual commands untouched - confirmed empirically
 while preparing this pass. Fixture 1's two cut targets (`### Remote Bindings for Local Dev`,
-`### Local Testing with Vitest`) happen to contain no `#`-led lines, so a normal heading cut works
-there. Fixtures 2-4's needed facts sit inside bash blocks, so the cut-section arguments above
-instead target the bash *comment line itself* as the heading (e.g.
-`"# Set secret - interactive prompt (preferred, wrangler will ask for the value securely)"`), which
-`locate_section` happily matches as a (fake, level-1) heading and uses as the cut's start - exploiting
-the same bug deliberately to reach the actual command line. This worked and is verified above, but
-it is a workaround for a real bug, not a fix: anyone else reaching for `--cut-section` on a section
-whose content starts with a bash comment will see the same silent near-no-op cut this pass had to
-route around. Left unfixed here - `tools/skill_eval.py` is out of this dispatch's scope.
+`### Local Testing with Vitest`) happen to contain no `#`-led lines, so a normal heading cut worked
+there regardless. Fixtures 2-4's needed facts sit inside bash blocks, so at the time this pass was
+written the cut-section arguments instead targeted the bash *comment line itself* as the heading
+(e.g. `"# Set secret - interactive prompt (preferred, wrangler will ask for the value securely)"`),
+exploiting the same bug deliberately to reach the actual command line.
+
+Todo 1130 made `locate_section()` fence-aware: a line whose stripped start is a backtick fence
+(three or more backticks) or `~~~` toggles fence state, and a heading match inside an open fence
+is now ignored. The old bash-comment
+targets no longer match at all (`locate_section` now returns `None` for them, proven in todo 1130's
+dispatch), so the cut-section arguments above have been re-pointed at the real section headings
+(`### Manage Secrets` / `### Versions and Rollback` for fixture 2, `### Manage Indexes` /
+`### Migrations` for fixture 3, `### Manage Queues` / `### Manage Workflows` for fixture 4). The
+workaround is no longer needed for any fixture in this file.

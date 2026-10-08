@@ -320,6 +320,38 @@ def check_locate_section_slices_heading_to_heading() -> bool:
             "equal-or-higher heading")
 
 
+FENCED_SKILL_MD = (
+    "## Deployment\r\n"
+    "Intro text.\r\n"
+    "\r\n"
+    "```bash\r\n"
+    "# install deps\r\n"
+    "npm install\r\n"
+    "```\r\n"
+    "\r\n"
+    "More prose after the fence.\r\n"
+    "\r\n"
+    "## Next\r\n"
+    "Unrelated section.\r\n"
+)
+
+
+def check_locate_section_ignores_heading_inside_fence() -> bool:
+    """A `# install deps` bash comment inside a ```bash block must never read as
+    an ATX heading (todo 1130): cutting ## Deployment must remove the whole
+    section, not stop at the first `#`-led line the fence happens to contain."""
+    span = se.locate_section(FENCED_SKILL_MD, "## Deployment")
+    ok = span is not None
+    if ok:
+        cut = FENCED_SKILL_MD[span[0]:span[1]]
+        ok = ("# install deps" in cut and "npm install" in cut
+              and "More prose after the fence." in cut
+              and "## Next" not in cut and "Unrelated section." not in cut)
+    return _testlib.report(
+        ok, "locate_section does not treat a `#`-led line inside a fenced code "
+            "block as a heading")
+
+
 def check_locate_section_returns_none_when_missing() -> bool:
     ok = se.locate_section(SAMPLE_SKILL_MD, "## Not A Real Heading") is None
     return _testlib.report(ok, "locate_section returns None for a heading that is not present")
@@ -482,6 +514,7 @@ def run() -> int:
         check_prompt_never_positional,
         check_not_a_ci_check,
         check_locate_section_slices_heading_to_heading,
+        check_locate_section_ignores_heading_inside_fence,
         check_locate_section_returns_none_when_missing,
         check_cut_sections_removes_named_section,
         check_cut_sections_refuses_on_missing_heading,
