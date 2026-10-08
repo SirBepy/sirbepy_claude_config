@@ -25,3 +25,7 @@ In step 3 of the "Pre-push gate" section, add: run the `mark` command as its own
 ## Acceptance
 - The Pre-push gate section says so explicitly.
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- Completed 2026-10-08 (loop-todos cycle 1): commit SKILL.md Pre-push gate step 3 says the push-gate mark and git push are separate tool calls.

@@ -906,6 +906,109 @@ else
   echo "PASS: the non-ASCII new file inside the tracked-dir pathspec landed"
 fi
 
+# --- repeated -m accumulates into subject + body, never last-one-wins (todo 1109): git joins
+# separate -m values as paragraphs, so the FIRST lands as %s (subject) and the SECOND as %b
+# (body) - the defect was an assignment that kept only the last one, landing the body text as
+# the subject and losing the real subject entirely ---
+r34=$(new_repo); tmp_dirs+=("$r34")
+branch=$(git -C "$r34" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r34" rev-parse HEAD)
+printf 'two message file\n' > "$r34/two-m.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r34" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "subject line" -m "body paragraph" -- two-m.txt 2>&1); rc=$?
+check "two -m flags commit cleanly" 0 '\[commit\] committed' 'REFUSED|ERROR' "$out" "$rc"
+new_subject=$(git -C "$r34" log -1 --format=%s)
+new_body=$(git -C "$r34" log -1 --format=%b)
+if [ "$new_subject" = "subject line" ]; then
+  echo "PASS: repeated -m (todo 1109) - subject landed as the first -m value"
+else
+  echo "FAIL: repeated -m (todo 1109) - subject is '$new_subject', want 'subject line'"
+  fail=1
+fi
+if [ "$new_body" = "body paragraph" ]; then
+  echo "PASS: repeated -m (todo 1109) - body landed as the second -m value"
+else
+  echo "FAIL: repeated -m (todo 1109) - body is '$new_body', want 'body paragraph'"
+  fail=1
+fi
+
+# --- CRLF/LF conversion warning never prints from this script's own internal git calls, and
+# the commit still lands with every verdict line intact (todo 1115): new_repo()'s own
+# `core.autocrlf false` exists specifically so every fixture ABOVE this one never hits this
+# warning, so this test builds a dedicated autocrlf=true repo - the exact setting that makes a
+# plain `git diff` on a tracked, edited file print "LF will be replaced by CRLF" ---
+r35=$(mktemp -d) || { echo "FAIL: mktemp -d (r35)"; exit 1; }
+tmp_dirs+=("$r35")
+git -C "$r35" init -q
+git -C "$r35" config user.email "test@example.com"
+git -C "$r35" config user.name "test"
+git -C "$r35" config core.autocrlf true
+printf 'line1\nline2\n' > "$r35/f.txt"
+git -C "$r35" add f.txt
+git -C "$r35" commit -q -m seed
+branch=$(git -C "$r35" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r35" rev-parse HEAD)
+printf 'line1\nline2 EDITED\n' > "$r35/f.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r35" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "autocrlf repo, no CRLF warning expected" -- f.txt 2>&1); rc=$?
+check "commit-pathspec.sh prints no LF/CRLF conversion warning in an autocrlf repo" \
+  0 '\[commit\] committed' 'will be replaced by CRLF|will be replaced by LF' "$out" "$rc"
+if [ "$(git -C "$r35" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: todo 1115 - the autocrlf commit did not land"
+  fail=1
+else
+  echo "PASS: todo 1115 - the autocrlf commit landed despite the suppressed warning class"
+fi
+
+# --- --todo <id> appends a TRACKED todo's archive-move paths by itself (todo 1105): both the
+# done/ destination (filesystem glob, since complete-todo.ps1's Move-Item never stages anything)
+# and the still-tracked source deletion land, with no coverage refusal and no pathspec typed by
+# hand beyond `--` itself ---
+r36=$(new_repo); tmp_dirs+=("$r36")
+mkdir -p "$r36/.claude/todos/done"
+printf 'the archived todo\n' > "$r36/.claude/todos/1105-example.md"
+git -C "$r36" add .claude/todos/1105-example.md
+git -C "$r36" commit -q -m "seed .claude/todos/1105-example.md"
+branch=$(git -C "$r36" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r36" rev-parse HEAD)
+mv "$r36/.claude/todos/1105-example.md" "$r36/.claude/todos/done/1105-example.md"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r36" --expect-branch "$branch" --expect-sha "$sha" \
+  --todo 1105 -m "archive todo 1105 via --todo" -- 2>&1); rc=$?
+check "--todo on a tracked todo commits both the done/ destination and the source deletion" \
+  0 '\[commit\] committed' 'REFUSED|ERROR' "$out" "$rc"
+if git -C "$r36" ls-files --error-unmatch -- .claude/todos/1105-example.md >/dev/null 2>&1; then
+  echo "FAIL: --todo (tracked) - the source deletion did not land"
+  fail=1
+else
+  echo "PASS: --todo (tracked) - the source deletion landed"
+fi
+if ! git -C "$r36" ls-files --error-unmatch -- .claude/todos/done/1105-example.md >/dev/null 2>&1; then
+  echo "FAIL: --todo (tracked) - the done/ destination did not land"
+  fail=1
+else
+  echo "PASS: --todo (tracked) - the done/ destination landed"
+fi
+
+# --- --todo <id> on an UNTRACKED todo (a peer-filed todo never committed) appends only the
+# done/ destination - there is no tracked source to delete, so `git ls-files` finds nothing and
+# this must not error or invent a path ---
+r37=$(new_repo); tmp_dirs+=("$r37")
+branch=$(git -C "$r37" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r37" rev-parse HEAD)
+mkdir -p "$r37/.claude/todos/done"
+printf 'untracked todo\n' > "$r37/.claude/todos/1106-untracked.md"
+mv "$r37/.claude/todos/1106-untracked.md" "$r37/.claude/todos/done/1106-untracked.md"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r37" --expect-branch "$branch" --expect-sha "$sha" \
+  --todo 1106 -m "archive untracked todo 1106 via --todo" -- 2>&1); rc=$?
+check "--todo on an untracked todo commits only the done/ destination" \
+  0 '\.claude/todos/done/1106-untracked\.md: untracked' 'REFUSED|ERROR' "$out" "$rc"
+if ! git -C "$r37" ls-files --error-unmatch -- .claude/todos/done/1106-untracked.md >/dev/null 2>&1; then
+  echo "FAIL: --todo (untracked) - the done/ destination did not land"
+  fail=1
+else
+  echo "PASS: --todo (untracked) - the done/ destination landed"
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else

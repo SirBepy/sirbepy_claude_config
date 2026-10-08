@@ -42,3 +42,4 @@ suppress other warnings.
 ## Notes
 
 - 2026-10-07: recurred in claude_usage_in_taskbar. A session piped commit-pathspec.sh through `grep` to cut the CRLF flood on a 1-file commit (it committed fine, 7d44da7d). Same trigger as above, second occurrence.
+- Completed 2026-10-08 (loop-todos cycle 1): commit-pathspec.sh and prefilter-gate.sh export GIT_CONFIG_* core.safecrlf=false so child git calls stop printing the LF/CRLF warning; exit codes unchanged; tests in test_prefilters.sh and r35.

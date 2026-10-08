@@ -308,6 +308,28 @@ else
   echo "PASS: comment-noise.sh does not flag a text-heavy PDF"
 fi
 
+# --- prefilter-gate.sh: CRLF/LF conversion warning never prints, exit code unchanged (todo
+# 1115) - new_repo()'s own `core.autocrlf false` exists specifically so no fixture ABOVE this
+# one ever hits this warning, so this test builds a dedicated autocrlf=true repo: the exact
+# setting that makes each wrapped script's plain `git diff` on a tracked, edited file print
+# "LF will be replaced by CRLF" (confirmed empirically - the warning comes from em-dash.sh/
+# secret-scan.sh/comment-tense.sh's OWN git diff calls, not from prefilter-gate.sh itself,
+# which is why the suppression has to go through the environment rather than a `-c` flag on a
+# call this script doesn't make) ---
+crlf=$(mktemp -d) || { echo "FAIL: mktemp -d (crlf)"; exit 1; }
+tmp_dirs+=("$crlf")
+git -C "$crlf" init -q
+git -C "$crlf" config user.email "test@example.com"
+git -C "$crlf" config user.name "test"
+git -C "$crlf" config core.autocrlf true
+printf 'line1\nline2\n' > "$crlf/f.txt"
+git -C "$crlf" add f.txt
+git -C "$crlf" commit -q -m seed
+printf 'line1\nline2 EDITED\n' > "$crlf/f.txt"
+out=$(cd "$crlf" && "$gate" f.txt 2>&1); rc=$?
+check "prefilter-gate.sh suppresses the LF/CRLF conversion warning, exit code unchanged" \
+  0 '' 'will be replaced by CRLF|will be replaced by LF' "$out" "$rc"
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else

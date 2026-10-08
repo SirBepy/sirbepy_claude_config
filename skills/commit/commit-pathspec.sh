@@ -15,7 +15,14 @@
 # Usage:
 #   commit-pathspec.sh [-C|--repo <repo>] --expect-branch <b> --expect-sha <sha>
 #     [--own <sha,sha,...>] [--own-since <sha>] [--own-range <file>:<a>-<b>[,<a>-<b>...]]...
-#     [--force <check>[,<check>...]] -m <message> -- <file> [<file> ...]
+#     [--force <check>[,<check>...]] [--todo <id>]... -m <message> [-m <body>]... -- <file> [<file> ...]
+#
+# --todo <id> (repeatable, todo 1105): appends that todo's archive-move paths to the pathspec
+# itself, so a caller closing a backlog item names the id once instead of hand-globbing
+# complete-todo.ps1's own output - `.claude/todos/done/<id>-*.md` when that file exists on disk,
+# and `.claude/todos/<id>-*.md` when git still tracks it (an untracked, peer-filed todo has no
+# source half to name, so only the done/ file is added). `--` may be given with zero explicit
+# files when --todo alone supplies the whole pathspec.
 #
 # --own-range is OPTIONAL per file: when a file has no explicit range, this script derives it
 # from the file's own current `@@` hunk headers (the same "1-9999" assumption step 8 already made
@@ -57,6 +64,20 @@
 # failure) - not a finding to act on, fix and rerun.
 set -uo pipefail
 
+# Suppresses only the "LF will be replaced by CRLF" / "CRLF will be replaced by LF" class of
+# warning (todo 1115): core.safecrlf's default "warn" still runs the same conversion, it just
+# prints first - every diff this script or a child script (prefilter-gate.sh and whatever it
+# forwards to) takes against a tracked file re-triggers it once per file in an autocrlf repo,
+# flooding real output and tempting a caller into a forbidden pipe/filter to read past it.
+# core.safecrlf=false never turns a prior success into a failure (unlike =true, which can),
+# so this cannot change any exit code - only the warning text disappears. Exported as GIT_CONFIG_*
+# rather than a per-call `-c` flag so a child bash script's OWN git calls (em-dash.sh, secret-
+# scan.sh, comment-tense.sh, comment-noise.sh - none of which this script owns or invokes via
+# `git -c`) inherit the same suppression through the environment.
+export GIT_CONFIG_COUNT=1
+export GIT_CONFIG_KEY_0=core.safecrlf
+export GIT_CONFIG_VALUE_0=false
+
 dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 repo_in=""
@@ -66,7 +87,8 @@ own_shas=""
 own_since=""
 declare -A explicit_ranges
 force_list=""
-message=""
+messages=()
+todo_ids=()
 files=()
 
 while [ $# -gt 0 ]; do
@@ -85,14 +107,21 @@ while [ $# -gt 0 ]; do
     # writes "override these two checks", and an assignment here silently dropped every
     # earlier one, honouring only the last --force actually typed.
     --force) force_list="${force_list:+$force_list,}${2:-}"; shift 2 ;;
-    -m|--message) message="${2:-}"; shift 2 ;;
+    # Appended, not assigned (todo 1109): a repeated -m is the natural way to pass a subject
+    # plus body paragraphs, the way `git commit -m A -m B` does - an assignment here silently
+    # dropped every -m but the last, landing the BODY text as the commit's subject line.
+    -m|--message) messages+=("${2:-}"); shift 2 ;;
+    --todo) todo_ids+=("${2:-}"); shift 2 ;;
     --) shift; files=("$@"); break ;;
     *) printf 'ERROR: unknown argument %s\n' "$1"; exit 2 ;;
   esac
 done
 
-if [ -z "$expect_branch" ] || [ -z "$expect_sha" ] || [ -z "$message" ] || [ "${#files[@]}" -eq 0 ]; then
-  printf 'ERROR: --expect-branch, --expect-sha, -m and -- <files> are all required\n'
+# The files-non-empty half of this check runs further down (after --todo resolution): a
+# --todo-only call legitimately has zero explicit files at parse time, filling the pathspec
+# entirely from the ids' own archive paths.
+if [ -z "$expect_branch" ] || [ -z "$expect_sha" ] || [ "${#messages[@]}" -eq 0 ]; then
+  printf 'ERROR: --expect-branch, --expect-sha and -m are all required\n'
   exit 2
 fi
 
@@ -125,6 +154,38 @@ if ! git -C "$repo_check" rev-parse --show-toplevel >/dev/null 2>&1; then
 fi
 repo_root=$(git -C "$repo_check" rev-parse --show-toplevel)
 git_c() { git -C "$repo_root" "$@"; }
+
+# --todo <id> resolution (todo 1105): the done/ half is a filesystem glob (complete-todo.ps1's
+# Move-Item never touches the index, so the file is untracked new content, not a git object yet)
+# and the source half is a git pathspec glob gated on still being tracked - an untracked source
+# (a peer-filed todo that was never committed) has no deletion for this commit to carry, and
+# `git ls-files` on it correctly returns nothing rather than a path to add.
+declare -A todo_seen
+for f in "${files[@]}"; do todo_seen["$f"]=1; done
+for tid in "${todo_ids[@]}"; do
+  shopt -s nullglob
+  for donef in "$repo_root"/.claude/todos/done/"$tid"-*.md; do
+    [ -e "$donef" ] || continue
+    rel="${donef#"$repo_root"/}"
+    if [ -z "${todo_seen[$rel]:-}" ]; then
+      todo_seen["$rel"]=1
+      files+=("$rel")
+    fi
+  done
+  shopt -u nullglob
+  while IFS= read -r -d '' trackedf; do
+    [ -z "$trackedf" ] && continue
+    if [ -z "${todo_seen[$trackedf]:-}" ]; then
+      todo_seen["$trackedf"]=1
+      files+=("$trackedf")
+    fi
+  done < <(git_c ls-files -z -- ".claude/todos/${tid}-*.md" 2>/dev/null)
+done
+
+if [ "${#files[@]}" -eq 0 ]; then
+  printf 'ERROR: -- <files> or --todo <id> must supply at least one path\n'
+  exit 2
+fi
 
 # --expect-sha accepts a short sha (todo 994): resolve it against this repo before the
 # head-guard comparison, the same normalization a caller would otherwise have to do by hand.
@@ -578,7 +639,11 @@ for f in "${files[@]}"; do
     fi
   fi
 done
-if ! commit_out=$(git_c commit -m "$message" -- "${files[@]}" 2>&1); then
+# Each -m lands as its own paragraph (git joins them with a blank line), matching
+# `git commit -m A -m B`'s own subject+body shape - todo 1109.
+commit_msg_args=()
+for m in "${messages[@]}"; do commit_msg_args+=(-m "$m"); done
+if ! commit_out=$(git_c commit "${commit_msg_args[@]}" -- "${files[@]}" 2>&1); then
   printf '[commit] ERROR: git commit failed:\n%s\n' "$commit_out"
   exit 2
 fi

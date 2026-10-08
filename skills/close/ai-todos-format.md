@@ -343,6 +343,9 @@ Archiving is a two-path change (a delete in `.claude/todos/`, an add under `done
 pathspec naming only one half drops the other, the exact recurrence `done/495-commit-pathspec-drops-the-source-half-of-a-git-mv.md`
 traces - `/commit`'s "Staged-pathspec coverage check" bullet (step 8 of `skills/commit/SKILL.md`) is
 what catches it, so name both paths there rather than re-deriving the check here.
+`skills/commit/commit-pathspec.sh --todo <id>` builds both halves itself (todo 1105): hand the
+script the id instead of globbing `done/<id>-*.md` and checking `git ls-files` for the source by
+hand before every call.
 
 Preferred mechanism for the completion sequence (append a Notes bullet + move to `done/` +
 release claim + prune PLAN.md line, all four): `~/.claude/skills/close/complete-todo.ps1 -Id <id>

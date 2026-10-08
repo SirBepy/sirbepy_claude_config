@@ -11,6 +11,17 @@
 # Exit 0 = clean, 1 = a prefilter flagged something, 2 = could not run (bad path, no repo found).
 set -uo pipefail
 
+# Suppresses only the "LF will be replaced by CRLF" / "CRLF will be replaced by LF" class of
+# warning (todo 1115): every wrapped script below (comment-tense.sh, em-dash.sh, secret-scan.sh,
+# comment-noise.sh) diffs a tracked file via plain `git diff`, which re-triggers core.safecrlf's
+# default "warn" once per file in an autocrlf repo - none of those scripts are touched here, so
+# the suppression goes through the environment (GIT_CONFIG_*, same as a global `-c` on every git
+# call they make) instead of a per-call flag. =false only drops the warning text; it never turns
+# a prior success into a failure the way =true could, so exit codes are unaffected.
+export GIT_CONFIG_COUNT=1
+export GIT_CONFIG_KEY_0=core.safecrlf
+export GIT_CONFIG_VALUE_0=false
+
 dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 status=0
 repo=""

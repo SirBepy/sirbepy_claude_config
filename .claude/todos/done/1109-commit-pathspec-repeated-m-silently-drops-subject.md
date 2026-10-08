@@ -37,3 +37,7 @@ Collect every `-m` into an array and pass each through as its own `-m` to the fi
 - `commit-pathspec.sh -m A -m B -- f` produces a commit whose `%s` is `A` and body is `B`.
 - A single `-m` still works unchanged.
 - `python ci/run_all.py` is green.
+
+## Notes
+
+- Completed 2026-10-08 (loop-todos cycle 1): commit-pathspec.sh collects every -m into an array and passes each as its own paragraph; r34 test asserts subject and body both land.

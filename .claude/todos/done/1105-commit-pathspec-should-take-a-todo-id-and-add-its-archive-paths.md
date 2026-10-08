@@ -32,3 +32,7 @@ file lands).
 ## Acceptance
 - `--todo <id>` commits a tracked todo's move whole and an untracked todo's done/ file alone.
 - `bash skills/commit/test_commit_pathspec.sh` passes (give it timeout 600000).
+
+## Notes
+
+- Completed 2026-10-08 (loop-todos cycle 1): commit-pathspec.sh --todo <id> (repeatable) adds the done/ copy and the tracked source deletion; documented in commit SKILL.md step 8 and ai-todos-format.md; r36/r37 tests.

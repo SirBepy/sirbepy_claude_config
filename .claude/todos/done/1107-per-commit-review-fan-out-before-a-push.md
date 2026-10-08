@@ -32,3 +32,7 @@ fixes.
 ## Acceptance
 - One written procedure exists and is referenced from `/commit`'s Push pipeline.
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- Completed 2026-10-08 (loop-todos cycle 1): new skills/review-unpushed/SKILL.md (6eec3be), wired into /loop-todos Phase 4.5 and /commit's Pre-push gate step 1 for long unpushed stacks.
