@@ -141,8 +141,6 @@
       "Read(**/.next/**)",
       "Read(**/.terraform/**)",
       "Read(**/.ansible/**)",
-      "Read(**/build/**)",
-      "Read(**/dist/**)",
       "Read(**/out/**)",
       "Read(**/venv/**)",
       "Read(**/.venv/**)",

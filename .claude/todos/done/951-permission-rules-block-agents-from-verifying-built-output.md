@@ -140,6 +140,7 @@ denial. Not reproducible here is not the same as does not exist.
 new deny rule" passes. Anyone editing this file's deny list should expect that.
 
 <!-- loop-skip: dev deferred 2026-09-11 -->
+- Fixed 2026-10-08 per Joe ('Remove both rules'): Read(**/build/**) and Read(**/dist/**) removed from settings.json permissions.deny. Verified live the same session: a Grep over countoff/dist returned 186 matches across 3 files, which the deny had blocked. Whole-file reads of bundles are left to the Read tool's own size cap and to ripgrep skipping gitignored build dirs by default. The bare-word 'build' Bash denial was never reproduced (see 2026-09-10 notes) and was most likely the same Read(**/build/**) rule matching a path-like token; re-file if it recurs.
 ## Deferred questions
 
 Written by /loop-todos on 2026-09-10. The next run opens with these.
