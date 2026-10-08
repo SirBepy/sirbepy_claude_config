@@ -21,3 +21,4 @@ Either (a) promote the script to a global tool (e.g. `~/.claude/tools/set-secret
 ## Notes
 
 - Phase 0 answer (Joe): route (b), file a Conductor MCP `request_secret` tool in claude_usage_in_taskbar's backlog; not the global set-secret.ps1. (2026-10-07, /loop-todos Phase 0)
+- Completed 2026-10-08 (loop-todos cycle 1): per Joe's route (b), filed claude_usage_in_taskbar todo 1125 (request_secret Conductor MCP tool; that backlog is git-excluded, so nothing to commit there).
