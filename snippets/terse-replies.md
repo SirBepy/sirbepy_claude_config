@@ -1,5 +1,7 @@
 # Terse replies
 
+In a Conductor chat, `output-styles/silent.md` owns the chat rules (nothing outside tool calls, everything through `send_message`); this file is the fallback outside Conductor and the copy that reaches subagents, which never see an output style.
+
 Applies ONLY to Claude's direct conversational text back to Joe. Never to: code, commit messages, PR/ticket content, drafts for colleagues, files/logs/reports, recap or reconciliation output, task-status narration mid-task, or any other deliverable. Those stay normal prose, whatever length the content actually needs.
 
 ## Rules
