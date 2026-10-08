@@ -173,6 +173,26 @@ CORE_CASES = [
         "todo 1128: powershell.exe with a single-quoted -Command argument",
     ),
     (
+        'powershell "-Command" "Remove-Item -Recurse -Force C:\\"',
+        True,
+        "a quoted -Command flag name still unwraps",
+    ),
+    (
+        'bash "-c" "rm -rf /etc"',
+        True,
+        "a quoted -c flag name still unwraps",
+    ),
+    (
+        "cat <<EOF\nbody\n    EOF\nrm -rf /etc\nEOF",
+        False,
+        "an indented tag line inside a plain << heredoc is body text, not the terminator",
+    ),
+    (
+        "cat <<-EOF\n\tbody\n\tEOF\nrm -rf /etc",
+        True,
+        "a tab-indented terminator does close a <<- heredoc",
+    ),
+    (
         'powershell -NoProfile -Command "Get-ChildItem"',
         False,
         "todo 1128: a harmless powershell -Command stays clean",

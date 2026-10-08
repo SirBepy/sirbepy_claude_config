@@ -117,10 +117,15 @@ def verb_segments(command: str):
     `rm -rf "$HOME"` still exposes $HOME to the target pattern.
     """
     for segment in split_outside_quotes(command):
-        s = segment.strip()
-        while True:
-            m = LEADING_SUDO_RE.match(s) or LEADING_ENV_RE.match(s) or LEADING_WRAPPER_RE.match(s)
-            if not m:
-                break
-            s = s[m.end():]
-        yield s.replace("'", "").replace('"', "")
+        s = _strip_leading_prefixes(segment.strip())
+        # Second pass after the quotes go: `powershell "-Command" "..."` only
+        # exposes its wrapper once its flag name is unquoted.
+        yield _strip_leading_prefixes(s.replace("'", "").replace('"', ""))
+
+
+def _strip_leading_prefixes(s: str) -> str:
+    while True:
+        m = LEADING_SUDO_RE.match(s) or LEADING_ENV_RE.match(s) or LEADING_WRAPPER_RE.match(s)
+        if not m:
+            return s
+        s = s[m.end():]
