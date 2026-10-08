@@ -223,17 +223,21 @@ def _fence_mask(lines: list) -> list:
     closed by a ~~~ line. The fence delimiter lines themselves never match
     HEADING_RE, so their own mask value is never consulted by callers.
     """
-    mask, in_fence, fence_char, fence_len = [], False, None, 0
-    for line in lines:
+    mask, in_fence, fence_char, fence_len, opened_at = [], False, None, 0, 0
+    for i, line in enumerate(lines):
         mask.append(in_fence)
         match = FENCE_RE.match(line.strip())
         if not match:
             continue
         marker = match.group(1)
         if not in_fence:
-            in_fence, fence_char, fence_len = True, marker[0], len(marker)
+            in_fence, fence_char, fence_len, opened_at = True, marker[0], len(marker), i
         elif marker[0] == fence_char and len(marker) >= fence_len:
             in_fence, fence_char, fence_len = False, None, 0
+    if in_fence:
+        # A fence never closed is a typo, not a code block: masking to EOF would
+        # hide every later heading and make a cut run to the end of the file.
+        mask[opened_at:] = [False] * (len(mask) - opened_at)
     return mask
 
 

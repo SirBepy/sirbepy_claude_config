@@ -352,6 +352,15 @@ def check_locate_section_ignores_heading_inside_fence() -> bool:
             "block as a heading")
 
 
+def check_locate_section_survives_unclosed_fence() -> bool:
+    """A fence that never closes is a typo: the next real heading still ends
+    the section instead of the cut running to EOF."""
+    doc = "## Deployment\n```bash\nnpm install\n\n## Next\nUnrelated section.\n"
+    span = se.locate_section(doc, "## Deployment")
+    ok = span is not None and "## Next" not in doc[span[0]:span[1]]
+    return _testlib.report(ok, "locate_section stops at the next heading after an unclosed fence")
+
+
 def check_locate_section_returns_none_when_missing() -> bool:
     ok = se.locate_section(SAMPLE_SKILL_MD, "## Not A Real Heading") is None
     return _testlib.report(ok, "locate_section returns None for a heading that is not present")
@@ -515,6 +524,7 @@ def run() -> int:
         check_not_a_ci_check,
         check_locate_section_slices_heading_to_heading,
         check_locate_section_ignores_heading_inside_fence,
+        check_locate_section_survives_unclosed_fence,
         check_locate_section_returns_none_when_missing,
         check_cut_sections_removes_named_section,
         check_cut_sections_refuses_on_missing_heading,
