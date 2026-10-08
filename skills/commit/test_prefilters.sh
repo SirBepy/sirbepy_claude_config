@@ -1,17 +1,13 @@
 #!/usr/bin/env bash
-# Fixture suite for secret-scan.sh, comment-noise.sh, em-dash.sh, overlap-check.sh (todo 810),
+# Fixture suite for secret-scan.sh, em-dash.sh, overlap-check.sh,
 # foreign-hunk-check.sh (todos 1033, 1064), seeded from done/412, done/460, done/456, done/778.
 # Invoke directly:
 #   bash skills/commit/test_prefilters.sh
-# The comment-noise.sh cut-ratio arithmetic (the exact-25%-boundary math) has no test coverage
-# here: its old suite, test_comment_noise.sh, was deleted with the cap it tested (todo 922).
-# Accepted gap - the number is advisory-only now, not a gate; see todo 935.
 set -uo pipefail
 
 script_dir=$(cd "$(dirname "$0")" && pwd)
 gate="$script_dir/prefilter-gate.sh"
 secret_scan="$script_dir/secret-scan.sh"
-comment_noise="$script_dir/comment-noise.sh"
 em_dash="$script_dir/em-dash.sh"
 overlap_check="$script_dir/overlap-check.sh"
 foreign_hunk_check="$script_dir/foreign-hunk-check.sh"
@@ -138,34 +134,6 @@ out=$(cd "$bogus" && "$gate" never/existed.txt); rc=$?
 check "a path that was never tracked and is not on disk still exits 2" \
   2 'ERROR: could not find a git repository for never/existed\.txt' '' "$out" "$rc"
 
-# --- comment-noise.sh: generated-file skip, filename suffix only (done/456) ---
-# comment-noise.sh's own exit code is sort's (always 0), so this checks stdout content only;
-# the gate integration is already covered by the secret-scan cases above.
-gen=$(new_repo); tmp_dirs+=("$gen")
-write_noisy() {
-  local path=$1 i
-  : > "$path"
-  for i in 1 2 3 4 5 6; do printf '// note %d\n' "$i" >> "$path"; done
-  for i in $(seq 1 18); do printf 'var x = %d;\n' "$i" >> "$path"; done
-}
-write_noisy "$gen/model.freezed.dart"
-write_noisy "$gen/model.dart"
-mkdir -p "$gen/generated"
-write_noisy "$gen/generated/model.dart"
-out=$(cd "$gen" && bash "$comment_noise" model.freezed.dart model.dart generated/model.dart)
-if printf '%s' "$out" | grep -qF 'model.freezed.dart'; then
-  echo "FAIL: comment-noise.sh flagged a .freezed.dart file: $out"
-  fail=1
-elif ! printf '%s' "$out" | grep -qE '^model\.dart '; then
-  echo "FAIL: comment-noise.sh did not flag the hand-written model.dart: $out"
-  fail=1
-elif ! printf '%s' "$out" | grep -qE '^generated/model\.dart '; then
-  echo "FAIL: comment-noise.sh skipped a hand-written file merely sitting under generated/: $out"
-  fail=1
-else
-  echo "PASS: comment-noise.sh skips by filename suffix, not by directory"
-fi
-
 # --- em-dash.sh: exempt marker honored under .claude/todos/ only (done/778) ---
 ed=$(new_repo); tmp_dirs+=("$ed")
 mkdir -p "$ed/.claude/todos" "$ed/other"
@@ -291,22 +259,6 @@ check "secret-scan.sh does not flag a credential embedded in a text-heavy PDF" 0
 printf 'const tok = "%s";\n' "$fake_tok4" > "$ssbin/config.js"
 out=$(cd "$ssbin" && "$gate" config.js); rc=$?
 check "secret-scan.sh still flags the same credential in a plain-text file" 1 'config\.js:1: ghp_' '' "$out" "$rc"
-
-# --- comment-noise.sh: a text-heavy binary (PDF) is skipped, not scanned (todo 1086) ---
-cnbin=$(new_repo); tmp_dirs+=("$cnbin")
-{
-  printf '%%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n'
-  for i in 1 2 3 4 5 6; do printf '// note %d\n' "$i"; done
-  for i in $(seq 1 18); do printf 'var x = %d;\n' "$i"; done
-  head -c 9000 /dev/zero | tr '\0' 'x'
-} > "$cnbin/doc.pdf"
-out=$(cd "$cnbin" && bash "$comment_noise" doc.pdf)
-if printf '%s' "$out" | grep -qF 'doc.pdf'; then
-  echo "FAIL: comment-noise.sh flagged a text-heavy PDF: $out"
-  fail=1
-else
-  echo "PASS: comment-noise.sh does not flag a text-heavy PDF"
-fi
 
 # --- prefilter-gate.sh: CRLF/LF conversion warning never prints, exit code unchanged (todo
 # 1115) - new_repo()'s own `core.autocrlf false` exists specifically so no fixture ABOVE this

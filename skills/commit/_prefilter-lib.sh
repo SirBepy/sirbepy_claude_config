@@ -35,7 +35,7 @@ scan_invisible_paths() {
 # vs real-diff heuristic (used by callers below for untracked files) still emits it as scannable
 # text (todo 986). Extension is checked first since that is the exact shape that slipped through;
 # the NUL sniff backs it up for an extensionless binary. Shared by every prefilter (todo 1086) so
-# em-dash.sh, secret-scan.sh and comment-noise.sh can never drift on which files are binary.
+# em-dash.sh and secret-scan.sh can never drift on which files are binary.
 BINARY_EXT_RE='\.(pdf|png|jpe?g|gif|webp|ico|ttf|otf|woff2?|mp3|mp4|zip)$'
 is_binary_path() {
   local f="$1" p stats

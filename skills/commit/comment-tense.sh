@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Timeless-Present prefilter: flags comments that narrate the change instead of stating the
 # invariant. Rule, measured false-positive rate, and the rejected patterns are all in
-# skills/commit/comment-noise.md. Todo 429.
+# skills/commit/comment-tense.md.
 
 # Usage: comment-tense.sh <file> [<file> ...]   working-tree mode (/commit step 5a)
 #        comment-tense.sh --range <base>        range mode (/create-pr, branch diff)

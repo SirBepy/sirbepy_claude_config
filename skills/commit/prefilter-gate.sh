@@ -4,9 +4,6 @@
 # flagged diff. Wraps those scripts unchanged - they still work standalone. todo-ref.sh flags an
 # added code comment that names a backlog item by its numeric id; like comment-tense.sh it is
 # fix-and-continue, not a STOP like secret-scan.sh.
-# comment-noise.sh also runs but is informational only (demoted, todo 922): its output is
-# printed for visibility but never sets the exit status, so a long comment block never blocks
-# a commit; the measurement stays available for todo 403's brainstorm.
 
 # Usage: prefilter-gate.sh [-C <repo>|--repo <repo>] <file> [<file> ...]   working-tree mode
 #        prefilter-gate.sh --range <base>                                  range mode, forwarded as-is
@@ -14,8 +11,8 @@
 set -uo pipefail
 
 # Suppresses only the "LF will be replaced by CRLF" / "CRLF will be replaced by LF" class of
-# warning (todo 1115): every wrapped script below (comment-tense.sh, em-dash.sh, secret-scan.sh,
-# comment-noise.sh) diffs a tracked file via plain `git diff`, which re-triggers core.safecrlf's
+# warning: every wrapped script below (comment-tense.sh, em-dash.sh, secret-scan.sh)
+# diffs a tracked file via plain `git diff`, which re-triggers core.safecrlf's
 # default "warn" once per file in an autocrlf repo - none of those scripts are touched here, so
 # the suppression goes through the environment (GIT_CONFIG_*, same as a global `-c` on every git
 # call they make) instead of a per-call flag. =false only drops the warning text; it never turns
@@ -155,20 +152,6 @@ elif [ "${1:-}" != "--range" ] && [ $# -gt 0 ]; then
         status=1
       fi
     done
-    # comment-noise.sh is informational only (demoted, todo 922): run it, print anything it
-    # says, but never let it set status - a long comment block no longer blocks a commit.
-    if [ "$repo_key" = "$cwd_repo" ]; then
-      noise_out=$(bash "$dir/comment-noise.sh" "${paths[@]}")
-    else
-      noise_out=$(bash "$dir/comment-noise.sh" --repo "$repo_key" "${paths[@]}")
-    fi
-    if [ -n "$noise_out" ]; then
-      if [ "$repo_key" = "$cwd_repo" ]; then
-        printf '=== comment-noise.sh (informational, non-blocking) ===\n%s\n' "$noise_out"
-      else
-        printf '=== comment-noise.sh (informational, non-blocking) (%s) ===\n%s\n' "$repo_key" "$noise_out"
-      fi
-    fi
   done
   exit $status
 fi
@@ -185,15 +168,5 @@ for script in comment-tense.sh em-dash.sh secret-scan.sh todo-ref.sh; do
     status=1
   fi
 done
-
-# comment-noise.sh is informational only (demoted, todo 922): see the loop above for why.
-if [ -n "$repo" ]; then
-  noise_out=$(bash "$dir/comment-noise.sh" --repo "$repo" "$@")
-else
-  noise_out=$(bash "$dir/comment-noise.sh" "$@")
-fi
-if [ -n "$noise_out" ]; then
-  printf '=== comment-noise.sh (informational, non-blocking) ===\n%s\n' "$noise_out"
-fi
 
 exit $status

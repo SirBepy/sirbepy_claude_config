@@ -73,7 +73,7 @@ set -uo pipefail
 # core.safecrlf=false never turns a prior success into a failure (unlike =true, which can),
 # so this cannot change any exit code - only the warning text disappears. Exported as GIT_CONFIG_*
 # rather than a per-call `-c` flag so a child bash script's OWN git calls (em-dash.sh, secret-
-# scan.sh, comment-tense.sh, comment-noise.sh - none of which this script owns or invokes via
+# scan.sh, comment-tense.sh - none of which this script owns or invokes via
 # `git -c`) inherit the same suppression through the environment.
 export GIT_CONFIG_COUNT=1
 export GIT_CONFIG_KEY_0=core.safecrlf

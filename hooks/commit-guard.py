@@ -309,7 +309,7 @@ def _prune_expired_legacy_markers() -> None:
 def _deny_prefilter_failure() -> None:
     deny(
         "[commit-guard] This commit's own prefilter-gate re-check just failed "
-        "(comment-noise/em-dash/comment-tense/secret-scan); no part of this call "
+        "(em-dash/comment-tense/secret-scan); no part of this call "
         "ran, including any command chained before it. A `;` between an earlier "
         "gate run and `git commit` does not skip this - the gate is re-run here, "
         "at commit time, over the exact pathspec being committed. Run `bash "

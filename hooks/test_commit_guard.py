@@ -268,8 +268,7 @@ with tempfile.TemporaryDirectory() as tmp:
     subprocess.run(["git", "add", "source_move.py"], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-q", "-m", "add source_move"], cwd=repo, check=True)
 
-    # An em dash trips em-dash.sh, which still gates; this was a 5-line comment
-    # block until todo 922 demoted comment-noise to informational.
+    # An em dash trips em-dash.sh, which gates this 5-line comment block.
     # Written as an escape, never a literal: em-dash.sh's exempt marker only covers
     # .claude/todos/, so a literal one would make this file uncommittable.
     (repo / "noisy.py").write_text(

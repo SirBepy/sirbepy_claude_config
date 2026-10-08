@@ -86,3 +86,4 @@ Written by /auto-do-todos on 2026-10-08 (loop-todos cycle 1). The next run opens
 
 - Filed via `/create-todo` on Joe's direct request, 2026-08-19, during the `/mega-todos` wrap-up.
 - Supersedes nothing. `399` stays live and is now gated on this; see its Notes.
+- Done 2026-10-08: web research (arxiv 2506.11007: comments 96% vs none 84%, wrong comments 61%) led Joe to adopt a rewritten CLAUDE.md comment rule (why lives in the code, not only the commit; fix or delete stale comments; same rule in every repo, client or personal). comment-noise.sh line-count scan retired. 399 was already closed.

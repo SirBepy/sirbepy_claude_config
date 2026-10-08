@@ -3,7 +3,7 @@
 Shared by `/commit` (step 5a) and `/create-pr` (drafting subagent, step 2).
 Read on demand, not part of either skill's always-loaded body.
 
-**Unlike comment-noise and em-dash, a hit here is NOT auto-fixed.** A secret
+**Unlike em-dash, a hit here is NOT auto-fixed.** A secret
 needs a human decision: is the value real, has it already leaked elsewhere,
 does it need rotating. On a hit, STOP the commit and surface the flagged
 `file:line`. The dev or agent must remove the literal value, source it from
@@ -49,7 +49,7 @@ manifest that opts into Common Controls v6, and grants nothing. Allowed by Joe
      ```
 
    No output = clean. Any output = a real hit, stop and fix it now; there is
-   no judge-the-flagged-files step like comment-noise has, because the fix
+   no judge-the-flagged-files step like em-dash has, because the fix
    is not a style call.
 
    A named path invisible to git (gitignored, or missing entirely) still

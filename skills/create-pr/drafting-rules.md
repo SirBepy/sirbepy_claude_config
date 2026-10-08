@@ -60,7 +60,7 @@ pad a trimmed body back up toward the target range with lower-value content.
 ### Secret-scan check (for the subagent to apply in step 2)
 
 See `skills/commit/secret-scan.md` for what it matches. Same range-mode
-command as comment-noise, `git diff <base>`:
+command as em-dash, `git diff <base>`:
 ```
 bash skills/commit/secret-scan.sh --range <base>
 ```

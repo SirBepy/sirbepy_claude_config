@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Em-dash prefilter: added lines only, mirrors skills/commit/comment-noise.sh's shape/exit
+# Em-dash prefilter: added lines only, mirrors skills/commit/secret-scan.sh's shape/exit
 # convention. A pre-existing em dash on an unchanged line is not this diff's business.
 
 # Usage: em-dash.sh <file> [<file> ...]   working-tree mode (/commit step 5a)
@@ -34,8 +34,8 @@ exempt_list() {
   done
 }
 
-# is_binary_path()/binary_list(): shared with secret-scan.sh and comment-noise.sh via
-# _prefilter-lib.sh (todo 1086), so all three prefilters agree on which files are binary.
+# is_binary_path()/binary_list(): shared with secret-scan.sh via
+# _prefilter-lib.sh, so both prefilters agree on which files are binary.
 
 AWK='
 BEGIN { n=split(EXEMPT, e, "\n"); for (i=1; i<=n; i++) if (e[i] != "") ex[e[i]]=1 }

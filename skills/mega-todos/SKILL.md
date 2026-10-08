@@ -426,9 +426,6 @@ when the kill lands loses everything even if the diff was finished - confirmed t
 
    Exit 1's labeled sections do NOT all get the same treatment:
 
-   - comment-noise: INFORMATIONAL ONLY since todo 922 demoted it on 2026-09-05. It still prints,
-     labeled as non-blocking, and never sets the gate's exit status. Read it or ignore it; comment
-     length is guidance now, not a gate. Write comments that say WHY, not what.
    - em-dash: fix the flagged added lines now, do not ask.
    - comment-tense: rewrite the flagged comment to state what the code IS, not what changed about
      it, same do-not-ask treatment. The gate runs this one too, so you can see its section here.

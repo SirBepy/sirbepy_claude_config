@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Secret-scan prefilter: added lines only, mirrors skills/commit/comment-noise.sh's
+# Secret-scan prefilter: added lines only, mirrors skills/commit/em-dash.sh's
 # shape/exit convention. A pre-existing secret on an unchanged line is not this diff's
 # business - it needs its own scrub, not a blocked commit.
 #
