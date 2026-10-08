@@ -98,3 +98,6 @@ hooks/.testing-floor-skip
 .env.bak
 **/.env.bak
 .DS_Store
+
+# impeccable's per-project hook dedup cache, rewritten on every UI edit
+**/.impeccable/hook.cache.json
