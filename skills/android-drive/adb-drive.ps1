@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$true, Position=0)]
-    [ValidateSet('devices','wait-boot','screenshot','tap','tap-and-capture','clear-field','type-field','dismiss-keyboard','install')]
+    [ValidateSet('devices','wait-boot','screenshot','tap','tap-and-capture','clear-field','type-field','dismiss-keyboard','install','record-motion')]
     [string]$Action,
 
     [string]$Serial,
@@ -11,7 +11,10 @@ param(
     [string]$Text,
     [int]$TimeoutSec = 90,
     [int]$WaitMs = 800,
-    [string]$Apk
+    [string]$Apk,
+    [string]$Steps,
+    [string]$Strips,
+    [int]$TimeLimit = 16
 )
 
 # On disk rather than inline in SKILL.md: keeps the screencap/pull/rm two-step and the
@@ -58,6 +61,61 @@ function Get-DefaultScreenshotPath {
     $dir = ".for_bepy/screenshots/$id"
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
     Join-Path $dir "adb-$(Get-Date -Format 'HHmmss-fff').png"
+}
+
+function Get-DefaultRecordingPath {
+    param([string]$Ext)
+    $renameScript = Join-Path $PSScriptRoot '..\close\rename-session.ps1'
+    $id = & $renameScript -GetId
+    $dir = ".for_bepy/screenshots/$id"
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    Join-Path $dir "adb-$(Get-Date -Format 'HHmmss-fff').$Ext"
+}
+
+function Resolve-Ffmpeg {
+    # Guard: record-motion must still pull the mp4 and say so when ffmpeg isn't present,
+    # rather than throwing partway through and losing the recording.
+    $cmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    $scoopShim = 'C:\Users\tecno\scoop\shims\ffmpeg.exe'
+    if (Test-Path $scoopShim) { return $scoopShim }
+    return $null
+}
+
+function ConvertTo-DeviceShellSteps {
+    # Translates -Steps (tap/wait/key tokens, tap coords in the PNG space the caller read
+    # off a screenshot) into device shell commands, scaling tap coords the same way
+    # Convert-TapCoords does for the `tap` action - raw `input tap` at unscaled PNG
+    # coordinates misses the target widget on any device where PNG size != wm size.
+    param([string]$Steps, [double]$ScaleX, [double]$ScaleY)
+    $parts = @()
+    foreach ($tok in ($Steps -split ';')) {
+        $tok = $tok.Trim()
+        if (-not $tok) { continue }
+        $kv = $tok -split ':', 2
+        $kind = $kv[0].Trim().ToLowerInvariant()
+        $arg = if ($kv.Count -gt 1) { $kv[1].Trim() } else { '' }
+        switch ($kind) {
+            'tap' {
+                $xy = $arg -split ','
+                $pngX = [int]$xy[0].Trim()
+                $pngY = [int]$xy[1].Trim()
+                $devX = [math]::Round($pngX / $ScaleX)
+                $devY = [math]::Round($pngY / $ScaleY)
+                $parts += "input tap $devX $devY"
+            }
+            'wait' {
+                $secs = [int]$arg / 1000.0
+                $secsStr = [string]::Format([System.Globalization.CultureInfo]::InvariantCulture, '{0:0.###}', $secs)
+                $parts += "sleep $secsStr"
+            }
+            'key' {
+                $parts += "input keyevent $arg"
+            }
+            default { throw "Unknown step kind '$kind' in -Steps (expected tap:X,Y / wait:MS / key:CODE)" }
+        }
+    }
+    return $parts
 }
 
 function Take-Screenshot {
@@ -178,5 +236,73 @@ switch ($Action) {
         if (-not $Apk) { throw "-Apk is required for install" }
         $s = Resolve-Serial -Serial $Serial
         & adb -s $s install -r $Apk
+    }
+
+    'record-motion' {
+        if (-not $Steps) { throw "-Steps is required for record-motion, e.g. 'tap:76,153;wait:2500;key:4;wait:2000;tap:957,2088'" }
+        $s = Resolve-Serial -Serial $Serial
+
+        # Scale factor comes from the device's CURRENT screen, same source `tap` uses -
+        # -Steps tap coords are PNG-space from a screenshot already read, not device-input
+        # space, so they need the same PNG-size-vs-wm-size conversion before being baked
+        # into the one device-side shell string below.
+        $refShot = Join-Path ([System.IO.Path]::GetTempPath()) "adb-drive-record-ref-$PID.png"
+        Take-Screenshot -Serial $s -LocalPath $refShot | Out-Null
+        $png = Get-PngSize -Path $refShot
+        $wm  = Get-WmSize -Serial $s
+        $info = Get-OrientationInfo -PngWidth $png.Width -PngHeight $png.Height -WmWidth $wm.Width -WmHeight $wm.Height
+        Remove-Item -Force $refShot -ErrorAction SilentlyContinue
+
+        $deviceSteps = ConvertTo-DeviceShellSteps -Steps $Steps -ScaleX $info.ScaleX -ScaleY $info.ScaleY
+        $remoteMp4 = '/sdcard/_adb_drive_record_tmp.mp4'
+        # screenrecord and every tap/wait/key run inside ONE device-side shell string so
+        # timing is accurate by construction - separate host-side `adb` round trips under
+        # screenrecord load drift by seconds, landing taps late or dropping them entirely.
+        # Trailing `wait` blocks this call until screenrecord's own --time-limit ends it,
+        # so the file below is never pulled mid-recording.
+        $shellCmd = "screenrecord --time-limit $TimeLimit $remoteMp4 & " + ($deviceSteps -join '; ') + '; wait'
+        & adb -s $s shell $shellCmd | Out-Null
+
+        $outPath = if ($Out) { $Out } else { Get-DefaultRecordingPath -Ext 'mp4' }
+        $outDir = Split-Path -Parent $outPath
+        if (-not $outDir) { $outDir = '.' }
+        New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+        & adb -s $s pull $remoteMp4 $outPath | Out-Null
+        & adb -s $s shell rm $remoteMp4 | Out-Null
+
+        $ffmpegExe = Resolve-Ffmpeg
+        if (-not $ffmpegExe) {
+            Write-Output "recorded serial=$s out=$outPath orientation=$($info.Orientation) rotated=$($info.Rotated) contactSheet=skipped(ffmpeg-not-found) strips=skipped(ffmpeg-not-found)"
+            break
+        }
+
+        $base = Join-Path $outDir ([System.IO.Path]::GetFileNameWithoutExtension($outPath))
+        $contactSheet = "$base-contact.png"
+        # ffmpeg writes its banner/progress to stderr even on success; with
+        # $ErrorActionPreference='Stop' that turns into a terminating NativeCommandError
+        # regardless of exit code, so it's relaxed to 'Continue' for just these calls.
+        $prevEap = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        # Whole-video contact sheet by default, not just the requested strips - this is what
+        # actually diagnoses a botched drive at a glance instead of guessing at offsets.
+        & $ffmpegExe -y -i $outPath -vf "fps=2,tile=8x4" -frames:v 1 $contactSheet 2>$null | Out-Null
+
+        $stripPaths = @()
+        if ($Strips) {
+            $i = 0
+            foreach ($t in ($Strips -split ',')) {
+                $t = $t.Trim()
+                if (-not $t) { continue }
+                $i++
+                $stripPath = "$base-strip$i.png"
+                # -ss AFTER -i: placed before -i it snaps to the nearest keyframe, so two
+                # different timestamps can silently return byte-identical strips.
+                & $ffmpegExe -y -i $outPath -ss $t -t 0.4 -vf "fps=25,scale=200:-1,tile=10x1" -frames:v 1 $stripPath 2>$null | Out-Null
+                $stripPaths += $stripPath
+            }
+        }
+        $ErrorActionPreference = $prevEap
+
+        Write-Output "recorded serial=$s out=$outPath orientation=$($info.Orientation) rotated=$($info.Rotated) contactSheet=$contactSheet strips=$($stripPaths -join ',')"
     }
 }

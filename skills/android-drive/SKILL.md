@@ -85,6 +85,28 @@ settings and derails the flow instead of dismissing the keyboard.
 powershell -File adb-drive.ps1 install -Serial <id> -Apk <path-to.apk>
 ```
 
+## Proving an animation runs
+
+A still screenshot can't show motion. Use `record-motion`, never a hand-rolled loop of separate
+`adb shell` calls with `Start-Sleep` in between - see Gotchas for why that fails:
+```
+powershell -File adb-drive.ps1 record-motion -Serial <id> -Steps "wait:1500;tap:76,153;wait:2500;key:4;wait:2000;tap:957,2088" -Out <path.mp4> [-Strips "1.5,5.0"] [-TimeLimit 16]
+```
+- `-Steps` is a `;`-separated list of `tap:X,Y` / `wait:MS` / `key:CODE` tokens, built into ONE
+  device-side shell string (`screenrecord ... & input tap ...; sleep ...; wait`) so timing is
+  accurate by construction. `tap:X,Y` coordinates are PNG-space, read off a screenshot the same
+  way `tap`/`tap-and-capture` expect - the script takes its own reference screenshot first and
+  applies the identical PNG-size-vs-`wm size` scaling, so raw unscaled coordinates never reach
+  `input tap`. Put any lead-in delay (recording needs a beat to start) as the first `wait` token.
+- Pulls the mp4 to `-Out` (default screenshot dir, `.mp4`) and deletes the device-side temp file.
+- Always emits a whole-video contact sheet (`fps=2,tile=8x4`) alongside the mp4 - this is what
+  actually shows a botched drive at a glance instead of guessing at offsets.
+- `-Strips "t1,t2,..."` additionally emits one short frame strip per timestamp
+  (`fps=25,scale=200:-1,tile=10x1`, 0.4s window). Two strips at different timestamps must differ
+  in file size - identical sizes mean the recording didn't move between them.
+- If `ffmpeg` isn't found (PATH, then the known scoop shim), the mp4 still pulls; the output says
+  `contactSheet=skipped(ffmpeg-not-found)` instead of throwing.
+
 ## Gotchas this skill exists to prevent
 
 - **`-s <serial>` omitted.** A physical phone plugged in alongside the emulator makes bare `adb`
@@ -112,6 +134,22 @@ powershell -File adb-drive.ps1 install -Serial <id> -Apk <path-to.apk>
 - **Release Flutter builds produce no logcat output.** They log via `log()` from `dart:developer`,
   which release mode does not surface to `adb logcat`. If the app under test is a release Flutter
   build, the backend/API log is the diagnostic surface for a failed step, not the device log.
+- **Host-side sleeps drift during a recording.** Timing a tap sequence with separate `adb shell`
+  calls and PowerShell `Start-Sleep` in between looks fine until `screenrecord` is running - each
+  round trip costs enough under that load that a sequence timed for 1.5s/3.2s/5.2s lands several
+  seconds late, the recording ends before the interesting transition, and a tap can miss entirely.
+  `record-motion` puts every `sleep`/`input tap`/`input keyevent` into the SAME device-side shell
+  string as `screenrecord`, so there is no host round trip to drift.
+- **`ffmpeg -ss` before `-i` silently lies.** Placed before the input it snaps to the nearest
+  keyframe, so two different requested timestamps can return byte-identical strips (this is how
+  the bug was caught - two "different" strips at 79179 bytes each). `record-motion` always puts
+  `-ss` after `-i` for both strips and the contact sheet, so no caller can get the order wrong.
+- **Raw `input tap` in a recording sequence needs the same scaling `tap` already applies.** The
+  coordinates you read off a screenshot are PNG-space; `input tap` expects `wm size` space. A FAB
+  tapped at the PNG's y=1852 instead of the scaled y=2088 simply does nothing, with no error.
+  `record-motion` takes its own reference screenshot and applies the identical conversion before
+  building the device-side shell string, so `-Steps` coordinates stay PNG-space like everywhere
+  else in this skill.
 
 ## Screenshot output location
 

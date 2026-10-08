@@ -73,3 +73,4 @@ where the existing scale-mismatch and keyevent-111 notes live.
   and in `pomalo/.claude/todos/18`.
 - `screenrecord --time-limit` self-terminates, so it does not need the orphan handling a
   long-lived process would.
+- Done 2026-10-08 per Joe ('Build it on emulator'): adb-drive.ps1 record-motion (-Steps one device-side shell string, PNG-to-wm-size scaling, -Strips with -ss after -i, default fps=2 tile=8x4 contact sheet, ffmpeg-missing skip) plus three gotchas in SKILL.md. Verified on AVD Medium_Phone_API_36.0 driving Settings: mp4 4,193,653 B, strips 55,596 B vs 139,470 B (differ, so -ss is right), contact sheet shows the screens in drive order. Artifacts in .for_bepy/screenshots/33628-134359307865973543/.
