@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=7, reconfirm-count=1, content-hash=7b41965e -->
 <!-- duplicate-checked: 2026-10-08; done/1101 is untracked files in a tracked dir, not an index-only removal -->
 # commit-pathspec.sh cannot commit a `git rm --cached` untracking
 
@@ -29,3 +30,7 @@ separate `git commit -- <path>` after `git rm --cached` inside the script is the
 - `git rm --cached f` then `commit-pathspec.sh ... -- .gitignore f` commits the removal, and `f` is
   still on disk and untracked afterwards.
 - `bash skills/commit/test_commit_pathspec.sh` passes.
+
+## Answers 2026-10-08
+
+- Joe, 2026-10-08 (todo-questions chat): approved to build as written.

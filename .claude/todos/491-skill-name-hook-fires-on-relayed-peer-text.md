@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=7, reconfirm-count=6, content-hash=7d9e6f53 -->
+<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=7, reconfirm-count=7, content-hash=7d9e6f53 -->
 <!-- duplicate-checked -->
 <!-- em-dash-exempt --> <!-- the Context block quotes a peer's post_message body verbatim -->
 # `flagged-skill-mention`'s envelope guard misses daemon-relayed channel messages
@@ -181,3 +181,7 @@ sender.** Every `post_message` returned `ok: true` and looked normal from its si
 its messages were injecting a skill into another session because that session told it.
 
 - /loop-todos 2026-10-05: step 4 (wording) confirmed already shipped (test check_wording passes). Steps 1-3 still need a raw UserPromptSubmit payload captured during a LIVE peer relay landing on the session itself, which a builder subagent cannot manufacture; left open.
+
+## Answers 2026-10-08
+
+- 2026-10-08, new evidence: in the todo-questions session (24016c48) the hook injected `auto-do-todos` into a turn whose only new input was a SUBAGENT HAND-BACK (a sonnet scorer's report that mentioned the skill by slash name). So subagent hand-backs are a second relayed-text surface besides peer channel messages, and they are easy to reproduce on demand: dispatch a subagent whose report quotes a flagged skill. That may unblock step 1's payload dump without waiting for a live peer relay.

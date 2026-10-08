@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-08, complexity=EASY, worth=7, reconfirm-count=1, content-hash=0d8ec1bf -->
 <!-- duplicate-checked: 2026-10-08; 1140 is date-override scoping in the same guard, done/1111 its tokenizer duplication; neither covers the inline-command flag match -->
 # commit-window-guard reads git's own `-c key=value` as a nested shell command
 
@@ -27,3 +28,7 @@ landing target. Live guard: one complete edit, run its test file right after.
 - `git -c core.editor="git commit -m x" status` yields no landing target.
 - `bash -c "git commit -m x"` in a client repo inside the window is still denied.
 - `python hooks/test_commit_window_guard.py` passes.
+
+## Answers 2026-10-08
+
+- Joe, 2026-10-08 (todo-questions chat): approved with the 1139-1144 batch. Same file as 1140; one lane, one commit each.

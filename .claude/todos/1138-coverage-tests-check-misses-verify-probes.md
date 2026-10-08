@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-08, complexity=EASY, worth=7, reconfirm-count=1, content-hash=dd373c8a -->
 <!-- duplicate-checked: 1073 (done) is the staged-pathspec [coverage-check] basename false positive; this is the separate [coverage-tests-check] test-file classifier. 1045/1137 (done) moved the client list and extension lists, not is_test_path's patterns. -->
 # commit-pathspec's coverage-tests check misses a repo's verify/ probes
 

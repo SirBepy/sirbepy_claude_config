@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-08, complexity=EASY, worth=3, reconfirm-count=11, content-hash=75cd15eb -->
+<!-- cleanup: last-checked 2026-10-08, complexity=EASY, worth=3, reconfirm-count=12, content-hash=75cd15eb -->
 # Session activity log design, parked
 
 **Type:** task
@@ -53,3 +53,7 @@ Absorbed todos 206 during /cleanup-todos. Their full text is in `done/` - read t
 ## Notes
 
 - **Q parked 2026-09-04 (revive and build, leave parked, or archive as won't-build) - dev delegated to autopilot on 2026-09-10** via /loop-todos Phase 0. Autopilot takes the recommendation: leave it parked. Joe's 2026-08-16 answer already reframed this as a `/brainstorm` task in its own session, so archiving it as won't-build would contradict a decision he stated in his own words.
+
+## Answers 2026-10-08
+
+- Joe, 2026-10-08 (todo-questions chat): spawn the dedicated brainstorm session now. A separate chat is being opened for it, seeded with this file.

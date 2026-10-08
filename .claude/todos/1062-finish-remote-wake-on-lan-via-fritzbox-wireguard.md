@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=5, reconfirm-count=2, content-hash=e3250126 -->
+<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=5, reconfirm-count=3, content-hash=e3250126 -->
 # Finish remote Wake-on-LAN: FRITZ!Box WireGuard tunnel + verify wake from outside the LAN
 
 **Type:** task
@@ -134,3 +134,7 @@ Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens
   `userConnections` before redoing anything.
 - On 2026-10-02 adb listed no device, so the phone wasn't plugged in at that point.
 - Never write the router password into a file. It's in the 2026-09-05 session transcript only.
+
+## Answers 2026-10-08
+
+- Joe, 2026-10-08 (todo-questions chat): keep parked. He is finishing this himself in the frozen chat that started it, ideally today. Runs ignore this todo.

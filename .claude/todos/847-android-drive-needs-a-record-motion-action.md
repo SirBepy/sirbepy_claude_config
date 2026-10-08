@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=5, reconfirm-count=5, content-hash=24c90d7a -->
+<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=5, reconfirm-count=6, content-hash=24c90d7a -->
 <!-- duplicate-checked -->
 # android-drive needs a record-motion action
 

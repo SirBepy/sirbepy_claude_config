@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-06, complexity=HARD, worth=7, reconfirm-count=6, content-hash=388b488c -->
+<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=7, reconfirm-count=7, content-hash=388b488c -->
 <!-- duplicate-checked -->
 # Six of ~30 hook events are wired, and all 41 hooks use exit codes only
 
@@ -136,4 +136,5 @@ to detect a shared checkout and was globbing every file in it. Backups would hav
 live peer sessions, so a session alone in the tree would have started refusing its own commits. The
 count now matches only bare session-id (UUID) filenames. A pre-existing `silent-turns-<id>` file was
 being miscounted the same way. Anything else that writes into that directory must keep a prefix.
+- Closed 2026-10-08 per Joe: PreCompact shipped (hooks/precompact-backup.py); the PermissionRequest auto-allow hook is dropped (auto mode already removes most prompts) and the em-dash Stop hook stays as is. A research pass found Anthropic never announced an em-dash fix, and the guard blocked 332 em dashes in the 30 days to 2026-10-08, so it is still earning its place.
 

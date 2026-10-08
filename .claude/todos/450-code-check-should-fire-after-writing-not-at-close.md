@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=4, reconfirm-count=7, content-hash=ffbd0b07 -->
+<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=4, reconfirm-count=8, content-hash=ffbd0b07 -->
 <!-- duplicate-checked -->
 # /code-check should fire right after code is written, not only at /close
 
@@ -136,3 +136,7 @@ the false positives in todos 471 and 456. Those are `/commit`'s regex prefilters
 from rating subagents, not a `/code-check` dispatch, and does not transfer; the standing note for
 a general-purpose subagent is 15-20k. Whoever builds the trigger owes a real measurement, per this
 todo's own Acceptance.
+
+## Answers 2026-10-08
+
+- Joe, 2026-10-08 (todo-questions chat): keep waiting. 427's testing-floor Stop gate went live 2026-10-08 (ee77508); revisit once it has run clean for about a week.

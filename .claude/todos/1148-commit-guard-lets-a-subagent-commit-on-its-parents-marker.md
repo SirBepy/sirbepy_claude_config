@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=9, reconfirm-count=1, content-hash=32a0fea6 -->
 <!-- duplicate-checked: 2026-10-08; 1146 is the read-only staging-line wording (git add), not commit-guard allowing a subagent's git commit -->
 # commit-guard lets a dispatched subagent commit on its parent session's marker
 

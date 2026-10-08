@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=6, reconfirm-count=3, content-hash=1277c0e8 -->
+<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=6, reconfirm-count=4, content-hash=1277c0e8 -->
 # A read-only live Firebase inspect helper
 
 **Type:** skill-improvement
@@ -54,3 +54,4 @@ Written by /auto-do-todos on 2026-10-08 (loop-todos cycle 1). The next run opens
 
 - Phase 0 answer (Joe): allow tools/firebase-live.cjs (read-only helper reading the firebase-tools token cache) for one builder run in this loop. (2026-10-07, /loop-todos Phase 0)
 - /loop-todos 2026-10-05: BLOCKED. A builder's Write of tools/firebase-live.cjs (read-only GET/runQuery helper reading the firebase-tools configstore token) was denied by the auto-mode classifier as Credential Exploration; not retried. Needs Joe to allow that file kind, or to build it himself.
+- Dropped 2026-10-08 per Joe: 'I dont remember ever needing this so for now i say no'. The auto-mode classifier also denied writing the token-reading helper twice.

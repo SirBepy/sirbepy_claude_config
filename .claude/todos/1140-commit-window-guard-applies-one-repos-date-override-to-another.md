@@ -1,4 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- cleanup: last-checked 2026-10-08, complexity=EASY, worth=7, reconfirm-count=1, content-hash=c72565fb -->
 <!-- duplicate-checked: 2026-10-08; no live or done todo covers commit-window-guard's override scoping -->
 # commit-window-guard applies one repo's --date override to every repo in a chained command
 
@@ -30,3 +31,7 @@ that applies to the whole command. Add the two-repo chain above as a test in
 - The two-repo chain above is allowed at 14:00.
 - `git -C <client-repo> commit --date="2026-10-06 02:30:00" -m y` at 14:00 is still denied.
 - `python hooks/test_commit_window_guard.py` passes.
+
+## Answers 2026-10-08
+
+- Joe, 2026-10-08 (todo-questions chat): approved to build as written. 1150 targets the same file; build them in one lane, one commit each.

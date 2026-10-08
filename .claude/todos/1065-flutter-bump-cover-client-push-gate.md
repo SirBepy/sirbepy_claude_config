@@ -1,5 +1,5 @@
 <!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
-<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=6, reconfirm-count=3, content-hash=4d6cdf85 -->
+<!-- cleanup: last-checked 2026-10-08, complexity=HARD, worth=6, reconfirm-count=4, content-hash=4d6cdf85 -->
 <!-- duplicate-checked: grepped the backlog for "flutter-bump". Only hit is 1064, which is about foreign-hunk-check.sh, a different fix. -->
 # 1065 - /flutter-bump: cover the client push gate and the steps it keeps missing
 
@@ -66,3 +66,7 @@ In `skills/flutter-bump/SKILL.md`:
 ## Notes
 
 - /loop-todos 2026-10-05: step 2e now runs the push gate via skills/commit/SKILL.md's Push pipeline, plus the backend precondition, flutterRoot re-check and full commit-pathspec invocation. Still open: the committed admin/biller smoke helper (skills/flutter-bump/scripts/smoke.cjs); its recipe and accounts live in zng-app's project memory (reference_admin_biller_local_smoke_e2e.md), so build it from a zng-app session against a live local backend.
+
+## Answers 2026-10-08
+
+- Joe, 2026-10-08 (todo-questions chat): build the smoke helper at the next Flutter bump, when zng-api is running anyway. Not before.
