@@ -129,8 +129,11 @@ fails += _testlib.run_cases(PATHSPEC_CASES, check_pathspec)
 # --- main() end to end, temp marker dirs only ---
 
 
-def run_main(command: str, session_id: str = "", cwd: str = "") -> int:
-    guard.read_payload = lambda: {"tool_input": {"command": command}, "session_id": session_id, "cwd": cwd}
+def run_main(command: str, session_id: str = "", cwd: str = "", agent_id: str = "") -> int:
+    payload = {"tool_input": {"command": command}, "session_id": session_id, "cwd": cwd}
+    if agent_id:
+        payload["agent_id"] = agent_id
+    guard.read_payload = lambda: payload
     try:
         guard.main()
         return 0
@@ -226,6 +229,38 @@ with tempfile.TemporaryDirectory() as tmp:
         exclude_prefix=guard.LEGACY_SESSION_MARKER_PREFIX,
     )
     if not _testlib.report(excluded is False, label):
+        fails.append(label)
+
+# --- a dispatched subagent must not commit on its parent's session marker -
+# only the sanctioned /mega-todos per-commit marker can.
+
+with tempfile.TemporaryDirectory() as tmp:
+    tmpdir = Path(tmp)
+    guard.MARKER_DIR = tmpdir
+    guard.SESSION_MARKER_DIR = tmpdir / ".session-markers"
+    guard.SESSION_MARKER_DIR.mkdir(parents=True)
+
+    parent_session_id = "sess-parent-1148"
+    guard.session_marker_path(parent_session_id).touch()
+
+    label = "todo 1148: agent_id payload authorized only by the parent's session marker is denied"
+    got = run_main("git commit -m 'x'", session_id=parent_session_id, agent_id="a1234abcd")
+    if not _testlib.report(got == 2, f"{label} (got exit={got})"):
+        fails.append(label)
+
+    label = "todo 1148: the sanctioned /mega-todos per-commit marker still allows an agent_id payload"
+    mega_marker = tmpdir / ".commit-marker-mega1"
+    mega_marker.touch()
+    got = run_main("git commit -m 'x'", session_id=parent_session_id, agent_id="a1234abcd")
+    if not _testlib.report(got == 0, f"{label} (got exit={got})"):
+        fails.append(label)
+    label = "todo 1148: the per-commit marker is consumed same as the non-agent legacy path"
+    if not _testlib.report(not mega_marker.exists(), label):
+        fails.append(label)
+
+    label = "todo 1148: a main-session payload (no agent_id) with its own marker is still allowed"
+    got = run_main("git commit -m 'x'", session_id=parent_session_id)
+    if not _testlib.report(got == 0, f"{label} (got exit={got})"):
         fails.append(label)
 
 with tempfile.TemporaryDirectory() as tmp:

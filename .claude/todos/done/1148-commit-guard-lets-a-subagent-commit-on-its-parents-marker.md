@@ -33,3 +33,7 @@ payload with only the session marker (denied) and one for the `/mega-todos` path
 - A payload with `agent_id` and only the parent's session marker is denied for `git commit`.
 - A `/mega-todos` builder's sanctioned commit still passes.
 - `python hooks/test_commit_guard.py` passes.
+
+## Notes
+
+- Done 2026-10-08: commit-guard computes is_agent_call (lazy-loaded from agent-todo-write-guard.py, as _testing_floor_lib.py does) and never lets a payload carrying agent_id ride the parent session marker; the /mega-todos per-commit .commit-marker-<guid> path (skills/mega-todos/SKILL.md:396-400) still passes. Tests: agent + parent marker denied, agent + fresh per-commit marker allowed and consumed, main session + its marker allowed.
