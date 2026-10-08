@@ -389,4 +389,16 @@ with tempfile.TemporaryDirectory() as tmp:
         if not _testlib.report(got == expect, f"{label} (got exit={got}, want {expect})"):
             fails.append(label)
 
+    (tmpdir / "msg-ai.txt").write_text("X\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n", encoding="utf-8")
+    (tmpdir / "msg-ok.txt").write_text("FIX: Player Claude listener\n", encoding="utf-8")
+    for label, command, expect in (
+        ("a trailer read from -F <file> is refused", "git commit -F msg-ai.txt", 2),
+        ("a trailer read from --file=<file> is refused", "git commit --file=msg-ai.txt", 2),
+        ("a clean -F <file> is allowed", "git commit -F msg-ok.txt", 0),
+        ("a missing -F file is left to git", "git commit -F nope.txt", 0),
+    ):
+        got = run_main(command, session_id="sess-attr", cwd=str(tmpdir))
+        if not _testlib.report(got == expect, f"{label} (got exit={got}, want {expect})"):
+            fails.append(label)
+
 sys.exit(_testlib.summarize(fails, style="count"))

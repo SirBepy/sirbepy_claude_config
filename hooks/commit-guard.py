@@ -326,12 +326,32 @@ _AI_GENERATED_RE = re.compile(r"generated with \[?claude code", re.IGNORECASE)
 _SHORT_MESSAGE_RE = re.compile(r"^-[aenqsv]*m(.*)$", re.DOTALL)
 
 
-def commit_messages(tokens: list[str]) -> list[str]:
-    """Every -m / --message value in the command, however it is spelled."""
+def _read_message_file(name: str, cwd: str) -> str | None:
+    if not name or name == "-":
+        return None
+    path = Path(name) if Path(name).is_absolute() else Path(cwd or ".") / name
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")[:65536]
+    except OSError:
+        return None
+
+
+def commit_messages(tokens: list[str], cwd: str = "") -> list[str]:
+    """Every -m / --message value in the command, however it is spelled, plus
+    the content of a -F / --file message file that exists."""
     messages = []
     for i, tok in enumerate(tokens):
         short = _SHORT_MESSAGE_RE.match(tok)
-        if tok == "--message" and i + 1 < len(tokens):
+        file_name = None
+        if tok in ("-F", "--file") and i + 1 < len(tokens):
+            file_name = tokens[i + 1]
+        elif tok.startswith("--file="):
+            file_name = tok[len("--file="):]
+        if file_name is not None:
+            content = _read_message_file(file_name, cwd)
+            if content is not None:
+                messages.append(content)
+        elif tok == "--message" and i + 1 < len(tokens):
             messages.append(tokens[i + 1])
         elif tok.startswith("--message="):
             messages.append(tok[len("--message="):])
@@ -342,8 +362,8 @@ def commit_messages(tokens: list[str]) -> list[str]:
     return messages
 
 
-def ai_attribution_line(tokens: list[str]) -> str | None:
-    for message in commit_messages(tokens):
+def ai_attribution_line(tokens: list[str], cwd: str = "") -> str | None:
+    for message in commit_messages(tokens, cwd):
         for line in message.splitlines():
             if _AI_TRAILER_RE.search(line.strip()) or _AI_GENERATED_RE.search(line):
                 return line.strip()
@@ -362,7 +382,7 @@ def main() -> None:
     tokens = _tokenize(command) or []
 
     # Before the bypass: /commit's Rules allow no AI attribution, ever.
-    attribution = ai_attribution_line(tokens)
+    attribution = ai_attribution_line(tokens, payload.get("cwd") or "")
     if attribution:
         deny(
             "[commit-guard] This commit message carries AI attribution, which /commit's "
