@@ -216,6 +216,16 @@ by `git diff --cached`, which cannot tell one builder's staged files from anothe
 in the same index (todo 1061: another builder's staged deletions rode into an unrelated commit this
 way and left HEAD uncompilable until the second builder's own commit landed).
 
+**A shared registry file belongs to exactly one builder.** Files every feature touches (a
+providers/DI file, `main.dart`, a router, an index barrel, `settings.json`) go in exactly one
+dispatch's owned list and in every sibling's OFF LIMITS list; a sibling that needs a line there
+returns it in its report and the orchestrator applies it. Until every still-running sibling whose
+lane could reach a file has reported, do not commit that file. `commit-pathspec.sh` cannot catch
+this case: the siblings write under the orchestrator's own session marker, so its one-marker
+"solo session" test passes and auto-derived own ranges come back `clean` while another writer is
+still active in the file (todo 1119: a commit carried a running sibling's half-finished providers
+and HEAD stopped compiling).
+
 **Reports come back as conclusions plus evidence.** A subagent returns what it concluded, what it
 changed, and the commands it ran with their real output. It does not return file dumps, search
 results, or transcripts. Specify the report shape in the dispatch prompt.

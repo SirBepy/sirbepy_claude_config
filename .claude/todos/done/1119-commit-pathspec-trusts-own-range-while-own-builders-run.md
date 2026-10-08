@@ -45,3 +45,7 @@ Pick one, or both:
 Replaying the scenario (two parallel builders editing one file, commit after the first reports)
 either refuses at foreign-hunk-check or is prevented by the dispatch rule, and the doctrine or
 script text names the case.
+
+## Notes
+
+- Took approach 1: refs/delegation-doctrine.md Parallelism now says a shared registry file belongs to exactly one builder and is not committed until every sibling whose lane could reach it has reported, naming why commit-pathspec.sh's one-marker test cannot catch it. Approach 2 (script signal for running subagents) not done: no cheap signal identified.
