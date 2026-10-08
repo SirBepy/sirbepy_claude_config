@@ -44,6 +44,10 @@ skills/synced/
 **/.for_bepy/
 *.stackdump
 
+# impeccable's per-platform engine binary (17 MB), reinstalled by `npx impeccable update`; its
+# hooks no-op when the file is absent
+skills/impeccable/scripts/bin/
+
 # Per-user ticket log, not shared
 skills/ticket/log.md
 
