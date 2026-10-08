@@ -11,9 +11,9 @@ argument-hint: "[range, default @{u}..HEAD]"
 
 ## Trigger
 
-Called from another skill's procedure, not typed directly in the normal case: `/commit push
-review` and `/loop-todos`'s final review phase both invoke this file's steps rather than restating
-them. Takes one optional range argument, default `@{u}..HEAD`.
+Called from another skill's procedure, not typed directly in the normal case: `/commit`'s Pre-push
+gate runs it when the unpushed stack is long (roughly 10+ commits), and `/loop-todos`'s final review
+phase always does; both invoke this file's steps rather than restating them. Takes one optional range argument, default `@{u}..HEAD`.
 
 ## Why this exists, not /code-check
 
