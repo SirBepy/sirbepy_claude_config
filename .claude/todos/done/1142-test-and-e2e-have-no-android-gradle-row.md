@@ -44,6 +44,10 @@ Two gotchas any row has to encode:
 - `/e2e` in the same repo runs `connectedDebugAndroidTest` against a booted emulator, or reports
   "no device" plainly instead of "no suite".
 
+## Notes
+
+- Done 2026-10-08: /test Step 1 has an Android / Gradle row plus a Step 3 inline-JDK bullet, /e2e Mode A has a connectedDebugAndroidTest row (needs a booted device, says 'no device' not 'no suite', notes the uninstall). Verified: the row's exact command in annoying_stopwatch exited 0; frontmatter check OK.
+
 ## Answers 2026-10-08
 
 - Joe, 2026-10-08 (todo-questions chat): approved to build as written.

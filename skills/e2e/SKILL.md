@@ -20,6 +20,7 @@ Delegates entirely; this skill never reimplements a driver.
 |---|---|---|
 | `pubspec.yaml` with a `flutter:` dependency | Flutter | `/flutter-e2e` - scripted mode for a flow description, plan-file mode for a `.md` test-plan path |
 | `test.project.json`, `*.rbxlx`, or a `testing/wally.toml` | Roblox / Luau | `/jest-lua run` (its `run-in-roblox` fallback is the client-in-the-loop path for this stack) |
+| `gradlew` or `settings.gradle(.kts)` at the repo root | Android / Gradle | `gradlew connectedDebugAndroidTest` - requires a booted device/emulator; report "no device" plainly when none is attached, not "no suite". UNINSTALLS the app from the device/emulator when it finishes. |
 | `package.json` with a Playwright config or `snippets/test-e2e.md` import | Node / web | follow `~/.claude/snippets/test-e2e.md` exactly - affected-specs by default, full suite when asked, dispatched to a background subagent |
 | anything else (bare Node without Playwright, Rust/Tauri) | - | no scripted e2e path exists - ask "how would I observe this if I had no test suite at all?" and drive/inspect the real system by hand instead of reporting a dead end |
 

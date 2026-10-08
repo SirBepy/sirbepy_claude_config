@@ -28,6 +28,7 @@ A repo can match more than one row (a Tauri app matches Rust *and* Node); run ev
 | `package.json` | Node / web | resolved from `scripts.test` |
 | `Cargo.toml` or `src-tauri/Cargo.toml` | Rust / Tauri | `cargo test --lib` |
 | `test.project.json`, `*.rbxlx`, or a `testing/wally.toml` | Roblox / Luau | `/jest-lua run` |
+| `gradlew` or `settings.gradle(.kts)` at the repo root | Android / Gradle | `gradlew testDebugUnitTest lintDebug assembleDebug` |
 | none of the above | scripts / docs repo | see "Scripts repo" below |
 
 State the detected stack(s) and the exact commands in one line before running anything. If nothing
@@ -59,6 +60,9 @@ workspace: pass `--manifest-path src-tauri/Cargo.toml` rather than relying on cw
   the test fails with "Access is denied (os error 5)". Restart it after.
 - **Roblox / Luau:** hand off to `/jest-lua run`; it already owns `scripts/check.sh` and the
   `run-in-roblox` fallback.
+- **Android / Gradle:** `gradlew testDebugUnitTest lintDebug assembleDebug`. `$env:JAVA_HOME` does
+  not persist between tool calls, so pass the JDK inline as `-Dorg.gradle.java.home=<path>`, found
+  once from the project's own run-mechanics memory or `JAVA_HOME`.
 - **Scripts repo** (`~/.claude` itself is one): `python <each hooks/test_*.py>`, `python -m
   py_compile` over changed `hooks/*.py`, `node --check` over changed `.mjs`/`.cjs`, and
   `[System.Management.Automation.Language.Parser]::ParseFile` over changed `.ps1`.
