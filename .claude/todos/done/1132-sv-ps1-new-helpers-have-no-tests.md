@@ -25,3 +25,7 @@ malformed entry, and `Format-StartedAt` on a known epoch.
 ## Acceptance
 - The new test fails if `Get-ParamsHash` drops the second `-Param`, and passes now.
 - `python ci/run_all.py` discovers and passes it.
+
+## Notes
+
+- Pure helpers moved into skills/supervised-run/sv-lib.ps1 (dot-sourced by sv.ps1, whose diff is only the removed bodies plus one dot-source line); test_sv.ps1 covers one/several -Param, a value with '=', malformed entry, Format-StartedAt and Get-ApiErrorBody; dropping the second -Param makes it fail. ci/run_all.py's skill-test discovery now runs .ps1 tests via powershell -File.

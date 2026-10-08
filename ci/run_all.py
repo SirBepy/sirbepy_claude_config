@@ -150,8 +150,8 @@ def check_prefilter_suites(root: Path) -> tuple:
 
 
 def discover_skill_tests(root: Path) -> list:
-    """Finds test_*.sh / test_*.py living beside a script anywhere under
-    skills/, outside skills/commit (todo 991).
+    """Finds test_*.sh / test_*.py / test_*.ps1 living beside a script anywhere
+    under skills/, outside skills/commit (todo 991; .ps1 added by todo 1132).
 
     skills/commit stays excluded here because check_prefilter_suites already
     runs its three test_*.sh suites with its own bash-specific handling;
@@ -172,13 +172,17 @@ def discover_skill_tests(root: Path) -> list:
     function generalizes - that is why it finds nothing today. It exists so
     the next skill author who writes a sibling test (the skills/commit shape)
     gets picked up without a second hardcoded directory ever being added.
+
+    skills/mega-todos/test-archive-batch.ps1 still isn't discovered here: its
+    name uses a hyphen ("test-"), not the "test_" prefix this glob requires,
+    and its own docstring says it is deliberately not wired into this file.
     """
     skills_dir = root / "skills"
     if not skills_dir.is_dir():
         return []
     candidates = sorted(
         p for p in skills_dir.rglob("test_*.*")
-        if p.suffix in (".sh", ".py")
+        if p.suffix in (".sh", ".py", ".ps1")
         and "__pycache__" not in p.parts
         and p.relative_to(skills_dir).parts[0] != "commit"
     )
@@ -195,7 +199,7 @@ def check_skill_tests(root: Path) -> tuple:
     which is exactly what todo 991 found already happened once (skills/close's
     safe-remove-worktree.ps1 had no discovery path for weeks).
     """
-    print("\n=== skill-script self-tests (skills/**/test_*.{sh,py}, excl. commit) ===", flush=True)
+    print("\n=== skill-script self-tests (skills/**/test_*.{sh,py,ps1}, excl. commit) ===", flush=True)
     tests = discover_skill_tests(root)
     if not tests:
         print("OK: 0 skill-script test suites discovered outside skills/commit")
@@ -204,7 +208,12 @@ def check_skill_tests(root: Path) -> tuple:
     details = []
     for test_path in tests:
         rel = test_path.relative_to(root)
-        runner = [_bash_exe(), rel.as_posix()] if test_path.suffix == ".sh" else [sys.executable, str(rel)]
+        if test_path.suffix == ".sh":
+            runner = [_bash_exe(), rel.as_posix()]
+        elif test_path.suffix == ".ps1":
+            runner = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(rel)]
+        else:
+            runner = [sys.executable, str(rel)]
         try:
             proc = subprocess.run(
                 runner, cwd=str(root), capture_output=True,
