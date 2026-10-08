@@ -44,6 +44,8 @@ qualifying turns, and every Hard Stop in `/autopilot`.
 - `/autopilot`'s **behavior contract** in full - tiered uncertainty resolution, BOUNDED
   `/iterate-it` (`--explore-max=2 --polish-max=1`, max 3 escalations per run), nested-question
   suppression including the ship/another-round/abandon special case, verify-before-done.
+- `/autopilot`'s **Reporting** section - a chat bubble only for a blocker, a decision, or the
+  final summary; every other update (a commit landing, a todo closed) goes to `write_plan`.
 - `/autopilot`'s **3-strike runaway guard** - the same verification failing 3x consecutively, or a
   todo making zero forward progress across 3 consecutive subagent dispatches, parks that todo and
   the run continues with the next one. No infinite retry.

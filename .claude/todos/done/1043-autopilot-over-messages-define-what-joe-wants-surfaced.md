@@ -60,4 +60,5 @@ Where the rules live today:
   only committed a small fix. Whatever the Reporting rule becomes, the guard needs a matching
   exemption (e.g. a turn that updated `write_plan` counts as reporting), or it will keep forcing
   exactly the noise Joe asked to cut.
+- Completed 2026-10-08 (loop-todos cycle 1): autopilot SKILL.md Reporting section (bubble only for blocker, decision, final summary, plus a screenshot or real bug; everything else in write_plan), cross-refs in auto-do-todos and loop-todos; hook half shipped in d5da0cb (write_plan turn resets the silent counter).
 

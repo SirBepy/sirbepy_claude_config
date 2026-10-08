@@ -84,6 +84,26 @@ Read pct used (= 100 - pct left). Two named thresholds, on context USED (tweak h
 - **SLOW_AT = 50% used:** start winding down. Prefer FINISHING in-flight work over STARTING new chunks; tighten scope; avoid large new investigations or wide subagent fan-out; do not begin anything you cannot also finish AND verify within the remaining budget.
 - **HARD_STOP_AT = 60% used:** STOP taking new work. Immediately, in order: (a) `/commit` anything staged, (b) write every remaining planned item to `.claude/todos/` (one file each, per `close/ai-todos-format.md` - claim rules included, `**Origin:** dev` since these are pieces of the dev's own approved run deferred by the context stop) so nothing is lost, (c) write the final summary and END the run. Do NOT start another chunk past this line.
 
+## Reporting
+
+A chat bubble (`send_message`) is earned only by: a genuine blocker or parked item needing the
+dev, a decision made on his behalf that he might reverse (an `iterate-it` verdict, a UX call), a
+real product bug found, something to look at (a screenshot), and the run's final summary.
+Everything else - each commit landing, each todo closed, a builder dispatch going out, a mechanism
+explanation - goes into `write_plan` instead: one step per todo or chunk, `detail` holding the
+commit sha, kept current at every step change rather than written once and left stale. (Joe,
+2026-09-29, during an `/autopilot` run: "i see you write a lot more than you need to in chats like
+these ... i think this could have been more helpful if it was moreso using this kind of style of
+visualizing for me (the steps mcp)". Answered 2026-10-07.)
+
+This overrides the Conductor harness's own general guidance that a commit landing is a
+`send_message` trigger: under `/autopilot` and `/loop-todos`, a commit landing is a `write_plan`
+update, not a bubble, unless that same commit also IS one of the five bubble-earning events above.
+
+The `hooks/send-message-stop-guard.py` Stop guard (main-agent-side, not this skill's to enforce)
+exempts a turn that updated `write_plan` from its silent-turns counter, so following this section
+does not trip it.
+
 ## Where decisions and parked items go (use the dev's existing taxonomy)
 
 - **Routine auto-decisions** (trivial picks, bounded-iterate-it verdicts) -> decide and move on, no log. The dev has said he never reads a running decision log; git history + the final summary are the record.

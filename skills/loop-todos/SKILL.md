@@ -130,6 +130,17 @@ Cycles used: <n> of <cap>. Skipped todos: <ids>.
 A `--resumed` run skips Phase 0 and reads its cycle count, cap and skip list from that state block.
 Without `--resumed` the successor would re-ask everything the dev already answered.
 
+## Phase 4.5 - Final per-commit review
+
+Runs once, after the last cycle and only once a Phase 3 stop condition has fired - never between
+cycles, and never repeated. This is a different, heavier pass than Step 9's per-cycle
+`/code-check` (structure, DRY, dead code): run `skills/review-unpushed/SKILL.md`'s procedure over
+`@{u}..HEAD` (its default range already covers every commit the whole loop produced, regardless of
+which cycle made it). Fold its fix-now findings through its own triage step before Phase 5's
+summary runs; a backlogged finding is reported there like any other todo this loop filed. This
+phase is the loop's own answer to the hand-built per-commit review rounds todo 1107 was filed
+over.
+
 ## Phase 5 - Final report
 
 One summary at the end covering: cycles used of the cap, todos completed per cycle with commit
@@ -139,8 +150,10 @@ and the final `/test` + `/e2e` result.
 
 ## Notes
 
-- This skill dispatches no subagents of its own; every dispatch happens inside `/auto-do-todos`
-  under `refs/delegation-doctrine.md`.
+- This skill dispatches no subagents of its own except Phase 4.5's review-unpushed fan-out; every
+  other dispatch happens inside `/auto-do-todos` under `refs/delegation-doctrine.md`.
 - It never commits directly and never claims a todo. `/auto-do-todos` owns both.
 - Backlog source of truth: `.claude/todos/` per `close/ai-todos-format.md`, resolved from the repo
   root of the session's own cwd.
+- Reporting cadence (a chat bubble only for a blocker, a decision, or the final summary; every
+  other update goes to `write_plan`) follows `/autopilot`'s own Reporting section.
