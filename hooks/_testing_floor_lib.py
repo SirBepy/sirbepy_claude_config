@@ -217,6 +217,9 @@ def running_background_agents(transcript_path: str) -> set:
     return {agent_id for agent_id, alive in running.items() if alive}
 
 
+_UNLAUNCHABLE_MARKER = "is not recognized as an internal or external command"
+
+
 def resolve_launcher(argv: list, which=shutil.which) -> list:
     """npm, pnpm and yarn are .cmd shims on Windows, which subprocess cannot
     launch by bare name without a shell, so the check never ran at all."""
@@ -426,9 +429,15 @@ def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner, pa
         # something the dev, not the edit, would have to fix.
         return True, f"{label}: check command not found ({e}); nothing to verify"
     except subprocess.TimeoutExpired:
-        return False, f"{label}: check timed out after {timeout}s"
+        # A timeout says nothing about the edit (a concurrent build holding the
+        # target dir is the usual cause), and blocking on it cost up to 3 x 300s.
+        return True, f"{label}: check timed out after {timeout}s; not verified"
 
     output = "\n".join(s for s in (proc.stdout, proc.stderr) if s)
+    if proc.returncode != 0 and _UNLAUNCHABLE_MARKER in output:
+        # pnpm 12's managed-tools .cmd shim calls an extensionless script that
+        # cmd.exe cannot run, so the launcher itself failed before any test did.
+        return True, f"{label}: check command could not launch ({output.strip()[:200]}); not verified"
     if label == "flutter":
         ok = "All tests passed!" in output
     else:

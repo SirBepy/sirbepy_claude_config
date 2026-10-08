@@ -698,6 +698,41 @@ def launcher_resolution_checks() -> list:
     return fails
 
 
+def infra_failure_checks() -> list:
+    """A check that cannot launch or cannot finish says nothing about the
+    edit, and blocking on it held peer sessions for up to 3 x 300s (cueline
+    2026-10-08: a pnpm shim cmd.exe cannot run, and a rust build contended
+    by a concurrent builder)."""
+    fails = []
+    lib = _testlib.load_module("testing_floor_lib_for_infra_test", _HOOKS_DIR / "_testing_floor_lib.py")
+
+    class FakeProc:
+        def __init__(self, returncode, stdout="", stderr=""):
+            self.returncode, self.stdout, self.stderr = returncode, stdout, stderr
+
+    def unlaunchable(argv, **kwargs):
+        return FakeProc(1, stderr="'\"C:\\pnpm\\..\\node_modules\\pnpm\\pnpm\"' is not recognized as an internal or external command,")
+
+    def hangs(argv, **kwargs):
+        raise subprocess.TimeoutExpired(argv, 300)
+
+    def real_failure(argv, **kwargs):
+        return FakeProc(1, stdout="FAIL src/a.test.ts")
+
+    with tempfile.TemporaryDirectory(prefix="testing-floor-infra-") as tmp:
+        for label, runner, expect_ok in (
+            ("a shim cmd.exe cannot launch is not verified, not failed", unlaunchable, True),
+            ("a timed-out check is not verified, not failed", hangs, True),
+            ("a real test failure still fails", real_failure, False),
+        ):
+            ok, summary = lib.run_stack_check("node", ["npm", "test"], Path(tmp), 300, runner)
+            good = ok == expect_ok
+            print(f"[{'PASS' if good else 'FAIL'}] infra: {label} -> ok={ok} {summary[:120]!r}")
+            if not good:
+                fails.append(f"infra: {label}")
+    return fails
+
+
 def _guarded(fn):
     def _run():
         try:
@@ -718,6 +753,7 @@ def run() -> int:
         + node_test_script_checks()
         + _guarded(background_agent_checks)()
         + _guarded(launcher_resolution_checks)()
+        + _guarded(infra_failure_checks)()
     )
     return _testlib.summarize(fails)
 
