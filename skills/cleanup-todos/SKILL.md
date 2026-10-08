@@ -156,10 +156,10 @@ transcription step that caused the 2026-08-12 corruption.
   - **5-6** - genuine improvement, but speculative trigger or marginal payoff.
   - **3-4** - churn. Restates a rule that already exists elsewhere, or adds a rule with no
     enforcement path, or documents a preference as if it were a defect. Also caps here: a
-    behavior-neutral change (file split, helper move, dead-code nit) in a repo whose `origin`
-    remote sits outside the personal `SirBepy` account, the same org check the gh-account-switch
-    hook already uses (zirtue-corp, Fibo-Studio, revaire, or any other client/employer org) - that
-    repo pays real review time and merge-conflict risk a solo repo never does. Ask "is there a
+    behavior-neutral change (file split, helper move, dead-code nit) in a client repo, i.e. one
+    `python ~/.claude/hooks/_client_repo.py is-client <repo>` reports as `client` (the list in
+    `refs/client-repos.txt`) - that repo pays real review time and merge-conflict risk a solo repo
+    never does. Ask "is there a
     downside to keeping it as-is?" before scoring one above 4 there.
   - **1-2** - net negative. Contradicts an existing rule, over-fits a single incident, or adds
     surface area to a file that is already the bottleneck.
