@@ -56,6 +56,23 @@ Joe's hardware can handle 5 fine.
 
 If you ever bypass the supervisor: track the PID and ensure it terminates on session end / Ctrl-C / completion of the parent task.
 
+## Stopping what you started, and closing when done
+
+Joe's standing rule (2026-10-06), to save RAM and CPU on this PC. An idle chat still holds a
+`claude` process of 200-330MB, and one idle local API plus its Docker containers measured ~430MB
+after 9 hours with zero connections.
+
+- **Servers.** Stop every dev server, watcher, emulator, Docker or Gradle stack this chat started
+  as soon as the task no longer needs it, not at session end. A shared one this chat did NOT start
+  is stopped only after `list_peers` shows no live chat using it, the same check `/supervised-run`'s
+  Stop bullet already requires. A Gradle daemon a busy peer owns stays up: killing it fails that
+  peer's next build.
+- **The chat itself.** When the task is fully done (verified, committed, nothing left for Joe to
+  answer), run `/close` without being asked. Exceptions: a turn that ends on a question card for
+  Joe never self-closes, since the answer has nowhere to land; a long run (`/loop-todos`,
+  `/autopilot`, `/auto-do-todos`) closes only after its final report, never between cycles; and a
+  chat Joe is actively talking to stays open until the conversation is clearly finished.
+
 ## Secrets on the command line
 
 A secret passed as a `--dart-define` or an env-prefix argument sits in that process's command line

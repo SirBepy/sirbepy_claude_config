@@ -59,3 +59,7 @@ backlog on 2026-10-06 found no existing rule or todo for either.
   `/close` and with stopping its own servers, citing the CLAUDE.md line.
 - A chat waiting on a question card for Joe does not self-close.
 - Shared servers a different live chat depends on are not stopped (the `list_peers` check holds).
+
+## Notes
+
+- Both rules added to refs/process-hygiene.md 'Stopping what you started, and closing when done' with the question-card, long-run and active-conversation exceptions; CLAUDE.md Process Hygiene line replaced (the old dev-server PID line duplicated process-hygiene.md), budget check PASS with 1 token headroom.
