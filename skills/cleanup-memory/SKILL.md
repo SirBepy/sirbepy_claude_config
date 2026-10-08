@@ -110,6 +110,20 @@ rotates through each run. After a file's deep pass, touch it (e.g. a trivial no-
 `description` line, or append a `<!-- last-deep-checked: YYYY-MM-DD -->` comment) so it rotates to
 the back of the queue next run.
 
+**Small-corpus branch.** When the full candidate set from Step 1 is at or under `INLINE_MAX` (10)
+files, skip the subagent dispatch entirely: the orchestrator performs the deep pass itself,
+inline, over every file in the set - the same checks below (every path/command/flag claim
+re-verified against the current codebase, every `[[link]]` resolved against an existing memory's
+frontmatter `name`, the same `suggested_drop` criteria) at the same depth a dispatched pass would
+run, feeding Step 5 the identical verdict shape. This is a branch on WHO does the check, not an
+exemption from what it covers, same reasoning as `/cleanup-todos`'s Small-backlog branch: the
+orchestrator already read every file in full in Step 1, so dispatching a subagent to re-read the
+same text would buy back zero context per CLAUDE.md's context-weight axis. "Must stay a single
+batched call, never one dispatch per memory" below still holds here - it is zero dispatches for
+the whole set, not one dispatch per memory, exactly like the todos skill's own inline branch is
+not an exception to its "no per-todo dispatch" rule either. Above `INLINE_MAX`, proceed to the
+dispatched deep pass below.
+
 **Deep pass (up to 60):** dispatch exactly ONE subagent (`model: 'sonnet'`), full text of each
 memory in one prompt. Paste the canonical preamble from `refs/builder-preamble.md` into the
 dispatch prompt (it's read-only, so the `READ-ONLY DISPATCH` opt-out applies) -
@@ -299,3 +313,15 @@ caller with no one left to prompt it - print the report and let its turn continu
 - No rewriting a memory's *content* for style/length during this pass - a kept memory's body is
   only ever edited to fold in a dedupe-loser's unique detail (Step 6) or repair a link; anything
   more is a separate, differently-gated edit.
+
+## Notes
+
+- `INLINE_MAX = 10` - at or under this many files in Step 1's full candidate set, Step 4 skips the
+  subagent dispatch and does the deep pass inline in the orchestrator instead (todo 1144).
+  Memory files run short (Step 1.5 flags any index bullet over ~150 chars, and the whole
+  `MEMORY.md` caps at 24.4KB), so a 10-file corpus is a small inline re-verification even though
+  it is a lower bar than `/cleanup-todos`'s own `INLINE_MAX` (4) - todos run longer per file and
+  the single-dispatch deep pass there caps at 30 files per chunk, not 60. Picked to leave headroom
+  for a handful-sized corpus while staying well clear of the 60-file deep-pass cap, so a corpus
+  large enough to want the dispatched pass's prompt-size bound never qualifies for the inline
+  branch by accident. Constant, not a flag; tune here.

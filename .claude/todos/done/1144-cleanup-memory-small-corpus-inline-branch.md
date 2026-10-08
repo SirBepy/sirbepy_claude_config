@@ -19,6 +19,10 @@ Add a "Small-corpus branch" paragraph to Step 4 of `skills/cleanup-memory/SKILL.
 - Step 4 names the inline threshold and states the inline pass checks the same things (paths/commands exist, `[[links]]` resolve, `suggested_drop`).
 - A run over a <= threshold corpus following the skill literally dispatches no subagent.
 
+## Notes
+
+- Done 2026-10-08: cleanup-memory Step 4 has a Small-corpus branch (INLINE_MAX = 10, inline deep pass with the same checks) and a new Notes section stating the constant and why it differs from cleanup-todos' 4.
+
 ## Answers 2026-10-08
 
 - Joe, 2026-10-08 (todo-questions chat): approved to build as written.
