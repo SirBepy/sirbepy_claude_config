@@ -1,11 +1,16 @@
 ---
 name: batch-todos
-description: Dedupes todos, auto-executes EASY ones after a dry-run confirm, flags the HARD queue. /batch-todos or /auto-do-todos.
+description: Dedupes todos, auto-executes EASY ones after a dry-run confirm, flags the HARD queue. Internal step for /auto-do-todos, not a standalone command.
+disable-model-invocation: true
 ---
 
 # /batch-todos
 
 > Dedupe AI todos, auto-batch the easy ones, then surface the hard ones for the dev to choose.
+
+**Trigger:** `/batch-todos` only. Never auto-invoke. In practice this runs as `/auto-do-todos`
+Step 3 (and transitively inside `/mega-todos`) rather than standalone - the dev does not invoke it
+directly day-to-day.
 
 Backlog rules (location, format, claims, done/, PLAN.md) live in
 `~/.claude/skills/close/ai-todos-format.md` - follow that contract for every file operation here.

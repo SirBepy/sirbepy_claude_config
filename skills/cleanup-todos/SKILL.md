@@ -478,8 +478,8 @@ into the closing summary as still-pending, for confirmation on a later run.
 
 ## Non-goals (v1)
 
-- No coupling with `/batch-todos` - that skill is untouched; a redesign to consume cached
-  complexity/dedupe results is a separate, later effort.
+- No coupling with batch-todos (internal-only, invoked via `/auto-do-todos`) - that skill is
+  untouched; a redesign to consume cached complexity/dedupe results is a separate, later effort.
 - No cron/scheduled-trigger wiring - manual invocation only. The staleness threshold is a
   report-time nag, not an enforced re-run mechanism.
 - No auto-drop of a `dev`-origin todo, ever, under any condition. `ai`/absent-origin todos are
