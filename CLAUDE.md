@@ -115,7 +115,8 @@ Project-local scratch (never global; skip if there's no project): `screenshots/`
 
 ## Global Knowledge Vault
 
-- Cross-project facts (would matter in a different project too - preferences, people, ideas) go in the Obsidian vault at `C:\Users\tecno\Documents\ObsidianVault\`, never native Auto Memory; project-local facts (a bug workaround, a project-specific quirk) stay in Auto Memory as today. The vault is shared across 3+ concurrent sessions with no file locking - re-read immediately before every write and edit line-scoped, never whole-file. Person-file schema, backup fallback, full discipline: `refs/global-knowledge-vault.md`, read before the first vault write of a session.
+- Cross-project facts (true in any project: preferences, people, ideas) go in the Obsidian vault at `C:\Users\tecno\Documents\ObsidianVault\`, never native Auto Memory; project-local facts stay in Auto Memory. The vault is shared across 3+ concurrent sessions with no file locking - re-read immediately before every write and edit line-scoped, never whole-file. Person-file schema, backup fallback, full discipline: `refs/global-knowledge-vault.md`, read before the first vault write of a session.
+- Unsure who Joe means by a name or role word: `/people`, never guess.
 
 ## Memory Discipline
 
