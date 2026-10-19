@@ -68,7 +68,7 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 
 ## Execution Discipline
 
-- For any creative/feature work (new feature, component, behavior change, non-trivial design), use the local `/brainstorm` skill, never `superpowers:brainstorming`. The local one is the owned replacement. It deliberates first by default and shows a short plan before building; it skips that checkpoint when the invocation already says to implement, or when the change is a single existing file that adds no new file and no new skill/hook/rule surface. Its SKILL.md holds the exact escape conditions.
+- For any creative/feature work (new feature, component, behavior change, non-trivial design), use the local `/brainstorm` skill, never `superpowers:brainstorming`. The local one is the owned replacement; its SKILL.md holds the plan checkpoint and its escape conditions. Exception: dashboard-a planning talks use `superpowers:brainstorming`, enabled only in that repo's `.claude/settings.local.json` (Joe, 2026-10-20).
 - State assumptions and interpretations before coding; present them instead of picking silently.
 - Every changed line must trace to the request. No drive-by refactors.
 - Before writing a new helper, util, or type: scan the codebase first. If something equivalent already exists a few files over, reuse it. Re-implementing what's nearby is the most common way code bloats.
