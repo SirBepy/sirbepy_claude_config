@@ -189,7 +189,6 @@ At END of scan, append any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCA
 
 Cap: 5 entries max. When at cap, drop the entry with the earliest date field before appending; if dates tie, drop the topmost entry. Never reorder remaining entries.
 
-- 2026-07-19: Deep Windows scan (supersedes 2026-06-03 data). C: free 29.6/930.6G. Added mandatory build-artifact sweep step - found 150G+ across 19 repos in Desktop\Projects (biggest: claude_usage_in_taskbar 90.6G in 3 duplicate src-tauri target dirs from switched CARGO_TARGET_DIR configs, server_supervisor 12.1G, pomodoro-overlay 8.5G, odysseus 13.2G target+venv, revaire-mobile 6.7G build+.dart_tool, 12 more repos 0.5-3G each). Root cause found and fixed: global ~/.cargo/config.toml had no target-dir set, so one-off manual overrides never stuck - added `target-dir = "D:/cargo-target"` globally so this stops recurring. Other safe wins: Docker 26.5G, gradle 19.5G, LocalAppData Temp 17.5G, npm/pip/cargo/pnpm/playwright/recycle ~15G, huggingface hub 60.2G (cleared, unused models), stale node_modules 10 repos ~4G. Judgment calls (Joe's call each time, not auto-safe): game data (PrismLauncher instance 33.4G - Joe approved delete, curseforge 5.3G - kept), Android AVD image 11.6G, ollama models 7.7G idle 6-7wk (Joe kept), Roblox project folders misfiled in Downloads 30.4G (moved to D:\RobloxDev not deleted). Windows-level bloat (SoftwareDistribution, Windows.old) checked clean - not a Windows problem this time. Non-cache real data generally needs a judgment-call question - cache/build-artifact patterns don't.
 - 2026-08-05: Follow-up scan. C: free 127.8/930.6G (recovered from June's 24-30G). Confirmed claude_usage_in_taskbar's Tauri junk was NOT actively regrowing - all found Rust target dirs (claude_usage_in_taskbar target 19.95G+src-tauri/target 14.93G+target-alt 16.47G, server_supervisor src-tauri/target 12.05G, odysseus desktop/src-tauri/target 9.42G) predate the 2026-07-19 global target-dir fix and were simply never cleaned up. Found + fixed 2 live issues: (1) claude_usage_in_taskbar's settings.local.json (+worktree copy) had 3 pre-approved permissions hardcoding CARGO_TARGET_DIR=src-tauri/target-export, bypassing the global redirect if ever reused - removed. (2) shared unnamespaced D:/cargo-target meant unrelated projects/tools (Claude Conductor build, cargo-audit) already landed in the same debug/release folders - added per-project target-dir overrides (own D: subfolder) to claude_usage_in_taskbar, server_supervisor, pomodoro-overlay, odysseus .cargo/config.toml. Also found D: itself had ~33.6G of stale one-off pre-fix test folders (claude_usage_in_taskbar__src-tauri 18G, server_supervisor__src-tauri 8.9G, pomodoro-overlay__src-tauri 6.7G) - junk isn't C:-only, D: needs the same recurring check. Other wins: Docker 26.5G, npm-cache 7.65G, gradle 4.48G, LocalAppData Temp 19.64G, playwright caches 8.44G, pip 2.51G, revaire-mobile build+.dart_tool 6.7G, odysseus venv 3.8G, llama.cpp build 1.07G. Total addressable ~192G across C: and D:. Judgment calls (kept, not junk): Roblox LocalAppData cache 6.87G, .screenpipe 27.02G.
 - 2026-09-04: `C:\Users\tecno\.screenpipe` no longer exists - Joe deleted Screenpipe and its capture
   database deliberately. Do not go looking for that 27G on a future scan, and do not treat its
@@ -209,3 +208,19 @@ Cap: 5 entries max. When at cap, drop the entry with the earliest date field bef
   scanned), several Steam games played within the last ~10 days. Two games (inZOI 36.69G, Fellowship
   16.31G) resolved to a Steam library path outside the scanned C:\Program Files (x86)\Steam -
   likely a second library on another drive; not chased since D: is out of scope by default.
+- 2026-10-21: Deep scan, 3 read-only sonnet scouts (system/cache, dev artifacts, games+user content) plus a
+  chart in the preview panel (Joe asked to see the graph before deciding). C: free 239.1/930.5G at scan
+  (Ollama pulls then grew blobs 78 to 112G during the session, so free dropped to 183.5G before cleanup),
+  281.3G after. Deleted (each approved per item): ~/.gradle/caches (all but 0.09G of run-task-jars locked by
+  a Paper dev server), idle Flutter build + .dart_tool in 5 repos 13.8G, odysseus venv + sirbepy_assistant
+  laya-venv 8G (process check: 0 hits), cargo registry, Yarn/bun/pip-tools/.dartServer caches, pnpm prune,
+  npm cache, Temp older than 2 days. Moved (not deleted) to D:\Archive: 7 screen recordings 23.2G (robocopy
+  /MOV, byte counts matched) and Minecraft saves\v2 + 2024-2.zip 9.06G. C:\tmp subfolders older than 30
+  days were NOT cleaned: destructive-command-guard blocks any Remove-Item naming C:\tmp, even per-item
+  -LiteralPath, so Joe runs that himself. Killing the Gradle daemon also orphaned a running Paper dev server
+  (java 47356, parent was the daemon): check child processes of a daemon before stopping it. Ollama (111G)
+  is IN USE - sirbepy_assistant calls qwen3.5:9b and qwen3:8b, and 11 models were pulled overnight for a
+  bake-off - do not offer it for deletion until that ends. Found, not actioned: fvm 42.9G (14 of 17 versions
+  unpinned), Android SDK 18G (six NDKs) + Medium_Phone AVD 6.9G, HF/whisper caches 22.8G, Claude VM bundle
+  8.3G, Docker vhdx 27.5G, inZOI folder still on D:\SteamLibrary (no manifest for appid 2456740), Heroes of
+  the Storm 19.5G in Program Files (x86). C: games total only about 50G; inZOI/Fellowship live on D:.
