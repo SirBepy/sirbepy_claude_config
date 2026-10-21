@@ -1,6 +1,5 @@
 # Plan
 
-- [ ] 1062 - finish remote Wake-on-LAN (FRITZ!Box WireGuard, needs Joe at the router)
 
 ## Harvest implementation - ordered, 2026-08-20
 

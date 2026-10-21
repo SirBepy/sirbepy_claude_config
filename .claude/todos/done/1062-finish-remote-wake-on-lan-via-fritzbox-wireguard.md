@@ -134,7 +134,43 @@ Written by /auto-do-todos on 2026-10-06 (loop-todos cycle 2). The next run opens
   `userConnections` before redoing anything.
 - On 2026-10-02 adb listed no device, so the phone wasn't plugged in at that point.
 - Never write the router password into a file. It's in the 2026-09-05 session transcript only.
+- DONE 2026-10-22 (session ea3b6f1b): remote wake from sleep AND full shutdown verified, one-tap HTTP Shortcuts button works cold. Root cause of the button first needing WireGuard open: logcat showed 'Background start not allowed: service GoBackend$VpnService' (Android background-service limit, process started for the broadcast but in background); fix was codeOnPrepare launching com.wireguard.android/.activity.MainActivity via sendIntent before setWireguardTunnelState, plus tunnel off in codeOnSuccess. Joe confirmed it worked. Leftover for Joe only: optional deletion of the unused zero-rights 'wake' FRITZ!Box user.
 
 ## Answers 2026-10-08
 
 - Joe, 2026-10-08 (todo-questions chat): keep parked. He is finishing this himself in the frozen chat that started it, ideally today. Runs ignore this todo.
+
+## Progress 2026-10-22 (session ea3b6f1b)
+
+- Steps 1-3 DONE. WireGuard "single device" connection created; QR scan kept failing (camera permission
+  was granted, so not that), so the FRITZ!Box `wg_config.conf` download was `adb push`ed and imported
+  from file instead, then deleted from the phone. Endpoint is a `*.myfritz.net:54457` hostname.
+- With phone WiFi off (Tele2 mobile data) and the tunnel up, `ping 192.168.178.1` 3/3. Ping to the PC
+  failed, likely Windows Firewall ICMP default, irrelevant to WoL.
+- Remote wake from sleep verified twice: Joe's own test (slept 22:02:01Z, woke 22:02:29Z) and a
+  Claude-triggered sleep (22:03:45Z) woken from the phone at 22:04:30Z, Power-Troubleshooter event
+  and `powercfg /lastwake` both name `Realtek Gaming 2.5GbE Family Controller`.
+- Remaining: step 4 (BIOS, wake from full shutdown) and step 5. The `C:\tmp` scratch scripts are
+  already gone (only `llama-lowprio.ps1` remains there), so step 6 cleanup is moot.
+- Wake from full shutdown FAILED on the first try (2026-10-22, BIOS untouched since no record of the
+  step 4 change exists). Claude rebooted into UEFI setup (`shutdown /r /fw`) for Joe to set
+  `ErP Ready` Disabled + `Power On By PCI-E` Enabled; retest shutdown wake after that.
+- After the BIOS change Joe reports wake from full shutdown works: shutdown 00:16:26, cold boot
+  (Kernel-General 12) 00:17:02 local. All acceptance met; step 5 (DHCP pin) still unasked.
+- Follow-ups Joe raised: one-tap wake (router TR-064 `X_AVM-DE_WakeOnLANByMACAddress` on
+  `urn:dslforum-org:service:Hosts:1` at `/upnp/control/hosts`, confirmed in the box's SCPD) and
+  skipping the Windows PIN for remote access (account is local `DESKTOP-6GJ2QR0\tecno`).
+- Both follow-ups built 2026-10-22:
+  - PIN: `DevicePasswordLessBuildVersion=0`, Joe set netplwiz auto-login (`AutoAdminLogon=1`,
+    password as LSA secret, no plaintext `DefaultPassword`), `CONSOLELOCK` AC/DC = 0.
+  - Wake button: HTTP Shortcuts 4.9.0 (`ch.rmy.android.http_shortcuts`, GitHub arm64 APK, signer
+    `CN=Roland Meyer` SHA-256 `26006920...f48606`, same as 4.8.2) installed via adb,
+    `CONTROL_TUNNELS` granted with `pm grant`, WireGuard "Allow remote control apps" on. Shortcut
+    source: `.for_bepy/wake-pc-shortcut.json` (gitignored): `setWireguardTunnelState('home', true)`,
+    `wait(4000)`, then the TR-064 SOAP POST.
+  - The TR-064 wake action needs NO auth from the LAN (correct, wrong and missing credentials all
+    returned HTTP 200), so the zero-rights `wake` router user Joe created is unused.
+  - A UDP 7/9 listener on the awake PC never sees the router's packet, for both the UI button and
+    TR-064; not evidence of failure (the box likely sends a raw-Ethernet WoL frame).
+  - End to end: phone on mobile data, PC slept 23:28:58Z, woke 23:29:54Z after Joe's tap, phone
+    VPN up at wake. Wake Source "Unknown", the same as Joe's earlier manual router-button wake.
