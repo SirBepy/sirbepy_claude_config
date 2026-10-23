@@ -501,6 +501,16 @@ def main():
         title = args.title or default_title(paths)
         slug = args.slug or default_slug(paths)
         budget_bytes = int(args.budget_mb * 1024 * 1024)
+        # The follow-up below reruns the dropped files; one that cannot fit even alone would be
+        # dropped again every rerun, so it is an error up front instead.
+        oversize = [f for f in files if f.stat().st_size > budget_bytes]
+        if oversize:
+            print(
+                f"error: {oversize[0].name} alone is {oversize[0].stat().st_size} bytes, over the whole "
+                f"{budget_bytes}-byte budget; raise --budget-mb or use a smaller image",
+                file=sys.stderr,
+            )
+            sys.exit(1)
         html_text, included, dropped = build_gallery_html(files, title, budget_bytes)
 
         if args.out:
