@@ -57,7 +57,28 @@ per the global subagent-model rule; never inherit.
      either is missing, say so and stop.
    - Check whether a PR already exists for this branch (`gh pr view`) - just
      note yes/no, don't fetch its body yet. Existing PR → the subagent will
-     regenerate (edit mode) instead of drafting fresh.
+     regenerate (edit mode) instead of drafting fresh. `gh pr view <branch>`
+     resolves only OPEN PRs, so it cannot see one already merged from the same
+     head; the next two checks cover that.
+   - **Duplicate-PR check, head:** `gh pr list --head <branch> --state all --json
+     number,state,author,mergedAt`. Any MERGED or OPEN PR from this head that
+     this session did not create (an open one this session created is the
+     edit-mode case above) → STOP before any drafting subagent or verifier is
+     dispatched, name the PR number, state and author to the dev, and ask how to
+     proceed. A different dev can open and merge a PR from your head branch name
+     while you work (REV-7305, 2026-10-12: PR #1140 merged 7 minutes after the
+     branch was created).
+   - **Duplicate-PR check, ticket:** when the branch name or its commits carry a
+     ticket id, run `gh pr list --search "<TICKET-ID>" --state all --json
+     number,title,state,author` with the same stop rule: any merged or open PR
+     for that ticket not created by this session → stop and name it.
+   - **Base-moved report (optional, one call):**
+     `gh api repos/<owner>/<repo>/compare/<fork-point>...<base> --jq .ahead_by`
+     where `<fork-point>` is `git merge-base HEAD <base>`. Local `origin/*` refs
+     can be stale (in some repos `git fetch` fails silently under the wrong
+     account), so this API read is the reliable "how far did the base move"
+     figure. A nonzero value is not a stop by itself; mention it to the dev and
+     let the ticket check above decide whether the move is the same work.
    - **Title-convention probe** (one `gh` call, cheap):
      `gh pr list --state merged --limit 10 --json title --jq '.[].title'`.
      Pass the raw titles to the step 2 subagent - they outrank
