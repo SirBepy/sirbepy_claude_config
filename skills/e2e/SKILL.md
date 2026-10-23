@@ -16,13 +16,20 @@ drives a real UI. Two independent modes, pick by what's asked.
 
 Delegates entirely; this skill never reimplements a driver.
 
+**Pre-check, before the table:** a Flutter repo (`pubspec.yaml` with a `flutter:` dependency) that
+also has a committed `e2e/run-all.js` runs that suite, not `/flutter-e2e`. Read `e2e/README.md`, run
+the command it documents (typically the release build with the repo's local env file, then
+`node run-all.js`), and report the suite's PASS/FAIL summary. A Flutter repo without `e2e/run-all.js`
+falls through to the table and its `/flutter-e2e` row.
+
 | Marker at repo root | Stack | Delegate |
 |---|---|---|
 | `pubspec.yaml` with a `flutter:` dependency | Flutter | `/flutter-e2e` - scripted mode for a flow description, plan-file mode for a `.md` test-plan path |
 | `test.project.json`, `*.rbxlx`, or a `testing/wally.toml` | Roblox / Luau | `/jest-lua run` (its `run-in-roblox` fallback is the client-in-the-loop path for this stack) |
 | `gradlew` or `settings.gradle(.kts)` at the repo root | Android / Gradle | `gradlew connectedDebugAndroidTest` - requires a booted device/emulator; report "no device" plainly when none is attached, not "no suite". UNINSTALLS the app from the device/emulator when it finishes. |
 | `package.json` with a Playwright config or `snippets/test-e2e.md` import | Node / web | follow `~/.claude/snippets/test-e2e.md` exactly - affected-specs by default, full suite when asked, dispatched to a background subagent |
-| anything else (bare Node without Playwright, Rust/Tauri) | - | no scripted e2e path exists - ask "how would I observe this if I had no test suite at all?" and drive/inspect the real system by hand instead of reporting a dead end |
+| `package.json` with a wdio config (`wdio.conf.*`) or an `@wdio/cli` devDependency | WebdriverIO desktop app (Tauri / native webview) | the project's own documented e2e script: read the Commands section of its `CLAUDE.md` for the exact npm script or wrapper (e.g. a `test:e2e*` script or a sweep script), run it, and report its per-spec verdicts. This row wins over the Playwright row above it when both match. |
+| anything else (bare Node without Playwright) | - | no scripted e2e path exists - ask "how would I observe this if I had no test suite at all?" and drive/inspect the real system by hand instead of reporting a dead end |
 
 State the detected stack and the exact delegate before driving anything.
 

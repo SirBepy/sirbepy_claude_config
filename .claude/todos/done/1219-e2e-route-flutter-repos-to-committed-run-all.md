@@ -24,3 +24,7 @@ Add a row (or a pre-check above the table) to `skills/e2e/SKILL.md`: a Flutter r
 
 - `/e2e` in zng-admin and zng-app runs `node run-all.js` without project-specific CLAUDE.md hints.
 - Repos with no committed suite still route to `/flutter-e2e` as today.
+
+## Notes
+
+- Completed 2026-10-23 (loop-todos cycle 1): e2e skill pre-check routes a Flutter repo with a committed e2e/run-all.js to its README-documented command. Not yet exercised in zng-admin/zng-app.
