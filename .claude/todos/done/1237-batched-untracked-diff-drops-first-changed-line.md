@@ -31,3 +31,7 @@ Have `batch_untracked_diffs` keep the first `+`/`-` line after each `@@`, or re-
 A test in `skills/commit/test_commit_pathspec.sh`: 16+ untracked files, one of them `git rm
 --cached` and recreated, 2 session markers, `--force foreign-hunk`; the output's
 `hunk(s) taken on trust:` block shows that file's first changed line. Fails before the fix.
+
+## Notes
+
+- Archived by loop-todos cycle 3 on 2026-10-23 as an invalid premise: classify_path marks a file with a HEAD blob as index-removed, never untracked, so no batched untracked diff ever reaches print_taken_hunks. Scratch repro (git rm --cached plus recreate, 20 untracked files, 2 markers, --force foreign-hunk) showed the file as index-removed and nothing in unverified_files.

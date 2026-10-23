@@ -6,11 +6,9 @@ repo=""
 # (`+++ "b/caf\303\251.txt"`), which no scanner's `+++ b/` match reads as a new file.
 git_c() { if [ -n "$repo" ]; then git -c core.quotePath=false -C "$repo" "$@"; else git -c core.quotePath=false "$@"; fi; }
 
-# Windows caps one command line near 32K characters, and a generated-asset commit names more
-# paths than that. Everything below that hands the whole path list to an external command either
-# splits it at this many characters or moves it through a file; PREFILTER_ARGV_BUDGET lets a test
-# force the split with a handful of paths.
-PREFILTER_ARGV_BUDGET="${PREFILTER_ARGV_BUDGET:-12000}"
+# PREFILTER_ARGV_BUDGET and paths_over_budget: everything below that hands the whole path list to
+# an external command splits it at that budget or moves it through a file.
+. "$(dirname "${BASH_SOURCE[0]}")/_argv-budget.sh" || return 1
 
 # A function's `shift` can't reach the caller's $@, so the trimmed list comes back via
 # PREFILTER_ARGS; caller restores with `set -- "${PREFILTER_ARGS[@]}"`. `-C` is accepted
@@ -31,16 +29,6 @@ parse_repo_arg() {
   if [ -n "$pf" ]; then
     while IFS= read -r -d '' p; do PREFILTER_ARGS+=("$p"); done < "$pf"
   fi
-}
-
-# True when "$@" would not fit in one external command's argv budget.
-paths_over_budget() {
-  local p total=0
-  for p in "$@"; do
-    total=$((total + ${#p} + 1))
-    [ "$total" -gt "$PREFILTER_ARGV_BUDGET" ] && return 0
-  done
-  return 1
 }
 
 # Sets DEDUPED to "$@" minus every path that sits under another argument which is a directory.
