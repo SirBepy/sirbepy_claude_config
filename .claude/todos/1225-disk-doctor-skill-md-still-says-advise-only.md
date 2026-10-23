@@ -31,3 +31,9 @@ advise-only.
 
 - `SKILL.md`, `gate.md` and `windows.md` state one consistent rule for who runs a delete.
 - `python ci/check_skill_frontmatter.py` reports nothing for disk-doctor.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-23. The next run opens with these.
+
+- [ ] [SEC] Needs an attended session: the committed `gate.md` (Joe, 2026-08-29) and `windows.md` already let Claude run a delete after a per-item `ask_user_question` approval, so `SKILL.md` (description and line 9) and `macos.md` line 3 are the stale side. The unattended loop's edit of `SKILL.md` to say so was denied by the auto-mode classifier as self-modification (it widens Claude's stated delete authority), so Joe has to approve the wording edit in-session. Proposed description: "Use when Joe asks what to delete or how to free disk space. Repeatable cleanup scan; Claude deletes only per-item approved candidates."
