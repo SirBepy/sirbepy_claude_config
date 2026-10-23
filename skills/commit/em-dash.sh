@@ -38,7 +38,7 @@ exempt_list() {
 # _prefilter-lib.sh, so both prefilters agree on which files are binary.
 
 AWK='
-BEGIN { n=split(EXEMPT, e, "\n"); for (i=1; i<=n; i++) if (e[i] != "") ex[e[i]]=1 }
+BEGIN { while ((getline row < EXEMPTFILE) > 0) if (row != "") ex[row]=1; close(EXEMPTFILE) }
 /^\+\+\+ b\// { f=substr($0,7); skip=(f in ex); next }
 /^@@/ { match($0, /\+[0-9]+/); ln=substr($0, RSTART+1, RLENGTH-1)+0; next }
 /^\+/ && !/^\+\+\+/ { l=substr($0,2); if (!skip && index(l, ED) > 0) printf "%s:%d\n", f, ln; ln++; next }
@@ -50,26 +50,23 @@ if [ "${1:-}" = "--range" ]; then
   diff_out=$(git diff "$2" 2>&1) || { printf 'ERROR: git diff --range %s failed: %s\n' "$2" "$diff_out"; exit 1; }
   changed=(); while IFS= read -r n; do [ -n "$n" ] && changed+=("$n"); done < <(git diff --name-only "$2" 2>/dev/null)
   exempt=$(printf '%s\n%s' "$(exempt_list ${changed+"${changed[@]}"})" "$(binary_list ${changed+"${changed[@]}"})")
-  printf '%s\n' "$diff_out" | awk -v ED="$ED" -v EXEMPT="$exempt" "$AWK" | sort
+  exempt_file=$(write_exempt_file "$exempt")
+  printf '%s\n' "$diff_out" | awk -v ED="$ED" -v EXEMPTFILE="$exempt_file" "$AWK" | sort
+  rm -f "$exempt_file"
 else
   # --repo <path>: forwarded by prefilter-gate.sh when the first path argument resolves to a
   # repo other than cwd (todo 447); absent, git_c is a passthrough and behaviour is unchanged.
   parse_repo_arg "$@"
   set -- "${PREFILTER_ARGS[@]}"
   exempt=$(printf '%s\n%s' "$(exempt_list "$@")" "$(binary_list "$@")")
+  exempt_file=$(write_exempt_file "$exempt")
 
   {
-    git_c diff HEAD -- "$@"
-    # -z/NUL-separated: git status quotes space-containing names, which broke the downstream
-    # git diff --no-index call; ls-files -z sidesteps quoting entirely.
-    git_c ls-files --others --exclude-standard -z -- "$@" | while IFS= read -r -d '' f; do
-      out=$(git_c diff --no-index -- /dev/null "$f" 2>&1); rc=$?
-      if [ "$rc" -gt 1 ]; then
-        printf 'ERROR: could not inspect untracked file %s (git diff --no-index exit %d): %s\n' "$f" "$rc" "$out"
-      else
-        printf '%s\n' "$out"
-      fi
-    done
+    git_c_paths diff HEAD -- "$@"
+    # untracked_diffs lists the files NUL-separated (ls-files -z): git status quotes space-
+    # containing names, which broke the downstream git diff --no-index call.
+    untracked_diffs "$@"
     scan_invisible_paths "$@"
-  } | awk -v ED="$ED" -v EXEMPT="$exempt" "$AWK" | sort
+  } | awk -v ED="$ED" -v EXEMPTFILE="$exempt_file" "$AWK" | sort
+  rm -f "$exempt_file"
 fi

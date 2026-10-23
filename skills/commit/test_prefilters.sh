@@ -316,6 +316,48 @@ out=$(cd "$tr1" && "$gate" code3.js); rc=$?
 check "todo-ref.sh flags a five-digit todo id" \
   1 'todo-ref\.sh' '' "$out" "$rc"
 
+# --- binary detection window: a NUL in the first 8000 bytes marks an extensionless file binary,
+# a NUL only past that window leaves it scannable text (the window git's own sniff uses) ---
+nulrepo=$(new_repo); tmp_dirs+=("$nulrepo")
+ED=$(printf '\xe2\x80\x94')
+{ printf 'a\0b %s\n' "$ED"; } > "$nulrepo/early_nul"
+{ head -c 8000 /dev/zero | tr '\0' 'x'; printf '\0 %s\n' "$ED"; } > "$nulrepo/late_nul"
+{ printf 'plain %s\n' "$ED"; } > "$nulrepo/no_nul"
+out=$(cd "$nulrepo" && bash "$em_dash" early_nul 2>/dev/null); rc=$?
+check "em-dash.sh skips an extensionless file with a NUL in its first 8000 bytes" 0 '' 'early_nul' "$out" "$rc"
+out=$(cd "$nulrepo" && bash "$em_dash" no_nul 2>/dev/null); rc=$?
+check "em-dash.sh scans an extensionless file with no NUL" 0 'no_nul:1' '' "$out" "$rc"
+out=$(cd "$nulrepo" && bash "$em_dash" late_nul 2>/dev/null); rc=$?
+check "a NUL only after byte 8000 does not make a file binary" 0 'late_nul:' '' "$out" "$rc"
+
+# --- a path list too long for argv: the gate takes it from a file, and a tiny
+# PREFILTER_ARGV_BUDGET forces every wrapped script through --paths-from-file and every git call
+# through chunks; the findings must equal the plain argv run's ---
+bigrepo=$(new_repo); tmp_dirs+=("$bigrepo")
+mkdir -p "$bigrepo/gen"
+printf 'seed\n' > "$bigrepo/gen/seed.txt"
+git -C "$bigrepo" add gen/seed.txt
+git -C "$bigrepo" commit -q -m "seed gen"
+for n in $(seq 1 40); do printf 'row %d\n' "$n" > "$bigrepo/gen/row_$(printf '%02d' "$n").txt"; done
+printf 'dash %s here\n' "$ED" > "$bigrepo/gen/row_17.txt"
+printf '%%PDF-1.4 %s text\n' "$ED" > "$bigrepo/gen/doc.pdf"
+printf 'seed changed %s\n' "$ED" > "$bigrepo/gen/seed.txt"
+big_args=(gen)
+for n in "$bigrepo"/gen/*; do big_args+=("gen/${n##*/}"); done
+plain_out=$(cd "$bigrepo" && "$gate" "${big_args[@]}" 2>/dev/null); plain_rc=$?
+chunk_out=$(cd "$bigrepo" && PREFILTER_ARGV_BUDGET=200 "$gate" "${big_args[@]}" 2>/dev/null); chunk_rc=$?
+check "gate flags the em dashes in the 40-file fixture with plain argv" 1 'row_17\.txt:1' 'doc\.pdf' "$plain_out" "$plain_rc"
+if [ "$plain_out" = "$chunk_out" ] && [ "$plain_rc" = "$chunk_rc" ]; then
+  echo "PASS: a forced-chunking budget gives the same findings and exit code as plain argv"
+else
+  echo "FAIL: forced-chunking output differs from plain argv"
+  diff <(printf '%s\n' "$plain_out") <(printf '%s\n' "$chunk_out") | head -n 10
+  fail=1
+fi
+printf '%s\0' gen gen/row_17.txt gen/seed.txt gen/doc.pdf > "$bigrepo/paths.nul"
+out=$(cd "$bigrepo" && "$gate" -C "$bigrepo" --paths-from-file "$bigrepo/paths.nul" 2>/dev/null); rc=$?
+check "gate --paths-from-file reads a NUL-separated path list" 1 'row_17\.txt:1' 'doc\.pdf' "$out" "$rc"
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else

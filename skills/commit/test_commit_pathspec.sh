@@ -1320,6 +1320,57 @@ out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r49" --ex
 check "a path under .claude/todos/ is exempt from the coverage-tests check regardless of extension (todo 1045)" \
   0 'coverage-tests-check.*clean' 'coverage-tests-check.*REFUSED' "$out" "$rc"
 
+# --- a .rs file whose own content carries a #[cfg(test)] block is its own test coverage ---
+r49a=$(new_repo); tmp_dirs+=("$r49a")
+branch=$(git -C "$r49a" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r49a" rev-parse HEAD)
+mkdir -p "$r49a/src"
+printf 'pub fn add(a: i32, b: i32) -> i32 { a + b }\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n    #[test]\n    fn adds() { assert_eq!(add(1, 2), 3); }\n}\n' > "$r49a/src/lib.rs"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r49a" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "src/lib.rs with an inline test module" -- src/lib.rs 2>&1); rc=$?
+check "a .rs file with its own #[cfg(test)] block passes coverage-tests-check with no force (todo 1196)" \
+  0 'coverage-tests-check.*clean' 'coverage-tests-check.*REFUSED|OVERRIDDEN' "$out" "$rc"
+if [ "$(git -C "$r49a" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: todo 1196 - the inline-test .rs commit did not land"
+  fail=1
+else
+  echo "PASS: todo 1196 - the inline-test .rs commit landed"
+fi
+
+# A .rs file with no #[cfg(test)] still refuses, exactly as before.
+r49b=$(new_repo); tmp_dirs+=("$r49b")
+branch=$(git -C "$r49b" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r49b" rev-parse HEAD)
+mkdir -p "$r49b/src"
+printf 'pub fn add(a: i32, b: i32) -> i32 { a + b }\n' > "$r49b/src/plain.rs"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r49b" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "src/plain.rs, no test" -- src/plain.rs 2>&1); rc=$?
+check "a .rs file with no #[cfg(test)] block is still refused by coverage-tests-check (todo 1196)" \
+  1 'coverage-tests-check.*REFUSED.*src/plain\.rs' '' "$out" "$rc"
+
+# The inline test covers ITS OWN file only: a second, untested source file in the same pathspec refuses.
+r49c=$(new_repo); tmp_dirs+=("$r49c")
+branch=$(git -C "$r49c" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r49c" rev-parse HEAD)
+mkdir -p "$r49c/src"
+printf 'pub fn add(a: i32, b: i32) -> i32 { a + b }\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn t() {}\n}\n' > "$r49c/src/lib.rs"
+printf 'export const y = 2;\n' > "$r49c/src/y.ts"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r49c" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "tested .rs plus an untested .ts" -- src/lib.rs src/y.ts 2>&1); rc=$?
+check "an inline-tested .rs file does not cover a different untested source file in the pathspec (todo 1196)" \
+  1 'coverage-tests-check.*REFUSED' '' "$out" "$rc"
+
+# A #[cfg(test)] that only appears inside a comment is not a test module.
+r49d=$(new_repo); tmp_dirs+=("$r49d")
+branch=$(git -C "$r49d" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r49d" rev-parse HEAD)
+mkdir -p "$r49d/src"
+printf '// TODO: add #[cfg(test)] later\npub fn add(a: i32, b: i32) -> i32 { a + b }\n' > "$r49d/src/commented.rs"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r49d" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "src/commented.rs, #[cfg(test)] only in a comment" -- src/commented.rs 2>&1); rc=$?
+check "a #[cfg(test)] mentioned only in a comment does not count as coverage (todo 1196)" \
+  1 'coverage-tests-check.*REFUSED.*src/commented\.rs' '' "$out" "$rc"
+
 # An empty -m fails fast at argument parsing, before any gate runs.
 r50=$(new_repo); tmp_dirs+=("$r50")
 printf 'x\n' > "$r50/notes.md"
@@ -1607,6 +1658,135 @@ out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r62" --ex
   -m "src/x.ts, an excluded real test exists" -- src/x.ts 2>&1); rc=$?
 check "an excluded real test file still satisfies the local-only check beside dependency noise (todo 1220)" \
   0 'coverage-tests-check.*clean.*src/x\.test\.ts.*last 24h' 'REFUSED|node_modules' "$out" "$rc"
+
+# --- a commit whose expanded path list outgrows one Windows command line (~32K characters) ---
+# 220 new files with ~150 character names under a tracked directory expand to ~34K characters of
+# argv. Before the fix every git/bash call that took the whole list died with "Argument list too
+# long" inside the prefilter gate and nothing committed.
+new_big_dir_repo() {
+  local d
+  d=$(new_repo) || return 1
+  mkdir -p "$d/gen"
+  printf 'seed\n' > "$d/gen/seed.txt"
+  git -C "$d" add gen/seed.txt
+  git -C "$d" commit -q -m "seed gen"
+  printf '%s' "$d"
+}
+r70=$(new_big_dir_repo); tmp_dirs+=("$r70")
+branch=$(git -C "$r70" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r70" rev-parse HEAD)
+pad=$(printf 'x%.0s' $(seq 1 140))
+i=1
+while [ "$i" -le 220 ]; do
+  printf 'item %d\n' "$i" > "$r70/gen/f$(printf '%03d' "$i")_$pad.txt"
+  i=$((i + 1))
+done
+printf 'edited\n' >> "$r70/README.md"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r70" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "220 long-named files" -- gen README.md 2>&1); rc=$?
+check "a pathspec whose expansion exceeds the Windows command line still commits (todo 1161)" \
+  0 '\[commit\] committed' 'Argument list too long|ERROR' "$out" "$rc"
+if [ "$(git -C "$r70" ls-tree -r --name-only HEAD -- gen | wc -l | tr -d ' ')" = "221" ] && [ -z "$(git -C "$r70" status --porcelain)" ]; then
+  echo "PASS: todo 1161 - all 221 files under gen/ landed and the tree is clean"
+else
+  echo "FAIL: todo 1161 - expected 221 files under gen/ in HEAD and a clean tree"
+  git -C "$r70" status --porcelain | head -n 3
+  fail=1
+fi
+
+# --- the same commit with the budget forced tiny, so the gate's path file, the chunked
+# overlap/foreign-hunk runs and the batched untracked diffs all run on a small fixture ---
+chunked_fixture() {
+  local d
+  d=$(new_repo) || return 1
+  mkdir -p "$d/dd"
+  { printf 'line %02d\n' $(seq 1 30); } > "$d/dd/shared.txt"
+  git -C "$d" add dd/shared.txt
+  git -C "$d" commit -q -m "seed dd"
+  printf '%s' "$d"
+}
+fill_chunked_fixture() {
+  local d="$1" n
+  sed -i '2s/.*/line 02 MINE/' "$d/dd/shared.txt"
+  sed -i '20s/.*/line 20 NOT-MINE/' "$d/dd/shared.txt"
+  for n in $(seq 1 24); do printf 'new %d\n' "$n" > "$d/dd/new_$(printf '%02d' "$n").txt"; done
+}
+r71=$(chunked_fixture); tmp_dirs+=("$r71")
+fill_chunked_fixture "$r71"
+branch=$(git -C "$r71" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r71" rev-parse HEAD)
+out=$(PREFILTER_ARGV_BUDGET=250 COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r71" --expect-branch "$branch" --expect-sha "$sha" \
+  --own-range dd/shared.txt:2-2 -m "chunked, undeclared hunk" -- dd 2>&1); rc=$?
+check "a foreign hunk is still refused when the checks run as several chunks (todo 1161)" \
+  1 'foreign-hunk-check.*REFUSED' '' "$out" "$rc"
+check "the chunked foreign-hunk refusal names the file and the undeclared hunk (todo 1161)" \
+  1 'dd/shared\.txt: foreign-hunks-present' '' "$out" "$rc"
+if [ "$(git -C "$r71" rev-parse HEAD)" = "$sha" ]; then
+  echo "PASS: todo 1161 - the chunked refusal left HEAD untouched"
+else
+  echo "FAIL: todo 1161 - the chunked refusal must not have committed anything"
+  fail=1
+fi
+out=$(PREFILTER_ARGV_BUDGET=250 COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r71" --expect-branch "$branch" --expect-sha "$sha" \
+  --own-range dd/shared.txt:1-6,17-23 -m "chunked, both hunks declared" -- dd 2>&1); rc=$?
+check "the same chunked commit lands once every hunk is declared (todo 1161)" \
+  0 '\[commit\] committed' 'REFUSED|Argument list too long' "$out" "$rc"
+if [ -z "$(git -C "$r71" status --porcelain)" ]; then
+  echo "PASS: todo 1161 - chunked commit left a clean tree"
+else
+  echo "FAIL: todo 1161 - chunked commit left uncommitted paths"
+  git -C "$r71" status --porcelain | head -n 3
+  fail=1
+fi
+
+# A prefilter finding in one of many files is still reported through the gate's path file.
+r72=$(chunked_fixture); tmp_dirs+=("$r72")
+branch=$(git -C "$r72" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r72" rev-parse HEAD)
+for n in $(seq 1 24); do printf 'new %d\n' "$n" > "$r72/dd/new_$(printf '%02d' "$n").txt"; done
+printf 'dash \xe2\x80\x94 here\n' > "$r72/dd/new_13.txt"
+out=$(PREFILTER_ARGV_BUDGET=250 COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r72" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "chunked, em dash in one file" -- dd 2>&1); rc=$?
+check "an em dash in one of many files is refused by the gate fed through its path file (todo 1161)" \
+  1 'prefilter-gate.*FLAGGED' '' "$out" "$rc"
+check "the gate's finding names the flagged file and line (todo 1161)" \
+  1 'dd/new_13\.txt:1' '' "$out" "$rc"
+
+# An overlap hit against an unpushed commit still refuses when the overlap check runs as chunks.
+r73=$(chunked_fixture); tmp_dirs+=("$r73")
+bare73=$(mktemp -d) || { echo "FAIL: mktemp -d (bare73)"; exit 1; }
+tmp_dirs+=("$bare73")
+git init -q --bare "$bare73"
+git -C "$r73" remote add origin "$bare73"
+branch=$(git -C "$r73" rev-parse --abbrev-ref HEAD)
+git -C "$r73" push -q -u origin "$branch"
+sed -i '5s/.*/line 05 UNPUSHED/' "$r73/dd/shared.txt"
+git -C "$r73" commit -q -am "unpushed change to line 5"
+sha=$(git -C "$r73" rev-parse HEAD)
+sed -i '5s/.*/line 05 WORKING TREE EDIT/' "$r73/dd/shared.txt"
+for n in $(seq 1 24); do printf 'new %d\n' "$n" > "$r73/dd/new_$(printf '%02d' "$n").txt"; done
+git -C "$r73" remote set-url origin "https://github.com/zirtue-corp/zng-app.git"
+out=$(PREFILTER_ARGV_BUDGET=250 COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r73" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "chunked overlap" -- dd 2>&1); rc=$?
+check "a client-repo overlap hit still refuses when overlap-check runs as chunks (todo 1161)" \
+  1 'overlap-check.*REFUSED' '' "$out" "$rc"
+check "the chunked overlap refusal names the overlapping hunk (todo 1161)" \
+  1 'dd/shared\.txt:2-8 .*unpushed change to line 5' '' "$out" "$rc"
+
+# A backslash-separated pathspec still lands in its directory, so a half-committed move named that
+# way is refused, not waved through with the source deletion left behind.
+r74=$(new_repo); tmp_dirs+=("$r74")
+mkdir -p "$r74/src"
+printf 'moved\n' > "$r74/src/old.txt"
+git -C "$r74" add src/old.txt
+git -C "$r74" commit -q -m "add old"
+sha=$(git -C "$r74" rev-parse HEAD)
+branch=$(git -C "$r74" rev-parse --abbrev-ref HEAD)
+mv "$r74/src/old.txt" "$r74/src/new.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r74" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "half move" -- 'src\new.txt' 2>&1); rc=$?
+check "a backslash pathspec still refuses a half-committed move in its directory" \
+  1 'coverage-check\] REFUSED.*src/old\.txt' '\[commit\] committed' "$out" "$rc"
 
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"

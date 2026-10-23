@@ -81,6 +81,45 @@ export GIT_CONFIG_VALUE_0=false
 
 dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Windows caps one command line near 32K characters, and a commit of a few hundred generated files
+# names more paths than that. Every external call below that receives the whole path list either
+# stays on argv while it fits under this many characters or moves the list through a file
+# (git's --pathspec-from-file, the gate's --paths-from-file) or into argv-sized chunks. The env
+# override lets a test force those paths with a handful of files.
+argv_budget="${PREFILTER_ARGV_BUDGET:-12000}"
+
+# Scratch files for the path lists above; removed on any exit.
+work_dir=$(mktemp -d) || { printf 'ERROR: could not create a scratch directory\n'; exit 2; }
+trap 'rm -rf "$work_dir"' EXIT
+
+# True when the NUL-free total length of "$@" would not fit one command line.
+args_over_budget() {
+  local a total=0
+  for a in "$@"; do
+    total=$((total + ${#a} + 1))
+    [ "$total" -gt "$argv_budget" ] && return 0
+  done
+  return 1
+}
+
+# dirname/basename without a process per call: coverage and test-path checks visit every pathspec
+# file, and a fork each made a 1000-file commit spend minutes there. Results land in SP_DIR and
+# SP_BASE; they match MSYS dirname/basename for the repo-relative paths this script handles,
+# which treat a backslash as a separator too (`src\new.txt` is in `src`).
+split_path() {
+  local p="${1//\\//}"
+  while [ "${#p}" -gt 1 ] && [ "${p%/}" != "$p" ]; do p="${p%/}"; done
+  if [ "$p" = "/" ]; then SP_DIR=/; SP_BASE=/; return; fi
+  SP_BASE="${p##*/}"
+  case "$p" in
+    */*)
+      SP_DIR="${p%/*}"
+      while [ "${#SP_DIR}" -gt 1 ] && [ "${SP_DIR%/}" != "$SP_DIR" ]; do SP_DIR="${SP_DIR%/}"; done
+      [ -n "$SP_DIR" ] || SP_DIR=/ ;;
+    *) SP_DIR=. ;;
+  esac
+}
+
 repo_in=""
 expect_branch=""
 expect_sha=""
@@ -278,7 +317,28 @@ is_personal_repo() {
 # before calling this script is "live" per classify_path (it is in the index now), but if it
 # was never part of any commit it still has no HEAD baseline for a peer's lines to hide
 # inside - the exact case the untracked exemption exists for.
-file_has_head_blob() { git_c cat-file -e "HEAD:$1" 2>/dev/null; }
+# prime_head_blob_cache answers for a whole path list in one `cat-file --batch-check` process, so
+# a 1000-file commit in a shared checkout does not pay one process per file below.
+declare -A head_blob_cache
+file_has_head_blob() {
+  local c="${head_blob_cache["$1"]:-}"
+  [ -n "$c" ] && return $((1 - c))
+  git_c cat-file -e "HEAD:$1" 2>/dev/null
+}
+prime_head_blob_cache() {
+  local -a ps=() res=()
+  local p line i
+  for p in "$@"; do
+    case "$p" in *$'\n'*) return 0 ;; esac
+    ps+=("$p")
+  done
+  [ "${#ps[@]}" -gt 0 ] || return 0
+  while IFS= read -r line; do
+    case "$line" in *" missing") res+=(0) ;; *) res+=(1) ;; esac
+  done < <(printf 'HEAD:%s\n' "${ps[@]}" | git_c cat-file --batch-check 2>/dev/null)
+  [ "${#res[@]}" -eq "${#ps[@]}" ] || return 0
+  for i in "${!ps[@]}"; do head_blob_cache["${ps[i]}"]="${res[i]}"; done
+}
 
 # --own-since resolution: a shorthand for "every commit since <sha> is mine" (todo 978). Merged
 # into own_shas so overlap-check.sh's own-commit exclusion sees no difference between a hand-typed
@@ -302,6 +362,7 @@ fi
 # Per-hunk `@@ -a,b +c,d @@` -> own range c-(c+d-1), the exact hand conversion SKILL.md step 8
 # describes; a pure-deletion hunk (+c,0) contributes no new-file lines and is skipped, matching
 # foreign-hunk-check.sh's own treatment of that case.
+# Result lands in DERIVED rather than on stdout: a command substitution per file is a fork each.
 derive_own_ranges() {
   local diff_out="$1" ranges="" line rest newspec c d end
   while IFS= read -r line; do
@@ -314,7 +375,7 @@ derive_own_ranges() {
     end=$((c + d - 1))
     ranges+="${c}-${end},"
   done <<<"$diff_out"
-  printf '%s' "${ranges%,}"
+  DERIVED="${ranges%,}"
 }
 
 # Prints every hunk header plus its first changed line for one file - the per-hunk visibility a
@@ -459,7 +520,8 @@ for f in "${files[@]}"; do
 done
 
 # --- prefilter gate (step 5a) - never overridable ---
-pf_out=$(bash "$dir/prefilter-gate.sh" -C "$repo_root" "${files[@]}" 2>&1); pf_rc=$?
+printf '%s\0' "${files[@]}" > "$work_dir/files.nul"
+pf_out=$(bash "$dir/prefilter-gate.sh" -C "$repo_root" --paths-from-file "$work_dir/files.nul" 2>&1); pf_rc=$?
 if [ "$pf_rc" -eq 2 ]; then
   printf '[prefilter-gate] ERROR (could not run):\n%s\n' "$pf_out"
   exit 2
@@ -500,13 +562,77 @@ else
   printf '[head-guard] OK (HEAD matches expected %s)\n' "$expect_sha"
 fi
 
+# overlap-check.sh and foreign-hunk-check.sh each walk their file arguments one at a time, so a
+# list too long for one command line runs as argv-sized chunks, a few at a time because every file
+# costs several git processes, and the chunks' output is joined back in file order. A list that
+# fits one chunk (the usual case) runs inline, exactly as a direct call would.
+# usage: run_checker_chunks <script> <common-args array> <per-file --own spec array> <files array>
+# Sets CHECK_OUT (stdout+stderr, trailing newline trimmed) and CHECK_RC (0, 1 or 2).
+run_checker_chunks() {
+  local script="$1"
+  local -n _common="$2" _own="$3" _items="$4"
+  local n="${#_items[@]}" i c start=0 len=0 add jobs=0 max_jobs=4 a out rc
+  local -a starts=() ends=() args=()
+  for a in "${_common[@]}"; do len=$((len + ${#a} + 1)); done
+  len=$((len + ${#repo_root} + 8))
+  local base_len=$len
+  for ((i = 0; i < n; i++)); do
+    add=$(( ${#_items[i]} + ${#_own[i]} + 8 ))
+    if [ "$i" -gt "$start" ] && [ $((len + add)) -gt "$argv_budget" ]; then
+      starts+=("$start"); ends+=("$i"); start=$i; len=$base_len
+    fi
+    len=$((len + add))
+  done
+  starts+=("$start"); ends+=("$n")
+
+  build_chunk_args() {
+    args=(-C "$repo_root" "${_common[@]}")
+    local k
+    for ((k = $1; k < $2; k++)); do
+      [ -n "${_own[k]:-}" ] && args+=(--own "${_own[k]}")
+    done
+    for ((k = $1; k < $2; k++)); do args+=("${_items[k]}"); done
+  }
+
+  if [ "${#starts[@]}" -eq 1 ]; then
+    build_chunk_args "${starts[0]}" "${ends[0]}"
+    CHECK_OUT=$(bash "$dir/$script" "${args[@]}" 2>&1); CHECK_RC=$?
+    return
+  fi
+
+  local cdir="$work_dir/chunks-$script"
+  mkdir -p "$cdir"
+  for ((c = 0; c < ${#starts[@]}; c++)); do
+    build_chunk_args "${starts[c]}" "${ends[c]}"
+    (
+      out=$(bash "$dir/$script" "${args[@]}" 2>&1); rc=$?
+      printf '%s' "$out" > "$cdir/$c.out"
+      printf '%s' "$rc" > "$cdir/$c.rc"
+    ) &
+    jobs=$((jobs + 1))
+    if [ "$jobs" -ge "$max_jobs" ]; then wait -n; jobs=$((jobs - 1)); fi
+  done
+  wait
+  CHECK_OUT=""; CHECK_RC=0
+  for ((c = 0; c < ${#starts[@]}; c++)); do
+    rc=2; out=""
+    [ -f "$cdir/$c.rc" ] && rc=$(<"$cdir/$c.rc")
+    [ -f "$cdir/$c.out" ] && out=$(<"$cdir/$c.out")
+    [ -n "$out" ] && CHECK_OUT+="${CHECK_OUT:+$'\n'}$out"
+    if [ "$rc" -eq 2 ]; then CHECK_RC=2
+    elif [ "$rc" -ne 0 ] && [ "$CHECK_RC" -ne 2 ]; then CHECK_RC=1; fi
+  done
+}
+
 # --- unpushed-overlap check (hunk-level, own shas excluded) ---
 if [ "${#diffable_files[@]}" -eq 0 ]; then
   printf '[overlap-check] skipped (every pathspec file is an already-staged deletion)\n'
 else
   own_args=()
   [ -n "$own_shas" ] && own_args=(--own "$own_shas")
-  ov_out=$(bash "$dir/overlap-check.sh" -C "$repo_root" "${own_args[@]}" "${diffable_files[@]}" 2>&1); ov_rc=$?
+  no_own_specs=()
+  run_checker_chunks overlap-check.sh own_args no_own_specs diffable_files
+  ov_out=$CHECK_OUT; ov_rc=$CHECK_RC
   if [ "$ov_rc" -eq 2 ]; then
     printf '[overlap-check] ERROR (could not run):\n%s\n' "$ov_out"
     exit 2
@@ -598,14 +724,57 @@ multi_session=0
 [ "$session_marker_count" -gt 1 ] && multi_session=1
 
 # --- working-tree foreign-hunk check, own-ranges derived automatically unless declared ---
+# Untracked files' hunk headers taken from one diff instead of a `git diff --no-index` process per
+# file: with 16 or more regular untracked files they are registered intent-to-add in a throwaway
+# index and diffed against the empty tree, which prints the same new-file diffs without touching
+# the real index or writing objects. Only the diff --git and @@ lines are kept (content lines cannot
+# start with either, they carry a +/-/space prefix). A file the batch did not see, or any git
+# failure, leaves that file on the per-file call in the loop below.
+declare -A ut_have ut_hunks
+batch_untracked_diffs() {
+  local f line cur tree
+  local -a ut=()
+  local -A hdr_of=()
+  for f in "${diffable_files[@]}"; do
+    if [ "${class_of[$f]}" = "untracked" ] && [ -f "$repo_root/$f" ]; then
+      ut+=("$f")
+      hdr_of["diff --git a/$f b/$f"]="$f"
+    fi
+  done
+  [ "${#ut[@]}" -ge 16 ] || return 0
+  printf '%s\0' "${ut[@]}" > "$work_dir/ut.nul"
+  tree=$(git_c hash-object -t tree /dev/null 2>/dev/null) || return 0
+  GIT_LITERAL_PATHSPECS=1 GIT_INDEX_FILE="$work_dir/ut.index" git_c add -N --pathspec-from-file="$work_dir/ut.nul" --pathspec-file-nul >/dev/null 2>&1 || return 0
+  GIT_INDEX_FILE="$work_dir/ut.index" git_c diff "$tree" > "$work_dir/ut.diff" 2>/dev/null || return 0
+  cur=""
+  while IFS= read -r line; do
+    case "$line" in
+      "diff --git "*) cur="${hdr_of["$line"]:-}"; [ -n "$cur" ] && ut_have["$cur"]=1 ;;
+      "@@ "*) [ -n "$cur" ] && ut_hunks["$cur"]+="$line"$'\n' ;;
+    esac
+  done < <(grep -E '^(diff --git |@@ )' "$work_dir/ut.diff")
+}
+batch_untracked_diffs
+if [ "$multi_session" -eq 1 ] || [ -n "$own_since" ]; then
+  untracked_for_prime=()
+  for f in "${diffable_files[@]}"; do
+    [ "${class_of[$f]}" = "untracked" ] && untracked_for_prime+=("$f")
+  done
+  [ "${#untracked_for_prime[@]}" -ge 16 ] && prime_head_blob_cache "${untracked_for_prime[@]}"
+fi
+
 fh_files=()
-fh_own_args=()
+fh_own_specs=()
 derive_notes=""
 unverified_files=()
 declare -A unverified_diff
 for f in "${diffable_files[@]}"; do
   if [ "${class_of[$f]}" = "untracked" ]; then
-    diff_out=$(git_c diff --no-index -- /dev/null "$f" 2>/dev/null)
+    if [ -n "${ut_have["$f"]:-}" ]; then
+      diff_out="diff --git a/$f b/$f"$'\n'"${ut_hunks["$f"]:-}"
+    else
+      diff_out=$(git_c diff --no-index -- /dev/null "$f" 2>/dev/null)
+    fi
   elif [ -n "$own_since" ]; then
     # --own-since baseline (todo 978): everything this session's own commits (own_since..HEAD)
     # plus its current working tree changed for this file, not only the uncommitted delta.
@@ -618,7 +787,8 @@ for f in "${diffable_files[@]}"; do
     spec="${explicit_ranges[$f]%,}"
     derive_notes+="  - $f: caller-declared own-range $spec"$'\n'
   else
-    spec=$(derive_own_ranges "$diff_out")
+    derive_own_ranges "$diff_out"
+    spec=$DERIVED
     if [ -z "$spec" ]; then
       derive_notes+="  - $f: pure deletion, no new-file lines to own, skipped for this check"$'\n'
       continue
@@ -637,14 +807,16 @@ for f in "${diffable_files[@]}"; do
     fi
   fi
   fh_files+=("$f")
-  fh_own_args+=(--own "$f:$spec")
+  fh_own_specs+=("$f:$spec")
 done
 printf '[own-range] derivation:\n%s' "${derive_notes:-  (nothing to derive)$'\n'}"
 
 if [ "${#fh_files[@]}" -eq 0 ]; then
   printf '[foreign-hunk-check] skipped (no file has new-file content to check)\n'
 else
-  fh_out=$(bash "$dir/foreign-hunk-check.sh" -C "$repo_root" "${fh_own_args[@]}" "${fh_files[@]}" 2>&1); fh_rc=$?
+  no_common_args=()
+  run_checker_chunks foreign-hunk-check.sh no_common_args fh_own_specs fh_files
+  fh_out=$CHECK_OUT; fh_rc=$CHECK_RC
   if [ "$fh_rc" -eq 2 ]; then
     printf '[foreign-hunk-check] ERROR (could not run):\n%s\n' "$fh_out"
     exit 2
@@ -710,6 +882,14 @@ fi
 # rename detection already fed correctly for years.
 declare -A in_pathspec
 for f in "${files[@]}"; do in_pathspec["$f"]=1; done
+# Per-entry parts, computed once: check_coverage_hit compares every staged path against every
+# pathspec entry, so deriving them inside it costs staged-paths x pathspec-entries.
+ps_dir_of=(); ps_base_of=(); ps_dir_entries=()
+for f in "${files[@]}"; do
+  split_path "$f"; ps_dir_of+=("$SP_DIR"); ps_base_of+=("$SP_BASE")
+  fn="${f//\\//}"; fn="${fn%/}"
+  [ -d "$repo_root/$fn" ] && ps_dir_entries+=("$fn")
+done
 coverage_move=()
 coverage_other=()
 declare -A move_seen other_seen
@@ -734,7 +914,7 @@ check_coverage_hit() {
   #     blob before this commit touched it, so an unrelated deletion sharing its basename is not
   #     "half of a move" either - without this, editing skills/foo/SKILL.md while an unrelated
   #     skills/bar/SKILL.md deletion was pending anywhere else refused on basename alone.
-  local p="$1" is_del="$2" pd pb d f fn
+  local p="$1" is_del="$2" pd pb fn i
   [ -n "${in_pathspec[$p]:-}" ] && return
   # Directory-pathspec containment: a path equal to, or nested at any depth under,
   # a pathspec entry that is ITSELF a directory is already covered the way `git commit -- <dir>`
@@ -745,19 +925,16 @@ check_coverage_hit() {
   # style or slash-terminated directory pathspec; $p itself never needs this since it always comes
   # from git's own output, which is already forward-slash. Gated on -d so a FILE pathspec entry
   # (e.g. src/new.txt) never falls into this branch and still reaches the heuristic below.
-  for f in "${files[@]}"; do
-    fn="${f//\\//}"
-    fn="${fn%/}"
-    [ -d "$repo_root/$fn" ] || continue
+  for fn in "${ps_dir_entries[@]}"; do
     case "$p" in
       "$fn"|"$fn"/*) return ;;
     esac
   done
-  pd=$(dirname -- "$p")
-  pb=$(basename -- "$p")
-  for f in "${files[@]}"; do
-    d=$(dirname -- "$f")
-    if [ "$d" = "$pd" ] || { [ "$is_del" = "1" ] && [ "$(basename -- "$f")" = "$pb" ] && ! file_has_head_blob "$f"; }; then
+  split_path "$p"
+  pd=$SP_DIR
+  pb=$SP_BASE
+  for i in "${!files[@]}"; do
+    if [ "${ps_dir_of[i]}" = "$pd" ] || { [ "$is_del" = "1" ] && [ "${ps_base_of[i]}" = "$pb" ] && ! file_has_head_blob "${files[i]}"; }; then
       if [ -z "${move_seen[$p]:-}" ]; then
         move_seen["$p"]=1
         coverage_move+=("$p")
@@ -835,7 +1012,8 @@ is_source_file() {
 }
 is_test_path() {
   local base
-  base=$(basename -- "$1")
+  split_path "$1"
+  base=$SP_BASE
   # *-probe.* / *-unit.*: countoff's own convention, a repo that keeps every test
   # under verify/ as *-probe.cjs and *-unit.mjs instead of any basename pattern already covered.
   case "$base" in
@@ -938,11 +1116,20 @@ if [ "$local_only_repo" -eq 1 ]; then
   fi
 fi
 
+# Rust's idiomatic test lives in the same file as the code, so no separate test path ever appears
+# in the pathspec. A .rs file whose current working-tree content opens a #[cfg(test)] block covers
+# itself and nothing else. The match is line-anchored, so a `//` mention does not count, but a line
+# inside a /* */ block comment or a raw string does: a presence check, not a parse.
+rust_has_inline_tests() {
+  case "$1" in *.rs) ;; *) return 1 ;; esac
+  [ -f "$repo_root/$1" ] && grep -qE '^[[:space:]]*#\[cfg\(test\)\]' "$repo_root/$1" 2>/dev/null
+}
+
 has_source=0
 has_test=0
 for f in "${files[@]}"; do
   is_test_path "$f" && has_test=1
-  is_source_file "$f" && has_source=1
+  is_source_file "$f" && ! rust_has_inline_tests "$f" && has_source=1
 done
 if [ "$has_source" -eq 1 ] && [ "$has_test" -eq 0 ]; then
   recent_local_test=""
@@ -1036,19 +1223,39 @@ if [ "$has_index_removed" -eq 1 ]; then
     printf '[commit] ERROR: update-ref failed to advance %s to %s\n' "$actual_branch" "$new_commit"
     exit 2
   fi
-  git_c reset -- "${files[@]}" >/dev/null 2>&1
+  if args_over_budget "${files[@]}"; then
+    git_c reset --pathspec-from-file="$work_dir/files.nul" --pathspec-file-nul >/dev/null 2>&1
+  else
+    git_c reset -- "${files[@]}" >/dev/null 2>&1
+  fi
   printf '[commit] committed\n'
   git_c rev-parse HEAD
 else
+  # One `git add` for every untracked entry instead of one process each; the per-entry loop only
+  # runs after a failure, to name the entry git refused.
+  to_stage=()
   for f in "${files[@]}"; do
-    if [ "${class_of[$f]}" = "untracked" ]; then
-      if ! git_c add -- "$f" >/dev/null 2>&1; then
-        printf '[commit] ERROR: could not stage untracked file %s\n' "$f"
-        exit 2
-      fi
-    fi
+    [ "${class_of[$f]}" = "untracked" ] && to_stage+=("$f")
   done
-  if ! commit_out=$(git_c commit "${commit_msg_args[@]}" -- "${files[@]}" 2>&1); then
+  if [ "${#to_stage[@]}" -gt 0 ]; then
+    printf '%s\0' "${to_stage[@]}" > "$work_dir/stage.nul"
+    # A transient failure (a peer holding index.lock) can fail the batch and still let every
+    # per-entry add succeed; the commit then goes ahead rather than leaving them staged.
+    if ! GIT_LITERAL_PATHSPECS=1 git_c add --pathspec-from-file="$work_dir/stage.nul" --pathspec-file-nul >/dev/null 2>&1; then
+      for f in "${to_stage[@]}"; do
+        if ! git_c add -- "$f" >/dev/null 2>&1; then
+          printf '[commit] ERROR: could not stage untracked file %s\n' "$f"
+          exit 2
+        fi
+      done
+    fi
+  fi
+  if args_over_budget "${files[@]}"; then
+    commit_out=$(git_c commit "${commit_msg_args[@]}" --pathspec-from-file="$work_dir/files.nul" --pathspec-file-nul 2>&1); commit_rc=$?
+  else
+    commit_out=$(git_c commit "${commit_msg_args[@]}" -- "${files[@]}" 2>&1); commit_rc=$?
+  fi
+  if [ "$commit_rc" -ne 0 ]; then
     printf '[commit] ERROR: git commit failed:\n%s\n' "$commit_out"
     exit 2
   fi
