@@ -5,11 +5,13 @@ Run: python skills/preview/test_build_gallery.py   (exit 0 = all pass)
 Todo 1174: the flat gallery had no pairing, per-item notes or WebP step, so a 14-item keep/drop
 sweep was hand-built each time. These cases drive the real script as a subprocess against
 synthetic PNGs written with zlib (no Pillow, so it runs on CI's bare Windows runner). Nothing
-here POSTs: --post and --check need the live Conductor daemon, so the post-response URL logic is
-proven through render_url_from_response() alone.
+here POSTs: --post and --check need the live Conductor daemon, so the URL logic is proven through
+render_url_from_response() and an in-process main() run with the network and chromium calls stubbed.
 """
 
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import re
@@ -253,10 +255,45 @@ def test_render_url_helper():
         mod.render_url("zz9") == f"{mod.RENDER_CHECK_ENDPOINT.rstrip('/')}/zz9",
         "render_url defaults to the render-check endpoint",
     )
-    # The --check path is untestable without a live daemon plus chromium, so prove it shares the
-    # helper structurally: the endpoint join must be spelled out in exactly one place.
-    source = SCRIPT.read_text(encoding="utf-8")
-    check(source.count(".rstrip('/')") == 1, "the render URL is formed in one place only", str(source.count(".rstrip('/')")))
+
+
+def test_both_url_sites_go_through_render_url(root):
+    """Runs main() in-process with the daemon POST, the post-preview POST and the chromium load
+    stubbed, and with render_url replaced by a recorder. A call site that hand-builds its URL
+    instead of calling render_url would hand the HTTP/chromium layer a URL the recorder never
+    minted, so the assertions below fail for any spelling of the join."""
+    mod = load_module()
+    page = root / "page.html"
+    page.write_text("<!doctype html><title>t</title>", encoding="utf-8")
+
+    minted = []
+
+    def recording_render_url(render_id, base=None):
+        url = f"stub-url://{render_id}"
+        minted.append(url)
+        return url
+
+    loaded = []
+    printed = io.StringIO()
+    saved = (mod.render_url, mod.post_render_check, mod.check_rendered_page, mod.post_preview, sys.argv)
+    mod.render_url = recording_render_url
+    mod.post_render_check = lambda html_text, endpoint=None: {"id": "chk1"}
+    mod.check_rendered_page = lambda url, *a, **kw: (loaded.append(url), (True, "PAGE_OK"))[1]
+    mod.post_preview = lambda *a, **kw: (200, '{"id": "post1"}')
+    sys.argv = ["build_gallery.py", str(page), "--check", "--post"]
+    try:
+        with contextlib.redirect_stdout(printed):
+            mod.main()
+    except SystemExit as e:
+        check(False, "main() with --check --post runs offline to the end", f"SystemExit({e.code}) out={printed.getvalue()!r}")
+    finally:
+        mod.render_url, mod.post_render_check, mod.check_rendered_page, mod.post_preview, sys.argv = saved
+
+    out = printed.getvalue()
+    check(loaded == ["stub-url://chk1"], "--check loads the URL render_url minted for the check id", f"loaded={loaded}")
+    check("check OK: stub-url://chk1" in out, "--check reports the URL render_url minted", out)
+    check("render-url: stub-url://post1" in out, "the post-response URL is the one render_url minted", out)
+    check(minted == ["stub-url://chk1", "stub-url://post1"], "render_url served exactly the two call sites", str(minted))
 
 
 def test_duplicate_slug_ids_are_unique(root):
@@ -320,6 +357,8 @@ def main():
         test_flat_single_oversize_file_is_an_error(root)
     test_render_url()
     test_render_url_helper()
+    with tempfile.TemporaryDirectory() as tmp:
+        test_both_url_sites_go_through_render_url(Path(tmp))
     if failures:
         print(f"\n{len(failures)} failure(s)")
         return 1
