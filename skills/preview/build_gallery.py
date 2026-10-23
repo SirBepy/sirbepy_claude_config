@@ -250,10 +250,27 @@ def build_manifest_html(items, title, budget_bytes, convert=convert_to_webp):
     over_budget = False
     sections = []
     img_idx = 0
+    taken_ids = set()
     with tempfile.TemporaryDirectory() as tmp_dir:
         for item in items:
+            # Assigned for every item in manifest order, before any budget drop, so an item's
+            # anchor does not shift with the budget.
+            base_id = f"item-{slugify(item['id'])}"
+            section_id, n = base_id, 1
+            while section_id in taken_ids:
+                n += 1
+                section_id = f"{base_id}-{n}"
+            taken_ids.add(section_id)
+
             encoded = [(cap, *convert(p, tmp_dir)) for cap, p in item["shots"]]
             size = sum(len(b) for _, _, b in encoded)
+            if size > budget_bytes:
+                # The dropped-items follow-up moves leftovers into a second manifest; an item
+                # that cannot fit even alone would be dropped again every rerun, never converging.
+                raise ManifestError(
+                    f"item '{item['id']}': its shots alone are {size} bytes, over the whole "
+                    f"{budget_bytes}-byte budget; raise --budget-mb or use smaller shots"
+                )
             if over_budget or used + size > budget_bytes:
                 dropped.append(item["id"])
                 over_budget = True
@@ -272,7 +289,7 @@ def build_manifest_html(items, title, budget_bytes, convert=convert_to_webp):
                 img_idx += 1
             note = f'<p class="note">{html_mod.escape(item["note"])}</p>' if item["note"] else ""
             sections.append(
-                f'<section class="item" id="item-{html_mod.escape(slugify(item["id"]))}">'
+                f'<section class="item" id="{section_id}">'
                 f'<h2><span class="badge">{len(included)}</span>{html_mod.escape(item["title"])}</h2>'
                 f'{note}<div class="shots">{"".join(figs)}</div></section>'
             )
@@ -292,6 +309,12 @@ def build_manifest_html(items, title, budget_bytes, convert=convert_to_webp):
     return page, included, dropped
 
 
+def render_url(render_id, base=RENDER_CHECK_ENDPOINT):
+    """/hooks/preview-render/<id> serves a posted page outside the panel; the one place that URL
+    is formed, shared by --check and the post-response iframe URL."""
+    return f"{base.rstrip('/')}/{render_id}"
+
+
 def render_url_from_response(status, body, base=RENDER_CHECK_ENDPOINT):
     """The inline-card iframe URL for a successful POST, or None. The daemon answers 200
     {"id": ...}; /hooks/preview-render/<id> serves that same page outside the panel."""
@@ -301,7 +324,7 @@ def render_url_from_response(status, body, base=RENDER_CHECK_ENDPOINT):
         render_id = json.loads(body).get("id")
     except (json.JSONDecodeError, AttributeError):
         return None
-    return f"{base.rstrip('/')}/{render_id}" if render_id else None
+    return render_url(render_id, base) if render_id else None
 
 
 def default_slug(paths):
@@ -448,7 +471,11 @@ def main():
         title = args.title or manifest_title or manifest_path.stem.replace("-", " ").replace("_", " ")
         slug = args.slug or slugify(manifest_path.stem)
         budget_bytes = int(args.budget_mb * 1024 * 1024)
-        html_text, included, dropped = build_manifest_html(items, title, budget_bytes)
+        try:
+            html_text, included, dropped = build_manifest_html(items, title, budget_bytes)
+        except ManifestError as e:
+            print(f"error: {e}", file=sys.stderr)
+            sys.exit(1)
         out_path = Path(args.out) if args.out else manifest_path.parent / f"{slug}-gallery.html"
         out_path.write_text(html_text, encoding="utf-8")
         print(f"out: {out_path.resolve()}")
@@ -505,19 +532,19 @@ def main():
         if not render_id:
             print(f"check FAILED: render-check endpoint returned no id: {render_resp}", file=sys.stderr)
             sys.exit(1)
-        render_url = f"{RENDER_CHECK_ENDPOINT.rstrip('/')}/{render_id}"
-        ok, message = check_rendered_page(render_url)
+        check_url = render_url(render_id)
+        ok, message = check_rendered_page(check_url)
         if not ok:
             print(f"check FAILED: {message}", file=sys.stderr)
             sys.exit(1)
-        print(f"check OK: {render_url}")
+        print(f"check OK: {check_url}")
 
     if args.post:
         status, resp_body = post_preview(html_text, title, slug)
         print(f"HTTP {status}: {resp_body}")
-        render_url = render_url_from_response(status, resp_body)
-        if render_url:
-            print(f"render-url: {render_url}")
+        posted_url = render_url_from_response(status, resp_body)
+        if posted_url:
+            print(f"render-url: {posted_url}")
 
 
 if __name__ == "__main__":

@@ -241,6 +241,60 @@ def test_render_url():
     check(mod.render_url_from_response(None, "refused", base) is None, "a refused connection yields no URL")
 
 
+def test_render_url_helper():
+    mod = load_module()
+    base = "http://127.0.0.1:27182/hooks/preview-render"
+    check(hasattr(mod, "render_url"), "render_url helper exists")
+    if not hasattr(mod, "render_url"):
+        return
+    check(mod.render_url("abc123", base) == f"{base}/abc123", "render_url joins base and id")
+    check(mod.render_url("abc123", base + "/") == f"{base}/abc123", "render_url tolerates a trailing slash")
+    check(
+        mod.render_url("zz9") == f"{mod.RENDER_CHECK_ENDPOINT.rstrip('/')}/zz9",
+        "render_url defaults to the render-check endpoint",
+    )
+    # The --check path is untestable without a live daemon plus chromium, so prove it shares the
+    # helper structurally: the endpoint join must be spelled out in exactly one place.
+    source = SCRIPT.read_text(encoding="utf-8")
+    check(source.count(".rstrip('/')") == 1, "the render URL is formed in one place only", str(source.count(".rstrip('/')")))
+
+
+def test_duplicate_slug_ids_are_unique(root):
+    d = root / "slugs"
+    d.mkdir()
+    write_png(d / "a.png", 1)
+    shot = [["Before", "a.png"]]
+    ids = ["a b", "a-b", "A B", "a-b-2", "other"]
+    manifest = d / "m.json"
+    manifest.write_text(
+        json.dumps([{"id": i, "title": f"T{n}", "shots": shot} for n, i in enumerate(ids)]), encoding="utf-8"
+    )
+    proc = run("--manifest", str(manifest), "--out", str(d / "o.html"))
+    check(proc.returncode == 0, "ids that slugify alike still build", proc.stderr)
+    html = (d / "o.html").read_text(encoding="utf-8") if (d / "o.html").exists() else ""
+    found = re.findall(r'<section class="item" id="([^"]+)"', html)
+    check(len(found) == len(ids) and len(set(found)) == len(found), "every section has a unique html id", str(found))
+    check(found[:3] == ["item-a-b", "item-a-b-2", "item-a-b-3"], "collisions take -2, -3 in manifest order", str(found))
+    check(found[3:] == ["item-a-b-2-2", "item-other"], "a later literal slug does not reuse a taken id", str(found))
+
+
+def test_single_oversize_item_is_an_error(root):
+    d = root / "oversize"
+    d.mkdir()
+    manifest = make_manifest(d, 2)
+    # A budget far below any one item: the old behaviour dropped everything and printed a
+    # follow-up whose rerun would drop the same item again, forever.
+    proc = run("--manifest", str(manifest), "--budget-mb", "0.0001")
+    check(proc.returncode == 1, "an item larger than the whole budget exits 1", f"rc={proc.returncode} out={proc.stdout!r}")
+    check(
+        "fix-1" in proc.stderr and "budget" in proc.stderr,
+        "the error names the item and the budget",
+        proc.stderr,
+    )
+    check("follow-up:" not in proc.stdout, "no follow-up hint that could never converge", proc.stdout)
+    check(not (d / "sweep-gallery.html").exists(), "no half-built gallery is written")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -250,7 +304,10 @@ def main():
         test_validation_errors(root)
         test_webp_conversion(root)
         test_relative_paths_and_escaping(root)
+        test_duplicate_slug_ids_are_unique(root)
+        test_single_oversize_item_is_an_error(root)
     test_render_url()
+    test_render_url_helper()
     if failures:
         print(f"\n{len(failures)} failure(s)")
         return 1
