@@ -31,6 +31,12 @@ find /System/Library/AssetsV2 -maxdepth 1 -name "*iOSSimulator*" 2>/dev/null | x
 
 Avoid `sudo du` - it blocks on a password prompt in this harness.
 
+In-use probe, run at scan time before listing any group as a candidate: `pgrep -fl 'ollama|python|java|node|Simulator|Xcode'` plus `ollama ps` if present, then match each candidate path (a venv, `~/.ollama`, a model cache, `~/Library/Developer/CoreSimulator`) against those processes' command lines (`ps -axo pid,command | grep <path-fragment>`). A match marks the group "in use": list it as such, never as a deletable. `gate.md` ("Mtime alone is not last-use evidence") holds the full check; this step runs it at scan time rather than at card time.
+
+### Breakdown chart (after the scans, before any command suggestion)
+
+Before offering any delete command, show where the space goes: group findings into regenerable / re-downloadable / personal / system plus an unattributed remainder (used space minus the sum), render with the `dataviz` skill (one hue per kind, GB printed on each bar, tooltips, table toggle, "in use" groups outlined and labelled), and push it via `show_preview` or `/preview` under slug `mac-storage-map`. Only then ask which groups Joe wants commands for. Worked example on Windows: `windows.md`, "Breakdown chart".
+
 ### Second-pass drill-down
 
 After the initial scan, drill into the **top-3 home dirs exceeding 2GB**:
