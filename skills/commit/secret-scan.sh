@@ -48,6 +48,7 @@ BEGIN {
     exit 1
   }
 }
+/^diff --git / { f="?"; skip=0; next }
 /^\+\+\+ b\// {
   f=substr($0,7)
   skip = (f ~ /\.env\.example$/ || f ~ /\.md$/ || (f in ex))
@@ -81,8 +82,8 @@ BEGIN {
 '
 
 if [ "${1:-}" = "--range" ]; then
-  diff_out=$(git diff "$2" 2>&1) || { printf 'ERROR: git diff --range %s failed: %s\n' "$2" "$diff_out"; exit 1; }
-  changed=(); while IFS= read -r n; do [ -n "$n" ] && changed+=("$n"); done < <(git diff --name-only "$2" 2>/dev/null)
+  diff_out=$(git_c diff "$2" 2>&1) || { printf 'ERROR: git diff --range %s failed: %s\n' "$2" "$diff_out"; exit 1; }
+  changed=(); while IFS= read -r n; do [ -n "$n" ] && changed+=("$n"); done < <(git_c diff --name-only "$2" 2>/dev/null)
   exempt=$(binary_list ${changed+"${changed[@]}"})
   exempt_file=$(write_exempt_file "$exempt")
   printf '%s\n' "$diff_out" | awk -v PATFILE="$patfile" -v EXEMPTFILE="$exempt_file" "$AWK" | sort

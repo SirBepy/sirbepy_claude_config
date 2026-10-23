@@ -39,6 +39,7 @@ exempt_list() {
 
 AWK='
 BEGIN { while ((getline row < EXEMPTFILE) > 0) if (row != "") ex[row]=1; close(EXEMPTFILE) }
+/^diff --git / { f="?"; skip=0; next }
 /^\+\+\+ b\// { f=substr($0,7); skip=(f in ex); next }
 /^@@/ { match($0, /\+[0-9]+/); ln=substr($0, RSTART+1, RLENGTH-1)+0; next }
 /^\+/ && !/^\+\+\+/ { l=substr($0,2); if (!skip && index(l, ED) > 0) printf "%s:%d\n", f, ln; ln++; next }
@@ -47,8 +48,8 @@ BEGIN { while ((getline row < EXEMPTFILE) > 0) if (row != "") ex[row]=1; close(E
 '
 
 if [ "${1:-}" = "--range" ]; then
-  diff_out=$(git diff "$2" 2>&1) || { printf 'ERROR: git diff --range %s failed: %s\n' "$2" "$diff_out"; exit 1; }
-  changed=(); while IFS= read -r n; do [ -n "$n" ] && changed+=("$n"); done < <(git diff --name-only "$2" 2>/dev/null)
+  diff_out=$(git_c diff "$2" 2>&1) || { printf 'ERROR: git diff --range %s failed: %s\n' "$2" "$diff_out"; exit 1; }
+  changed=(); while IFS= read -r n; do [ -n "$n" ] && changed+=("$n"); done < <(git_c diff --name-only "$2" 2>/dev/null)
   exempt=$(printf '%s\n%s' "$(exempt_list ${changed+"${changed[@]}"})" "$(binary_list ${changed+"${changed[@]}"})")
   exempt_file=$(write_exempt_file "$exempt")
   printf '%s\n' "$diff_out" | awk -v ED="$ED" -v EXEMPTFILE="$exempt_file" "$AWK" | sort
