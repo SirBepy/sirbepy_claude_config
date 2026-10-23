@@ -123,8 +123,16 @@ OUTBOUND-DRAFT>>>
      action the reader would take; without one it is not a FAIL.
    - NOTE: a format or phrasing difference from precedent that cannot be misread. Report it; it
      does not fail the draft.
-4. Verdict: PASS only if every factual claim is CONFIRMED and step 3 found no FAIL. Any WRONG,
-   UNVERIFIABLE, or step-3 FAIL is a FAIL. End your report with exactly one of these
+4. Source trace (tickets only): list every action item and acceptance criterion in the draft and
+   the source the draft cites for it (Figma text, product doc, the dev's words, an existing
+   ticket line); check the cited text yourself where you can. FAIL when an item has no cited
+   source, or when it widens its source (more callers, routes, actors or states than the source
+   names), since a reader would build and ship the unrequested behavior. The same item framed as a
+   question under a Questions heading is fine. A "BE lacks guard X" claim you can disprove from the
+   tracked branch is WRONG: if existing role guards or self-action blocks already make the state
+   unreachable, say so with file:line.
+5. Verdict: PASS only if every factual claim is CONFIRMED and steps 3 and 4 found no FAIL. Any WRONG,
+   UNVERIFIABLE, step-3 FAIL, or step-4 FAIL is a FAIL. End your report with exactly one of these
    lines, alone on its own line:
 OUTBOUND-VERDICT: PASS
 OUTBOUND-VERDICT: FAIL
@@ -144,6 +152,17 @@ OUTBOUND-VERDICT: FAIL
   which claims are disputed, what each verifier's receipt says, and the text as it stands.
 - **Opt-in cap of 7:** only when Joe asks for more rounds ("keep going until it doesn't fail"),
   keep autofixing up to 7 rounds, stopping at the first round where all 3 PASS. Never the default.
+
+## Keeping the verify loop short
+
+Converged practice (zng-biller, 2026-10-21/22, a batch of 3 long tickets took 4 failed rounds):
+
+- One ticket per round, about 20 lines. Delete speculative and design-opinion sentences.
+- Date every absence claim: "no BE ticket found as of <date> (title search)".
+- Point verifiers at local Figma PNG renders, not the rate-limited Figma API.
+- Apply all of a round's findings in ONE edit before the next round; 2 rounds then sufficed.
+- Fill the template once into a file and reuse that text for all 3 dispatches and later rounds.
+- A newly merged PR or ticket makes text stale: re-check claims about moving state before round 1.
 
 ## When the hook itself is broken
 
