@@ -207,8 +207,10 @@ to stop running commands and report facts it already had, which is the orchestra
 by proxy anyway (todo 335).
 
 **Parallelism.** Independent chunks fan out concurrently; anything that touches the same files
-runs sequentially, or each builder gets its own worktree. Never let two builders write the same
-file in parallel. Every builder running concurrently with another in the same tree uses the
+runs sequentially, or each builder gets its own worktree. A dispatch with `isolation: "worktree"`
+may start at the remote's tip, not local HEAD (a repo with many unpushed commits can be 100+
+behind), so it fills the preamble's `<WORKTREE_LINE>` to fast-forward onto the orchestrator's branch
+first. Never let two builders write the same file in parallel. Every builder running concurrently with another in the same tree uses the
 `Leave all changes unstaged` staging line (not the default stage-only variant) and names its own
 changed files in its report; the orchestrator commits each chunk by that reported file list, never
 by `git diff --cached`, which cannot tell one builder's staged files from another's already sitting
