@@ -84,10 +84,11 @@ _SECRETS = None
 
 # Part of every session's index signature: raising it makes the next `update` re-extract
 # sessions already indexed, so a redaction fix also cleans entries written before it.
-REDACTION_VERSION = 2
+REDACTION_VERSION = 3
 # A line ending in a password-ish label, optionally bold, e.g. "**2.** Log in. Password:".
 LABEL_RE = re.compile(r"\b(?:password|passwort|pin|lozinka)\s*(?:\*\*|__)?\s*:\s*(?:\*\*|__)?\s*$", re.I)
 LABELLED_VALUE_MAX = 64
+FENCE_OPEN_RE = re.compile(r"^[\s>]*(?:`{3,}|~{3,})[\w+.-]*\s*$")
 
 
 def redact(text: str) -> str:
@@ -102,6 +103,10 @@ def redact(text: str) -> str:
             # The label's value is the first following line that has content once blockquote
             # markers, backticks and code fences are peeled off; chat renders it on its own line.
             core = re.sub(r"^[\s>]+", "", line).strip(" \t`")
+            # A fence opener carries a language tag ("```text") that would otherwise pass for
+            # the value and leave the real one on the next line unredacted.
+            if FENCE_OPEN_RE.match(line):
+                core = ""
             if core:
                 after_label = False
                 if len(core) <= LABELLED_VALUE_MAX and not re.search(r"\s", core):

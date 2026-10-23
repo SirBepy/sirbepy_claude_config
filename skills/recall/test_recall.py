@@ -330,6 +330,10 @@ def main():
               "a bold list-item label with a backticked value is redacted")
         check(fake not in recall.redact(f"PIN:\n```\n{fake}\n```"),
               "a value inside a code fence under the label is redacted")
+        for tag in ("text", "bash", "~~~"):
+            fence = tag if tag == "~~~" else f"```{tag}"
+            check(fake not in recall.redact(f"Password:\n{fence}\n{fake}\n```"),
+                  f"a value inside a {tag}-tagged fence under the label is redacted")
         prose = recall.redact("Password:\nthis next line is ordinary prose")
         check(prose == "Password:\nthis next line is ordinary prose", "prose with spaces after a label stays intact")
         unlabelled = recall.redact(f"Log in here\n\n> {fake}")
