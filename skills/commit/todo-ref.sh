@@ -44,14 +44,7 @@ else
   parse_repo_arg "$@"
   set -- "${PREFILTER_ARGS[@]}"
   {
-    git_c diff HEAD -- "$@"
-    git_c ls-files --others --exclude-standard -z -- "$@" | while IFS= read -r -d '' f; do
-      out=$(git_c diff --no-index -- /dev/null "$f" 2>&1); rc=$?
-      if [ "$rc" -gt 1 ]; then
-        printf 'ERROR: could not inspect untracked file %s (git diff --no-index exit %d): %s\n' "$f" "$rc" "$out"
-      else
-        printf '%s\n' "$out"
-      fi
-    done
+    git_c_paths diff HEAD -- "$@"
+    untracked_diffs "$@"
   } | awk "$AWK" | sort
 fi

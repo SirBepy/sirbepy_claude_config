@@ -6,7 +6,10 @@
 # fix-and-continue, not a STOP like secret-scan.sh.
 
 # Usage: prefilter-gate.sh [-C <repo>|--repo <repo>] <file> [<file> ...]   working-tree mode
+#        prefilter-gate.sh [-C <repo>] --paths-from-file <list>            same, the paths NUL-separated in a file
 #        prefilter-gate.sh --range <base>                                  range mode, forwarded as-is
+# --paths-from-file exists for a path list too long for one Windows command line (~32K characters);
+# the wrapped scripts get the same list the same way once it outgrows PREFILTER_ARGV_BUDGET.
 # Exit 0 = clean, 1 = a prefilter flagged something, 2 = could not run (bad path, no repo found).
 set -uo pipefail
 
@@ -22,8 +25,37 @@ export GIT_CONFIG_KEY_0=core.safecrlf
 export GIT_CONFIG_VALUE_0=false
 
 dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+. "$dir/_prefilter-lib.sh" || { printf 'ERROR: missing prefilter lib: %s/_prefilter-lib.sh\n' "$dir"; exit 2; }
 status=0
 repo=""
+
+# run_prefilter <script> <repo or ""> <paths...>: one wrapped script over the paths, as argv while
+# that fits and through --paths-from-file once it would not.
+run_prefilter() {
+  local script="$1" target="$2" pf rc
+  shift 2
+  local pre=()
+  [ -n "$target" ] && pre=(--repo "$target")
+  if ! paths_over_budget "$@"; then
+    bash "$dir/$script" "${pre[@]}" "$@"
+    return
+  fi
+  pf=$(mktemp) || { printf 'ERROR: could not create a temporary path list\n'; return 2; }
+  printf '%s\0' "$@" > "$pf"
+  bash "$dir/$script" "${pre[@]}" --paths-from-file "$pf"
+  rc=$?
+  rm -f "$pf"
+  return $rc
+}
+
+# Reads a leading `--paths-from-file <list>` into the positional parameters. Inline at both call
+# sites below because `set --` inside a function would not reach the script's own "$@".
+if [ "${1:-}" = "--paths-from-file" ]; then
+  mapfile -d '' -t _pf_paths < "${2:-/dev/null}"
+  shift 2
+  set -- "${_pf_paths[@]}" "$@"
+fi
 
 if [ "${1:-}" = "-C" ] || [ "${1:-}" = "--repo" ]; then
   repo="${2:-}"
@@ -31,6 +63,11 @@ if [ "${1:-}" = "-C" ] || [ "${1:-}" = "--repo" ]; then
   if ! git -C "$repo" rev-parse --show-toplevel >/dev/null 2>&1; then
     printf 'ERROR: %s is not a git repository\n' "$repo"
     exit 2
+  fi
+  if [ "${1:-}" = "--paths-from-file" ]; then
+    mapfile -d '' -t _pf_paths < "${2:-/dev/null}"
+    shift 2
+    set -- "${_pf_paths[@]}" "$@"
   fi
 elif [ "${1:-}" != "--range" ] && [ $# -gt 0 ]; then
   # A path inside a submodule resolves to the SUBMODULE's own root, not the parent's, so
@@ -136,9 +173,9 @@ elif [ "${1:-}" != "--range" ] && [ $# -gt 0 ]; then
     for r in "${rels[@]}"; do [ -n "$r" ] && paths+=("$r"); done
     for script in comment-tense.sh em-dash.sh secret-scan.sh todo-ref.sh; do
       if [ "$repo_key" = "$cwd_repo" ]; then
-        out=$(bash "$dir/$script" "${paths[@]}")
+        out=$(run_prefilter "$script" "" "${paths[@]}")
       else
-        out=$(bash "$dir/$script" --repo "$repo_key" "${paths[@]}")
+        out=$(run_prefilter "$script" "$repo_key" "${paths[@]}")
       fi
       rc=$?
       if [ -n "$out" ] || [ "$rc" -ne 0 ]; then
@@ -157,11 +194,7 @@ elif [ "${1:-}" != "--range" ] && [ $# -gt 0 ]; then
 fi
 
 for script in comment-tense.sh em-dash.sh secret-scan.sh todo-ref.sh; do
-  if [ -n "$repo" ]; then
-    out=$(bash "$dir/$script" --repo "$repo" "$@")
-  else
-    out=$(bash "$dir/$script" "$@")
-  fi
+  out=$(run_prefilter "$script" "$repo" "$@")
   rc=$?
   if [ -n "$out" ] || [ "$rc" -ne 0 ]; then
     printf '=== %s ===\n%s\n' "$script" "$out"
