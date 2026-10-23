@@ -24,3 +24,7 @@ an over-budget single item a clear error. Extend `skills/preview/test_build_gall
 ## Acceptance
 
 Both call sites use the helper; tests cover duplicate ids and a single over-budget item.
+
+## Notes
+
+- Done by /loop-todos cycle 2 on 2026-10-23: render_url() helper used by both call sites, section ids deduped with -2/-3 suffixes in manifest order, a single item over the whole budget is now a ManifestError (exit 1) so the follow-up converges. 51 PASS in test_build_gallery.py.
