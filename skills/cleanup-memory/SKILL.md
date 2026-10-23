@@ -105,10 +105,14 @@ Do NOT write or move anything in this step.
 ## Step 4 - Staleness / dead-reference triage
 
 Cap the deep pass at 60 files to bound subagent prompt size - overflow gets the shallow pass
-below. Sort candidates by mtime ascending (least-recently modified first) so a different set
-rotates through each run. After a file's deep pass, touch it (e.g. a trivial no-op edit to its
-`description` line, or append a `<!-- last-deep-checked: YYYY-MM-DD -->` comment) so it rotates to
-the back of the queue next run.
+below. Sort candidates by their date in the sidecar log `<memory-dir>/.deep-check-log` ascending
+(files with no entry first, ties broken by mtime ascending, then filename) so a different set
+rotates through each run. The log is one `<filename><TAB><YYYY-MM-DD>` line per file. Never touch a
+memory file to mark it checked: Step 6.5 sorts the index by file mtime, so a no-op edit or marker
+comment would turn every deep-checked file into a "Recent" entry and bury the files actually
+written this week. Record the files this pass deep-checked (the date is today's) and let Step 6 write
+them to the log, since Step 6 is the only step that mutates the memory directory. The log has no
+`.md` extension, so `reachability.mjs` never counts it as a memory (it lists only `*.md` files).
 
 **Small-corpus branch.** When the full candidate set from Step 1 is at or under `INLINE_MAX` (10)
 files, skip the subagent dispatch entirely: the orchestrator performs the deep pass itself,
@@ -212,6 +216,11 @@ reorder), then proceed - same pattern `/commit` already uses for its own shared-
 are MCP tools that may not exist in a plain terminal session; if either is unavailable, skip this
 check silently.
 
+**Rotation log.** After the backup, update `<memory-dir>/.deep-check-log` (Step 4): set each file
+the Step 4 deep pass covered to today's date, keep the other lines, and drop lines whose file no
+longer exists in the directory. Write it in one pass, never by touching the memory files
+themselves. Runs even when the apply set is empty, otherwise the next run re-checks the same files.
+
 For each archive/drop item, in this exact order:
 
 1. Move the file to `<memory-dir>/archive/` (never plain-delete).
@@ -261,8 +270,11 @@ the two sorted sets for equality says nothing about it, and a stale rewrite woul
 
 1. **Snapshot first.** Read `MEMORY.md` at the START of this step and record its line set
    (`before`).
-2. **Section-heading guard.** If `before` contains two or more `## ` headings above the line-cap
-   region, the index has been hand-organised into topic sections rather than left in the
+2. **Section-heading guard.** Ignore the three canonical headings `## Axioms`, `## Recent` and
+   `## Rest` (any subset, exact text): they are this step's own output shape from
+   `refs/memory-rubric.md`, and counting them would block every reorder of a correctly shaped
+   index. If `before` contains any OTHER `## ` heading above the line-cap region (e.g.
+   `## Playwright`), the index has been hand-organised into topic sections rather than left in the
    Axioms/Recent/Rest shape (fibo session e3334a4a, 2026-10-03: a flattening reorder would have
    destroyed exactly this). Skip the reorder entirely, make no write, and report "reorder skipped:
    MEMORY.md is hand-sectioned (`## ` headings found), flattening it would be destructive" in
