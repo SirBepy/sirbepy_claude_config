@@ -58,3 +58,9 @@ reporting suites that "die partway" with no failing test.
 
 - A `vitest run` started before a floor-hook node check is still alive after the hook finishes.
 - Processes the check itself spawned are still cleaned up.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-23. The next run opens with these.
+
+- [ ] [TOOLING] Run this todo in an attended session (say which). Its fix writes to `hooks/` or `settings.json`, which `hooks/sensitive-file-guard.py` gates with a permission ask, and the autopilot rules bar a dispatched subagent from those writes, so an unattended loop cannot land it.

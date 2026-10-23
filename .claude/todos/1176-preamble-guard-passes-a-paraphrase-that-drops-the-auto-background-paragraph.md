@@ -44,3 +44,9 @@ incident is new evidence for the auto-background paragraph specifically.
 - A prompt with only "run_in_background is FORBIDDEN" and no auto-background paragraph is denied.
 - A verbatim paste of the canonical block still passes, including READ-ONLY DISPATCH prompts.
 - The guard's self-test covers both cases, and `python ci/run_all.py` stays green.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-23. The next run opens with these.
+
+- [ ] [TOOLING] Run this todo in an attended session (say which). Its fix writes to `hooks/` or `settings.json`, which `hooks/sensitive-file-guard.py` gates with a permission ask, and the autopilot rules bar a dispatched subagent from those writes, so an unattended loop cannot land it.

@@ -34,3 +34,9 @@ always-on index.
 - A dry run over the real corpus lists candidate clusters with their source files.
 - Promoted lessons load in a project that never had them (prove with a nested `claude -p` run).
 - No client-repo content lands in the tracked global folder.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-23. The next run opens with these.
+
+- [ ] [TOOLING] Run this todo in an attended session (say which). Its fix writes to `hooks/` or `settings.json`, which `hooks/sensitive-file-guard.py` gates with a permission ask, and the autopilot rules bar a dispatched subagent from those writes, so an unattended loop cannot land it.

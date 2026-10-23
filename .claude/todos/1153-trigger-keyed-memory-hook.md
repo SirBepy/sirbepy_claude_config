@@ -45,3 +45,9 @@ call and wire `settings.json` last; prove wiring with a nested `claude -p` run
 - Measured per-call latency recorded in the commit report, under 50 ms.
 - Re-run the done/1017 scenario: the meal-gap memory reaches a Clockify run without step 4a's
   manual read.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-23. The next run opens with these.
+
+- [ ] [TOOLING] Run this todo in an attended session (say which). Its fix writes to `hooks/` or `settings.json`, which `hooks/sensitive-file-guard.py` gates with a permission ask, and the autopilot rules bar a dispatched subagent from those writes, so an unattended loop cannot land it.

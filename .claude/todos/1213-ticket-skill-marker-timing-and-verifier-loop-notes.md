@@ -28,6 +28,12 @@ Make `skills/ticket/SKILL.md` (and `refs/outbound-verify.md`) say what actually 
 - `refs/shortcut-api.md` read recipe does not send a session into the false-positive block unwarned.
 - `refs/outbound-verify.md` carries the loop guidance in 10 lines or less.
 
+## Open questions
+
+Written by /auto-do-todos on 2026-10-23. The next run opens with these.
+
+- [ ] [TOOLING] Run this todo in an attended session (say which). Its fix writes to `hooks/` or `settings.json`, which `hooks/sensitive-file-guard.py` gates with a permission ask, and the autopilot rules bar a dispatched subagent from those writes, so an unattended loop cannot land it.
+
 ## Notes
 
 - Joe said (2026-10-21) he wants iteration until tickets verify; no appetite to bypass the guard.
