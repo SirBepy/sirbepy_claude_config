@@ -55,3 +55,4 @@ Claude used it.
 
 - Joe was told on 2026-10-22 that this password is in a past transcript. Whether he changes it is his
   call. This todo fixes only the index leak.
+- Completed 2026-10-23 (loop-todos cycle 1): redact() two-line lookahead for label-then-value passwords (commit aae5f8f), REDACTION_VERSION in the index signature; a full recall update re-extracted 1034 sessions and show 83d15843 --grep 'Log in' now shows the value as REDACTED:labelled_password.
