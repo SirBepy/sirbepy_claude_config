@@ -102,7 +102,9 @@ line - the disclosure is what makes the skip recoverable, never skip without it.
 **Source every requirement first.** Before drafting, list each requirement (every action item and
 acceptance criterion) with its source: Figma text, a product doc, the dev's own words, or an
 existing ticket line. Anything with no source is Claude's suggestion: it goes under a `Questions`
-heading as a question, never as an action item or AC. Widening a sourced rule (more callers, more
+heading as a question, never as an action item or AC. That list goes into every verifier prompt's
+Pointers field, not the ticket body, so the source trace can check it without padding the ticket.
+Widening a sourced rule (more callers, more
 routes, more actors than the source names) is an unsourced requirement too. Why: sc-56481,
 2026-10-22, was filed with ACs that extended a product rule ("at least one Admin remains", portal
 team management) to staff callers and to user delete/archive routes; the BE dev objected and the

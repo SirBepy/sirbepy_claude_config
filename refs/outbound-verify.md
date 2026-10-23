@@ -124,9 +124,9 @@ OUTBOUND-DRAFT>>>
    - NOTE: a format or phrasing difference from precedent that cannot be misread. Report it; it
      does not fail the draft.
 4. Source trace (tickets only): list every action item and acceptance criterion in the draft and
-   the source the draft cites for it (Figma text, product doc, the dev's words, an existing
-   ticket line); check the cited text yourself where you can. FAIL when an item has no cited
-   source, or when it widens its source (more callers, routes, actors or states than the source
+   its source (Figma text, product doc, the dev's words, an existing ticket line), taken from the
+   requirement-to-source list in the prompt's Pointers field or from a cite in the draft itself;
+   check the cited text yourself where you can. FAIL when an item has no source in either place, or when it widens its source (more callers, routes, actors or states than the source
    names), since a reader would build and ship the unrequested behavior. The same item framed as a
    question under a Questions heading is fine. A "BE lacks guard X" claim you can disprove from the
    tracked branch is WRONG: if existing role guards or self-action blocks already make the state
