@@ -107,6 +107,10 @@ def main() -> int:
         "COMMITTING IS PART OF YOUR JOB" not in r3.stdout,
         "NoCommitBlock full shape never injects mega-todos' own commit procedure",
     )
+    check("<WORKTREE_LINE>" not in r3.stdout,
+          "full shape fills or drops every placeholder (no literal <WORKTREE_LINE>)")
+    check("WORKTREE_LINE -> DELETE" in r1.stdout,
+          "Compact shape tells the builder to drop the WORKTREE_LINE placeholder")
 
     # Case 4: mega-todos' existing per-builder caller shape is unchanged -
     # still requires CommitMessage/ExpectedBranch, still gets the commit
