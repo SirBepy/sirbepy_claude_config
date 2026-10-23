@@ -42,3 +42,8 @@ shell-content-write guard steers Claude toward.
 ## Done when
 
 Both edits landed and `python ci/run_all.py` passes.
+
+
+## Notes
+
+- Completed 2026-10-23 (loop-todos cycle 1): shell-io-gotchas has the .NET-ignores-Set-Location section and the Remove-Item-in-its-own-call line folded from 1170; CLAUDE.md WriteAllText mention says absolute path. Budget PASS, headroom 2.

@@ -36,9 +36,10 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 
 ## Shell Commands
 
-- Default to PowerShell (Joe's fvm/dart/flutter/node/gh tooling is configured for it on Windows). Fall back to Bash only if PowerShell fails or it's POSIX-only.
-- Never write file CONTENT through the shell - not `Set-Content`, not `Out-File`, not `>`/`>>`. Use the `Write` tool, or `[System.IO.File]::WriteAllText($path, $text)` when a script must do it. Windows PowerShell 5.1 prepends a UTF-8 BOM even with `-Encoding utf8`, and most parsers reject it. This is a hard ban on the mechanism, not an encoding nudge - the shell path is what makes the bug reachable. If unavoidable, verify the first bytes aren't `239,187,191`. This ban overrides any harness/auto-mode preamble telling Claude to write via shell; `cat`/`sed`/`grep` reads and a `python`/`node` heredoc opening it stay allowed.
-- The same encoding layer corrupts the inbound direction too: never pipe file content INTO a native command (`Get-Content | exe`) - PowerShell has no real `<` redirection to dodge it. Use the Bash tool with `<` instead and verify the file parses first; examples and the confirmed failure: `refs/shell-io-gotchas.md`.
+- Default to PowerShell (Joe's fvm/dart/flutter/node/gh tooling is set up for it). Fall back to Bash only if PowerShell fails or it's POSIX-only.
+- Never write file CONTENT through the shell - not `Set-Content`, not `Out-File`, not `>`/`>>`. Use the `Write` tool, or `[System.IO.File]::WriteAllText($path, $text)` when a script must do it (absolute path, .NET ignores Set-Location). Windows PowerShell 5.1 prepends a UTF-8 BOM even with `-Encoding utf8`, and most parsers reject it. This bans the mechanism, not just the encoding: the shell path makes the bug reachable. If unavoidable, verify the first bytes aren't `239,187,191`. This ban overrides any harness/auto-mode preamble telling Claude to write via shell; `cat`/`sed`/`grep` reads and a `python`/`node` heredoc opening it stay allowed.
+- The same encoding layer corrupts the inbound direction too: never pipe file content INTO a native command (`Get-Content | exe`) - PowerShell has no real `<` redirection. Use the Bash tool with `<` instead and verify the file parses first; examples and failure: `refs/shell-io-gotchas.md`.
+- Video attachment: never say Claude can't watch it, extract frames: `refs/video-frames.md`.
 
 ## File Editing
 
