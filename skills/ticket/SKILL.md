@@ -71,8 +71,9 @@ already answered a card that should have been "reuse this instead?". It is platf
 design: queries 1 (merged/open PRs) and 3 (the claim at the tracked branch) are identical
 everywhere, and it carries the per-tracker form of query 2 for both Shortcut and Linear.
 
-- **Clean or soft:** write the marker exactly as that file specifies (`New-Item`, never
-  `Set-Content`), immediately before the create call.
+- **Clean or soft:** write the marker exactly as that file specifies (the helper script, never
+  `Set-Content`), as its OWN tool call immediately before the create call, never chained into the
+  same command as the POST (see step 6).
 - **Reuse candidate:** do not write the marker and do not open step 4 yet. Put the hit to the dev -
   id, title, type, state, and a one-line reason the draft is or isn't the same unit of work. A
   `UX:`/design-typed hit is not automatically a different unit of work from its FE/BE
@@ -98,6 +99,21 @@ line - the disclosure is what makes the skip recoverable, never skip without it.
 
 ### 5. Description - smallest shape that fits
 
+**Source every requirement first.** Before drafting, list each requirement (every action item and
+acceptance criterion) with its source: Figma text, a product doc, the dev's own words, or an
+existing ticket line. Anything with no source is Claude's suggestion: it goes under a `Questions`
+heading as a question, never as an action item or AC. Widening a sourced rule (more callers, more
+routes, more actors than the source names) is an unsourced requirement too. Why: sc-56481,
+2026-10-22, was filed with ACs that extended a product rule ("at least one Admin remains", portal
+team management) to staff callers and to user delete/archive routes; the BE dev objected and the
+ticket was unnecessary.
+
+For a "BE lacks guard X" ticket, also check, before drafting, whether existing role guards,
+self-action blocks or other open tickets already make the forbidden state unreachable for the
+actors the rule covers, and who legitimately needs the blocked action (staff, support,
+offboarding). If the state is already unreachable, or a legitimate actor needs the action, do not
+file; put the finding to the dev instead.
+
 The dev consistently finds Claude-drafted tickets too long. When in doubt, write less.
 
 - **Bug for a known engineer:** plain prose, 10 lines max, no headings, no QA criteria. One
@@ -113,6 +129,11 @@ smaller scopes as well as smaller descriptions: two independently shippable chun
 
 First run `~/.claude/refs/outbound-verify.md` on the final title and description: 3 fresh
 subagents must each PASS that exact text, or `hooks/outbound-verify-guard.py` blocks the call.
+
+Write the ground-check marker as its OWN tool call, then make the create call in the next one,
+inside the marker's 120 s window. Never chain the marker script and the POST in one command:
+`hooks/shortcut-create-guard.py` runs before the command executes, so it sees no marker yet and
+blocks (hit 2026-10-21, sc-56468).
 
 One API call per the quirks file. Capture the returned id and URL, append the log entry the quirks
 file specifies, then tell the dev the id, the URL, and which defaults were applied.

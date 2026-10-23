@@ -52,6 +52,10 @@ If no prefix match, also try a broad `--grep "$id"` to catch bundled references,
 curl -s "https://api.app.shortcut.com/api/v3/stories/<id>" -H "Shortcut-Token: $TOKEN"
 ```
 
+A read-only `curl` GET inside a shell loop piped into an interpreter was once blocked by `hooks/outbound-verify-guard.py` as an unverifiable REST write (a false positive, tracked by todo 1151, not fixed). `Invoke-RestMethod` from PowerShell was not blocked.
+
+The same guard reads a write's `-InFile` path up to the next space, so `-InFile C:\tmp\x.json; ...` fails with "cannot read the body file C:\tmp\x.json;". Quote the path (`-InFile 'C:\tmp\x.json'`) and end that statement with a newline, not `;` (hit twice on 2026-10-22).
+
 Full story JSON includes `comments[]`, `description`, `workflow_state_id`, `blocked`/`blocker`, `story_links`, `branches`, `pull_requests`, `commits`. Read `comments[]` in full, chronological order: a comment can silently reverse, narrow, or add scope the description never mentions (see `/ticket`'s Pickup flow). For provenance-checking a claim attributed to Shortcut (e.g. a todo's "per PM decision" citation), the comment thread is often the only place that backing actually lives.
 
 ## Fetching a story's history

@@ -172,7 +172,10 @@ script owns the join and guid generation and refuses to write a malformed marker
 ```
 
 The guards consume the oldest marker inside a **120 second** window, so write it immediately
-before the write call, not earlier in the flow.
+before the write call, not earlier in the flow. Run the script as its OWN tool call, then make the
+write call in the next one; never chain both in one command. The guard runs PreToolUse, before
+any part of the command executes, so a marker written in the same command does not exist yet when
+it checks (hit 2026-10-21, sc-56468). The window starts at the marker call.
 
 `.shortcut-marker-*` is the legacy name and is still accepted by the Shortcut guard so older
 instructions keep working. New call sites write `.outbound-marker-*`.
