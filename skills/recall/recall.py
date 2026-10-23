@@ -13,6 +13,8 @@ Usage:
     python recall.py digest-save <session-id> [--replace]    (digest on stdin)
     python recall.py decisions <term> [<term> ...] [--repo NAME] [--limit N]
     python recall.py activity --since DATE [--until DATE] [--repo NAME] [--json]
+    python recall.py memory <term> [<term> ...] [--memdir DIR] [--all] [--limit N]
+    python recall.py memory --stale-days N [--memdir DIR]
     python recall.py compress [--dry-run]
 
 DATE is YYYY-MM-DD, local time. --projects and --archive override the two roots, for tests.
@@ -573,6 +575,95 @@ def cmd_decisions(index: Index, terms, repo, limit) -> str:
     return "\n".join(out)
 
 
+# ---------- memory files ----------
+
+def _fm_value(front: str, key: str):
+    # Matches the key at top level or indented under `metadata:`, since the harness
+    # rewrites that block and a hand-written key can end up in either place.
+    m = re.search(rf"^[ \t]*{key}:[ \t]*(.*?)[ \t]*$", front, re.M)
+    return m.group(1).strip().strip("'\"") if m and m.group(1).strip() else None
+
+
+def parse_memory(path: Path) -> dict:
+    """Frontmatter fields of one memory file; every field is None when it is absent."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        text = ""
+    m = re.match(r"^---\r?\n(.*?)\r?\n---\r?\n?(.*)$", text, re.S)
+    front, body = (m.group(1), m.group(2)) if m else ("", text)
+
+    def day(v):
+        return v[:10] if v and re.match(r"^\d{4}-\d{2}-\d{2}", v) else None
+
+    return {"file": path.name, "name": _fm_value(front, "name") or path.stem,
+            "description": _fm_value(front, "description") or "", "type": _fm_value(front, "type") or "?",
+            "verified": day(_fm_value(front, "verified")), "modified": day(_fm_value(front, "modified")),
+            "superseded_by": _fm_value(front, "superseded_by"), "body": body}
+
+
+def _memory_files(memdir: Path) -> list:
+    """Top-level memory files only: archive/ and demotion-tier subfolders are not live memories."""
+    return [parse_memory(f) for f in sorted(memdir.glob("*.md")) if f.name != "MEMORY.md"]
+
+
+def cmd_memory(memdir: Path, terms, include_all: bool, limit: int) -> str:
+    """Searches one project's memory files. A memory with `superseded_by` is kept on disk
+    for its history but is hidden here unless include_all, so a replaced fact is never
+    read as current."""
+    terms = [t.lower() for t in terms]
+    hits, hidden = [], 0
+    for mem in _memory_files(memdir):
+        hay = f'{mem["name"]} {mem["description"]} {mem["body"]}'.lower()
+        if not all(t in hay for t in terms):
+            continue
+        if mem["superseded_by"] and not include_all:
+            hidden += 1
+            continue
+        hits.append(mem)
+    out = [f"{len(hits)} memory file(s) match all of: {' '.join(terms)}"]
+    for mem in hits[:limit]:
+        tag = f' [superseded by {mem["superseded_by"]}]' if mem["superseded_by"] else ""
+        ver = f'verified {mem["verified"]}' if mem["verified"] else "no verified date"
+        out.append(f'{mem["file"]} ({mem["type"]}, {ver}){tag}: {mem["description"]}')
+    if len(hits) > limit:
+        out.append(f"... {len(hits) - limit} more; narrow the terms or raise --limit")
+    if hidden:
+        out.append(f"{hidden} superseded memory file(s) hidden; pass --all to include them")
+    return "\n".join(out)
+
+
+def cmd_memory_stale(memdir: Path, days: int, today: datetime | None = None) -> str:
+    """Read-only list of memories whose last verification is older than `days`. A memory
+    with no `verified` date is aged by its `modified` date (or file mtime) and labelled,
+    because that date only proves it was last written, not that it was last checked."""
+    today = today or datetime.now()
+    rows, nver, nunver, nsup = [], 0, 0, 0
+    for mem in _memory_files(memdir):
+        if mem["superseded_by"]:
+            nsup += 1
+            continue
+        if mem["verified"]:
+            nver += 1
+            stamp, basis = mem["verified"], f'verified {mem["verified"]}'
+        else:
+            nunver += 1
+            stamp = mem["modified"] or datetime.fromtimestamp((memdir / mem["file"]).stat().st_mtime).strftime("%Y-%m-%d")
+            basis = f"no verified date, last modified {stamp}"
+        age = (today - datetime.strptime(stamp, "%Y-%m-%d")).days
+        if age > days:
+            rows.append((age, mem, basis))
+    rows.sort(key=lambda r: (-r[0], r[1]["file"]))
+    out = [f"{len(rows)} memory file(s) older than {days} days "
+           f"({nver} verified, {nunver} unverified, {nsup} superseded and skipped)"]
+    out += [f'{age}d  {mem["file"]} ({mem["type"]}; {basis})' for age, mem, basis in rows]
+    return "\n".join(out)
+
+
+def default_memdir(projects: Path, cwd) -> Path:
+    return projects / re.sub(r"[^A-Za-z0-9]", "-", str(cwd)) / "memory"
+
+
 def cmd_activity(index: Index, since, until, repo, as_json) -> str:
     sessions = []
     for h, _ in index.sessions():
@@ -833,9 +924,29 @@ def main(argv=None) -> int:
     a.add_argument("--until")
     a.add_argument("--repo")
     a.add_argument("--json", action="store_true")
+    mm = sub.add_parser("memory")
+    mm.add_argument("terms", nargs="*")
+    mm.add_argument("--memdir", type=Path, help="memory directory; default is the current project's under --projects")
+    mm.add_argument("--all", action="store_true", help="include superseded memories")
+    mm.add_argument("--stale-days", type=int, help="list memories not verified for more than N days instead of searching")
+    mm.add_argument("--limit", type=int, default=10)
     c = sub.add_parser("compress")
     c.add_argument("--dry-run", action="store_true")
     args = p.parse_args(argv)
+
+    if args.cmd == "memory":
+        # Reads memory files only, never the transcript index, so it skips the index update.
+        memdir = args.memdir or default_memdir(args.projects, Path.cwd())
+        if not memdir.is_dir():
+            print(f"No memory directory at {memdir}")
+            return 1
+        if args.stale_days is not None:
+            print(cmd_memory_stale(memdir, args.stale_days))
+        elif args.terms:
+            print(cmd_memory(memdir, args.terms, args.all, args.limit))
+        else:
+            p.error("memory needs search terms or --stale-days N")
+        return 0
 
     if args.cmd == "compress":
         result = cmd_compress(args.projects, args.archive, args.dry_run)

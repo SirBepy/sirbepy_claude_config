@@ -11,9 +11,14 @@ the same subject, then pick one:
 
 - **ADD** - genuinely new subject. Write a new file.
 - **UPDATE** - same subject, materially different value. Edit the existing file in place, keep its
-  name. Say what changed and when.
-- **DELETE** - the new fact contradicts a stored one and the stored one is now wrong. Remove it.
-  Being wrong is expected; staying wrong is the failure.
+  name. Say what changed and when. Set `verified:` to today.
+- **UPDATE-with-supersession** - the fact changed and the history of the old one still matters (a
+  tool quirk that was real until a version bump, a repro that was valid until fixed). Write the new
+  fact as its own memory, then mark the old file with `superseded_by: <name of the new memory>` and
+  drop the old file's line from `MEMORY.md`. The old file stays on disk, so the change stays
+  explainable; see "Freshness and supersession".
+- **DELETE** - the new fact contradicts a stored one and the stored one was simply wrong, with no
+  history worth keeping. Remove it. Being wrong is expected; staying wrong is the failure.
 - **NONE** - already captured, or fails the bar below. Do nothing. This is the most common answer.
 
 A near-duplicate written as ADD is worse than no memory at all: it crowds out rarer, more useful
@@ -51,6 +56,32 @@ trusted later with no way to tell it went stale. Every `feedback` and `reference
 - **Under what conditions** it was verified, when that matters. "Confirmed working" is worthless if
   the test conditions made failure impossible.
 - **When**, as an absolute date, never "recently" or "last week".
+
+## Freshness and supersession
+
+Two frontmatter keys, both optional on files written before 2026-10-23:
+
+- `verified: YYYY-MM-DD` - the last day the fact was confirmed against the live system or restated
+  by Joe, as an absolute date. Set on every ADD and UPDATE. Re-confirming a fact without changing
+  it is an UPDATE of this one line only.
+- `superseded_by: <name>` - the `name` of the memory that replaced this one. Present means the file
+  is history, not a current fact.
+
+Why: on 2026-09-10 two todos (929, 953) were scored on recorded repros of bugs already fixed
+(`feedback_a_recorded_reproduction_goes_stale`); an old fact reads as authoritative as a fresh one
+unless its age is on the page.
+
+A superseded file:
+
+- is kept on disk with its link, never loaded: its `MEMORY.md` line is removed, and
+  `python skills/recall/recall.py memory <terms>` hides it unless `--all` is passed;
+- is not an `orphan-file` defect, since having no index line is the point. `/cleanup-memory`
+  subtracts files carrying `superseded_by` from that count and reports them separately;
+- is never superseded by itself or by a memory that is also superseded (no chains to dead ends;
+  repoint the old link at the live memory).
+
+Use supersession only when the old fact's history is worth keeping. A fact that was merely wrong
+is DELETE: keeping a wrong record "for history" is the contradiction drift this rubric prevents.
 
 ## Negative results are first-class
 
@@ -124,7 +155,7 @@ because `CLAUDE.md` had no token headroom to carry the extra prose (ratchet ceil
 - **Bloat.** Volume degrades retrieval. More entries is not more memory.
 - **Stale confidence.** An old fact retrieved today reads exactly as authoritative as a fresh one.
   Timestamps and evidence are the only defense.
-- **Contradiction drift.** Two records disagreeing, neither marked superseded.
+- **Contradiction drift.** Two records disagreeing, neither marked superseded (`superseded_by`).
 - **Conclusion without conditions.** The single most expensive failure mode: a verdict recorded as
   fact, its test conditions omitted, so its wrongness is invisible until it misleads someone.
 

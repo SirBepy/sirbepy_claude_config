@@ -179,6 +179,59 @@ def test_digests():
               "the CLI reads the digest from stdin")
 
 
+def memory_file(path, name, body, verified=None, superseded_by=None, modified=None, mtype="reference"):
+    fm = ["---", f"name: {name}", f"description: about {name}"]
+    if verified:
+        fm.append(f"verified: {verified}")
+    if superseded_by:
+        fm.append(f"superseded_by: {superseded_by}")
+    fm += ["metadata: ", "  node_type: memory", f"  type: {mtype}"]
+    if modified:
+        fm.append(f"  modified: {modified}T10:00:00.000Z")
+    fm += ["---", "", body, ""]
+    path.write_text("\n".join(fm), encoding="utf-8")
+
+
+def test_memory():
+    with tempfile.TemporaryDirectory() as tmp:
+        mem = Path(tmp) / "memory"
+        (mem / "archive").mkdir(parents=True)
+        (mem / "MEMORY.md").write_text("- [zorb old](zorb_old.md) zorbquux\n", encoding="utf-8")
+        memory_file(mem / "zorb_old.md", "zorb-old", "zorbquux flag is --fast", verified="2026-01-02",
+                    superseded_by="zorb-new")
+        memory_file(mem / "zorb_new.md", "zorb-new", "zorbquux flag is --quick", verified="2026-10-01")
+        memory_file(mem / "plain.md", "plain", "unrelated fact", modified="2026-02-01")
+        memory_file(mem / "archive" / "gone.md", "gone", "zorbquux archived")
+
+        out = recall.cmd_memory(mem, ["zorbquux"], False, 10)
+        check("zorb-new" in out and "zorb-old" not in out, "memory search excludes a superseded memory by default")
+        check("gone" not in out and "MEMORY.md" not in out, "memory search skips archive/ and the index")
+        out_all = recall.cmd_memory(mem, ["zorbquux"], True, 10)
+        check("zorb-old" in out_all and "superseded by zorb-new" in out_all and "zorb-new" in out_all,
+              "--all includes the superseded memory and shows its link")
+        check((mem / "zorb_old.md").exists(), "a superseded memory stays on disk")
+        out_both = recall.cmd_memory(mem, ["zorbquux", "quick"], False, 10)
+        check("zorb-new" in out_both, "every term must match")
+        check("verified 2026-10-01" in out, "a hit shows its verified date")
+
+        today = datetime(2026, 10, 23)
+        stale = recall.cmd_memory_stale(mem, 90, today)
+        check("zorb-old" not in stale, "a superseded memory is not a stale candidate")
+        check("zorb-new" not in stale, "a recently verified memory is not a stale candidate")
+        check("plain" in stale and "no verified" in stale,
+              "an unverified memory is aged by its modified date and labelled")
+        check("1 verified, 1 unverified" in stale and "1 superseded" in stale, "stale listing reports counts")
+        memory_file(mem / "aged.md", "aged", "old repro", verified="2026-03-01")
+        check("aged" in recall.cmd_memory_stale(mem, 90, today), "an old verified memory is a stale candidate")
+        check("aged" not in recall.cmd_memory_stale(mem, 365, today), "the age threshold is respected")
+
+        # A frontmatter-less file must not crash the scan.
+        (mem / "bare.md").write_text("no frontmatter at all\n", encoding="utf-8")
+        recall.cmd_memory(mem, ["bare"], False, 10)
+        recall.cmd_memory_stale(mem, 90, today)
+        check(True, "a file without frontmatter is tolerated")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -318,6 +371,7 @@ def main():
         check(any("format may have changed" in w for w in index4.warnings), "a format change is flagged")
 
     test_digests()
+    test_memory()
 
     if failures:
         print(f"\n{len(failures)} failure(s)")

@@ -24,8 +24,15 @@ python ~/.claude/skills/recall/recall.py show <session-id-prefix> [--grep TEXT] 
 python ~/.claude/skills/recall/recall.py digest-save <session-id> [--replace]   # digest on stdin
 python ~/.claude/skills/recall/recall.py decisions <term> [<term> ...] [--repo NAME] [--limit N]
 python ~/.claude/skills/recall/recall.py activity --since YYYY-MM-DD [--until YYYY-MM-DD] [--repo NAME] [--json]
+python ~/.claude/skills/recall/recall.py memory <term> [<term> ...] [--memdir DIR] [--all] [--limit N]
+python ~/.claude/skills/recall/recall.py memory --stale-days N [--memdir DIR]
 ```
 
+- `memory`: searches one project's Auto Memory files (default: the current project's memory dir;
+  `--memdir` overrides), every term must match. A memory with `superseded_by:` in its frontmatter
+  is hidden unless `--all`, so a replaced fact is not read as current. `--stale-days N` instead
+  lists memories whose `verified:` date is older than N days (used by `/cleanup-memory`). It does
+  not touch the transcript index, so it prints no index warnings.
 - `search`: a session matches only when it contains every term (case-insensitive substrings).
   Start with 2-3 distinctive words; add `--repo` or `--since` when hits are too many.
 - `show`: one session's conversation (the dev's turns, labelled `joe`, Claude's chat text, commit lines). Use
