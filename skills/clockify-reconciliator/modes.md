@@ -36,8 +36,9 @@ sessions instead of double-booking them. Create via `POST` (plain Reconciliation
 **Hard rule:** never invent hours not backed by a real commit/PR or an explicitly named real activity
 - a weekly target the dev states is a ceiling to fill toward from real evidence, never a target that
 justifies inventing unbacked hours (see SKILL.md's Rules section). SKILL.md's step 3a confirms the
-target's scope (existing-inclusive vs additional-only, exact window) before this mode is ever reached
-- never re-derive that confirmation here or assume it from context.
+target's scope (existing-inclusive vs additional-only, exact window), asked over a target-free draft
+card, before this procedure builds anything toward the target - never re-derive that confirmation
+here or assume it from context.
 
 ## Audit mode
 
