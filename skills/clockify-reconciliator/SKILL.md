@@ -80,6 +80,22 @@ restore an early preflight.
 
 Clockify's API stores and returns entry times in UTC. Convert explicitly in BOTH directions - `Europe/Zagreb` local to UTC when writing an entry in step 9, UTC to `Europe/Zagreb` when reading one in step 4 - rather than deriving the offset from whatever entries already exist. That derivation (diff a known local time against its stored UTC timestamp) is a legitimate FALLBACK, and it worked on 2026-08-16, but it is unavailable on exactly the day it matters most: a day whose first entry is the one being written has nothing to diff against. The failure mode is silent - right duration, wrong hour, which looks normal in a weekly total.
 
+**A converted timestamp is the easiest value to relabel.** `git log --pretty=format:%aI` already prints
+the author's LOCAL wall-clock time with its offset applied (`2026-10-16T14:32:39+02:00` means 14:32:39
+IS the Zagreb time); subtracting the offset gives `12:32:39` UTC, and carrying that bare `12:32:39`
+forward as if it were still local writes an entry two hours before the commit it covers. That
+happened on 2026-10-16/17 (Zirtue): one correct conversion for a cross-check, then the converted
+number reused as "local" through a subagent dispatch, a dev question and the Clockify write, caught
+only because the dev pushed back. Two rules close it:
+
+- **Tag every carried timestamp.** Any timestamp in working notes that survives past the step it was
+  read in is written `LOCAL=14:32:39` or `UTC=12:32:39`, never a bare clock value. The same tag goes
+  on a time shown to the dev or pasted into a subagent prompt.
+- **Re-derive, never reuse.** Before a subagent dispatch (step 7a), a question to the dev, or a
+  Clockify write (step 10), recompute each timestamp from its original source: `%aI` for a commit, the
+  raw `Z`-suffixed field for Clockify, Shortcut and HubStaff. A value carried in context from an
+  earlier conversion is not a source.
+
 If `[lookback]` given, parse it. Else: Monday 00:00 of current week to now, in dev's timezone.
 
 For a single-day lookback (`today`, `yesterday`, or an explicit single `YYYY-MM-DD`), the window is always a full local calendar day, true midnight-to-midnight: `<day> 00:00:00` to `<day+1> 00:00:00`, dev's timezone. `today` = the current calendar date; `yesterday` = current calendar date minus 1 calendar day. Compute the calendar date first, then take that date's midnight-to-midnight span - never derive the boundary as "now minus 24h", and never use a rounded/approximate cutoff (e.g. `22:00`) in place of true midnight. This window feeds both the Clockify entry fetch (step 4) and the git-log bounds (step 6). See `~/.claude/projects/c--Users-tecno-Desktop-Projects-zng-app/memory/feedback_verify_date_calculations.md` for the 2026-07-28 incident this rule fixes.
@@ -93,12 +109,21 @@ For a single-day lookback (`today`, `yesterday`, or an explicit single `YYYY-MM-
   stated hour target to fill toward). This is the dev's primary way of running this skill as of
   2026-08-21 - no confirmation gate to enter Reconstruction mode itself. If the trigger includes a
   stated hour target, confirm its scope via AskUserQuestion before building anything toward it -
-  before reading `modes.md`'s procedure, before any proposal table exists: does the target include
+  before reading `modes.md`'s procedure, before any target-driven block or proposal table exists. The
+  question waits for a card, though: run steps 4 to 6a first (fetch and classify the entries, read
+  the commits), then render and push a DRAFT `clockify-week` card per step 9a from the existing
+  entries plus the evidence-backed blocks only, with `--target-hours` omitted so the card makes no
+  claim about the target. Ask the scope question with that card visible. Asked with only a prose
+  estimate, the dev answered "i dont see the /preview ..." instead of picking an option and gave the
+  real answer only after the draft card appeared (2026-10-15, revaire-mobile), one wasted
+  round-trip. The question: does the target include
   already-existing entries in the window, or is it additional-only; and does the target's window match
   the reconciliation window exactly (does "this week" include today, or stop at yesterday). Skipping
   this is what produced the 2026-08-22 overshoot-then-redo (dev meant existing-inclusive plus a
   Saturday reserve; the run built additional-only Mon-Fri and had to be redone after presenting).
-  `modes.md`'s Reconstruction section carries the standing hard rule this backs. Once scope is
+  The draft card does not weaken that rule: it shows only evidence-backed time, nothing is filled
+  toward the target until scope is confirmed. `modes.md`'s Reconstruction section carries the
+  standing hard rule this backs. Once scope is
   confirmed (or no target was stated), go straight to reading
   `skills/clockify-reconciliator/modes.md`'s "Reconstruction mode" section for the full procedure; the
   step 9 apply/some/cancel gate is still the approval checkpoint before anything is written.
@@ -203,6 +228,12 @@ from a zero-commit day): if the dev recalls unlogged work on a day that already 
 
 For each repo in config: `git -C <repo> log --all --author="<user_id or name>" --since=... --until=... --pretty=format:...`, using the window resolved in step 3. Capture sha, ISO timestamp, subject, body, branch (best-effort via `git branch --contains`).
 
+**Timezone spot-check, once per run:** on the first commit read, print its `%aI` next to its `%ad`
+(`--date=format:"%H:%M:%S"`, the machine's own local zone) and compare the clock parts. Matching
+means `%aI` is the dev's local time as step 3 says. State it once at the top of the run's output
+(`Commit times: %aI is LOCAL, matches %ad`). A mismatch (a different machine timezone, a commit
+authored from another zone) goes to the dev before any block is laid out.
+
 **`--all` is required, not optional.** Without it `git log` walks only the checked-out branch's ancestry, so a commit on any branch nobody currently has out is invisible - that produced a real dev-caught miss on 2026-08-22 in revaire-mobile, where a day with three commits across two unchecked-out branches reported as zero. `git worktree list` does NOT substitute: it shows only branches checked out right now, and branches with real work routinely sit unchecked-out between sessions. `--all` also walks remote-tracking refs, which is a bonus here (it catches work pushed from another machine) and costs nothing, since `--author` still scopes results to the dev and `git log` dedupes a commit reachable from several refs.
 
 Then run one more pass per repo covering the first 4 hours after the window's END, same command and same `--all`, only the dates differing: `--since="<end>" --until="<end> + 4h"`. For a single-day lookback that is `<day+1> 00:00:00` to `<day+1> 04:00:00`; for a multi-day range it is the same 4 hours past the range's final midnight. Flag hits as "late-night spillover from <last day in window>" and split them across the boundary by each commit's real wall-clock minutes on its own calendar day. Never drop them, never fold the whole session onto one side.
@@ -229,6 +260,22 @@ reference - that is the only trail either of the other two sources leave (2026-0
 Reconstruction run's git-only first pass undercounted a full afternoon, 40min proposed vs ~6h real,
 until a transcript sweep found worktree work and ticket-only activity neither git command could
 see).
+
+**Other active folders, every run: negative evidence only.** The sweep above reads only the
+configured repos' transcript folders, so a stretch the dev remembers as "working the whole time"
+looks like an empty gap with no hint that the time went to a personal project. Run
+`node ~/.claude/skills/clockify-reconciliator/scripts/other_folders.cjs --range <from>..<to>` with one
+`--repo <cwd>` per configured repo (the same paths as the config's `repos:`) over the step 3 window.
+It lists every OTHER folder under `~/.claude-personal/projects/` with its activity windows per local
+day, split at 25-minute gaps, read-only. Use the output only to rule time OUT: a stretch where only
+those folders were active is not project time. It never adds a block and never counts toward any
+total. A `NOTE` line means a folder shares a configured repo's name but not its path (a relocated
+checkout): if it is the project, rerun with `--exclude-folder <name>` rather than reading its windows as
+non-project time. (2026-10-20, Zirtue week of 2026-10-19: Tue 17:07-18:04 looked like a gap, the dev
+said he had no break, and the folder scan showed two personal projects active 17:05-18:42 and
+17:33-17:56 with no zng chat in between; proposals that spread hours over it would have written about
+2h of personal-project time to Zirtue.) The scan is a script because the grouping is mechanical, for
+the same reason Audit mode scripts its overlap checks.
 
 ### 6a. Gap detection (mandatory in every mode, including plain Reconciliation)
 
@@ -264,9 +311,8 @@ For each target:
 
 - Collect ALL dev commits for that calendar day across all configured repos (don't filter by the entry's time window).
 - If duration > 3h, plan split into 1-3h chunks (prefer 1h or 2h). Respect original start + end total.
-- **Meal-gap check** (from the `feedback_clockify_meal_breaks_and_unattended_work_next_day` memory
-  file, read per step 4a - named here so it's enforced at the point blocks actually get laid out,
-  not just by having been read several steps earlier): cut an 11:30-12:00 lunch gap and an
+- **Meal-gap check** (this rule lives here in `SKILL.md`, enforced at the point blocks actually get
+  laid out; no memory file carries it): cut an 11:30-12:00 lunch gap and an
   18:30-19:30 dinner gap out of any contiguous block that spans them, unless real activity (a
   commit, a stated meeting) places the dev at the keyboard through the gap.
 - Distribute the day's commits across chunks by rough chronology: earliest commits → earliest chunks. Assume the dev worked on things in the order committed, even if the commit timestamp falls outside the chunk (e.g. commit at 18:00 can describe the 15:00-17:00 chunk if it represents that chunk's work in the dev's workflow).
@@ -359,8 +405,11 @@ admin and zng biller?" after a sweep that had already checked both, because noth
 Show a table: date, start-end, duration, proposed split, proposed description(s). Precede it with
 the step 9a hero-card-plus-timeline preview (its column headers carry the day-by-day totals, so
 there is no separate day-summary table to print here). A post-midnight block moved per step 7's
-default shows its moved time in this table directly - no separate placement question. Use
-AskUserQuestion:
+default shows its moved time in this table directly - no separate placement question. Name every
+proposed block that sits only inside an other-folder window from step 6's pass (a window where no
+configured-repo commit or chat was active) in the plan text, with the folder and window, e.g. "Tue
+17:05-18:10 overlaps only `claude-usage-in-taskbar` 17:05-18:42"; the dev decides whether to keep
+it. Use AskUserQuestion:
 
 - Apply all
 - Apply some (pick which by index)
@@ -410,6 +459,17 @@ hand.
 Build this every run - the only path that skips it is a failed push after both transports above
 have been tried. Judging it optional for any other reason (a short window, a simple week, a sense
 that the tables suffice) is a scope decision the dev makes, not the run (todo 961).
+
+**Render denied by the auto-mode classifier.** If the `render_week.cjs` call itself is denied with a
+`[Real-World Transactions]` reason, the run has hit a known false positive: the command is a local
+read-and-render that touches no payment or external transaction (reproduced twice in one session,
+2026-10-16/17, same reason, same command shape). The denial is a stop, not an error to work around:
+do not retry the command, and do not reroute it through another tool, encoding, or a rewritten
+input file. Report the week's numbers as plain text in chat instead (per-day totals, the hour total
+against the target when the full-week gate passed, and the step 9 table), and name the symptom in the
+message ("`render_week.cjs` was denied with `[Real-World Transactions]`, so no card this run") so the
+dev recognizes it. This is the only denial-driven skip of the card besides a failed push; step 13's
+visual line reports it.
 
 **What the template renders, so a change to it is a deliberate edit to `render_week.cjs`, not a
 per-run reinterpretation:**
@@ -513,7 +573,8 @@ Read `skills/clockify-reconciliator/hubstaff.md` and follow its "Step 12" sectio
 - Entries written (count + per-day summary)
 - Visual output (step 9a): hero-card-plus-timeline re-rendered via `render_week.cjs` with whatever
   was actually applied and re-pushed under the same slug, or "skipped - not a Conductor host" if
-  neither the `show_preview` tool nor the hook endpoint was reachable
+  neither the `show_preview` tool nor the hook endpoint was reachable, or "skipped - render denied
+  `[Real-World Transactions]`" with the numbers given as chat text (step 9a)
 - Gap-detection findings (step 6a): unlogged days/blocks surfaced, applied or still pending approval
 - In-flight cap (step 8a): excluded tail named as deferred if live work was detected, omitted otherwise
 - HubStaff comparison results (step 11), or the step 10a skip line carrying the actual hour numbers
