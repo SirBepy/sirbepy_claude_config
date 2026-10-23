@@ -16,7 +16,7 @@ separately.
 
 ## State and script
 
-`scripts/kickoff.py` (run as `PYTHONIOENCODING=utf-8 python -I <skill dir>/scripts/kickoff.py <cmd>`)
+`scripts/kickoff.py` (run as `python -I <skill dir>/scripts/kickoff.py <cmd>`; the script sets its own UTF-8 stdout)
 owns every fetch that has a cache. Its state lives in `~/.claude/state/zng-kickoff/`, which is
 gitignored and machine-local. Each cache exists so the next day's run doesn't repeat work the dev
 already finished:
