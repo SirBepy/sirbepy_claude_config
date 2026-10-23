@@ -650,13 +650,19 @@ def cmd_memory_stale(memdir: Path, days: int, today: datetime | None = None) -> 
             nunver += 1
             stamp = mem["modified"] or datetime.fromtimestamp((memdir / mem["file"]).stat().st_mtime).strftime("%Y-%m-%d")
             basis = f"no verified date, last modified {stamp}"
-        age = (today - datetime.strptime(stamp, "%Y-%m-%d")).days
+        try:
+            age = (today - datetime.strptime(stamp, "%Y-%m-%d")).days
+        except ValueError:
+            # parse_memory only checks the date's shape, so 2026-13-45 reaches here. Such a
+            # file can't be aged, and hiding it would bury a memory nobody can ever verify.
+            rows.append((None, mem, f"bad {'verified' if mem['verified'] else 'modified'} date {stamp}"))
+            continue
         if age > days:
             rows.append((age, mem, basis))
-    rows.sort(key=lambda r: (-r[0], r[1]["file"]))
+    rows.sort(key=lambda r: (r[0] is not None, -(r[0] or 0), r[1]["file"]))
     out = [f"{len(rows)} memory file(s) older than {days} days "
            f"({nver} verified, {nunver} unverified, {nsup} superseded and skipped)"]
-    out += [f'{age}d  {mem["file"]} ({mem["type"]}; {basis})' for age, mem, basis in rows]
+    out += [f'{"?" if age is None else age}d  {mem["file"]} ({mem["type"]}; {basis})' for age, mem, basis in rows]
     return "\n".join(out)
 
 

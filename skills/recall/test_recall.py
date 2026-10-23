@@ -225,6 +225,13 @@ def test_memory():
         check("aged" in recall.cmd_memory_stale(mem, 90, today), "an old verified memory is a stale candidate")
         check("aged" not in recall.cmd_memory_stale(mem, 365, today), "the age threshold is respected")
 
+        # A well-shaped but impossible date (month 13) must be listed as bad, not crash the scan.
+        memory_file(mem / "badver.md", "badver", "typo'd date", verified="2026-13-45")
+        bad = recall.cmd_memory_stale(mem, 90, today)
+        check("badver.md" in bad and "bad verified date" in bad,
+              "a memory with an impossible verified date is listed as bad, not a crash")
+        (mem / "badver.md").unlink()
+
         # A frontmatter-less file must not crash the scan.
         (mem / "bare.md").write_text("no frontmatter at all\n", encoding="utf-8")
         recall.cmd_memory(mem, ["bare"], False, 10)
