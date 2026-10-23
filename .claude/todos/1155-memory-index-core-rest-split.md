@@ -43,7 +43,7 @@ Decided by /auto-do-todos on 2026-10-23.
 
 Written by /auto-do-todos on 2026-10-23. The next run opens with these.
 
-- [ ] [TOOLING] Needs an attended session: approve this CLAUDE.md Memory Discipline clause (CLAUDE.md has about 0 tokens of headroom, so `ci/check_instruction_budget.py` needs a trade elsewhere): "Tier exception: a memory file inside a demotion-tier subfolder of its memory dir (any subfolder except `archive/`, e.g. `cold/`, `rest/`) needs no index line and is not an orphan; `/cleanup-memory` moves a file there and deletes its index line in one pass, and `recall.py memory` still finds it."
+- [ ] [TOOLING] Needs an attended session: approve this CLAUDE.md Memory Discipline clause (CLAUDE.md has about 0 tokens of headroom, so `ci/check_instruction_budget.py` needs a trade elsewhere): "Tier exception: a memory file inside a demotion-tier subfolder of its memory dir (any subfolder except `archive/`, e.g. `cold/`, `rest/`) needs no index line and is not an orphan; `/cleanup-memory` moves a file there and deletes its index line in one pass, and `recall.py memory` still finds it." The same clause should also cover a memory carrying `superseded_by:` frontmatter: `refs/memory-rubric.md:17-18` (commit 2aa0a38) already tells Claude to drop a superseded memory's index line while its file stays on disk, which the current CLAUDE.md rule forbids (found by the 2026-10-23 per-commit review).
 - [ ] [DATA] After the clause lands, run `/cleanup-memory` Step 1.7 on the real indexes, attended, since it moves entries out of what every session in that project loads. Dry run 2026-10-23: claude-usage-in-taskbar 29,030 bytes (past the 24.4 KB cut, truncating today), zng-app 22,929, mc-plugins-tag 20,705, all against the 8,192-byte core cap.
 
 ## Notes
