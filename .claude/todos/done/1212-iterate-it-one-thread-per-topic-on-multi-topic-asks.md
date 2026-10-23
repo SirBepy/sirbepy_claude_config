@@ -29,3 +29,7 @@ Edit `C:\Users\tecno\.claude\skills\iterate-it\SKILL.md`:
 ## Acceptance
 
 SKILL.md has both rules; a dry read of the "Arguments"/"Algorithm" sections makes the multi-topic case unambiguous.
+
+## Notes
+
+- Completed 2026-10-23 (loop-todos cycle 1): iterate-it has a Multiple topics section (one parallel thread per topic, one sub per round within a thread, combine only on request) and per-round step 1 states the dev's own success bar with no invented deadline or cut-bloat instruction.
