@@ -1,7 +1,7 @@
 ---
 name: preview
 description: Pushes an HTML mockup, markdown, or images into Conductor's in-app preview panel. Replaces local server or SendUserFile.
-argument-hint: "<file.html | file.md... | image.png... | dir | inline html> [--slug <name>] [--title <text>]"
+argument-hint: "<file.html | file.md... | image.png... | dir | --manifest pairs.json | inline html> [--slug <name>] [--title <text>]"
 ---
 
 # /preview
@@ -77,6 +77,22 @@ When the input is one or more image paths, or a directory of them, build a galle
      Edit the `files` array for the actual paths, then tell the dev about any `dropped` entries before pushing.
 2. Default slug/title derive from the first image path's stem, or the directory name for a directory input, same convention as the markdown branch.
 3. If `--post` wasn't used, take the written HTML path and continue at step 1 of the HTML steps below exactly as if it were a hand-written mockup file. `build_gallery.py` also accepts a single existing `.html` file in place of image paths - it passes the file through unchanged and, with `--post`, pushes it the same way, so a repeatedly-republished Code-mode mockup can go through this same script instead of a hand-typed body-builder each time. `--check` works on this passthrough file too (same headless-load-before-posting guard), which is the case it was added for: a mockup that re-pushes the same HTML many times over a session, where a late edit introducing an inline-script error is easy to miss without a render check.
+
+## Before/after branch (manifest)
+
+Use this when Joe must judge several changes by looking (keep/drop a UI sweep, compare old and new screens). A flat gallery of filenames makes him read words instead of comparing pictures. Write a manifest JSON (via the Write tool), then build:
+
+```powershell
+python "C:\Users\tecno\.claude\skills\preview\build_gallery.py" --manifest <manifest.json> [--slug <name>] [--title "<text>"] [--budget-mb 1.5] [--check] [--post]
+```
+
+Manifest: a JSON list, or `{"title": "...", "items": [...]}`. Each item is `{"id": "fix-3", "title": "Tab bar wraps", "note": "one line on what changed", "shots": [["Before", "shots/3-before.png"], ["After", "shots/3-after.png"]]}`. Shots are `[caption, path]` pairs shown left to right in the order given, so a variant is a third pair; relative paths resolve against the manifest's directory. The script validates before building and exits 1 naming the item and shot at fault (missing file, duplicate id, malformed shot).
+
+- Each item becomes a numbered section (badge `1..N` in manifest order). Number the question card's option labels the same way, so "keep 3, drop 5" maps to the badges Joe sees.
+- PNG/JPEG shots are re-encoded to WebP through `ffmpeg` (PNG screenshots shrink several-fold; 28 phone-width shots came to ~610 KB), keeping the original when WebP is not smaller or `ffmpeg` is missing. GIF and WebP are never re-encoded. The same lightbox as the flat gallery is reused, stepping through every shot in order.
+- The budget drops whole items, never half a pair: from the first item that would overflow, it and every later item are dropped, listed in `dropped: [...]`. Report them to the dev and put them in a second manifest (`--slug <slug>-2`).
+- With `--post` the script also prints `render-url: http://127.0.0.1:27182/hooks/preview-render/<id>` on a 200. The panel alone is not enough: Joe answers from the chat and may never open the panel (2026-10-13, he answered a keep/drop card with "id need to see a before and after view" because the gallery sat unseen in the panel).
+- **When the gallery precedes a question, show it inline first.** Send a `show_preview` card whose HTML is an iframe to that `render-url` immediately before the question, then ask. Do not rely on the panel push alone.
 
 ## Steps
 

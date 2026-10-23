@@ -15,8 +15,10 @@ import json
 import mimetypes
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -146,6 +148,162 @@ def build_gallery_html(files, title, budget_bytes):
     return page, included, dropped
 
 
+class ManifestError(Exception):
+    """A manifest problem the caller can fix; the message names the item and shot at fault."""
+
+
+# Section layout for the manifest branch. Shots sit side by side and shrink to fit, so a row of
+# phone-width before/after captures stays visible without horizontal scrolling.
+_PAIRS_CSS = (
+    "section.item{margin:0 0 32px;padding:16px;border:1px solid #d8dde3;border-radius:8px;"
+    "background:#fff}"
+    "section.item h2{margin:0 0 4px;font-size:1.15rem}"
+    ".badge{display:inline-block;min-width:1.6em;padding:0 .4em;margin-right:8px;"
+    "border-radius:1em;background:#1f2937;color:#fff;text-align:center;font-size:.95em}"
+    "p.note{margin:0 0 12px;color:#4b5563}"
+    ".shots{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}"
+    ".shots figure{flex:1 1 0;min-width:140px;max-width:360px;margin:0}"
+    ".shots figcaption{font-weight:600;margin-bottom:6px;font-size:.9rem}"
+    ".shots img{width:100%;border:1px solid #d8dde3}"
+)
+
+
+def load_manifest(path):
+    """Reads and validates a manifest: a JSON list of items, or {"title": ..., "items": [...]}.
+    Each item is {id, title, note?, shots: [[caption, path], ...]}; shot paths resolve against
+    the manifest's own directory. Returns (title_or_None, items) with shot paths as Path objects.
+    Every problem names the item and shot so a 14-item manifest is fixable from one message."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        raise ManifestError(f"manifest is not valid JSON: {path}: {e}")
+    title = None
+    if isinstance(data, dict):
+        title = data.get("title")
+        data = data.get("items")
+    if not isinstance(data, list) or not data:
+        raise ManifestError(f"manifest needs a non-empty list of items: {path}")
+
+    items, seen = [], set()
+    for n, raw in enumerate(data, 1):
+        if not isinstance(raw, dict):
+            raise ManifestError(f"item #{n}: expected an object, got {type(raw).__name__}")
+        item_id = str(raw.get("id") or "").strip()
+        if not item_id:
+            raise ManifestError(f"item #{n}: missing 'id'")
+        if item_id in seen:
+            raise ManifestError(f"item '{item_id}': duplicate id")
+        seen.add(item_id)
+        if not str(raw.get("title") or "").strip():
+            raise ManifestError(f"item '{item_id}': missing 'title'")
+        shots_raw = raw.get("shots")
+        if not isinstance(shots_raw, list) or not shots_raw:
+            raise ManifestError(f"item '{item_id}': 'shots' must be a non-empty list of [caption, path]")
+        shots = []
+        for s in shots_raw:
+            if not (isinstance(s, (list, tuple)) and len(s) == 2 and all(isinstance(x, str) for x in s)):
+                raise ManifestError(f"item '{item_id}': each shot must be [caption, path], got {s!r}")
+            shot_path = Path(s[1])
+            if not shot_path.is_absolute():
+                shot_path = path.resolve().parent / shot_path
+            if not shot_path.is_file():
+                raise ManifestError(f"item '{item_id}' shot '{s[0]}': file not found: {shot_path}")
+            if shot_path.suffix.lower() not in IMAGE_EXTS:
+                raise ManifestError(f"item '{item_id}' shot '{s[0]}': not an image file: {shot_path}")
+            shots.append((s[0], shot_path))
+        items.append(
+            {"id": item_id, "title": str(raw["title"]), "note": str(raw.get("note") or ""), "shots": shots}
+        )
+    return title, items
+
+
+def convert_to_webp(src, tmp_dir):
+    """Returns (mime, bytes) for `src`, re-encoded to WebP via ffmpeg when that is smaller. PNG
+    screenshots shrink several-fold, which is what lets a 14-item gallery fit the ~2MB cap. Falls
+    back to the original bytes when ffmpeg is missing or fails; gif/webp are never re-encoded
+    (a gif may be animated)."""
+    mime = mimetypes.guess_type(str(src))[0] or "image/png"
+    original = src.read_bytes()
+    ffmpeg = shutil.which("ffmpeg")
+    if src.suffix.lower() not in {".png", ".jpg", ".jpeg"} or not ffmpeg:
+        return mime, original
+    out = Path(tmp_dir) / f"{len(list(Path(tmp_dir).iterdir()))}.webp"
+    proc = subprocess.run(
+        [ffmpeg, "-v", "error", "-y", "-i", str(src), "-c:v", "libwebp", "-quality", "80", str(out)],
+        capture_output=True, text=True,
+    )
+    if proc.returncode != 0 or not out.is_file():
+        print(f"warning: ffmpeg could not convert {src.name}, using the original", file=sys.stderr)
+        return mime, original
+    converted = out.read_bytes()
+    if len(converted) >= len(original):
+        return mime, original
+    return "image/webp", converted
+
+
+def build_manifest_html(items, title, budget_bytes, convert=convert_to_webp):
+    """Renders one numbered section per item with its labelled shots side by side. The budget is
+    enforced per item, not per shot: from the first item that would overflow, it and every item
+    after it are dropped whole, so a before is never shown without its after."""
+    included, dropped = [], []
+    used = 0
+    over_budget = False
+    sections = []
+    img_idx = 0
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        for item in items:
+            encoded = [(cap, *convert(p, tmp_dir)) for cap, p in item["shots"]]
+            size = sum(len(b) for _, _, b in encoded)
+            if over_budget or used + size > budget_bytes:
+                dropped.append(item["id"])
+                over_budget = True
+                continue
+            used += size
+            included.append(item["id"])
+            figs = []
+            for cap, mime, data in encoded:
+                b64 = base64.b64encode(data).decode("ascii")
+                figs.append(
+                    f"<figure><figcaption>{html_mod.escape(cap)}</figcaption>"
+                    f'<img class="gallery-img" data-idx="{img_idx}" onclick="openLightbox({img_idx})" '
+                    f'src="data:{mime};base64,{b64}" alt="{html_mod.escape(item["title"] + " - " + cap)}">'
+                    "</figure>"
+                )
+                img_idx += 1
+            note = f'<p class="note">{html_mod.escape(item["note"])}</p>' if item["note"] else ""
+            sections.append(
+                f'<section class="item" id="item-{html_mod.escape(slugify(item["id"]))}">'
+                f'<h2><span class="badge">{len(included)}</span>{html_mod.escape(item["title"])}</h2>'
+                f'{note}<div class="shots">{"".join(figs)}</div></section>'
+            )
+
+    page = (
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+        f"<title>{html_mod.escape(title)}</title>"
+        f"<style>{_LIGHTBOX_CSS}{_PAIRS_CSS}</style>"
+        "</head>"
+        '<body style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;'
+        'background:#fbfcfd;margin:0;padding:24px">'
+        f"<h1>{html_mod.escape(title)}</h1>"
+        + "".join(sections)
+        + (_LIGHTBOX_HTML if included else "")
+        + "</body></html>"
+    )
+    return page, included, dropped
+
+
+def render_url_from_response(status, body, base=RENDER_CHECK_ENDPOINT):
+    """The inline-card iframe URL for a successful POST, or None. The daemon answers 200
+    {"id": ...}; /hooks/preview-render/<id> serves that same page outside the panel."""
+    if status != 200:
+        return None
+    try:
+        render_id = json.loads(body).get("id")
+    except (json.JSONDecodeError, AttributeError):
+        return None
+    return f"{base.rstrip('/')}/{render_id}" if render_id else None
+
+
 def default_slug(paths):
     first = paths[0]
     base = first.name if first.is_dir() else first.stem
@@ -243,7 +401,12 @@ def check_rendered_page(url, resolver_path=_RESOLVER_PATH, timeout=30):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "paths", nargs="+", help="Image file(s)/directory, or a single existing .html file"
+        "paths", nargs="*", help="Image file(s)/directory, or a single existing .html file"
+    )
+    parser.add_argument(
+        "--manifest",
+        help="JSON of before/after items [{id, title, note, shots: [[caption, path], ...]}]; "
+        "builds numbered paired sections with WebP-converted shots instead of a flat gallery",
     )
     parser.add_argument("--slug")
     parser.add_argument("--title")
@@ -263,10 +426,39 @@ def main():
         if not p.exists():
             print(f"error: path does not exist: {p}", file=sys.stderr)
             sys.exit(1)
+    if args.manifest and paths:
+        print("error: give either --manifest or image paths, not both", file=sys.stderr)
+        sys.exit(1)
+    if not args.manifest and not paths:
+        print("error: give image paths, an .html file, or --manifest", file=sys.stderr)
+        sys.exit(1)
 
     is_html_push = len(paths) == 1 and paths[0].is_file() and paths[0].suffix.lower() == ".html"
 
-    if is_html_push:
+    if args.manifest:
+        manifest_path = Path(args.manifest)
+        if not manifest_path.is_file():
+            print(f"error: manifest does not exist: {manifest_path}", file=sys.stderr)
+            sys.exit(1)
+        try:
+            manifest_title, items = load_manifest(manifest_path)
+        except ManifestError as e:
+            print(f"error: {e}", file=sys.stderr)
+            sys.exit(1)
+        title = args.title or manifest_title or manifest_path.stem.replace("-", " ").replace("_", " ")
+        slug = args.slug or slugify(manifest_path.stem)
+        budget_bytes = int(args.budget_mb * 1024 * 1024)
+        html_text, included, dropped = build_manifest_html(items, title, budget_bytes)
+        out_path = Path(args.out) if args.out else manifest_path.parent / f"{slug}-gallery.html"
+        out_path.write_text(html_text, encoding="utf-8")
+        print(f"out: {out_path.resolve()}")
+        print(f"included: {len(included)} dropped: {dropped}")
+        if dropped:
+            print(
+                f"follow-up: move the dropped items into a second manifest and rerun with "
+                f'--slug {slug}-2 --title "{title} (2)" --post'
+            )
+    elif is_html_push:
         html_path = paths[0]
         html_text = html_path.read_text(encoding="utf-8")
         title = args.title or html_path.stem.replace("-", " ").replace("_", " ")
@@ -323,6 +515,9 @@ def main():
     if args.post:
         status, resp_body = post_preview(html_text, title, slug)
         print(f"HTTP {status}: {resp_body}")
+        render_url = render_url_from_response(status, resp_body)
+        if render_url:
+            print(f"render-url: {render_url}")
 
 
 if __name__ == "__main__":
