@@ -11,6 +11,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const DEFAULT_TZ = 'Europe/Zagreb';
 const DEFAULT_GAP_MIN = 25;
@@ -20,15 +21,34 @@ function sanitizeCwd(p) {
   return p.replace(/[^A-Za-z0-9]/g, '-');
 }
 
-// A worktree of a configured repo gets its own folder named "<sanitized repo>-<suffix>", so the
-// prefix form counts as the same project. Compared case-insensitively because the same checkout
-// shows up under both "C--Users-..." and "c--Users-..." depending on how the cwd was spelled.
-function isConfiguredFolder(folderName, repos, excludeFolders) {
+// Sanitized folder names of the configured repos' registered git worktrees. A sibling worktree
+// (isolated-build's `../<repo>-<name>`) sanitizes to a name that no prefix rule can tell from an
+// unrelated sibling repo like `zng-app-x`, so git is asked instead. A worktree already removed is
+// not listed and shows up as an ordinary other folder.
+function gitWorktreeFolders(repos) {
+  const out = [];
+  for (const r of repos) {
+    try {
+      const txt = execFileSync('git', ['-C', r, 'worktree', 'list', '--porcelain'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+      for (const m of txt.matchAll(/^worktree (.+)$/gm)) out.push(sanitizeCwd(m[1].trim()));
+    } catch { /* not a git repo or path gone: the name rules below still apply */ }
+  }
+  return out;
+}
+
+// A worktree of a configured repo gets its own folder. EnterWorktree puts it at
+// "<repo>/.claude/worktrees/<name>", which sanitizes to "<sanitized repo>--claude-worktrees-<name>",
+// so that exact infix counts as the same project; a bare "<sanitized repo>-" prefix would also
+// swallow a sibling repo such as "zng-app-x". Sibling worktrees come in via worktreeFolders.
+// Compared case-insensitively because the same checkout shows up under both "C--Users-..." and
+// "c--Users-..." depending on how the cwd was spelled.
+function isConfiguredFolder(folderName, repos, excludeFolders, worktreeFolders = []) {
   const name = folderName.toLowerCase();
   if (excludeFolders.some((e) => e.toLowerCase() === name)) return true;
+  if (worktreeFolders.some((w) => w.toLowerCase() === name)) return true;
   return repos.some((r) => {
     const s = sanitizeCwd(r.replace(/[\\/]+$/, '')).toLowerCase();
-    return name === s || name.startsWith(s + '-');
+    return name === s || name.startsWith(s + '--claude-worktrees-');
   });
 }
 
@@ -79,7 +99,8 @@ function readMessageTimes(file) {
 }
 
 // Returns {days: {date: {folder: [{start:'HH:MM', end:'HH:MM', count}]}}, skipped: [folder]}.
-function scan({ projectsDir, repos, excludeFolders = [], from, to, tz = DEFAULT_TZ, gapMin = DEFAULT_GAP_MIN }) {
+function scan({ projectsDir, repos, excludeFolders = [], from, to, tz = DEFAULT_TZ, gapMin = DEFAULT_GAP_MIN,
+  worktreeFolders = gitWorktreeFolders(repos) }) {
   const local = makeLocalParts(tz);
   // A file untouched since before the range start cannot hold in-range messages. One day of slack
   // covers the local-vs-UTC date difference.
@@ -88,7 +109,7 @@ function scan({ projectsDir, repos, excludeFolders = [], from, to, tz = DEFAULT_
   const skipped = [];
   for (const ent of fs.readdirSync(projectsDir, { withFileTypes: true })) {
     if (!ent.isDirectory()) continue;
-    if (isConfiguredFolder(ent.name, repos, excludeFolders)) { skipped.push(ent.name); continue; }
+    if (isConfiguredFolder(ent.name, repos, excludeFolders, worktreeFolders)) { skipped.push(ent.name); continue; }
     const dir = path.join(projectsDir, ent.name);
     const perDay = {};
     for (const f of fs.readdirSync(dir)) {
@@ -161,4 +182,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { sanitizeCwd, isConfiguredFolder, groupWindows, scan, render };
+module.exports = { sanitizeCwd, isConfiguredFolder, gitWorktreeFolders, groupWindows, scan, render };

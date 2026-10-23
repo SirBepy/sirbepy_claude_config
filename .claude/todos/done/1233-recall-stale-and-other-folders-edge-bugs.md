@@ -31,3 +31,7 @@ Add a case to `skills/recall/test_recall.py` and `skills/clockify-reconciliator/
 ## Acceptance
 
 Both new tests fail before the fix and pass after it.
+
+## Notes
+
+- Done by /loop-todos cycle 2 on 2026-10-23: recall memory --stale-days lists a bad verified/modified date instead of crashing; other_folders.cjs matches only the --claude-worktrees- suffix plus git worktree list, so a sibling repo like zng-app-x is no longer hidden. Tests added to test_recall.py and test_other_folders.cjs.
