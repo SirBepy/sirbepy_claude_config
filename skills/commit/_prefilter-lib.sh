@@ -2,7 +2,9 @@
 # git_c and its --repo arg parse, shared by skills/commit/*.sh (todo 447, centralised by 813).
 # Dot-sourced by path, not imported. repo="" here so git_c works pre-parse (em-dash.sh --range).
 repo=""
-git_c() { if [ -n "$repo" ]; then git -C "$repo" "$@"; else git "$@"; fi; }
+# core.quotePath=false: with git's default, a non-ASCII path's diff header prints quoted
+# (`+++ "b/caf\303\251.txt"`), which no scanner's `+++ b/` match reads as a new file.
+git_c() { if [ -n "$repo" ]; then git -c core.quotePath=false -C "$repo" "$@"; else git -c core.quotePath=false "$@"; fi; }
 
 # Windows caps one command line near 32K characters, and a generated-asset commit names more
 # paths than that. Everything below that hands the whole path list to an external command either

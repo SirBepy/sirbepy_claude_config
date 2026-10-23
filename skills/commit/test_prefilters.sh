@@ -358,6 +358,26 @@ printf '%s\0' gen gen/row_17.txt gen/seed.txt gen/doc.pdf > "$bigrepo/paths.nul"
 out=$(cd "$bigrepo" && "$gate" -C "$bigrepo" --paths-from-file "$bigrepo/paths.nul" 2>/dev/null); rc=$?
 check "gate --paths-from-file reads a NUL-separated path list" 1 'row_17\.txt:1' 'doc\.pdf' "$out" "$rc"
 
+# --- a non-ASCII file name: git quotes its diff header by default, which the scanners must still
+# read as a new file, never inheriting the previous file's name or exempt state ---
+uniname=$(printf 'caf\xc3\xa9.txt')
+for mode in untracked tracked; do
+  urepo=$(new_repo); tmp_dirs+=("$urepo")
+  if [ "$mode" = tracked ]; then
+    printf 'seed\n' > "$urepo/a.pdf"; printf 'seed\n' > "$urepo/$uniname"
+    git -C "$urepo" add -A; git -C "$urepo" commit -q -m "seed both"
+  fi
+  printf 'plain text %s\n' "$ED" > "$urepo/a.pdf"
+  fake_tok3="ghp_""qwertyuiopasdfghjklzxcvb"
+  printf 'const tok = "%s"; %s\n' "$fake_tok3" "$ED" > "$urepo/$uniname"
+  out=$(cd "$urepo" && "$gate" a.pdf "$uniname" 2>/dev/null); rc=$?
+  check "secret-scan flags a credential in a $mode non-ASCII-named file beside an exempt one" \
+    1 "caf.*\.txt:1: ghp_" '' "$out" "$rc"
+  out=$(cd "$urepo" && bash "$em_dash" a.pdf "$uniname" 2>/dev/null); rc=$?
+  check "em-dash flags a $mode non-ASCII-named file under its real name" \
+    0 "^caf.*\.txt:1$" '^:' "$out" "$rc"
+done
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else

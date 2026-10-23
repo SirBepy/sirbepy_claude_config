@@ -12,6 +12,7 @@ script_dir=$(cd "$(dirname "$0")" && pwd)
 . "$script_dir/_prefilter-lib.sh" || { printf 'ERROR: missing prefilter lib: %s/_prefilter-lib.sh\n' "$script_dir"; exit 1; }
 
 AWK='
+/^diff --git / { f="?"; incomment=0; next }
 /^\+\+\+ b\// { f=substr($0,7); incomment=0; next }
 /^\+/ && !/^\+\+\+/ {
   if (f ~ /\.(md|mdx)$/) next
@@ -35,7 +36,7 @@ AWK='
 '
 
 if [ "${1:-}" = "--range" ]; then
-  diff_out=$(git diff "$2" 2>&1) || { printf 'ERROR: git diff --range %s failed: %s\n' "$2" "$diff_out"; exit 1; }
+  diff_out=$(git_c diff "$2" 2>&1) || { printf 'ERROR: git diff --range %s failed: %s\n' "$2" "$diff_out"; exit 1; }
   printf '%s\n' "$diff_out" | awk "$AWK" | sort
 else
   # --repo <path>: forwarded by prefilter-gate.sh when the first path argument resolves to a
