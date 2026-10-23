@@ -1525,6 +1525,89 @@ out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r58" --ex
 check "an unlisted repo's untracked test file in the pathspec is never hard-refused (todo 1138 regression guard)" \
   0 '\[commit\] committed' 'tests stay local' "$out" "$rc"
 
+# --- an absolute pathspec entry classifies the same as its repo-relative form: the caller's raw
+# string used to be tested as "$repo_root/$f", so "C:/.../f.txt" missed on disk and a modified
+# file was reported deleted-unstaged and skipped by overlap/foreign-hunk checks ---
+r59=$(new_repo); tmp_dirs+=("$r59")
+printf 'one\n' > "$r59/abs.txt"
+git -C "$r59" add abs.txt
+git -C "$r59" commit -q -m "seed abs.txt"
+branch=$(git -C "$r59" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r59" rev-parse HEAD)
+printf 'two\n' > "$r59/abs.txt"
+if command -v cygpath >/dev/null 2>&1; then abs59=$(cygpath -m "$r59/abs.txt"); else abs59="$r59/abs.txt"; fi
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r59" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "modify abs.txt by absolute path" -- "$abs59" 2>&1); rc=$?
+check "an absolute path to a modified file classifies live, relative in the output (todo 1192)" \
+  0 '  - abs\.txt: live' 'deleted-unstaged' "$out" "$rc"
+check "the absolute-path commit runs foreign-hunk-check against the file instead of skipping it (todo 1192)" \
+  0 'foreign-hunk-check.*clean' 'nothing left to diff' "$out" "$rc"
+if [ "$(git -C "$r59" rev-parse HEAD)" = "$sha" ]; then
+  echo "FAIL: todo 1192 - the absolute-path commit did not land"
+  fail=1
+else
+  echo "PASS: todo 1192 - the absolute-path commit landed"
+fi
+
+# --- --todo drops a todo path the repo git-ignores (.claude/todos/ in .git/info/exclude) instead
+# of failing the whole commit on `git add` refusing it ---
+r60=$(new_repo); tmp_dirs+=("$r60")
+printf '.claude/todos/\n' >> "$r60/.git/info/exclude"
+branch=$(git -C "$r60" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r60" rev-parse HEAD)
+mkdir -p "$r60/.claude/todos/done"
+printf 'ignored todo\n' > "$r60/.claude/todos/done/1169-ignored.md"
+printf 'real change\n' > "$r60/real.txt"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r60" --expect-branch "$branch" --expect-sha "$sha" \
+  --todo 1169 -m "real.txt with an ignored todo" -- real.txt 2>&1); rc=$?
+check "--todo skips a todo path the repo ignores, prints that it was skipped, and still commits (todo 1169)" \
+  0 '1169-ignored\.md skipped as ignored' 'could not stage|ERROR' "$out" "$rc"
+if git -C "$r60" show --stat --format= HEAD | grep -q 'real\.txt'; then
+  echo "PASS: todo 1169 - real.txt landed in the commit"
+else
+  echo "FAIL: todo 1169 - real.txt did not land"
+  fail=1
+fi
+
+# --- coverage-tests-check scan ordering and scope in a local-only-tests repo (todos 1200, 1220) ---
+# 1200: --force coverage-tests already decides the outcome, so the local-test scan must not run
+# (it printed "clean (local-only-tests repo ...)" first because the scan came before the force check).
+r61=$(new_listed_repo); tmp_dirs+=("$r61")
+branch=$(git -C "$r61" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r61" rev-parse HEAD)
+mkdir -p "$r61/src"
+printf 'export const x = 1;\n' > "$r61/src/x.ts"
+printf 'test x\n' > "$r61/src/x.test.ts"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r61" --expect-branch "$branch" --expect-sha "$sha" \
+  --force coverage-tests -m "forced, local test on disk" -- src/x.ts 2>&1); rc=$?
+check "--force coverage-tests decides before the local-test scan runs (todo 1200)" \
+  0 'OVERRIDDEN \(--force coverage-tests\)' 'local-only-tests repo:' "$out" "$rc"
+
+# 1220: fresh files under dependency/build trees never satisfy the local-test condition.
+r62=$(new_listed_repo); tmp_dirs+=("$r62")
+printf 'node_modules/\n.dart_tool/\nbuild/\nvendor/\n' >> "$r62/.git/info/exclude"
+branch=$(git -C "$r62" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r62" rev-parse HEAD)
+mkdir -p "$r62/src" "$r62/node_modules/x/test" "$r62/.dart_tool/p/test" "$r62/build/test" "$r62/vendor/v/test"
+printf 'export const x = 1;\n' > "$r62/src/x.ts"
+printf 'dep\n' > "$r62/node_modules/x/test/a.js"
+printf 'dep\n' > "$r62/.dart_tool/p/test/b.js"
+printf 'dep\n' > "$r62/build/test/c.js"
+printf 'dep\n' > "$r62/vendor/v/test/d.js"
+printf 'dep\n' > "$r62/node_modules/x/e.test.js"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r62" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "src/x.ts, only dependency-tree tests exist" -- src/x.ts 2>&1); rc=$?
+check "fresh test-path files under node_modules/.dart_tool/build/vendor do not satisfy the local-only check (todo 1220)" \
+  1 'coverage-tests-check.*REFUSED: pathspec changes non-test' 'clean \(local-only-tests' "$out" "$rc"
+
+# 1220: a real test listed in .git/info/exclude still satisfies it, even beside the dependency noise.
+printf 'src/x.test.ts\n' >> "$r62/.git/info/exclude"
+printf 'test x\n' > "$r62/src/x.test.ts"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r62" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "src/x.ts, an excluded real test exists" -- src/x.ts 2>&1); rc=$?
+check "an excluded real test file still satisfies the local-only check beside dependency noise (todo 1220)" \
+  0 'coverage-tests-check.*clean.*src/x\.test\.ts.*last 24h' 'REFUSED|node_modules' "$out" "$rc"
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else
