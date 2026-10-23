@@ -114,6 +114,13 @@ writes the same digest for its own session, since it already reads its own trans
 `recall.py decisions <topic>` searches only the decisions sections. `/brainstorm` step 1 runs it
 next to its existing todo grep, so a rejected option surfaces before it gets re-proposed.
 
+Built (todo 1152): one file per session, `~/.claude/memory-archive/digests/<sessionId>.md`, with a
+header (date, repo, scope, session id) and `## Done`, `## Decided`, `## Rejected`, `## Open`.
+`recall.py digest-save <sessionId>` takes it on stdin, redacts it, writes atomically and refuses to
+overwrite without `--replace`. `show` prints a cached digest above the conversation, or a nudge to
+write one. `decisions` reads only Decided and Rejected items. Digests sit beside `index/`, never
+under it, because the index is disposable and a digest is not rebuildable.
+
 **Trigger-keyed memory.** A memory file may carry `triggers:` in frontmatter: path globs, skill
 names, a repo. A PreToolUse hook on Edit, Write, Read, Skill and Agent matches the tool input and
 injects the matching memory once per session as additional context. On an Agent dispatch the

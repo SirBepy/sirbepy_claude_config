@@ -4,8 +4,10 @@ dir, so it never reads the real transcripts and runs on CI's bare Windows runner
 Run: python skills/recall/test_recall.py   (exit 0 = all pass)
 """
 
+import io
 import json
 import os
+import shutil
 import sys
 import tempfile
 import zipfile
@@ -76,6 +78,105 @@ def write_session(projects, sid, lines, mtime=None, sidecar=True):
         for p in files:
             os.utime(p, (mtime, mtime))
     return f
+
+
+DIGEST_OLD = """## Done
+- Compared the vault design with the MCP server
+## Decided
+- Use the vault design for cross-project memory
+## Rejected
+- MCP server for memory: needs a daemon and a second store
+## Open
+- Whether the zorbquux export is worth keeping
+"""
+DIGEST_NEW = """## Done
+- Wrote the vault loader
+## Decided
+- Keep transcripts forever
+## Rejected
+- Nightly summarising model call: vault digests cost no extra call
+## Open
+- none
+"""
+
+
+def test_digests():
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        projects, archive = root / "projects", root / "memory-archive"
+        write_session(projects, SID, transcript_lines(), sidecar=False)
+        write_session(projects, SID_NEW, [rec(type="user", timestamp="2026-03-02T10:00:00Z", cwd="C:/work/demo",
+                                              message={"content": "recent march chat about vault"})], sidecar=False)
+        index = recall.Index(projects, archive, scope_of=lambda cwd: "personal")
+        index.update()
+        ddir = archive / "digests"
+
+        code, msg = recall.cmd_digest_save(index, SID, DIGEST_OLD, False)
+        check(code == 0 and (ddir / f"{SID}.md").exists(), f"digest-save writes digests/<id>.md ({msg})")
+        check([p.name for p in ddir.iterdir()] == [f"{SID}.md"], "the atomic write leaves no temp file behind")
+        text = (ddir / f"{SID}.md").read_text(encoding="utf-8")
+        check(SID in text and "repo" in text.lower() and "personal" in text and "2026-01-10" in text,
+              "the digest header cites date, repo, scope and session id")
+        before = text
+
+        code, msg = recall.cmd_digest_save(index, SID, DIGEST_NEW, False)
+        check(code != 0 and (ddir / f"{SID}.md").read_text(encoding="utf-8") == before and "--replace" in msg,
+              "digest-save refuses to overwrite without --replace and keeps the file")
+        code, _ = recall.cmd_digest_save(index, SID, DIGEST_NEW, True)
+        check(code == 0 and "Keep transcripts forever" in (ddir / f"{SID}.md").read_text(encoding="utf-8"),
+              "--replace overwrites")
+        recall.cmd_digest_save(index, SID, DIGEST_OLD, True)
+
+        code, _ = recall.cmd_digest_save(index, SID_NEW, "## Done\n- only one section\n", False)
+        check(code != 0 and not (ddir / f"{SID_NEW}.md").exists(), "a digest missing a required section is rejected")
+        code, _ = recall.cmd_digest_save(index, "not-a-session", DIGEST_NEW, False)
+        check(code != 0, "an unknown session id is rejected")
+        code, _ = recall.cmd_digest_save(index, "66666666", DIGEST_NEW, False)
+        check(code == 0 and (ddir / f"{SID_NEW}.md").exists(), "a unique prefix resolves to the full session id")
+        leaky = DIGEST_NEW.replace("Keep transcripts forever", "Stored key " + AKIA)
+        recall.cmd_digest_save(index, SID_NEW, leaky, True)
+        check(AKIA not in (ddir / f"{SID_NEW}.md").read_text(encoding="utf-8"), "secrets in a digest are redacted")
+        recall.cmd_digest_save(index, SID_NEW, DIGEST_NEW, True)
+
+        shown = recall.cmd_show(index, SID[:8], None, 40000)
+        check("Use the vault design for cross-project memory" in shown
+              and shown.index("Use the vault design") < shown.index("joe:"),
+              "show prints a cached digest above the conversation")
+        check(shown.startswith(recall.FENCE_OPEN) and shown.rstrip().endswith(recall.FENCE_CLOSE),
+              "show with a digest stays inside the data fence")
+        ddir.joinpath(f"{SID}.md").rename(ddir / "parked.tmp")
+        bare = recall.cmd_show(index, SID[:8], None, 40000)
+        check("digest-save" in bare and "No digest" in bare, "show nudges to write a digest when none exists")
+        (ddir / "parked.tmp").rename(ddir / f"{SID}.md")
+
+        out = recall.cmd_decisions(index, ["mcp"], None, 10)
+        check(out.startswith(recall.FENCE_OPEN) and out.rstrip().endswith(recall.FENCE_CLOSE),
+              "decisions output is fenced as data")
+        check("MCP server for memory" in out and SID in out, "decisions matches a Rejected item and cites the session")
+        check("repo=demo" in out and "(personal)" in out, "decisions cites repo and scope")
+        check("0 decision" in recall.cmd_decisions(index, ["zorbquux"], None, 10),
+              "decisions ignores the Open section")
+        check("0 decision" in recall.cmd_decisions(index, ["compared"], None, 10)
+              and "0 decision" in recall.cmd_decisions(index, ["loader"], None, 10),
+              "decisions ignores the Done section")
+        both = recall.cmd_decisions(index, ["vault"], None, 10)
+        check(both.index(SID_NEW) < both.index(SID), "decisions lists the newest session first")
+        check("Use the vault design" in both, "decisions matches a Decided item")
+        check(SID not in recall.cmd_decisions(index, ["vault"], "nomatch", 10), "decisions honours --repo")
+
+        snap = {p.name: p.read_bytes() for p in ddir.iterdir()}
+        shutil.rmtree(archive / "index")
+        rebuilt = recall.Index(projects, archive, scope_of=lambda cwd: "personal")
+        check(rebuilt.update() == 2, "the index rebuilds from scratch after deletion")
+        check({p.name: p.read_bytes() for p in ddir.iterdir()} == snap, "rebuilding the index leaves every digest intact")
+
+        sys.stdin = io.StringIO(DIGEST_NEW)
+        try:
+            rc = recall.main(["--projects", str(projects), "--archive", str(archive), "digest-save", SID, "--replace"])
+        finally:
+            sys.stdin = sys.__stdin__
+        check(rc == 0 and "Keep transcripts forever" in (ddir / f"{SID}.md").read_text(encoding="utf-8"),
+              "the CLI reads the digest from stdin")
 
 
 def main():
@@ -215,6 +316,8 @@ def main():
         index4 = recall.Index(projects, archive, scope_of=lambda cwd: "personal")
         index4.update()
         check(any("format may have changed" in w for w in index4.warnings), "a format change is flagged")
+
+    test_digests()
 
     if failures:
         print(f"\n{len(failures)} failure(s)")

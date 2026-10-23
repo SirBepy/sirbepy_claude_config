@@ -230,6 +230,13 @@ Run in this order:
    for stray `.png` files - the MCP writes there directly and this summary cannot see them; report
    any found, never auto-delete, since they may be git-tracked. `.for_bepy/mockups/` and
    `mockup-step-*.json` are out of scope here too - `/mockup` step 7 owns their disposal.
+4. **Session digest.** Skip a session with no decision or rejected option worth keeping (a pure
+   mechanical run). Otherwise write this session's digest from the Phase 1 material, no extra
+   model call: pipe `## Done`, `## Decided`, `## Rejected` (option plus the reason it lost) and
+   `## Open` sections (write `none` under an empty one) to
+   `python ~/.claude/skills/recall/recall.py digest-save <sessionId>`, using the `sessionId` the
+   Transcript grounding step resolved. It refuses to overwrite an existing digest; never pass
+   `--replace` here. Digests feed `recall.py decisions` (design: `refs/permanent-memory.md`).
 Note: there is no implicit /commit step anymore. If the dev wants a commit, they chain `/commit` (with whatever subcommand they want) into the /close call.
 
 ## Phase 4 - Counter summary
