@@ -28,3 +28,7 @@ temp-dir check (one live, one superseded, one true orphan) and run it.
 
 - A superseded file reports as `superseded`, never `orphan-file`; a true orphan still reports as one.
 - `SKILL.md` Step 2 no longer asks for a manual subtraction.
+
+## Notes
+
+- Done by /loop-todos cycle 2 on 2026-10-23: reachability.mjs reports superseded_by files on their own superseded line, never as orphan-file; SKILL.md Step 2 manual subtraction removed; new test_reachability.cjs (RED before, GREEN after).

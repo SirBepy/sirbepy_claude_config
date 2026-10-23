@@ -89,8 +89,8 @@ step uses the 132 reading - the script's `loaded-window, direct-link-only` outpu
 The other two readings the script prints are context only, never the reported figure.)
 
 - A file with no direct link inside MEMORY.md's loaded window: `orphan-file`. Exception: a file
-  whose frontmatter carries `superseded_by:` is unindexed on purpose. `reachability.mjs` still
-  counts it, so subtract those files from the count, list them separately as `superseded: N`, and
+  whose frontmatter carries `superseded_by:` is unindexed on purpose. `reachability.mjs` lists
+  those files separately on its `superseded (...): N` line and never counts them as `orphan-file`;
   never add an index line for one in Step 6.
 - A `MEMORY.md` line (within that window) whose linked file doesn't exist: `orphan-index-entry`.
 
@@ -325,7 +325,7 @@ caller with no one left to prompt it - print the report and let its turn continu
   link fixes.
 - Any item excluded by Step 5.5, named with the reason.
 - Step 1.6's freshness candidates (file, age, whether `verified` was present) and the superseded
-  count Step 2 subtracted from `orphan-file`.
+  count Step 2's script reported separately from `orphan-file`.
 - Step 2's counts for both desync directions (`orphan-file`, `orphan-index-entry`), the
   definition used ("loaded-window, direct-link-only"), before and after apply.
 - Result of the mandatory final consistency check (clean, or what still mismatches).
