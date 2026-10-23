@@ -13,7 +13,7 @@ Usage:
     python recall.py digest-save <session-id> [--replace]    (digest on stdin)
     python recall.py decisions <term> [<term> ...] [--repo NAME] [--limit N]
     python recall.py activity --since DATE [--until DATE] [--repo NAME] [--json]
-    python recall.py memory <term> [<term> ...] [--memdir DIR] [--all] [--limit N]
+    python recall.py memory <term> [<term> ...] [--memdir DIR | --all-projects] [--all] [--limit N]
     python recall.py memory --stale-days N [--memdir DIR]
     python recall.py compress [--dry-run]
 
@@ -602,30 +602,66 @@ def parse_memory(path: Path) -> dict:
             "superseded_by": _fm_value(front, "superseded_by"), "body": body}
 
 
+def tier_dirs(memdir: Path) -> list:
+    """Demotion-tier subfolders of a memory dir: every subdirectory except archive/. Same rule as
+    cleanup-memory/reachability.mjs's collectFiles (cold/, rest/, ...); keep the two in step."""
+    return sorted(d for d in memdir.iterdir() if d.is_dir() and d.name != "archive")
+
+
 def _memory_files(memdir: Path) -> list:
-    """Top-level memory files only: archive/ and demotion-tier subfolders are not live memories."""
-    return [parse_memory(f) for f in sorted(memdir.glob("*.md")) if f.name != "MEMORY.md"]
+    """Top-level memory files plus every demotion tier. Tier files were moved out of the
+    always-loaded MEMORY.md by /cleanup-memory: still live facts, just unindexed, so search and
+    the stale scan must see them. archive/ holds dropped memories and is skipped. A tier file's
+    `file` is its path relative to memdir ("rest/x.md"), which is what the stale scan stats."""
+    mems = [parse_memory(f) for f in sorted(memdir.glob("*.md")) if f.name != "MEMORY.md"]
+    for tier in tier_dirs(memdir):
+        for f in sorted(tier.glob("*.md")):
+            mem = parse_memory(f)
+            mem["file"] = f"{tier.name}/{f.name}"
+            mem["tier"] = tier.name
+            mems.append(mem)
+    return mems
+
+
+def project_memdirs(projects: Path) -> list:
+    """(project folder name, memory dir) for every project under `projects` that has a memory dir."""
+    return [(d.name, d / "memory") for d in sorted(projects.iterdir())
+            if d.is_dir() and (d / "memory").is_dir()] if projects.is_dir() else []
 
 
 def cmd_memory(memdir: Path, terms, include_all: bool, limit: int) -> str:
     """Searches one project's memory files. A memory with `superseded_by` is kept on disk
     for its history but is hidden here unless include_all, so a replaced fact is never
     read as current."""
+    return _search_memdirs([(None, memdir)], terms, include_all, limit)
+
+
+def cmd_memory_all(projects: Path, terms, include_all: bool, limit: int) -> str:
+    """Same search over every project's memory dir; each hit is cited as <project folder>/<file>."""
+    return _search_memdirs(project_memdirs(projects), terms, include_all, limit)
+
+
+def _search_memdirs(memdirs, terms, include_all: bool, limit: int) -> str:
     terms = [t.lower() for t in terms]
     hits, hidden = [], 0
-    for mem in _memory_files(memdir):
-        hay = f'{mem["name"]} {mem["description"]} {mem["body"]}'.lower()
-        if not all(t in hay for t in terms):
-            continue
-        if mem["superseded_by"] and not include_all:
-            hidden += 1
-            continue
-        hits.append(mem)
-    out = [f"{len(hits)} memory file(s) match all of: {' '.join(terms)}"]
+    for label, memdir in memdirs:
+        for mem in _memory_files(memdir):
+            hay = f'{mem["name"]} {mem["description"]} {mem["body"]}'.lower()
+            if not all(t in hay for t in terms):
+                continue
+            if mem["superseded_by"] and not include_all:
+                hidden += 1
+                continue
+            mem["cite"] = f'{label}/{mem["file"]}' if label else mem["file"]
+            hits.append(mem)
+    scope = f" across {len(memdirs)} project memory dir(s)" if memdirs and memdirs[0][0] else ""
+    out = [f"{len(hits)} memory file(s) match all of: {' '.join(terms)}{scope}"]
     for mem in hits[:limit]:
         tag = f' [superseded by {mem["superseded_by"]}]' if mem["superseded_by"] else ""
+        if mem.get("tier"):
+            tag += f' [{mem["tier"]}]'
         ver = f'verified {mem["verified"]}' if mem["verified"] else "no verified date"
-        out.append(f'{mem["file"]} ({mem["type"]}, {ver}){tag}: {mem["description"]}')
+        out.append(f'{mem["cite"]} ({mem["type"]}, {ver}){tag}: {mem["description"]}')
     if len(hits) > limit:
         out.append(f"... {len(hits) - limit} more; narrow the terms or raise --limit")
     if hidden:
@@ -933,6 +969,8 @@ def main(argv=None) -> int:
     mm = sub.add_parser("memory")
     mm.add_argument("terms", nargs="*")
     mm.add_argument("--memdir", type=Path, help="memory directory; default is the current project's under --projects")
+    mm.add_argument("--all-projects", action="store_true",
+                    help="search every project's memory dir under --projects instead of one")
     mm.add_argument("--all", action="store_true", help="include superseded memories")
     mm.add_argument("--stale-days", type=int, help="list memories not verified for more than N days instead of searching")
     mm.add_argument("--limit", type=int, default=10)
@@ -942,6 +980,11 @@ def main(argv=None) -> int:
 
     if args.cmd == "memory":
         # Reads memory files only, never the transcript index, so it skips the index update.
+        if args.all_projects:
+            if args.memdir or args.stale_days is not None or not args.terms:
+                p.error("--all-projects takes search terms and cannot combine with --memdir or --stale-days")
+            print(cmd_memory_all(args.projects, args.terms, args.all, args.limit))
+            return 0
         memdir = args.memdir or default_memdir(args.projects, Path.cwd())
         if not memdir.is_dir():
             print(f"No memory directory at {memdir}")

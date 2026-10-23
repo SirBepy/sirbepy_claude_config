@@ -238,6 +238,65 @@ def test_memory():
         recall.cmd_memory_stale(mem, 90, today)
         check(True, "a file without frontmatter is tolerated")
 
+    test_memory_rest()
+    test_memory_all_projects()
+
+
+def test_memory_rest():
+    # Every non-archive subfolder is a demotion tier (rest/, cold/): memories moved out of the
+    # always-loaded index stay searchable, labelled with their tier folder.
+    with tempfile.TemporaryDirectory() as tmp:
+        mem = Path(tmp) / "memory"
+        (mem / "rest").mkdir(parents=True)
+        (mem / "cold").mkdir()
+        (mem / "archive").mkdir()
+        (mem / "MEMORY.md").write_text("# index\n", encoding="utf-8")
+        memory_file(mem / "cold" / "chilly_fact.md", "chilly-fact", "wibblefrotz in cold", modified="2026-02-01")
+        memory_file(mem / "archive" / "dropped.md", "dropped", "wibblefrotz archived")
+        memory_file(mem / "rest" / "demoted_fact.md", "demoted-fact", "wibblefrotz detail", modified="2026-01-05")
+        memory_file(mem / "rest" / "demoted_old.md", "demoted-old", "wibblefrotz stale", superseded_by="demoted-fact")
+        memory_file(mem / "core.md", "core", "wibblefrotz in core", verified="2026-10-01")
+        out = recall.cmd_memory(mem, ["wibblefrotz"], False, 10)
+        check("rest/demoted_fact.md" in out and "[rest]" in out, "a rest file is returned and labelled [rest]")
+        check("cold/chilly_fact.md" in out and "[cold]" in out, "a cold file is returned and labelled [cold]")
+        check("dropped" not in out, "archive/ is not a tier and stays unsearched")
+        check("core.md (reference, verified 2026-10-01): " in out, "a top-level hit carries no tier label")
+        check("chilly-fact" in recall.cmd_memory(mem, ["chilly-fact"], False, 10), "a cold memory is found by a keyword from its title")
+        check("demoted_old" not in out and "1 superseded memory file(s) hidden" in out,
+              "a superseded rest file is hidden by default")
+        check("demoted_old" in recall.cmd_memory(mem, ["wibblefrotz"], True, 10), "--all shows a superseded rest file")
+        by_title = recall.cmd_memory(mem, ["demoted-fact"], False, 10)
+        check("rest/demoted_fact.md" in by_title, "a demoted memory is found by a keyword from its title")
+        stale = recall.cmd_memory_stale(mem, 90, datetime(2026, 10, 23))
+        check("rest/demoted_fact.md" in stale, "--stale-days treats rest files like top-level ones")
+        check("cold/chilly_fact.md" in stale, "--stale-days lists a cold tier file too")
+
+
+def test_memory_all_projects():
+    with tempfile.TemporaryDirectory() as tmp:
+        projects = Path(tmp) / "projects"
+        for slug, rest in (("C--proj-a", False), ("C--proj-b", True)):
+            mem = projects / slug / "memory"
+            (mem / "rest").mkdir(parents=True)
+            (mem / "MEMORY.md").write_text("# index\n", encoding="utf-8")
+            memory_file((mem / "rest" if rest else mem) / "shared_topic.md", f"topic-{slug}", "snorkelbat rule")
+        (projects / "C--no-memory").mkdir()
+        (projects / "C--proj-a" / "memory" / "rest" / "hidden.md").write_text(
+            "---\nname: h\ndescription: d\nsuperseded_by: x\n---\nsnorkelbat old\n", encoding="utf-8")
+        out = recall.cmd_memory_all(projects, ["snorkelbat"], False, 10)
+        check("C--proj-a/shared_topic.md" in out and "C--proj-b/rest/shared_topic.md" in out,
+              "cross-project search returns hits from both project dirs, each citing its project folder")
+        check("2 memory file(s)" in out and "across 2 project memory dir(s)" in out, "cross-project header counts hits and dirs")
+        check("hidden.md" not in out and "1 superseded" in out, "cross-project search hides superseded files")
+        # The CLI wires the flag through --projects, the same override tests use elsewhere.
+        buf = io.StringIO()
+        old_stdout, sys.stdout = sys.stdout, buf
+        try:
+            rc = recall.main(["--projects", str(projects), "memory", "snorkelbat", "--all-projects"])
+        finally:
+            sys.stdout = old_stdout
+        check(rc == 0 and "C--proj-b/rest/shared_topic.md" in buf.getvalue(), "memory --all-projects works from the CLI")
+
 
 def main():
     with tempfile.TemporaryDirectory() as tmp:
