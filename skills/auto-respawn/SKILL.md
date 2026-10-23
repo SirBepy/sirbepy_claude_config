@@ -1,6 +1,7 @@
 ---
 name: auto-respawn
 description: Triggers on /auto-respawn only. Opts this Conductor chat into the 150k context-cap respawn note. For long-running listener chats.
+disable-model-invocation: true
 ---
 
 # /auto-respawn
