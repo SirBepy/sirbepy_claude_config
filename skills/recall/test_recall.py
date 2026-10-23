@@ -95,6 +95,30 @@ def main():
         check(index.update() == 2, "update extracts both sessions")
         check(index.update() == 0, "second update re-extracts nothing")
 
+        # A new redaction format must re-extract sessions already in the index, or old
+        # leaks stay searchable forever. The bumped version is left in place: the rest
+        # of this run never compares it again.
+        setattr(recall, "REDACTION_VERSION", getattr(recall, "REDACTION_VERSION", 0) + 1)
+        check(index.update() == 2, "a bumped redaction version re-extracts every indexed session")
+        check(index.update() == 0, "and the run after that is a no-op again")
+
+        fake = "fakeword" + "1234"
+        shaped = recall.redact(f"**2.** Log in. Password:\n\n> {fake}\n\nthen continue")
+        check(fake not in shaped and "[REDACTED:labelled_password]" in shaped and "then continue" in shaped,
+              "a value in a blockquote under a blank line after a Password: label is redacted")
+        check(fake not in recall.redact(f"- **Lozinka:**\n`{fake}`"),
+              "a bold list-item label with a backticked value is redacted")
+        check(fake not in recall.redact(f"PIN:\n```\n{fake}\n```"),
+              "a value inside a code fence under the label is redacted")
+        prose = recall.redact("Password:\nthis next line is ordinary prose")
+        check(prose == "Password:\nthis next line is ordinary prose", "prose with spaces after a label stays intact")
+        unlabelled = recall.redact(f"Log in here\n\n> {fake}")
+        check(unlabelled == f"Log in here\n\n> {fake}", "a short line after a line with no label stays intact")
+        check(recall.redact("Password:\n\n" + "x" * 65) == "Password:\n\n" + "x" * 65,
+              "a line over 64 chars after a label stays intact")
+        check(recall.redact(f"Password:\n{fake}\nsecond line") == "Password:\n[REDACTED:labelled_password]\nsecond line",
+              "only the first value line after a label is redacted")
+
         header, rows = next((h, r) for h, r in index.sessions() if h["session"] == SID)
         texts = [r["text"] for r in rows]
         joe = [r["text"] for r in rows if r.get("role") == "joe"]

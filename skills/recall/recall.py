@@ -75,6 +75,13 @@ def _load_secret_patterns():
 
 _SECRETS = None
 
+# Part of every session's index signature: raising it makes the next `update` re-extract
+# sessions already indexed, so a redaction fix also cleans entries written before it.
+REDACTION_VERSION = 2
+# A line ending in a password-ish label, optionally bold, e.g. "**2.** Log in. Password:".
+LABEL_RE = re.compile(r"\b(?:password|passwort|pin|lozinka)\s*(?:\*\*|__)?\s*:\s*(?:\*\*|__)?\s*$", re.I)
+LABELLED_VALUE_MAX = 64
+
 
 def redact(text: str) -> str:
     global _SECRETS
@@ -82,7 +89,19 @@ def redact(text: str) -> str:
         _SECRETS = _load_secret_patterns()
     patterns, allows, value_re, has_env_marker = _SECRETS
     out = []
+    after_label = False
     for line in text.split("\n"):
+        if after_label:
+            # The label's value is the first following line that has content once blockquote
+            # markers, backticks and code fences are peeled off; chat renders it on its own line.
+            core = re.sub(r"^[\s>]+", "", line).strip(" \t`")
+            if core:
+                after_label = False
+                if len(core) <= LABELLED_VALUE_MAX and not re.search(r"\s", core):
+                    out.append("[REDACTED:labelled_password]")
+                    continue
+        if LABEL_RE.search(line):
+            after_label = True
         lo = line.lower()
         spans = []
         for name, rx in patterns:
@@ -272,6 +291,7 @@ class Index:
         seen = set()
         for key, sig, session_id, slug, opener in self._sources():
             seen.add(session_id)
+            sig = [*sig, REDACTION_VERSION]
             if state.get(key) == sig and (self.dir / f"{session_id}.jsonl").exists():
                 continue
             with opener() as fh:
