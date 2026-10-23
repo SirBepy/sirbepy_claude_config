@@ -30,3 +30,9 @@ The Stop-hook testing floor never runs a slow, server-backed e2e suite as a per-
 - A package can opt out (e.g. a marker file, or a `testing-floor: skip` field in package.json), or
   the floor only runs the node row for packages under directories the turn actually edited.
 - mc_plugins_tag's `e2e/` no longer blocks a Java-only turn.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-23. The next run opens with these.
+
+- [ ] [TOOLING] Run this todo in an attended session (say which). Its fix writes to `hooks/` or `settings.json`, which `hooks/sensitive-file-guard.py` gates with a permission ask, and the autopilot rules bar a dispatched subagent from those writes, so an unattended loop cannot land it.

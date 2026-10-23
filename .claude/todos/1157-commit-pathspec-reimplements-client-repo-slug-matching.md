@@ -24,3 +24,9 @@ Give `hooks/_client_repo.py` a `--list <path>` option (default `refs/client-repo
 - `commit-pathspec.sh` contains no origin-slug parsing of its own.
 - `bash skills/commit/test_commit_pathspec.sh` passes, including the local-only-tests cases r53-r58.
 - `python ci/run_all.py` passes.
+
+## Open questions
+
+Written by /auto-do-todos on 2026-10-23. The next run opens with these.
+
+- [ ] [TOOLING] Run this todo in an attended session (say which). Its fix writes to `hooks/` or `settings.json`, which `hooks/sensitive-file-guard.py` gates with a permission ask, and the autopilot rules bar a dispatched subagent from those writes, so an unattended loop cannot land it.
