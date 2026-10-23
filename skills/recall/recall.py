@@ -533,8 +533,9 @@ def cmd_digest_save(index: Index, session, body: str, replace: bool) -> tuple:
 
 def _decision_items(text: str) -> list:
     """(section, item) pairs for the Decided and Rejected sections only. An item is one
-    bullet plus its continuation lines, so a Rejected option and its reason stay together."""
-    items, section, current = [], None, None
+    bullet plus its continuation lines and deeper-indented sub-bullets, so a Rejected option
+    and its reason stay together."""
+    items, section, current, indent = [], None, None, 0
     for line in text.splitlines():
         m = re.match(r"^## (\w+)\s*$", line)
         if m:
@@ -542,8 +543,10 @@ def _decision_items(text: str) -> list:
             continue
         if section not in DECISION_SECTIONS or not line.strip():
             continue
-        if re.match(r"^\s*[-*] ", line) or current is None:
+        bullet = re.match(r"^(\s*)[-*] ", line)
+        if current is None or (bullet and len(bullet.group(1)) <= indent):
             current = [section, line.strip()]
+            indent = len(bullet.group(1)) if bullet else 0
             items.append(current)
         else:
             current[1] += " " + line.strip()

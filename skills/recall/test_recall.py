@@ -159,6 +159,9 @@ def test_digests():
         check("0 decision" in recall.cmd_decisions(index, ["compared"], None, 10)
               and "0 decision" in recall.cmd_decisions(index, ["loader"], None, 10),
               "decisions ignores the Done section")
+        nested = recall._decision_items("## Rejected\n- Postgres\n    - reason: too heavy\n- SQLite\n")
+        check(nested == [("Rejected", "- Postgres - reason: too heavy"), ("Rejected", "- SQLite")],
+              f"an indented sub-bullet stays with its parent option: {nested}")
         both = recall.cmd_decisions(index, ["vault"], None, 10)
         check(both.index(SID_NEW) < both.index(SID), "decisions lists the newest session first")
         check("Use the vault design" in both, "decisions matches a Decided item")
