@@ -23,3 +23,7 @@ Skip paths with a `node_modules/` segment (and likely `.dart_tool/`, `build/`, `
 
 - A fresh `node_modules/**/test/*.js` no longer satisfies the pass condition.
 - A real untracked test listed in `.git/info/exclude` still does.
+
+## Notes
+
+- Completed 2026-10-23 (loop-todos cycle 1): node_modules, .dart_tool, build and vendor trees never satisfy the local-test check; an excluded real test still does. Tests RED then GREEN, suite ALL PASS.

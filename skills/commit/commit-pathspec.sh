@@ -176,6 +176,40 @@ fi
 repo_root=$(git -C "$repo_check" rev-parse --show-toplevel)
 git_c() { git -C "$repo_root" "$@"; }
 
+# Every later check tests "$repo_root/$f" and hands $f to git as a repo-relative pathspec, so a
+# caller's absolute path ("C:/.../f.txt", "/c/.../f.txt", backslashes) is rewritten to the
+# repo-relative form once, here, before any classification. Without it the on-disk test missed
+# and a modified file was reported deleted-unstaged. cygpath (Git for Windows) folds the msys,
+# drive-letter and backslash spellings into the same mixed form `git rev-parse --show-toplevel`
+# prints; the prefix compare is case-insensitive because Windows drive letters and directories are.
+# A path outside the repo is left untouched so the existing "unknown" error still names it.
+to_repo_relative() {
+  local f="$1" abs root
+  case "$f" in
+    /*|[A-Za-z]:[/\\]*) ;;
+    *) printf '%s' "$f"; return ;;
+  esac
+  abs="$f"
+  if command -v cygpath >/dev/null 2>&1; then abs=$(cygpath -m -- "$f" 2>/dev/null) || abs="$f"; fi
+  root="${repo_root%/}"
+  if [ "${abs,,}" = "${root,,}" ]; then printf '.'; return; fi
+  if [[ "${abs,,}" == "${root,,}/"* ]]; then
+    printf '%s' "${abs:$(( ${#root} + 1 ))}"
+  else
+    printf '%s' "$f"
+  fi
+}
+normalized_files=()
+for f in "${files[@]}"; do normalized_files+=("$(to_repo_relative "$f")"); done
+files=("${normalized_files[@]+"${normalized_files[@]}"}")
+# --own-range keys are the caller's spelling of the same paths, so they follow the same rewrite.
+declare -A normalized_ranges
+for k in "${!explicit_ranges[@]}"; do
+  normalized_ranges["$(to_repo_relative "$k")"]+="${explicit_ranges[$k]}"
+done
+explicit_ranges=()
+for k in "${!normalized_ranges[@]}"; do explicit_ranges["$k"]="${normalized_ranges[$k]}"; done
+
 # --todo <id> resolution (todo 1105): the done/ half is a filesystem glob (complete-todo.ps1's
 # Move-Item never touches the index, so the file is untracked new content, not a git object yet)
 # and the source half is a git pathspec glob gated on still being tracked - an untracked source
@@ -188,6 +222,12 @@ for tid in "${todo_ids[@]}"; do
   for donef in "$repo_root"/.claude/todos/done/"$tid"-*.md; do
     [ -e "$donef" ] || continue
     rel="${donef#"$repo_root"/}"
+    # A repo that keeps todos local lists .claude/todos/ in .git/info/exclude; `git add` refuses
+    # an ignored path and aborts the whole commit, so the flag drops it instead.
+    if git_c check-ignore -q -- "$rel" 2>/dev/null; then
+      printf '[todo] %s skipped as ignored by this repo (--todo %s adds only paths git will stage)\n' "$rel" "$tid"
+      continue
+    fi
     if [ -z "${todo_seen[$rel]:-}" ]; then
       todo_seen["$rel"]=1
       files+=("$rel")
@@ -196,6 +236,10 @@ for tid in "${todo_ids[@]}"; do
   shopt -u nullglob
   while IFS= read -r -d '' trackedf; do
     [ -z "$trackedf" ] && continue
+    if git_c check-ignore -q -- "$trackedf" 2>/dev/null; then
+      printf '[todo] %s skipped as ignored by this repo (--todo %s adds only paths git will stage)\n' "$trackedf" "$tid"
+      continue
+    fi
     if [ -z "${todo_seen[$trackedf]:-}" ]; then
       todo_seen["$trackedf"]=1
       files+=("$trackedf")
@@ -839,19 +883,38 @@ is_local_only_tests_repo() {
 # lists every path outside the index regardless of ignore status - the exact "untracked-or-
 # ignored" union needed, since a file added to `.git/info/exclude` per this check's own (i)
 # message is exactly as invisible to `--exclude-standard` as a plain `.gitignore` entry.
+#
+# Cost control: git itself narrows the listing to test-path candidates (the glob pathspecs mirror
+# is_test_path) and drops dependency/build trees, because an unfiltered listing of an
+# `npm install`ed or Flutter repo is tens of thousands of ignored paths. Those same trees are
+# re-checked per path below: a fresh `node_modules/**/test/*.js` is not a test Claude wrote, and
+# the pathspec exclusion alone would not survive someone editing one list but not the other.
+# Mtimes come from one batched `stat` instead of a `date -r` process per file.
 find_recent_local_test() {
-  local f mtime now cutoff
+  local f mtime now cutoff candidates=() line
   now=$(date +%s)
   cutoff=$((now - 86400))
   while IFS= read -r -d '' f; do
     is_test_path "$f" || continue
-    [ -e "$repo_root/$f" ] || continue
-    mtime=$(date -r "$repo_root/$f" +%s 2>/dev/null) || continue
-    if [ "$mtime" -ge "$cutoff" ]; then
-      printf '%s' "$f"
+    case "/$f/" in
+      */node_modules/*|*/.dart_tool/*|*/build/*|*/vendor/*) continue ;;
+    esac
+    candidates+=("$f")
+  done < <(git_c ls-files -z --others -- \
+    ':(glob)**/test_*' ':(glob)**/*_test.*' ':(glob)**/*.test.*' ':(glob)**/*.spec.*' \
+    ':(glob)**/*-probe.*' ':(glob)**/*-unit.*' \
+    ':(glob)**/test/**' ':(glob)**/tests/**' ':(glob)**/__tests__/**' ':(glob)**/spec/**' ':(glob)**/verify/**' \
+    ':(exclude,glob)**/node_modules/**' ':(exclude,glob)**/.dart_tool/**' \
+    ':(exclude,glob)**/build/**' ':(exclude,glob)**/vendor/**')
+  [ "${#candidates[@]}" -gt 0 ] || return 1
+  # stat reports a vanished candidate on stderr and carries on with the rest.
+  while IFS= read -r line; do
+    mtime=${line%% *}
+    if [ "$mtime" -ge "$cutoff" ] 2>/dev/null; then
+      printf '%s' "${line#* }"
       return 0
     fi
-  done < <(git_c ls-files -z --others -- .)
+  done < <(cd "$repo_root" && printf '%s\0' "${candidates[@]}" | xargs -0 stat -c '%Y %n' -- 2>/dev/null)
   return 1
 }
 local_only_repo=0
@@ -883,7 +946,10 @@ for f in "${files[@]}"; do
 done
 if [ "$has_source" -eq 1 ] && [ "$has_test" -eq 0 ]; then
   recent_local_test=""
-  if [ "$local_only_repo" -eq 1 ]; then
+  # Scan only when it can change the outcome: a test file named in the pathspec never reaches
+  # this block, and --force coverage-tests overrides the refusal whether or not a local test
+  # exists, so neither pays for the walk.
+  if [ "$local_only_repo" -eq 1 ] && ! has_force coverage-tests; then
     # (ii) the ordinary "no test file in the pathspec" refusal below does not apply
     # the same way in a local-only-tests repo, since a test there is BY DESIGN never meant to
     # reach the pathspec - it is replaced with "a local test file was touched recently", proof
