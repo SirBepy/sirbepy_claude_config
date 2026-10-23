@@ -22,6 +22,28 @@ Use the Bash tool with real `<` redirection instead of a PowerShell pipe, and ve
 parses (e.g. `openssl x509 -in file -noout` for a cert) before handing it to the command that
 consumes it.
 
+## .NET file APIs ignore `Set-Location`
+
+`[System.IO.File]::ReadAllText/WriteAllText` resolve a relative path against the PROCESS current
+directory, which `Set-Location` does not change (it moves only PowerShell's own location). The
+PowerShell tool's process cwd stays wherever the session started.
+
+Confirmed failure, 2026-10-09, mc_plugins_tag session f348: a mutation test meant for a scratch
+worktree ran `Set-Location C:\cargo-target\mc-f348` then `WriteAllText` on a relative path. Process
+cwd was still the main checkout (shared with 4 live peer sessions), so the read and write hit the
+MAIN checkout's file. It surfaced only because the "mutated" tests all still passed; rerun with
+absolute paths, the mutations bit (3 tests failed as expected).
+
+Rule: pass absolute paths to .NET file APIs, or call `[System.IO.Directory]::SetCurrentDirectory(<dir>)`
+first. The same trap is in `skills/commit/SKILL.md` step 6 (worktree removal).
+
+## `Remove-Item` denied as "system path ... is blocked"
+
+That denial is a Claude Code harness built-in (the string lives in `claude.exe`; no hook here emits
+it), so it can only be documented, not fixed. It reads targets from the WHOLE command, so keep a
+`Remove-Item` in its own PowerShell call, never in the same call as text carrying a slash-word
+(four hits, each lost the writes in that call).
+
 ## A separate PowerShell footgun: `-replace` does not escape the replacement string
 
 Found 2026-09-10 while building `build-dispatch.ps1`'s `-AsJsLiteral` mode, which needs to double
