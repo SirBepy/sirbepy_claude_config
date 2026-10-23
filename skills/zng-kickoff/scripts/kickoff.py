@@ -1,4 +1,4 @@
-"""State + fetch helper for /zng-kickoff. Run with `python -I`, set PYTHONIOENCODING=utf-8.
+"""State + fetch helper for /zng-kickoff. Run with `python -I`; it sets its own UTF-8 stdout.
 
 Subcommands:
   leftovers                         unpushed commits, dirty files and todo claims per ZNG repo
