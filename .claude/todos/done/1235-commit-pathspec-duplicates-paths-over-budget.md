@@ -32,3 +32,7 @@ neither script's `git_c` changes. Read `refs/refactoring-method.md` first.
 - One definition of the helper and one of the default, grep-verified.
 - `bash skills/commit/test_commit_pathspec.sh` (its r70/r71 cases reach the helper) and
   `bash skills/commit/test_prefilters.sh` pass.
+
+## Notes
+
+- Done by loop-todos cycle 3 on 2026-10-23: new skills/commit/_argv-budget.sh holds the one PREFILTER_ARGV_BUDGET default and paths_over_budget, sourced by _prefilter-lib.sh and commit-pathspec.sh (each keeps its own git_c). test_prefilters.sh gains a direct probe block, since the pathspec suite passed even with the budget override broken.

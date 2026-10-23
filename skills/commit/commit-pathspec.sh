@@ -83,24 +83,15 @@ dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Windows caps one command line near 32K characters, and a commit of a few hundred generated files
 # names more paths than that. Every external call below that receives the whole path list either
-# stays on argv while it fits under this many characters or moves the list through a file
-# (git's --pathspec-from-file, the gate's --paths-from-file) or into argv-sized chunks. The env
-# override lets a test force those paths with a handful of files.
-argv_budget="${PREFILTER_ARGV_BUDGET:-12000}"
+# stays on argv while it fits under PREFILTER_ARGV_BUDGET characters or moves the list through a
+# file (git's --pathspec-from-file, the gate's --paths-from-file) or into argv-sized chunks. The
+# env override lets a test force those paths with a handful of files. _argv-budget.sh, not
+# _prefilter-lib.sh, because the lib's global `repo` and git_c would clash with this script's own.
+. "$dir/_argv-budget.sh" || { printf 'ERROR: missing argv-budget helper: %s/_argv-budget.sh\n' "$dir"; exit 2; }
 
 # Scratch files for the path lists above; removed on any exit.
 work_dir=$(mktemp -d) || { printf 'ERROR: could not create a scratch directory\n'; exit 2; }
 trap 'rm -rf "$work_dir"' EXIT
-
-# True when the NUL-free total length of "$@" would not fit one command line.
-args_over_budget() {
-  local a total=0
-  for a in "$@"; do
-    total=$((total + ${#a} + 1))
-    [ "$total" -gt "$argv_budget" ] && return 0
-  done
-  return 1
-}
 
 # dirname/basename without a process per call: coverage and test-path checks visit every pathspec
 # file, and a fork each made a 1000-file commit spend minutes there. Results land in SP_DIR and
@@ -578,7 +569,7 @@ run_checker_chunks() {
   local base_len=$len
   for ((i = 0; i < n; i++)); do
     add=$(( ${#_items[i]} + ${#_own[i]} + 8 ))
-    if [ "$i" -gt "$start" ] && [ $((len + add)) -gt "$argv_budget" ]; then
+    if [ "$i" -gt "$start" ] && [ $((len + add)) -gt "$PREFILTER_ARGV_BUDGET" ]; then
       starts+=("$start"); ends+=("$i"); start=$i; len=$base_len
     fi
     len=$((len + add))
@@ -1223,7 +1214,7 @@ if [ "$has_index_removed" -eq 1 ]; then
     printf '[commit] ERROR: update-ref failed to advance %s to %s\n' "$actual_branch" "$new_commit"
     exit 2
   fi
-  if args_over_budget "${files[@]}"; then
+  if paths_over_budget "${files[@]}"; then
     git_c reset --pathspec-from-file="$work_dir/files.nul" --pathspec-file-nul >/dev/null 2>&1
   else
     git_c reset -- "${files[@]}" >/dev/null 2>&1
@@ -1250,7 +1241,7 @@ else
       done
     fi
   fi
-  if args_over_budget "${files[@]}"; then
+  if paths_over_budget "${files[@]}"; then
     commit_out=$(git_c commit "${commit_msg_args[@]}" --pathspec-from-file="$work_dir/files.nul" --pathspec-file-nul 2>&1); commit_rc=$?
   else
     commit_out=$(git_c commit "${commit_msg_args[@]}" -- "${files[@]}" 2>&1); commit_rc=$?

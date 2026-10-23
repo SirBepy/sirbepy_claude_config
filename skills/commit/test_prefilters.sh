@@ -378,6 +378,29 @@ for mode in untracked tracked; do
     0 "^caf.*\.txt:1$" '^:' "$out" "$rc"
 done
 
+# --- the argv budget and its over-budget test have one definition, shared by the prefilter lib and
+# commit-pathspec.sh; the chunked runs above give identical findings either side of the budget, so
+# only a direct probe of the helper notices if it stops honouring the default or the env override ---
+budget_file="$script_dir/_argv-budget.sh"
+out=$(env -u PREFILTER_ARGV_BUDGET bash -c '. "$1"; printf "%s" "$PREFILTER_ARGV_BUDGET"' _ "$budget_file" 2>&1); rc=$?
+check "_argv-budget.sh defaults the budget to 12000" 0 '^12000$' '' "$out" "$rc"
+out=$(PREFILTER_ARGV_BUDGET=250 bash -c '. "$1"; printf "%s" "$PREFILTER_ARGV_BUDGET"' _ "$budget_file" 2>&1); rc=$?
+check "_argv-budget.sh keeps a PREFILTER_ARGV_BUDGET override" 0 '^250$' '' "$out" "$rc"
+# "aaaa" counts 5 (length plus separator): two of them total 10, so a budget of 10 fits and 9 does not.
+out=$(PREFILTER_ARGV_BUDGET=10 bash -c '. "$1"; paths_over_budget aaaa aaaa && printf over || printf fits' _ "$budget_file" 2>&1); rc=$?
+check "paths_over_budget treats a total equal to the budget as fitting" 0 '^fits$' '' "$out" "$rc"
+out=$(PREFILTER_ARGV_BUDGET=9 bash -c '. "$1"; paths_over_budget aaaa aaaa && printf over || printf fits' _ "$budget_file" 2>&1); rc=$?
+check "paths_over_budget reports a total past the budget as over" 0 '^over$' '' "$out" "$rc"
+out=$(PREFILTER_ARGV_BUDGET=250 bash -c '. "$1/_prefilter-lib.sh"; paths_over_budget "$(printf "%0300d" 0)" && printf over || printf fits' _ "$script_dir" 2>&1); rc=$?
+check "_prefilter-lib.sh exposes the shared budget helper" 0 '^over$' '' "$out" "$rc"
+dups=$(grep -nE 'ARGV_BUDGET:-|^(args|paths)_over_budget\(\)|^argv_budget=' "$script_dir"/*.sh | grep -v '/test_' | grep -v '/_argv-budget\.sh:' || true)
+if [ -z "$dups" ]; then
+  echo "PASS: no script besides _argv-budget.sh defines the budget default or the over-budget helper"
+else
+  echo "FAIL: a second definition of the budget default or over-budget helper: $dups"
+  fail=1
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else
