@@ -25,3 +25,7 @@ newest `startedAt`) even when the rest of grounding is skipped.
 ## Acceptance
 
 A dry read of `/close` gives a short session a concrete way to get its sessionId for `digest-save`.
+
+## Notes
+
+- Done by /loop-todos cycle 2 on 2026-10-23: close SKILL.md Phase 3 step 4 resolves the sessionId via Transcript grounding step 1 even when grounding is skipped for a short session.

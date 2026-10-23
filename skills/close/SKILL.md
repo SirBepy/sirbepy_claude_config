@@ -234,8 +234,9 @@ Run in this order:
    mechanical run). Otherwise write this session's digest from the Phase 1 material, no extra
    model call: pipe `## Done`, `## Decided`, `## Rejected` (option plus the reason it lost) and
    `## Open` sections (write `none` under an empty one) to
-   `python ~/.claude/skills/recall/recall.py digest-save <sessionId>`, using the `sessionId` the
-   Transcript grounding step resolved. It refuses to overwrite an existing digest; never pass
+   `python ~/.claude/skills/recall/recall.py digest-save <sessionId>`. Resolve `<sessionId>` with
+   Transcript grounding step 1 even when the rest of grounding was skipped as a short session,
+   since a short session can still hold a decision worth a digest. It refuses to overwrite an existing digest; never pass
    `--replace` here. Digests feed `recall.py decisions` (design: `refs/permanent-memory.md`).
 Note: there is no implicit /commit step anymore. If the dev wants a commit, they chain `/commit` (with whatever subcommand they want) into the /close call.
 
