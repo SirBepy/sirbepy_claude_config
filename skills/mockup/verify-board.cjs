@@ -37,6 +37,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { createRequire } = require("node:module");
 const { pathToFileURL } = require("node:url");
+const { resolveViteEsm, lintLiterals } = require("./_board-lib.cjs");
 
 function usage(msg) {
   if (msg) console.error(`verify-board: ${msg}`);
@@ -79,22 +80,6 @@ const failures = [];
 const fail = (msg) => { failures.push(msg); console.log(`FAIL  ${msg}`); };
 const pass = (msg) => console.log(`ok    ${msg}`);
 
-// The preview panel splices a diagnostics script into the raw text at </body>; these literals in
-// an inline script or comment corrupt the pushed page. Checked statically so the failure does not
-// depend on which splice implementation the installed app has.
-function lintLiterals(html) {
-  const blocks = [
-    ...[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map((m) => ["script", m[1]]),
-    ...[...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => ["style", m[1]]),
-    ...[...html.matchAll(/<!--([\s\S]*?)-->/g)].map((m) => ["comment", m[1]]),
-  ];
-  const bad = [];
-  for (const [kind, body] of blocks) {
-    const hit = /<\/body>|<head[\s>/]|<html[\s>/]/i.exec(body);
-    if (hit) bad.push(`inline ${kind} contains literal "${hit[0]}"`);
-  }
-  return bad;
-}
 
 async function loadPanelBuilder() {
   const ts = fs.readFileSync(panelDoc, "utf8");
@@ -104,11 +89,7 @@ async function loadPanelBuilder() {
     code = req("esbuild").transformSync(ts, { loader: "ts", format: "esm" }).code;
   } catch {
     try {
-      const vp = req.resolve("vite/package.json");
-      const pkg = JSON.parse(fs.readFileSync(vp, "utf8"));
-      const root = pkg.exports && pkg.exports["."];
-      const esm = root && (typeof root === "string" ? root : typeof root.import === "string" ? root.import : root.import && root.import.default);
-      const vite = await import(pathToFileURL(path.resolve(path.dirname(vp), esm || pkg.module || pkg.main)).href);
+      const vite = await import(pathToFileURL(resolveViteEsm(req)).href);
       code = (await vite.transformWithEsbuild(ts, "doc.ts", { loader: "ts", format: "esm" })).code;
     } catch (e) {
       console.error(`verify-board: cannot transpile ${panelDoc}: no esbuild or vite resolvable from ${project} (${e.code || e.message}). Pass --project <dir> or BOARD_PROJECT.`);
@@ -133,8 +114,8 @@ async function loadPanelBuilder() {
   }
 
   const raw = fs.readFileSync(boardPath, "utf8");
-  const lint = lintLiterals(raw);
-  for (const l of lint) fail(`${l} (breaks the panel's </body> splice)`);
+  // Checked statically so the failure does not depend on which splice implementation the installed app has.
+  for (const { kind, literal } of lintLiterals(raw)) fail(`inline ${kind} contains literal "${literal}" (breaks the panel's </body> splice)`);
 
   let doc = raw;
   if (panelDoc) doc = (await loadPanelBuilder())(raw);

@@ -25,3 +25,7 @@ reject those literals in CSS with a clear error. Add a case to `skills/mockup/te
 
 A board whose CSS contains `content: "</body>"` renders that string unchanged after bundling, and
 `</style` inside CSS cannot break out of the style element.
+
+## Notes
+
+- Done by /loop-todos cycle 2 on 2026-10-23: inlined CSS now uses a CSS escape (backslash 3C plus space) via escapeInlineCss; test_board_scripts.cjs proves content strings holding </body> and </style> render unchanged in the sandbox (RED showed x3C/body> before).

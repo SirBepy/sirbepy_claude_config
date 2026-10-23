@@ -26,3 +26,7 @@ Extract `skills/mockup/_board-lib.cjs` (require()-able from the .mjs) with `reso
 
 Both scripts import the shared helper, and
 `BOARD_PROJECT=<repo with vite> node skills/mockup/test_board_scripts.cjs` passes.
+
+## Notes
+
+- Done by /loop-todos cycle 2 on 2026-10-23: new skills/mockup/_board-lib.cjs owns resolveViteEsm and lintLiterals, used by bundle-board.mjs and verify-board.cjs; test_board_scripts.cjs passes 11/11 with BOARD_PROJECT=claude_usage_in_taskbar.

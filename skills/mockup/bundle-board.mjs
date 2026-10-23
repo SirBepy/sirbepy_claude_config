@@ -8,9 +8,11 @@
 // current directory), never from ~/.claude: the board must build with the same vite and the same
 // node_modules as the real app. Run from the project root or pass --project.
 import { createRequire } from "node:module";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve, relative, join } from "node:path";
 import { pathToFileURL } from "node:url";
+
+const { resolveViteEsm, lintLiterals } = createRequire(import.meta.url)("./_board-lib.cjs");
 
 function usage(msg) {
   if (msg) console.error(`bundle-board: ${msg}`);
@@ -36,12 +38,7 @@ async function loadVite() {
   let req;
   try {
     req = createRequire(join(project, "package.json"));
-    const pkgPath = req.resolve("vite/package.json");
-    const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
-    const root = pkg.exports && pkg.exports["."];
-    const esm = root && (typeof root === "string" ? root : typeof root.import === "string" ? root.import : root.import && root.import.default);
-    const rel = esm || pkg.module || pkg.main;
-    return await import(pathToFileURL(resolve(dirname(pkgPath), rel)).href);
+    return await import(pathToFileURL(resolveViteEsm(req)).href);
   } catch (e) {
     if (req) {
       try { return await import(pathToFileURL(req.resolve("vite")).href); } catch {}
@@ -90,6 +87,10 @@ const lookup = (ref) => byName.get(ref.replace(/^\.\//, "").replace(/^\//, ""));
 // preview panel's text splice; \x3C is the same character inside a JS string, regex or template.
 const escapeInline = (js) =>
   js.replace(/<(\/script|\/body>|!--|(?:head|html)(?=[\s>/]))/gi, "\\x3C$1");
+// \x is not a CSS escape (it would render as the letters x3C), so a stylesheet needs \3C ; the
+// trailing space ends the hex escape so the next character is not swallowed into it.
+const escapeInlineCss = (css) =>
+  css.replace(/<(\/style|\/body>|!--|(?:head|html)(?=[\s>/]))/gi, "\\3C $1");
 
 let html = Buffer.from(htmlAsset.source).toString("utf8");
 html = html.replace(/<script\b[^>]*\bsrc="([^"]+)"[^>]*><\/script>/g, (tag, ref) => {
@@ -100,7 +101,7 @@ html = html.replace(/<script\b[^>]*\bsrc="([^"]+)"[^>]*><\/script>/g, (tag, ref)
 });
 html = html.replace(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"[^>]*>/g, (tag, ref) => {
   const css = lookup(ref);
-  return css ? `<style>${escapeInline(text(css))}</style>` : tag;
+  return css ? `<style>${escapeInlineCss(text(css))}</style>` : tag;
 });
 
 // Anything still external would 404 inside the panel's opaque-origin sandbox.
@@ -111,16 +112,7 @@ if (leftovers.length) {
 }
 
 // Hand-written classic inline scripts in the .src.html are not run through vite, so lint them too.
-const blocks = [
-  ...[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map((m) => ["script", m[1]]),
-  ...[...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => ["style", m[1]]),
-  ...[...html.matchAll(/<!--([\s\S]*?)-->/g)].map((m) => ["comment", m[1]]),
-];
-const bad = [];
-for (const [kind, body] of blocks) {
-  const hit = /<\/body>|<head[\s>/]|<html[\s>/]/i.exec(body);
-  if (hit) bad.push(`${kind} contains literal "${hit[0]}"`);
-}
+const bad = lintLiterals(html).map(({ kind, literal }) => `${kind} contains literal "${literal}"`);
 if (bad.length) {
   console.error(
     `bundle-board: ${bad.join("; ")}.\nThe preview panel splices a diagnostics script into the raw text at </body>, ` +
