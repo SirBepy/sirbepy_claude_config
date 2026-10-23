@@ -52,7 +52,7 @@ installed it's a fast no-op.
 For each repo in the order above, complete every step below before moving to
 the next repo.
 
-**Local backend precondition.** The push gate's `/e2e` step (2e) and zng-app's 2d step 4 rebuild
+**Local backend precondition.** The push gate's `/e2e` step (2e) and zng-app's 2e step 2 rebuild
 both assume a live local `zng-api` plus its Docker deps (`postgres`, `localstack`,
 `sftp-server`). Confirm `zng-api` answers on `/health` before relying on either; if it or any
 dependency is down, start it per the zng-app project memory for the local smoke/e2e recipe
@@ -125,25 +125,10 @@ longer necessary and contradicts how this project is meant to be used.
 1. `fvm flutter analyze`
 2. `fvm flutter test`
 3. `fvm flutter build web`
-4. **zng-app only:** step 3's build carries no `--dart-define-from-file`, so it overwrites the
-   shared checkout's `build/web/main.dart.js` with a bundle that targets no API and breaks the
-   local e2e harness (`zng-app/e2e/lib/server.js:73`, `assertBundleTargetsConfiguredApi()` reads
-   that file from disk unconditionally). Rebuild it for real use: `fvm flutter build web --release
-   --dart-define-from-file=.env.local`, then confirm the defines took. The main session's tools
-   cannot read `build/` directly, so don't reach for `grep -c`; check from a shell instead:
-   `node -e "process.exit(require('fs').readFileSync('build/web/main.dart.js','utf8').includes('localhost:3009')?0:1)"`
-   - non-zero exit means the defines didn't take and the bundle is still broken. Note in the final
-   report that `build/web` was rebuilt with local defines. Do not fold this into step 3 itself:
-   the `.env.local` file is gitignored and repo-specific, so step 3 stays a portable compile gate
-   that works on any machine.
-
-   **Re-check `flutterRoot`** (same read as 2c step 4) after this rebuild, not only after `fvm
-   use`: this rebuild runs its own dependency resolution, which can re-point `flutterRoot` at a
-   stray global checkout the same way 2c step 4 guards against. Seen 2026-10-02:
-   `.dart_tool/package_config.json` reverted to the prior version at the exact moment this build
-   finished, written by a process outside this session (UNVERIFIED cause - likely a VS Code
-   window still open on the old SDK, the multi-root-workspace case in Section 3 below). Repair the
-   same way as 2c step 4 before trusting this build's own output or moving on to 2e.
+4. **zng-app only: do NOT rebuild with local defines here.** That rebuild runs in 2e step 2, after
+   the bump commit: zng-app's `assertBundleIsNotStale` rejects a `build/web` older than `HEAD`'s
+   commit time, so a rebuild made before the commit is always stale. Step 3's `build web` leaves
+   `build/web` without API defines until then; that is expected.
 
 **Gate PASS/FAIL on the command's own output text, never on `$LASTEXITCODE` /
 the process exit code.** Confirmed 2026-08-13: `fvm flutter test` returns
@@ -184,14 +169,38 @@ repo:
    ```
    Add `pubspec.lock` to the pathspec only when the bump itself changed it
    (SDK-pinned packages: meta, test_api, matcher).
-2. **Push gate.** `hooks/push-gate.py` (renamed from `client-push-gate.py`; now gates every
+2. **zng-app only: rebuild `build/web` with local defines, after the commit and before the push
+   gate.** zng-app's `e2e/lib/server.js` (`assertBundleIsNotStale`, ~line 56) refuses to drive a
+   bundle whose `build/web/main.dart.js` mtime predates `HEAD`'s commit time, so a build made in 2d
+   (before step 1's commit) is always stale by construction. Also, 2d step 3's `build web` carries no
+   `--dart-define-from-file`, so it overwrites the shared checkout's `build/web/main.dart.js` with a
+   bundle that targets no API, which breaks `assertBundleTargetsConfiguredApi()` (same file, ~line
+   73, reads that file from disk unconditionally). Run: `fvm flutter build web --release
+   --dart-define-from-file=.env.local`, then confirm the defines took. The main session's tools
+   cannot read `build/` directly, so don't reach for `grep -c`; check from a shell instead:
+   `node -e "process.exit(require('fs').readFileSync('build/web/main.dart.js','utf8').includes('localhost:3009')?0:1)"`
+   - non-zero exit means the defines didn't take and the bundle is still broken. Note in the final
+   report that `build/web` was rebuilt with local defines. Do not fold this into 2d step 3: the
+   `.env.local` file is gitignored and repo-specific, so 2d step 3 stays a portable compile gate that
+   works on any machine.
+
+   **Re-check `flutterRoot`** (same read as 2c step 4) after this rebuild, not only after `fvm
+   use`: this rebuild runs its own dependency resolution, which can re-point `flutterRoot` at a
+   stray global checkout the same way 2c step 4 guards against. Seen 2026-10-02:
+   `.dart_tool/package_config.json` reverted to the prior version at the exact moment this build
+   finished, written by a process outside this session (UNVERIFIED cause - likely a VS Code
+   window still open on the old SDK, the multi-root-workspace case in Section 3 below). Repair the
+   same way as 2c step 4 before trusting this build's own output or moving on to the push gate. No
+   further commit may land between this rebuild and the gate's `/e2e` step, or the bundle is stale
+   again.
+3. **Push gate.** `hooks/push-gate.py` (renamed from `client-push-gate.py`; now gates every
    repo's push, not only client ones) blocks `git push` until this repo's HEAD is marked
    cleared. Run `skills/commit/SKILL.md`'s "Push pipeline" section's **Pre-push gate** procedure
    against this bump commit before pushing - don't restate or improvise it here. Only the stack
    differs per repo: zng-app has a real suite (`e2e/run-all.js`, run both phases at
    `--concurrency=5`); zng-admin and zng-biller have none, so `/e2e`'s "anything else" row applies
    - drive a smoke check by hand until a committed helper exists for this repo (see Notes below).
-3. `git -C <repo> push`
+4. `git -C <repo> push`
 
 Message is always exactly `Bump Flutter to <version>` — the established
 style used by every prior bump commit in all three repos. No prefixes.
@@ -199,12 +208,12 @@ style used by every prior bump commit in all three repos. No prefixes.
 If ANY of analyze/test/build FAILED for this repo: do NOT commit or push it.
 Leave its tree dirty, report the failure, and continue to the next repo.
 
-If the push gate (2e step 2) comes back red: do NOT push. Leave the commit in place (it already
+If the push gate (2e step 3) comes back red: do NOT push. Leave the commit in place (it already
 passed 2d), report which check failed, and continue to the next repo.
 
 ### Admin/biller smoke check (no committed helper yet)
 
-zng-admin and zng-biller have no e2e suite, so 2e step 2's gate currently means driving a
+zng-admin and zng-biller have no e2e suite, so 2e step 3's gate currently means driving a
 throwaway Playwright smoke check by hand: serve a release build, log in through `auth/login` +
 `auth/verify` with code `000000`, seed localStorage, click through the left nav, assert the
 routes load and there are no page errors. Open todo 1065 tracks promoting this into a committed
@@ -275,7 +284,7 @@ For each of the 3 repos, report:
 
 - **zng-app**: bumped `<old>` → `<new>` (or "already on `<new>`"), then
   analyze/test/build PASS or FAIL with an output tail for any FAIL, then
-  whether the local-defines rebuild (2d step 4) ran and whether its bundle-target check passed.
+  whether the local-defines rebuild (2e step 2) ran and whether its bundle-target check passed.
 - **zng-admin**: fetch/pull result; if skipped, the reason; otherwise same
   bump + verify detail as above.
 - **zng-biller**: same as zng-admin.
@@ -296,4 +305,4 @@ Then:
   back wrong or a repair didn't hold.
 - Per repo: the commit sha + push result, or "not committed - verify failed"
   with the failing check named, or "committed but not pushed - push gate red"
-  naming which of `/code-check`/`/e2e` failed (2e step 2).
+  naming which of `/code-check`/`/e2e` failed (2e step 3).
