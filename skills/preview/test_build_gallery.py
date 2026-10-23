@@ -295,6 +295,17 @@ def test_single_oversize_item_is_an_error(root):
     check(not (d / "sweep-gallery.html").exists(), "no half-built gallery is written")
 
 
+def test_flat_single_oversize_file_is_an_error(root):
+    d = root / "flat-oversize"
+    d.mkdir()
+    (d / "big.png").write_bytes(b"\x89PNG" + b"\0" * 400)
+    proc = run(str(d), "--budget-mb", "0.0001", "--slug", "flat")
+    check(proc.returncode == 1, "a flat-gallery file larger than the whole budget exits 1", f"rc={proc.returncode} out={proc.stdout!r}")
+    check("big.png" in proc.stderr and "budget" in proc.stderr, "the error names the file and the budget", proc.stderr)
+    check("follow-up:" not in proc.stdout, "no flat follow-up hint that could never converge", proc.stdout)
+    check(not (d / "flat-gallery.html").exists(), "no flat gallery is written")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -306,6 +317,7 @@ def main():
         test_relative_paths_and_escaping(root)
         test_duplicate_slug_ids_are_unique(root)
         test_single_oversize_item_is_an_error(root)
+        test_flat_single_oversize_file_is_an_error(root)
     test_render_url()
     test_render_url_helper()
     if failures:
