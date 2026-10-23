@@ -23,3 +23,7 @@ Add a `test_register_archive_task.ps1` (or a case in `skills/recall/test_recall.
 
 - A test registers, verifies and removes a throwaway task, or the script's header states why it is untested.
 - The task's logon type is known and matches what `refs/permanent-memory.md` describes.
+
+## Notes
+
+- Archived by the cleanup-todos pass 2026-10-23: worth 3. The logon-type question is answered (Get-ScheduledTask: LogonType Interactive, StartWhenAvailable True) and memory-archive compress.log shows OK runs 2026-10-21, 22 and 23.
