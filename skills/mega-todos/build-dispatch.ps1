@@ -197,6 +197,7 @@ your working preamble VERBATIM, applying these substitutions to its placeholders
   STAGING_LINE -> already given above (do not re-read that placeholder from the file)
   OFF_LIMITS -> $OffLimits
   $banInstruction
+  WORKTREE_LINE -> DELETE that line entirely; this dispatch shares the orchestrator's tree, no isolation worktree.
 
 run_in_background is FORBIDDEN in builder subagents at every step of this dispatch, and so is
 Monitor - the file you just read carries the full orphan-check and 120-second-timeout rules,
@@ -253,6 +254,10 @@ and follow it VERBATIM, applying:
         -replace '<WORKING_DIR>', (Protect $WorkingDir) `
         -replace '<STAGING_LINE>', (Protect $stagingLine) `
         -replace '<OFF_LIMITS>', (Protect $OffLimits)
+
+    # This composer never passes `isolation: "worktree"`, so per the preamble's placeholder table
+    # the base-sync line is deleted rather than filled.
+    $prompt = ($prompt -split "`n") | Where-Object { $_.TrimEnd("`r") -ne '<WORKTREE_LINE>' } | Out-String
 
     if ($inClaudeDir) {
         $prompt = ($prompt -split "`n") | Where-Object { $_ -ne '<GLOBAL_EDIT_BAN>' } | Out-String
