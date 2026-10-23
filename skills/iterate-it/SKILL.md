@@ -23,7 +23,7 @@ argument-hint: "[--threshold=N] [--floor=N] [--explore-max=N] [--polish-max=N] [
 /iterate-it --threshold=7 --floor=9 --explore-max=6 --polish-max=3 [--research] <hypothesis>
 ```
 
-- `<hypothesis>` — free-text. The initial proposal `P1` to evolve.
+- `<hypothesis>` - free-text. The initial proposal `P1` to evolve. Several topics in one ask: see "Multiple topics" below.
 - `--threshold=<int>` — score that ends Explore phase. Default 7.
 - `--floor=<int>` — score that ends Polish phase. Default 9.
 - `--explore-max=<int>` — max Explore rounds. Default 6.
@@ -32,7 +32,15 @@ argument-hint: "[--threshold=N] [--floor=N] [--explore-max=N] [--polish-max=N] [
 
 ## Algorithm
 
-Two phases. Each round = ONE subagent (not parallel — sequential, so each round sees prior rounds' verdicts).
+Two phases. Each round = ONE subagent (not parallel within a thread, sequential, so each round sees prior rounds' verdicts).
+
+### Multiple topics
+
+When the dev names several topics in one ask (or several question-card answers each say "iterate-it this"), run **one thread per topic**, all threads in parallel. A thread is the full Explore/Polish run for its topic, with its own caps, checklist rows and report card. Within a thread the rule above is unchanged: one sub per round, sequential.
+
+- Shared context goes into every thread's CONTEXT block. Dependencies between topics are noted there ("topic B assumes X, decided in thread A"), never merged into one proposal.
+- Combine topics into a single run only when the dev asks for one combined run. Topics being related is not a reason: a combined run gives each topic a fraction of the rounds' attention, and the threads then have to be re-run separately.
+- Report one card per thread (the slug is per topic already), then one short bubble listing each topic's `<score>/10 - <answer>`.
 
 ### Phase A: Explore (up to `--explore-max` rounds)
 
@@ -75,7 +83,7 @@ The checklist is progress only. The final verdict never lives in it - that is th
 
 For each round (regardless of phase):
 
-1. **Write `P_R` clearly.** 1-3 short paragraphs. Mark explicit rejections (things prior rounds killed) so the sub doesn't re-propose them.
+1. **Write `P_R` clearly.** 1-3 short paragraphs. Mark explicit rejections (things prior rounds killed) so the sub doesn't re-propose them. The brief states the dev's own success bar (long-term vs short-term, as they put it) and never adds a deadline, team-size limit, or "cut bloat" instruction the dev did not give. If an inherited brief carries one, drop it before dispatch.
 
 2. **Dispatch ONE sub** via Agent tool. Use the prompt template below. Pass `model: 'sonnet'`
    explicitly on the Agent tool call itself (the parameter, not just prompt text) - per global
@@ -161,7 +169,7 @@ If the dev replies, act on it the following turn - that's when `AskUserQuestion`
 
 ## Hard rules
 
-- **ONE sub per round.** No parallelism. Sequential lets each sub see prior verdicts.
+- **ONE sub per round per thread.** No parallelism within a thread: sequential lets each sub see prior verdicts. Separate topics run as separate parallel threads (see "Multiple topics").
 - **Always rotate angles in Explore.** Same angle twice in a row = groupthink risk.
 - **Always main-audit each round.** It's the only check against sub sycophancy.
 - **Never extend past `--explore-max + --polish-max`.** If the dev wants more, re-invoke with the final proposal as the new P1.
