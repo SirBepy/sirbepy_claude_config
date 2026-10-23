@@ -33,3 +33,7 @@ section comments marking the seam: `# ---------- compression ----------` through
 - `python skills/recall/test_recall.py` passes unchanged except for import paths.
 - `python skills/recall/recall.py compress --dry-run` still works, and the scheduled task's
   next `compress.log` line reads OK.
+
+## Notes
+
+- Archived by the cleanup-todos pass 2026-10-23 (loop-todos cycle 1): worth 4, behavior-neutral file split with no misfire; 1152, 1155 and 1156 also edit recall.py so splitting first only creates conflicts.
