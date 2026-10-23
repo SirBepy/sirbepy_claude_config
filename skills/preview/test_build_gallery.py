@@ -282,8 +282,8 @@ def test_single_oversize_item_is_an_error(root):
     d = root / "oversize"
     d.mkdir()
     manifest = make_manifest(d, 2)
-    # A budget far below any one item: the old behaviour dropped everything and printed a
-    # follow-up whose rerun would drop the same item again, forever.
+    # A budget far below any one item: dropping it would print a follow-up whose rerun drops the
+    # same item again, forever, so it must be an error instead.
     proc = run("--manifest", str(manifest), "--budget-mb", "0.0001")
     check(proc.returncode == 1, "an item larger than the whole budget exits 1", f"rc={proc.returncode} out={proc.stdout!r}")
     check(
