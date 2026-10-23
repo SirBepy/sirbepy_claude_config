@@ -25,3 +25,7 @@ points and test imports working.
 ## Acceptance
 
 Both test suites pass unchanged except imports.
+
+## Notes
+
+- Archived by /loop-todos cycle 2 on 2026-10-23 as churn (worth 3): a behavior-neutral file split of two single-entry CLIs whose tests import them by path; todo 1158 (split recall.py's archive half) was archived for the same reason. The todo itself called it borderline.
