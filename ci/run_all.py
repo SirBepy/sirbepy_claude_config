@@ -150,8 +150,9 @@ def check_prefilter_suites(root: Path) -> tuple:
 
 
 def discover_skill_tests(root: Path) -> list:
-    """Finds test_*.sh / test_*.py / test_*.ps1 living beside a script anywhere
-    under skills/, outside skills/commit (todo 991; .ps1 added by todo 1132).
+    """Finds test_*.sh / .py / .ps1 / .cjs / .mjs living beside a script anywhere
+    under skills/, outside skills/commit. The node suffixes run under `node`;
+    without them a committed node test sat beside its script and never ran.
 
     skills/commit stays excluded here because check_prefilter_suites already
     runs its three test_*.sh suites with its own bash-specific handling;
@@ -182,7 +183,7 @@ def discover_skill_tests(root: Path) -> list:
         return []
     candidates = sorted(
         p for p in skills_dir.rglob("test_*.*")
-        if p.suffix in (".sh", ".py", ".ps1")
+        if p.suffix in (".sh", ".py", ".ps1", ".cjs", ".mjs")
         and "__pycache__" not in p.parts
         and p.relative_to(skills_dir).parts[0] != "commit"
     )
@@ -199,7 +200,7 @@ def check_skill_tests(root: Path) -> tuple:
     which is exactly what todo 991 found already happened once (skills/close's
     safe-remove-worktree.ps1 had no discovery path for weeks).
     """
-    print("\n=== skill-script self-tests (skills/**/test_*.{sh,py,ps1}, excl. commit) ===", flush=True)
+    print("\n=== skill-script self-tests (skills/**/test_*.{sh,py,ps1,cjs,mjs}, excl. commit) ===", flush=True)
     tests = discover_skill_tests(root)
     if not tests:
         print("OK: 0 skill-script test suites discovered outside skills/commit")
@@ -212,6 +213,8 @@ def check_skill_tests(root: Path) -> tuple:
             runner = [_bash_exe(), rel.as_posix()]
         elif test_path.suffix == ".ps1":
             runner = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(rel)]
+        elif test_path.suffix in (".cjs", ".mjs"):
+            runner = ["node", str(rel)]
         else:
             runner = [sys.executable, str(rel)]
         try:

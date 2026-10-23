@@ -67,6 +67,27 @@ def check_tracked_sibling_test_is_discovered_and_run() -> bool:
         return ok
 
 
+def check_tracked_node_sibling_test_is_discovered_and_run() -> bool:
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        _init_repo(tmp)
+        _commit(tmp, "skills/widget/widget.cjs", "module.exports = 1;\n")
+        _commit(tmp, "skills/widget/test_widget.cjs", "process.exit(0);\n")
+        _commit(tmp, "skills/widget/test_other.mjs", "process.exit(0);\n")
+        found = run_all.discover_skill_tests(tmp)
+        rels = {p.relative_to(tmp).as_posix() for p in found}
+        if rels != {"skills/widget/test_widget.cjs", "skills/widget/test_other.mjs"}:
+            print(f"node tests not discovered: {rels}")
+            return False
+        ok, detail = run_all.check_skill_tests(tmp)
+        if not ok:
+            print(detail)
+            return False
+        _commit(tmp, "skills/widget/test_widget.cjs", "process.exit(1);\n")
+        ok, detail = run_all.check_skill_tests(tmp)
+        return (not ok) and "test_widget.cjs" in detail
+
+
 def check_untracked_sibling_test_is_not_discovered() -> bool:
     with tempfile.TemporaryDirectory() as td:
         tmp = Path(td)
@@ -107,6 +128,7 @@ def check_no_skills_dir_is_a_clean_empty_pass() -> bool:
 def main() -> int:
     cases = (
         ("tracked sibling test is discovered and run", check_tracked_sibling_test_is_discovered_and_run),
+        ("tracked node .cjs/.mjs sibling test is discovered and run", check_tracked_node_sibling_test_is_discovered_and_run),
         ("untracked sibling test is not discovered", check_untracked_sibling_test_is_not_discovered),
         ("skills/commit is excluded (no double-run)", check_skills_commit_is_excluded),
         ("failing discovered test fails the check", check_failing_discovered_test_fails_the_check),
