@@ -84,6 +84,30 @@ document.getElementById("inc")!.addEventListener("click", () => { n++; out.textC
   const rawBad = write("raw-bad.html", fs.readFileSync(path.join(run, "bad-literal.src.html"), "utf8"));
   const vl = node("verify-board.cjs", [rawBad, shots, "--route", "local"]);
   check("verify-board fails a board holding </body> in an inline script", vl.status === 1 && /<\/body>/.test(vl.stdout), vl.stdout + vl.stderr);
+
+  // CSS strings holding </body> and </style must survive bundling with their meaning intact and
+  // must not close the style element. The probe reads the computed `content` back in a real browser.
+  write("css-literal.css", `.q::before { content: "</body>"; } .q::after { content: "</style>"; }\n`);
+  write("css-literal.ts", `import "./css-literal.css";
+const q = document.getElementById("q")!;
+document.getElementById("o")!.textContent =
+  getComputedStyle(q, "::before").content + getComputedStyle(q, "::after").content;
+`);
+  write("css-literal.src.html", `<!doctype html><html><head><meta charset="utf-8"></head>
+<body><div id="q" class="q"></div><span id="o">unset</span>
+<script type="module" src="./css-literal.ts"></script></body></html>
+`);
+  const cssOut = path.join(run, "css-literal.html");
+  const cb = node("bundle-board.mjs", [path.join(run, "css-literal.src.html"), cssOut]);
+  check("bundle-board bundles a board whose CSS strings hold </body> and </style>", cb.status === 0 && fs.existsSync(cssOut), cb.stderr || cb.stdout);
+  const cssHtml = fs.existsSync(cssOut) ? fs.readFileSync(cssOut, "utf8") : "";
+  check("a literal </style in CSS cannot close the style element", (cssHtml.match(/<\/style/gi) || []).length === 1, cssHtml.slice(0, 600));
+  const cssPlan = write("css-plan.json", JSON.stringify({
+    settleMs: 1800,
+    steps: [{ type: "expectText", selector: "#o", equals: '"</body>""</style>"' }],
+  }));
+  const cv = node("verify-board.cjs", [cssOut, shots, cssPlan, "--route", "local"]);
+  check("CSS content strings render unchanged in the sandbox", cv.status === 0, cv.stdout + cv.stderr);
 } finally {
   fs.rmSync(run, { recursive: true, force: true });
 }
