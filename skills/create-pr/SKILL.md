@@ -61,17 +61,18 @@ per the global subagent-model rule; never inherit.
      resolves only OPEN PRs, so it cannot see one already merged from the same
      head; the next two checks cover that.
    - **Duplicate-PR check, head:** `gh pr list --head <branch> --state all --json
-     number,state,author,mergedAt`. Any MERGED or OPEN PR from this head that
-     this session did not create (an open one this session created is the
-     edit-mode case above) → STOP before any drafting subagent or verifier is
+     number,state,author,mergedAt`. Any MERGED PR, or any OPEN PR other than the
+     one `gh pr view` already resolved for this branch (that one is the
+     edit-mode case above, whichever session opened it) → STOP before any drafting subagent or verifier is
      dispatched, name the PR number, state and author to the dev, and ask how to
      proceed. A different dev can open and merge a PR from your head branch name
      while you work (REV-7305, 2026-10-12: PR #1140 merged 7 minutes after the
      branch was created).
    - **Duplicate-PR check, ticket:** when the branch name or its commits carry a
      ticket id, run `gh pr list --search "<TICKET-ID>" --state all --json
-     number,title,state,author` with the same stop rule: any merged or open PR
-     for that ticket not created by this session → stop and name it.
+     number,title,state,author` with the same stop rule: any merged PR, or any
+     open PR other than this branch's own edit-mode PR, for that ticket → stop
+     and name it.
    - **Base-moved report (optional, one call):**
      `gh api repos/<owner>/<repo>/compare/<fork-point>...<base> --jq .ahead_by`
      where `<fork-point>` is `git merge-base HEAD <base>`. Local `origin/*` refs
