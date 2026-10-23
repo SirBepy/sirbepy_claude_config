@@ -28,3 +28,7 @@ call under it) in-process and assert the URL it is handed comes from `render_url
 
 - The substring-count check is gone; a behavioural check covers both call sites.
 - `python skills/preview/test_build_gallery.py` and `python tools/test_build_gallery.py` pass.
+
+## Notes
+
+- Done by /loop-todos cycle 3 on 2026-10-23: the source substring count is replaced by an in-process test that runs main() --check --post with stubbed network calls and a recording render_url; reverting either call site in a scratch copy turns it red.
