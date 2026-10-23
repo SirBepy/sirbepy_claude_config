@@ -85,7 +85,9 @@ def test_budget_drop(tmp):
     # alphabetically like render_markdown.py's collect_md_files, so
     # a-small must sort before b-huge for the included/dropped split below.
     (img_dir / "a-small.png").write_bytes(b"0" * 1000)
-    (img_dir / "b-huge.png").write_bytes(b"1" * 2000)
+    # 1200 bytes fits the 1572-byte budget alone but not after a-small, so it is dropped into the
+    # follow-up; a file over the whole budget is an error instead (its rerun could never fit).
+    (img_dir / "b-huge.png").write_bytes(b"1" * 1200)
 
     proc = run(str(img_dir), "--budget-mb", "0.0015", "--slug", "budget")
     check("budget-drop exits 0", proc.returncode == 0, proc.stdout + proc.stderr)

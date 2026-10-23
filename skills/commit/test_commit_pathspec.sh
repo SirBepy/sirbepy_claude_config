@@ -1661,8 +1661,8 @@ check "an excluded real test file still satisfies the local-only check beside de
 
 # --- a commit whose expanded path list outgrows one Windows command line (~32K characters) ---
 # 220 new files with ~150 character names under a tracked directory expand to ~34K characters of
-# argv. Before the fix every git/bash call that took the whole list died with "Argument list too
-# long" inside the prefilter gate and nothing committed.
+# argv, past what one git/bash call can take, so any call handed the whole list dies with
+# "Argument list too long" and nothing commits.
 new_big_dir_repo() {
   local d
   d=$(new_repo) || return 1

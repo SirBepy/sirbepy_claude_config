@@ -154,7 +154,7 @@ is_binary_path() {
 # `read -n 8000 -d ''` stops at the first NUL or after 8000 bytes, whichever comes first, and
 # returns 0 either way (1 only on EOF before both), so a NUL in the window is exactly "status 0 and
 # fewer than 8000 bytes read". No process is spawned, which is what keeps a 1000-file sniff cheap.
-# The earlier head|od|tr|grep pipeline gave identical answers at the 7999/8000/8001 byte edges.
+# Its answers match git's own binary sniff at the 7999/8000/8001 byte edges.
 has_early_nul() {
   local chunk rc
   local LC_ALL=C IFS=

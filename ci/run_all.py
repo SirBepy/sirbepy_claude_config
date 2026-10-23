@@ -168,11 +168,9 @@ def discover_skill_tests(root: Path) -> list:
     drives the script by subprocess with its path overridable via an env var
     (e.g. tools/test_close_safe_remove_worktree.py, tools/test_build_dispatch.py,
     tools/test_reachability.py). Those are already discovered by
-    run_tool_tests.py and must not be found twice here. Zero scripts outside
-    skills/commit currently use the sibling test_*.{sh,py} convention this
-    function generalizes - that is why it finds nothing today. It exists so
-    the next skill author who writes a sibling test (the skills/commit shape)
-    gets picked up without a second hardcoded directory ever being added.
+    run_tool_tests.py and must not be found twice here. This function exists
+    so a skill author who writes a sibling test (the skills/commit shape) gets
+    picked up without a second hardcoded directory ever being added.
 
     skills/mega-todos/test-archive-batch.ps1 still isn't discovered here: its
     name uses a hyphen ("test-"), not the "test_" prefix this glob requires,
