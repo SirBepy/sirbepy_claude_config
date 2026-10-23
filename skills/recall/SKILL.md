@@ -21,6 +21,8 @@ Every command first brings the index up to date (a few seconds; a full first bui
 ```
 python ~/.claude/skills/recall/recall.py search <term> [<term> ...] [--repo NAME] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--limit N]
 python ~/.claude/skills/recall/recall.py show <session-id-prefix> [--grep TEXT] [--max-chars N]
+python ~/.claude/skills/recall/recall.py digest-save <session-id> [--replace]   # digest on stdin
+python ~/.claude/skills/recall/recall.py decisions <term> [<term> ...] [--repo NAME] [--limit N]
 python ~/.claude/skills/recall/recall.py activity --since YYYY-MM-DD [--until YYYY-MM-DD] [--repo NAME] [--json]
 ```
 
@@ -28,6 +30,18 @@ python ~/.claude/skills/recall/recall.py activity --since YYYY-MM-DD [--until YY
   Start with 2-3 distinctive words; add `--repo` or `--since` when hits are too many.
 - `show`: one session's conversation (the dev's turns, labelled `joe`, Claude's chat text, commit lines). Use
   `--grep` on long sessions instead of reading all of it.
+  When a digest is cached it prints first; read it before the full conversation.
+- **Write a digest after reading an old session.** When `show` says there is no digest, save one
+  once you have read the chat (no extra model call, you already read it): sections `## Done`,
+  `## Decided`, `## Rejected` (option plus the reason it lost), `## Open`, `none` under an empty
+  one. `digest-save` refuses to overwrite without `--replace` (use it only to correct a wrong
+  digest), redacts secrets, and stores one file per session in `~/.claude/memory-archive/digests/`.
+  Digests are the one recall output that cannot be rebuilt from transcripts, so they live outside
+  `index/`; deleting and rebuilding the index leaves them intact. `/close` writes its own session's.
+- `decisions`: searches only the Decided and Rejected sections of saved digests (every term must
+  appear in one entry), newest first, with citations. Run it before proposing an option; a
+  rejected one needs a stated reason the situation changed. It only knows sessions that have a
+  digest, so no hit is not proof nothing was decided: fall back to `search`.
 - `activity`: raw timestamps of the dev's messages per session. Sessions overlap because several run
   at once; merge the windows, never sum them.
 

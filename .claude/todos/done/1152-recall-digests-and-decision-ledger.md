@@ -44,3 +44,7 @@ disposable.
   and decisions matching only decision sections.
 - A brainstorm on a topic with a recorded rejected option surfaces it in step 1.
 - Deleting `index/` and rebuilding leaves every digest intact.
+
+## Notes
+
+- Completed 2026-10-23 (loop-todos cycle 1): recall.py digest-save (atomic, no overwrite without --replace, redacted), show prints a cached digest, decisions searches Decided/Rejected only; wired into close Phase 3 step 4 and brainstorm step 1; tests cover digests surviving an index rebuild.
