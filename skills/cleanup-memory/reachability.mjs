@@ -52,6 +52,16 @@ function frontmatterName(text) {
   return nameLine ? nameLine[1].trim().replace(/^["']|["']$/g, '') : null;
 }
 
+// Same reading as recall.py's parse_memory/_fm_value so both tools agree on what is superseded:
+// the key counts at top level or indented (under `metadata:`), and an empty or quoted-empty
+// value is absent. Only the frontmatter block is searched, never the body.
+function isSuperseded(text) {
+  const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
+  if (!fm) return false;
+  const m = /^[ \t]*superseded_by:[ \t]*(.*?)[ \t]*$/m.exec(fm[1]);
+  return Boolean(m && m[1].trim().replace(/^["']|["']$/g, '').trim());
+}
+
 // Any subdirectory other than archive/ is a demotion tier (e.g. cold/):
 // files there are deliberately unindexed and must never be flagged as
 // orphan-file or proposed for re-indexing.
@@ -119,6 +129,10 @@ function main() {
 
   const { live, demoted } = collectFiles(dir);
   const targets = buildTargets(live);
+  // Superseded files are unindexed on purpose: they stay link targets (so a link to one is
+  // never an orphan-index-entry) but are never counted as orphan-file in any reading.
+  const superseded = live.filter((f) => isSuperseded(readFileSync(f, 'utf8')));
+  const isOrphanCandidate = (f) => !superseded.includes(f);
 
   // Reading C - "loaded-window, direct-link-only" (authoritative, per
   // SKILL.md Step 2): only (file.md) links inside MEMORY.md's own loaded
@@ -131,7 +145,7 @@ function main() {
     if (target) loadedResolved.add(target);
     else orphanIndexEntries.push(link.raw);
   }
-  const orphanFilesLoaded = live.filter((f) => !loadedResolved.has(f));
+  const orphanFilesLoaded = live.filter((f) => isOrphanCandidate(f) && !loadedResolved.has(f));
 
   // Reading B - strict BFS outward from MEMORY.md (full file, both link
   // kinds, transitive through memory files).
@@ -156,7 +170,7 @@ function main() {
       }
     }
   }
-  const orphanFilesBfs = live.filter((f) => !visited.has(f));
+  const orphanFilesBfs = live.filter((f) => isOrphanCandidate(f) && !visited.has(f));
 
   // Reading A - most lenient: any file crediting any other file with a
   // link counts as reachable, even a link from another orphan.
@@ -172,7 +186,7 @@ function main() {
       if (target) reachableAny.add(target);
     }
   }
-  const orphanFilesAny = live.filter((f) => !reachableAny.has(f));
+  const orphanFilesAny = live.filter((f) => isOrphanCandidate(f) && !reachableAny.has(f));
 
   const lines = [];
   lines.push(`memory dir: ${dir}`);
@@ -184,6 +198,8 @@ function main() {
   lines.push(`live files: ${live.length}`);
   lines.push(`demoted files (excluded from all readings): ${demoted.length}`);
   if (demoted.length) demoted.forEach((f) => lines.push(`  ${f}`));
+  lines.push(`superseded (unindexed on purpose, excluded from every orphan-file reading): ${superseded.length}`);
+  superseded.forEach((f) => lines.push(`    ${f}`));
   lines.push('');
   lines.push(`[authoritative] loaded-window, direct-link-only:`);
   lines.push(`  orphan-file: ${orphanFilesLoaded.length}`);
