@@ -32,14 +32,15 @@ pathspec before creating the commit object, so a flagged diff still can't
 land through this route either way.
 
 Usage:
-  split-hunks.py stage <path> --match <substring> [--repo <dir>]
+  split-hunks.py [--repo <dir>] stage <path> --match <substring>
+      (--repo is a top-level option: argparse rejects it after the subcommand.)
       Filters <path>'s unstaged hunks (vs HEAD) to those whose added/removed
       lines contain <substring>, applies just those into the REAL index with
       `git apply --cached`. For the solo, no-concurrent-risk case - nothing
       else of interest is staged. Prints `git diff --cached -- <path>` to
       confirm. Exit 1 if no hunk matched (nothing staged).
 
-  split-hunks.py commit --message <msg> [--repo <dir>]
+  split-hunks.py [--repo <dir>] commit -m <subject> [-m <body paragraph> ...]
       [--whole <path> ...] [--hunk <path>:<substring> ...] [--base <sha>]
       Builds a private index from HEAD (or --base, to retry against a known
       base), stages whole files as-is and/or filtered hunks into it, refuses
@@ -109,6 +110,12 @@ def split_file_sections(patch: bytes):
     """Splits a (possibly multi-file) unified diff into per-file byte-line
     lists, each starting at its own `diff --git` line."""
     lines = patch.split(b"\n")
+    # A diff ends in "\n", so the split leaves a phantom empty last element. Re-joined
+    # with "\n" plus a final "\n" it becomes a blank line, which `git apply --recount`
+    # counts as one more context line than the file has: "patch does not apply" whenever
+    # the kept set includes the file's final hunk. A real blank context line is " ", never "".
+    if lines and lines[-1] == b"":
+        lines.pop()
     sections = []
     current = []
     for line in lines:
@@ -121,10 +128,12 @@ def split_file_sections(patch: bytes):
     return sections
 
 
-def filter_hunks(section: list, substring: bytes):
+def filter_hunks(section: list, substrings: list):
     """Keeps only the hunks (`@@ ... @@` blocks) in one file-section whose
-    added/removed lines contain `substring`. Returns the trimmed line list,
-    or None if no hunk in this file matched (drop the file entirely)."""
+    added/removed lines contain ANY of `substrings`. A hunk matched by several
+    substrings is kept once (applying it twice makes git apply fail). Returns
+    the trimmed line list, or None if no hunk in this file matched (drop the
+    file entirely)."""
     header = []
     i = 0
     while i < len(section) and not section[i].startswith(b"@@"):
@@ -144,7 +153,7 @@ def filter_hunks(section: list, substring: bytes):
     kept = [
         h for h in hunks
         if any(
-            (ln.startswith(b"+") or ln.startswith(b"-")) and substring in ln
+            (ln.startswith(b"+") or ln.startswith(b"-")) and any(s in ln for s in substrings)
             for ln in h
         )
     ]
@@ -156,13 +165,13 @@ def filter_hunks(section: list, substring: bytes):
     return out
 
 
-def build_patch(repo, ref, path, substring: bytes, env=None):
-    """Bytes of `git diff <ref> -- <path>` trimmed to hunks containing
-    `substring`, or None if nothing matched (nothing to stage)."""
+def build_patch(repo, ref, path, substrings: list, env=None):
+    """Bytes of `git diff <ref> -- <path>` trimmed to hunks containing any of
+    `substrings`, or None if nothing matched (nothing to stage)."""
     full = diff_against_ref(repo, ref, path, env=env)
     if not full.strip():
         return None
-    kept = [s for s in (filter_hunks(sec, substring) for sec in split_file_sections(full)) if s is not None]
+    kept = [s for s in (filter_hunks(sec, substrings) for sec in split_file_sections(full)) if s is not None]
     if not kept:
         return None
     out = []
@@ -204,7 +213,7 @@ def run_prefilter_gate(repo, paths):
 
 def cmd_stage(args):
     repo = Path(args.repo).resolve()
-    patch = build_patch(repo, "HEAD", args.path, args.match.encode())
+    patch = build_patch(repo, "HEAD", args.path, [args.match.encode()])
     if patch is None:
         print(f"no hunk in {args.path} contains {args.match!r}; nothing staged")
         return 1
@@ -253,12 +262,17 @@ def cmd_commit(args):
         run(repo, ["read-tree", base], env=env)
         for path in whole_paths:
             run(repo, ["add", "--", path], env=env)
+        # Each filter must match something on its own (so a typo still refuses), but the
+        # patch is built once per path from the union: two filters landing in one @@ hunk
+        # would otherwise apply that hunk twice.
+        by_path = {}
         for path, substring in hunk_specs:
-            patch = build_patch(repo, base, path, substring.encode())
-            if patch is None:
+            if build_patch(repo, base, path, [substring.encode()]) is None:
                 print(f"no hunk in {path} contains {substring!r}; refusing (nothing would change)")
                 return 1
-            apply_cached(repo, patch, env=env)
+            by_path.setdefault(path, []).append(substring.encode())
+        for path, substrings in by_path.items():
+            apply_cached(repo, build_patch(repo, base, path, substrings), env=env)
 
         tree = run(repo, ["write-tree"], env=env).stdout.decode().strip()
 
@@ -274,7 +288,10 @@ def cmd_commit(args):
             print(f"refusing: tree touches undeclared path(s): {sorted(extra)}")
             return 1
 
-        new = run(repo, ["commit-tree", tree, "-p", base, "-m", args.message], env=env).stdout.decode().strip()
+        # One commit-tree -m per value: git joins repeated -m with blank lines, the same
+        # subject-then-paragraphs shape as `git commit -m A -m B`.
+        msg_args = [a for m in args.message for a in ("-m", m)]
+        new = run(repo, ["commit-tree", tree, "-p", base, *msg_args], env=env).stdout.decode().strip()
 
         # Step 3's CAS: refuses outright if HEAD != base, i.e. if a peer
         # committed in the window between reading base and this call - the
@@ -313,7 +330,7 @@ def main():
     p_stage.set_defaults(func=cmd_stage)
 
     p_commit = sub.add_parser("commit")
-    p_commit.add_argument("-m", "--message", required=True)
+    p_commit.add_argument("-m", "--message", action="append", required=True)
     p_commit.add_argument("--whole", action="append", default=[])
     p_commit.add_argument("--hunk", action="append", default=[])
     p_commit.add_argument("--base")

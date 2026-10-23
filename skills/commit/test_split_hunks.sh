@@ -155,6 +155,82 @@ check "commit race: refuses" 1 "HEAD moved" "" "$out" "$ec"
 now_head=$(git -C "$d4" rev-parse HEAD)
 [ "$now_head" = "$peer_head" ] && echo "PASS: commit race: HEAD left at the peer's commit" || { echo "FAIL: commit race: HEAD is $now_head, want $peer_head"; fail=1; }
 
+# --- commit: keeping the file's FINAL hunk used to hand git apply a patch ending in a
+# blank line that --recount counted as an extra context line ("patch does not apply") ---
+d5=$(new_repo); tmp_dirs+=("$d5")
+{
+  i=1
+  while [ "$i" -le 30 ]; do printf 'line%02d\n' "$i"; i=$((i + 1)); done
+} > "$d5/multi.txt"
+git -C "$d5" add multi.txt
+git -C "$d5" commit -q -m seed
+# Hunk 1 changes the line count (1 line becomes 3), hunks 2 and 3 are one-line edits.
+sed -i '2s/.*/line02-FIRST\nextra-a\nextra-b/' "$d5/multi.txt"
+sed -i 's/^line15$/line15-MID/' "$d5/multi.txt"
+sed -i 's/^line30$/line30-LAST/' "$d5/multi.txt"
+
+out=$("$py" "$sh_py" --repo "$d5" commit -m "final hunk only" --hunk multi.txt:LAST 2>&1); ec=$?
+check "final hunk: exit 0" 0 "" "patch" "$out" "$ec"
+shown=$(git -C "$d5" show HEAD -- multi.txt 2>&1)
+check "final hunk: commit carries the LAST edit" 0 "\+line30-LAST" "" "$shown" 0
+check "final hunk: commit carries no FIRST/MID edit" 0 "" "FIRST|MID|extra-" "$shown" 0
+left=$(git -C "$d5" diff HEAD -- multi.txt)
+check "final hunk: FIRST and MID stay uncommitted" 0 "FIRST" "" "$left" 0
+check "final hunk: LAST is no longer in the working diff" 0 "" "LAST" "$left" 0
+
+# 2 of 3 hunks (skipping the line-count-changing first one), via two filters.
+d6=$(new_repo); tmp_dirs+=("$d6")
+{
+  i=1
+  while [ "$i" -le 30 ]; do printf 'line%02d\n' "$i"; i=$((i + 1)); done
+} > "$d6/multi.txt"
+git -C "$d6" add multi.txt
+git -C "$d6" commit -q -m seed
+sed -i '2s/.*/line02-FIRST\nextra-a\nextra-b/' "$d6/multi.txt"
+sed -i 's/^line15$/line15-MID/' "$d6/multi.txt"
+sed -i 's/^line30$/line30-LAST/' "$d6/multi.txt"
+out=$("$py" "$sh_py" --repo "$d6" commit -m "mid and last" --hunk multi.txt:MID --hunk multi.txt:LAST 2>&1); ec=$?
+check "2-of-3 hunks: exit 0" 0 "" "patch" "$out" "$ec"
+shown=$(git -C "$d6" show HEAD -- multi.txt 2>&1)
+check "2-of-3 hunks: commit carries MID and LAST" 0 "\+line15-MID" "" "$shown" 0
+check "2-of-3 hunks: commit carries LAST" 0 "\+line30-LAST" "" "$shown" 0
+check "2-of-3 hunks: commit carries no FIRST edit" 0 "" "FIRST|extra-" "$shown" 0
+# The committed blob must equal HEAD~1 plus exactly those two edits.
+want=$(git -C "$d6" show HEAD~1:multi.txt | sed 's/^line15$/line15-MID/; s/^line30$/line30-LAST/')
+got=$(git -C "$d6" show HEAD:multi.txt)
+[ "$want" = "$got" ] && echo "PASS: 2-of-3 hunks: committed blob matches HEAD~1 plus MID and LAST" || { echo "FAIL: 2-of-3 hunks: committed blob differs from the expected content"; fail=1; }
+
+# --- commit: repeated -m is subject plus body paragraphs, like git commit -m A -m B ---
+d7=$(new_repo); tmp_dirs+=("$d7")
+printf 'base\n' > "$d7/m.txt"
+git -C "$d7" add m.txt
+git -C "$d7" commit -q -m seed
+printf 'changed\n' > "$d7/m.txt"
+out=$("$py" "$sh_py" --repo "$d7" commit -m "SUBJECT line" -m "Body paragraph one" -m "Body paragraph two" --whole m.txt 2>&1); ec=$?
+check "multi -m: exit 0" 0 "" "" "$out" "$ec"
+subject=$(git -C "$d7" log -1 --format=%s)
+[ "$subject" = "SUBJECT line" ] && echo "PASS: multi -m: first -m is the subject" || { echo "FAIL: multi -m: subject is '$subject'"; fail=1; }
+body=$(git -C "$d7" log -1 --format=%B)
+want_body=$(printf 'SUBJECT line\n\nBody paragraph one\n\nBody paragraph two')
+[ "$body" = "$want_body" ] && echo "PASS: multi -m: paragraphs joined by blank lines" || { echo "FAIL: multi -m: message is '$body'"; fail=1; }
+
+# --- commit: one hunk matched by two --hunk filters is applied once ---
+d8=$(new_repo); tmp_dirs+=("$d8")
+# The matched hunk is the FIRST of two, so this isolates the double-apply from the
+# final-hunk blank-line bug.
+{
+  i=1
+  while [ "$i" -le 30 ]; do printf 'line%02d\n' "$i"; i=$((i + 1)); done
+} > "$d8/imp.txt"
+git -C "$d8" add imp.txt
+git -C "$d8" commit -q -m seed
+sed -i 's/^line02$/line02-alphaX/; s/^line03$/line03-betaY/; s/^line28$/line28-other/' "$d8/imp.txt"
+out=$("$py" "$sh_py" --repo "$d8" commit -m "dedupe" --hunk imp.txt:alphaX --hunk imp.txt:betaY 2>&1); ec=$?
+check "dedupe: two filters on one hunk, exit 0" 0 "" "patch failed" "$out" "$ec"
+shown=$(git -C "$d8" show HEAD -- imp.txt 2>&1)
+check "dedupe: commit carries both edits" 0 "\+line03-betaY" "" "$shown" 0
+check "dedupe: the unmatched hunk stays out" 0 "" "other" "$shown" 0
+
 if [ "$fail" -ne 0 ]; then
   echo "FAIL: one or more split-hunks.py checks failed"
   exit 1
