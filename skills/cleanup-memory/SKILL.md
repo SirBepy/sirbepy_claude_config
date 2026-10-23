@@ -57,6 +57,20 @@ Read every file's frontmatter (`name`, `description`, `metadata.type`) and full 
   projects (editor prefs, communication style, universal workflow rules). Flag
   only - never auto-write to `~/.claude/CLAUDE.md`.
 
+## Step 1.6 - Freshness candidates (mechanical, read-only)
+
+Run `python ~/.claude/skills/recall/recall.py memory --stale-days 90 --memdir <memory-dir>`. It lists
+every non-superseded memory whose `verified:` date is older than 90 days, oldest first. A memory with
+no `verified:` key (every file written before 2026-10-23) is aged by its `modified` date and labelled
+`no verified date`, which proves only when it was last written, not last checked. Report the list and
+its counts (`verified`, `unverified`, `superseded`) in Step 7.
+
+Flag-only, never in the Step 5 apply set: age alone never drops a memory (Step 4). The list is where
+Step 4's deep pass looks first for tool-version quirks and recorded reproductions, the two shapes
+that go stale silently (`refs/memory-rubric.md` "Freshness and supersession"). A deep-pass memory
+whose claim re-verifies gets `verified:` set to today; one whose fact changed follows the rubric's
+UPDATE-with-supersession (history matters) or DELETE (merely wrong) rows.
+
 ## Step 2 - Index/file consistency (mechanical, read-only)
 
 Run `node ~/.claude/skills/cleanup-memory/reachability.mjs <memory-dir>` instead of reinventing
@@ -74,7 +88,10 @@ one still fails to reach a session, which is the only thing this check is trying
 step uses the 132 reading - the script's `loaded-window, direct-link-only` output - on purpose.
 The other two readings the script prints are context only, never the reported figure.)
 
-- A file with no direct link inside MEMORY.md's loaded window: `orphan-file`.
+- A file with no direct link inside MEMORY.md's loaded window: `orphan-file`. Exception: a file
+  whose frontmatter carries `superseded_by:` is unindexed on purpose. `reachability.mjs` still
+  counts it, so subtract those files from the count, list them separately as `superseded: N`, and
+  never add an index line for one in Step 6.
 - A `MEMORY.md` line (within that window) whose linked file doesn't exist: `orphan-index-entry`.
 
 The window ends at the **24.4KB byte cap**, which `reachability.mjs` derives itself. Invoke it with
@@ -239,7 +256,7 @@ in the keeper's body (a distinct example, a distinct "Why"). State explicitly, p
 it in before archiving. This applies to every dedupe-loser entry, listed or not, since under
 auto-apply nobody reads a list before the write happens.
 
-For each `orphan-file`: add a `MEMORY.md` line pointing to it (summarized from its `description`
+For each `orphan-file` (superseded files excluded, per Step 2): add a `MEMORY.md` line pointing to it (summarized from its `description`
 frontmatter). For each `orphan-index-entry`: remove the dangling line (safe - no file exists to
 desync against).
 
@@ -307,6 +324,8 @@ caller with no one left to prompt it - print the report and let its turn continu
 - What moved: dedupe merges (loser -> keeper, folded-detail note), drops, re-indexed orphans,
   link fixes.
 - Any item excluded by Step 5.5, named with the reason.
+- Step 1.6's freshness candidates (file, age, whether `verified` was present) and the superseded
+  count Step 2 subtracted from `orphan-file`.
 - Step 2's counts for both desync directions (`orphan-file`, `orphan-index-entry`), the
   definition used ("loaded-window, direct-link-only"), before and after apply.
 - Result of the mandatory final consistency check (clean, or what still mismatches).

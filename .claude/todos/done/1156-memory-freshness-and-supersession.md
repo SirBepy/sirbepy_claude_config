@@ -31,3 +31,7 @@ Graphiti keep invalidated facts with validity windows rather than deleting them 
 - Rubric and `/cleanup-memory` updated; a superseded memory is excluded from loading but still on
   disk with its link.
 - `/cleanup-memory` dry run on one real project lists old-`verified` candidates.
+
+## Notes
+
+- Completed 2026-10-23 (loop-todos cycle 1): memory-rubric gains verified:/superseded_by: with UPDATE-with-supersession vs DELETE; new recall.py memory command hides superseded by default (--all shows them) and lists stale candidates (--stale-days), used by cleanup-memory Step 1.6. Dry run on the ~/.claude memory dir: 35 files past 90 days, 0 carry verified: yet. Trigger tables are 1153's job.
