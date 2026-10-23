@@ -39,8 +39,11 @@ Consequences worth knowing before starting:
   run the em dash check, apply Joe's edits, THEN verify.
 - **A FAIL poisons that exact text for good.** Dispatching more verifiers until three agree never
   clears it; the text has to change.
-- **One draft can cover a batch.** Put the title, body and every comment of one posting into one
-  draft and verify once; each field only has to sit somewhere inside it.
+- **One draft per independent posting.** Title and body of ONE posting share a draft (each field
+  only has to sit somewhere inside it). Separate comments, or separate tickets/PRs, each get their
+  own draft, dispatched in the same message, so a FAIL poisons only the text it is about. Drafts in
+  one batch must be self-contained: no "see my comment on X" pointing at an unposted sibling, since
+  the verifier cannot see posting order.
 - **The text must be visible in the call**: literal in the command, in a `--body-file`/`-d @file`/
   `-InFile`/`--input` file, or in the MCP tool's input. A shell variable defined in an earlier
   call, `gh pr create --fill`, an editor, or stdin is blocked, since the hook cannot match what it
@@ -54,9 +57,15 @@ Consequences worth knowing before starting:
 
 Write out the exact final text: for a ticket, the title plus description, or the comment; for a
 PR, the title plus the body file's content; for a review, every comment. Joe sees and approves
-this text where the calling skill asks him to; if he edits it, the round below runs again.
+this text where the calling skill asks him to; if he edits it, the round below runs again. Cut any
+claim that only a run against shared state can verify (an e2e suite on a shared database, a
+deploy) rather than have three verifiers re-run it.
 
 ### 2. Dispatch 3 identical verifiers
+
+Use this template from round 1 for any verify request on text plausibly headed for a tracker or PR
+(a ticket reply, a ticket draft), even before Joe says to post: an ad-hoc prompt without the exact
+`OUTBOUND-VERDICT:` line does not count for the hook and wastes the round.
 
 Three `Agent` calls in one message, the **same prompt** for all three (per the zng-app finding that
 varied lenses made the verdict flip every round), `model: "sonnet"`, `subagent_type:
@@ -88,6 +97,11 @@ files with `git show origin/<branch>:<path>`, not the working tree). Pointers: <
 PR numbers, endpoints the text talks about>. Provenance: <who asked for this posting, and what it
 descends from - a todo id, a ticket, a PR>.
 
+Three verifiers run at once: do not run anything that writes to a shared resource (an e2e suite
+against a shared database, a deploy, a migration). If a claim can only be checked that way, mark it
+UNVERIFIABLE and say why. DB timestamps are usually UTC: convert before comparing them to local
+file times or screenshots.
+
 <<<OUTBOUND-DRAFT
 <the exact text, verbatim>
 OUTBOUND-DRAFT>>>
@@ -103,10 +117,14 @@ OUTBOUND-DRAFT>>>
 3. Ship review, beyond the prose: judge the planned non-text fields of the call (team/group, epic,
    owner, custom fields, state moves, links) against the tracker's real values and the nearest
    precedent ticket; for a batch, check the items are consistent with each other; flag wording a
-   teammate could misread even when it is factually true. Any finding here is a FAIL, the same as
-   a WRONG claim.
-4. Verdict: PASS only if every factual claim is CONFIRMED and step 3 found nothing. Any WRONG,
-   UNVERIFIABLE, or ship-review finding is a FAIL. End your report with exactly one of these
+   teammate could misread even when it is factually true. Label each finding:
+   - FAIL: a reader would act wrongly on it (wrong sequence, conflated conditions, wrong
+     target/owner/field), or a non-text field disagrees with the tracker. State the concrete wrong
+     action the reader would take; without one it is not a FAIL.
+   - NOTE: a format or phrasing difference from precedent that cannot be misread. Report it; it
+     does not fail the draft.
+4. Verdict: PASS only if every factual claim is CONFIRMED and step 3 found no FAIL. Any WRONG,
+   UNVERIFIABLE, or step-3 FAIL is a FAIL. End your report with exactly one of these
    lines, alone on its own line:
 OUTBOUND-VERDICT: PASS
 OUTBOUND-VERDICT: FAIL
@@ -119,9 +137,13 @@ OUTBOUND-VERDICT: FAIL
 - **Any FAIL, round 1:** fix it without asking. Before rewriting, check the dissenting verifier's
   key receipt yourself when it contradicts the others or what is already known; a verifier can be
   wrong too. Then correct or cut each WRONG claim, hedge or cut each UNVERIFIABLE one, and run
-  step 2 again on the new text with 3 fresh verifiers.
+  step 2 again on the new text with 3 fresh verifiers. A FAIL whose receipt you disprove at
+  file:line needs no rewrite for its own sake, but the hook still counts it against that exact
+  text, so the text must change (or Joe decides) before a clean round can count.
 - **Any FAIL, round 2:** stop. Do not post and do not start a round 3. Tell Joe in one message
   which claims are disputed, what each verifier's receipt says, and the text as it stands.
+- **Opt-in cap of 7:** only when Joe asks for more rounds ("keep going until it doesn't fail"),
+  keep autofixing up to 7 rounds, stopping at the first round where all 3 PASS. Never the default.
 
 ## When the hook itself is broken
 
