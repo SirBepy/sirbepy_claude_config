@@ -127,6 +127,27 @@ function Get-DirGB($p){ $o=robocopy $p NULL /L /S /NJH /NFL /NDL /BYTES /XJ /R:0
 }
 ```
 
+```powershell
+# In-use probe - MANDATORY at scan time, before any group is listed as a candidate. A running
+# process holding a store open makes the group "in use": it is shown as such in the chart and the
+# listing, and never offered for deletion. 2026-10-21: Ollama (111G) was listed as a delete area
+# while ollama.exe was running, a model was loaded and 11 manifests had been written overnight;
+# only Joe's "are you sure im not using the ollama models?" caught it. Sizes of a live store also
+# drift during a session (78 to 112G there), so re-size it just before any later card.
+Get-Process ollama*, python*, pythonw*, java*, node*, cargo*, rustc*, docker*, com.docker* -ErrorAction SilentlyContinue | Select-Object Name, Id, StartTime, Path
+Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='pythonw.exe' OR Name='java.exe' OR Name='node.exe' OR Name='ollama.exe'" | Select-Object ProcessId, Name, CommandLine
+if (Get-Command ollama -ErrorAction SilentlyContinue) { ollama ps }   # models currently loaded
+```
+
+Match each candidate group's path (a `.venv`/`venv`, `~/.ollama`, `~/.cache/huggingface`, whisper,
+a Gradle cache) against the Path / CommandLine / working directory of those processes, using the
+check in `gate.md` ("Mtime alone is not last-use evidence"). Do not restate that check here, run it
+per candidate at scan time instead of waiting for the delete card. Also grep the repos under
+`~/` for scripts that call a local model by name (e.g. `rg -l "qwen|mistral|llama" --glob "*.{js,mjs,py,ts}"`
+scoped to the dev roots, never `~/` whole) - a store with no process right now can still be the
+backing for a scheduled script. A hit marks the group "in use" and the listing names the process
+or the file:line that holds it. The gate.md check still runs again at card time as the second look.
+
 ### Second-pass drill-down
 
 After the initial scan, drill into the **top-3 dirs (home or LocalAppData) exceeding 2GB**:
@@ -138,9 +159,32 @@ Get-ChildItem '<dir>' -Directory -Force -ErrorAction SilentlyContinue | ForEach-
 
 Hard cap: 3 dirs max regardless of how many exceed the threshold.
 
+## Breakdown chart (after the scans, before ANY delete card)
+
+No delete card, and no "which areas do you want to clear" question, appears until Joe has seen where
+the space goes. 2026-10-21: after the scan Claude sent a text summary and a coarse areas card, and
+Joe answered "I wanna kinda see a graph of where all of my storage is going before i decide
+anything"; the chart built then (slug `c-drive-storage-map`) is the worked example.
+
+1. Group every finding of the scan (including the in-use probe results) into four kinds plus a
+   remainder: **regenerable** (caches, build output, Temp, node_modules), **re-downloadable**
+   (games, models, SDKs, toolchains), **personal** (Desktop, Documents, recordings, saves),
+   **system** (Windows, WinSxS, pagefile, Program Files installs), and **unattributed** (C: used
+   minus the sum of the rest, so the bars add up to the real used space).
+2. Render with the `dataviz` skill (invoke it before writing chart code): one horizontal bar per
+   group or per top item sorted by size, a single hue per kind with the kind named in the legend
+   and the GB printed on the bar (never color alone), hover tooltips with path and last-use
+   evidence, and a table toggle with the same rows. A group the in-use probe flagged is drawn
+   hatched or outlined and labelled "in use", with the process or file:line that holds it.
+3. Push it with `show_preview` (or the `/preview` skill) under the stable slug
+   `c-drive-storage-map`, so a re-run refreshes the same panel entry. Pure-HTML, no external deps.
+4. Only then ask which groups should become delete cards (`ask_user_question`, per `gate.md`).
+   "In use" groups are not options in that question. Each approved group then goes through the
+   per-item delete gate as before.
+
 ## Output rules
 
-- Rank deletables, biggest realistic win first.
+- Rank deletables, biggest realistic win first. Groups labelled "in use" by the scan-time probe are listed as in use, never as deletables.
 - Per item: size, what it is, regenerates/re-downloadable?, exact delete command (PowerShell `Remove-Item -Recurse -Force` or the named cleanup command).
 - Prefer the **native/owner cleanup** over raw deletes: `docker system prune` for Docker, `cleanmgr`/Storage Sense for Windows Update leftovers / Windows.old / Delivery Optimization, `npm cache clean --force` / `pnpm store prune` for package caches. Never raw-`Remove-Item` inside `C:\Windows\*`.
 - Flag slow-to-restore items - confirm live project targets before swinging (e.g. node_modules in an active repo).
@@ -179,7 +223,7 @@ At END of scan, append any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCA
 - Stale-project `node_modules` - `npm i` / `pnpm i` rebuilds. Build artifacts (`build/`, `.dart_tool/`, `dist/`, `.next/`, `target/`, `venv/`, `.venv/`) - regenerate. The build-artifact sweep step above is the biggest single win found so far (150G+ on 2026-07-19) - always run it, don't skip as optional.
 - Windows Update leftovers / `Windows.old` / Delivery Optimization - via `cleanmgr` or Storage Sense, not manual delete.
 - `.for_bepy/screenshots/` subfolders and loose legacy files older than 30 days - throwaway per-chat verification shots; `/close` stopped deleting these (todo 324), so they only clear here. Report per-repo, oldest first; never touch `.portfolio-data/` (portfolio keepers, separate scope).
-- `C:\tmp\pw-*` (Playwright browser profiles from Claude verification runs) and `C:\tmp\*-target` / `LocalAppData\Temp\*-target` (Rust scratch CARGO_TARGET_DIRs from Claude sessions) - throwaway, rebuilt on the next run; confirm no cargo/node process holds them first.
+- `C:\tmp\pw-*` (Playwright browser profiles from Claude verification runs) and `C:\tmp\*-target` / `LocalAppData\Temp\*-target` (Rust scratch CARGO_TARGET_DIRs from Claude sessions) - throwaway, rebuilt on the next run; confirm no cargo/node process holds them first. CLAUDE CANNOT DELETE THE `C:\tmp` ONES: the removal guard (`hooks/destructive-command-guard.py`) blocks any `Remove-Item` naming a drive-root child, even per-item `-LiteralPath` (2026-10-21, all three forms refused after the delete card was already approved). Never offer Claude to run it; the card says up front that Joe runs it and hands him the exact PowerShell command (e.g. `Get-ChildItem C:\tmp -Directory | Where-Object { $_.Name -like 'pw-*' -or $_.Name -like '*-target' } | Remove-Item -Recurse -Force`). `LocalAppData\Temp\*-target` is not a drive-root child, so Claude may still delete that one per the gate.
 
 ## KNOWN HARD (judgment call, not a routine safe-delete)
 
