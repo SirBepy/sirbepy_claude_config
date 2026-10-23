@@ -36,7 +36,7 @@ Two phases. Each round = ONE subagent (not parallel within a thread, sequential,
 
 ### Multiple topics
 
-When the dev names several topics in one ask (or several question-card answers each say "iterate-it this"), run **one thread per topic**, all threads in parallel. A thread is the full Explore/Polish run for its topic, with its own caps, checklist rows and report card. Within a thread the rule above is unchanged: one sub per round, sequential.
+When the dev names several topics in one ask (or several question-card answers each say "iterate-it this"), run **one thread per topic**, all threads in parallel. A thread is the full Explore/Polish run for its topic, with its own caps, checklist rows and report card. The threads share ONE `write_plan` checklist, since each call replaces the whole list: prefix every row with its topic ("Topic A - Explore round 1") and resend every thread's rows on each call. Within a thread the rule above is unchanged: one sub per round, sequential.
 
 - Shared context goes into every thread's CONTEXT block. Dependencies between topics are noted there ("topic B assumes X, decided in thread A"), never merged into one proposal.
 - Combine topics into a single run only when the dev asks for one combined run. Topics being related is not a reason: a combined run gives each topic a fraction of the rounds' attention, and the threads then have to be re-run separately.
