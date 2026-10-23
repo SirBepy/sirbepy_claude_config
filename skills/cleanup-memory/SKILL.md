@@ -71,6 +71,23 @@ that go stale silently (`refs/memory-rubric.md` "Freshness and supersession"). A
 whose claim re-verifies gets `verified:` set to today; one whose fact changed follows the rubric's
 UPDATE-with-supersession (history matters) or DELETE (merely wrong) rows.
 
+## Step 1.7 - Core cap (8 KB, read-only candidates)
+
+`MEMORY.md` is the always-loaded core, capped at 8192 bytes (a third of the 24.4KB cut), so the
+overflow cannot regrow one level up; everything else lives in a demotion tier (Step 2) and stays
+findable through `recall.py memory` (`refs/permanent-memory.md` "Retrieval quality"). Step 2's
+script prints `core index: <bytes> / 8192 bytes` and flags `OVER`. When it is over:
+
+- Run Step 1.5's axiom test on every entry (Claude defaults wrong without it, failure is silent,
+  applies every session). An entry that passes keeps its slot; one that fails is a demotion
+  candidate. Judge from the file's body, not the index line alone.
+- Take candidates oldest file mtime first and stop proposing once the remaining index fits under
+  the cap. Keep it flag-only here; Step 5 carries the set, Step 6 applies it.
+- The destination is the memory dir's existing tier folder when it has exactly one (e.g. `cold/`),
+  otherwise `rest/`. With two or more tiers and no obvious fit, use `rest/` and say so.
+- Demotion is never deletion: the file survives intact in the tier. If every entry passes and the
+  index is still over, report that and stop; do not demote a passing entry to hit the number.
+
 ## Step 2 - Index/file consistency (mechanical, read-only)
 
 Run `node ~/.claude/skills/cleanup-memory/reachability.mjs <memory-dir>` instead of reinventing
@@ -107,6 +124,9 @@ direct-link-only") - Step 7 carries all three forward.
 are deliberately unindexed - e.g. `claude_usage_in_taskbar`'s `memory/cold/README.md` documents
 one such tier. The script excludes every file under such a subfolder from all three readings and
 lists them separately; Step 6 must never bulk re-index them as if they were `orphan-file` hits.
+`recall.py memory` searches every tier (labelling hits `[cold]`, `[rest]`), so a demoted memory
+stays findable, and an index line may still point into one (`cold/x.md`, relative to the memory
+dir) without counting as `orphan-index-entry`. Step 1.7 demotes into a tier.
 
 ## Step 3 - Dedupe (read-only)
 
@@ -172,8 +192,8 @@ flagged stale by this step.
 ## Step 5 - Ask (one question, up front)
 
 The apply set going in: every `origin: dedupe` loser (Step 3), every `suggested_drop` (Step 4),
-every broken-link fix (Step 2/4), every `orphan-file` needing a new index line, and every
-`orphan-index-entry` needing its dangling line dropped (Step 2). Nothing outside this set is
+every broken-link fix (Step 2/4), every `orphan-file` needing a new index line, every
+`orphan-index-entry` needing its dangling line dropped (Step 2), and every Step 1.7 core-cap demotion. Nothing outside this set is
 ever auto-applied - Step 1.5's size warnings and CLAUDE.md/axiom candidates stay flag-only.
 
 Ask exactly ONE structured question (the harness's `AskUserQuestion`, or
@@ -250,6 +270,12 @@ Never remove an index line before its file has been confirmed moved (steps 1-2 b
 every time) - that ordering is what makes the desync structurally impossible rather than merely
 discouraged.
 
+For each Step 1.7 demotion, the same order with a different destination: move the file to
+the Step 1.7 tier (create `rest/` if the dir has none), verify the move, then delete its `MEMORY.md`
+line in that same pass. That keeps both directions of the pairing rule true: no index line without
+its file, and no top-level file without its index line (a tier file needs none). Never archive or
+delete a demoted file, and leave `[[name]]` links to it alone since it still exists.
+
 For a dedupe merge specifically: before step 1, check the loser's body for any detail not already
 in the keeper's body (a distinct example, a distinct "Why"). State explicitly, per entry, either
 "nothing unique to fold" or the exact detail folded and where it landed in the keeper - then fold
@@ -322,7 +348,7 @@ caller with no one left to prompt it - print the report and let its turn continu
 `/iterate-it`'s Output section documents. Short and auditable, not a re-run of the audit:
 
 - What moved: dedupe merges (loser -> keeper, folded-detail note), drops, re-indexed orphans,
-  link fixes.
+  link fixes, and each file demoted (and into which tier) with the core index size before and after.
 - Any item excluded by Step 5.5, named with the reason.
 - Step 1.6's freshness candidates (file, age, whether `verified` was present) and the superseded
   count Step 2's script reported separately from `orphan-file`.

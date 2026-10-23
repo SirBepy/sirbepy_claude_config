@@ -62,9 +62,12 @@ function isSuperseded(text) {
   return Boolean(m && m[1].trim().replace(/^["']|["']$/g, '').trim());
 }
 
-// Any subdirectory other than archive/ is a demotion tier (e.g. cold/):
+// Any subdirectory other than archive/ is a demotion tier (e.g. cold/, rest/):
 // files there are deliberately unindexed and must never be flagged as
-// orphan-file or proposed for re-indexing.
+// orphan-file or proposed for re-indexing. recall.py memory searches every tier.
+// The always-loaded core (MEMORY.md) is capped at 8 KB; /cleanup-memory Step 1.7 demotes into a tier.
+const CORE_CAP = 8192;
+
 function collectFiles(dir) {
   const live = [];
   const demoted = [];
@@ -128,7 +131,10 @@ function main() {
   const memoryMdLoaded = memoryMdLines.slice(0, lineCap).join('\n');
 
   const { live, demoted } = collectFiles(dir);
-  const targets = buildTargets(live);
+  // Tier files stay link targets (an index line pointing at one is not dangling) but are
+  // never in `live`, so no reading can call them orphan-file.
+  // Demoted first so a live file wins a basename collision with a tier file.
+  const targets = buildTargets([...demoted, ...live]);
   // Superseded files are unindexed on purpose: they stay link targets (so a link to one is
   // never an orphan-index-entry) but are never counted as orphan-file in any reading.
   const superseded = live.filter((f) => isSuperseded(readFileSync(f, 'utf8')));
@@ -191,6 +197,7 @@ function main() {
   const lines = [];
   lines.push(`memory dir: ${dir}`);
   lines.push(`index size: ${indexBytes} bytes across ${memoryMdLines.length} lines`);
+  lines.push(`core index: ${indexBytes} / ${CORE_CAP} bytes${indexBytes > CORE_CAP ? ` OVER by ${indexBytes - CORE_CAP}` : ''}`);
   lines.push(`line cap: ${lineCap} (${capSource})`);
   if (lineCap < memoryMdLines.length) {
     lines.push(`  TRUNCATING: lines ${lineCap + 1}-${memoryMdLines.length} never reach a session`);
