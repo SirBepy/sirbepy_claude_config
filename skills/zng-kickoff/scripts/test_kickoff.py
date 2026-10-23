@@ -68,6 +68,23 @@ class TodoCache(unittest.TestCase):
         run(kickoff.cmd_todos)
         self.assertEqual(kickoff.load('todos.json', {}), {})
 
+    def test_a_missing_repo_keeps_its_cached_verdicts(self):
+        run(kickoff.cmd_todo_verdict, repo='zng-app', file='12', verdict='urgent', reason='now')
+        kickoff.REPOS = ['zng-app', 'zng-api']
+        cache = kickoff.load('todos.json', {})
+        cache['zng-api/3-other.md'] = {'hash': 'abc', 'verdict': 'not-urgent'}
+        kickoff.save('todos.json', cache)
+        run(kickoff.cmd_todos)
+        self.assertIn('zng-api/3-other.md', kickoff.load('todos.json', {}))
+
+    def test_stdout_is_utf8_so_a_non_cp1250_title_prints(self):
+        raw = io.BytesIO()
+        stream = io.TextIOWrapper(raw, encoding='cp1250')
+        kickoff.utf8_stdout(stream)
+        stream.write('ticket → \U0001f600\n')
+        stream.flush()
+        self.assertIn('→'.encode('utf-8'), raw.getvalue())
+
 
 class HandledMarks(unittest.TestCase):
     def test_handle_records_a_mark_per_story(self):

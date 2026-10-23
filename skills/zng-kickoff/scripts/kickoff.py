@@ -262,8 +262,12 @@ def cmd_todos(_):
         else:
             c['to-triage'] += 1
             fresh.append((key, title_of(text), path, 'changed' if hit else 'new'))
+    # Only a repo whose todos dir is on disk can prove an entry archived; a repo moved or
+    # unmounted for a moment keeps its verdicts instead of being re-triaged from scratch.
+    readable = {name for name in REPOS if os.path.isdir(f'{PROJECTS}/{name}/.claude/todos')}
     for gone in set(cache) - present:
-        del cache[gone]
+        if gone.split('/', 1)[0] in readable:
+            del cache[gone]
     save('todos.json', cache)
     for repo, c in counts.items():
         print(f"{repo}: {c['total']} todos | {c['not-urgent']} not urgent | {c['urgent']} urgent | {c['to-triage']} to triage")
@@ -344,7 +348,14 @@ def cmd_ticket_dismiss(args):
     print(f'dismissed: {", ".join(args.story_ids)} ({args.reason})')
 
 
+def utf8_stdout(stream):
+    # `python -I` ignores PYTHONIOENCODING, and a piped Windows stdout is cp1250 here, so one
+    # arrow or emoji in a comment or ticket title would crash the whole run mid-print.
+    stream.reconfigure(encoding='utf-8', errors='replace')
+
+
 def main():
+    utf8_stdout(sys.stdout)
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest='cmd', required=True)
     sub.add_parser('leftovers').set_defaults(fn=cmd_leftovers)
