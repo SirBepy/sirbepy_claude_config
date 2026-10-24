@@ -1,6 +1,6 @@
 ---
 name: loop-todos
-description: Triggers on /loop-todos only. Loops /auto-do-todos until only dev-input todos remain, asking parked questions up front.
+description: Triggers on /loop-todos only. Loops /auto-do-todos until only dev-input todos remain, asking parked questions up front and before it stops.
 disable-model-invocation: true
 argument-hint: "[max cycles, default 5] [--resumed]"
 ---
@@ -8,7 +8,7 @@ argument-hint: "[max cycles, default 5] [--resumed]"
 # /loop-todos
 
 > `/auto-do-todos` on repeat. One question round before the first cycle, then grind, verify and
-> respawn until the only todos left are ones the dev has to answer.
+> respawn until the only todos left are ones the dev has to answer, then ask those before stopping.
 
 **Trigger:** `/loop-todos` only. Never auto-invoke.
 
@@ -19,6 +19,7 @@ its AUTO queue via bounded `/iterate-it`, already runs `/code-check` on its own 
 and already commits through `/commit`. This skill is a driver, not a second implementation:
 
 - Phase 0 discharges every parked question ONCE, so cycles 2+ never stall on a card.
+- Phase 3.5 asks whatever the cycles parked before the loop stops, so no question is left behind.
 - Phase 2 makes `/test` and `/e2e` an explicit gate between cycles, not a best-effort footnote.
 - Phase 4 keeps the loop alive across context exhaustion via `/respawn`.
 - This skill runs no `/code-check` of its own. Step 9's diff-scoped one is the whole coverage.
@@ -33,7 +34,8 @@ cycles running inside a loop:
 block) is SUPPRESSED.** Phase 0 below is the loop's compliance with the global front-load rule, and
 it leaves no `## Open questions` heading behind for that trigger to fire on anyway. Step 5's FIRST
 trigger (empty AUTO queue) is not suppressed, but inside a loop it means "nothing left I can
-decide", which is the loop's stop condition, so the loop ends rather than asking again.
+decide", which is the loop's stop condition, so the loop goes to Phase 3.5's closing round
+rather than asking mid-cycle.
 
 **`/auto-do-todos` Step 6's own claim call is SUPPRESSED.** Phase 1 step 2 below claims every
 backlog id (minus the skip list) before the cycle starts, which is this skill's own compliance with
@@ -41,8 +43,8 @@ the claim-before-edit contract (todo 1147). Reissuing Step 6's claim inside the 
 hit that same-session claim and read as a conflict with a live session - `claim-todo.ps1` keys
 staleness off pid liveness, not which session holds a claim - so Step 6 skips its own call here.
 
-Questions Step 8 parks DURING the loop belong to the NEXT `/loop-todos` invocation's Phase 0. They
-are never asked mid-loop.
+Questions Step 8 parks DURING a cycle are never asked mid-cycle: they are asked in Phase 3.5's
+closing round, before the loop ends.
 
 ## Phase 0 - The one question round
 
@@ -128,6 +130,29 @@ Checked after every cycle. First one to fire ends the loop:
 | An `/autopilot` Hard Stop | Same list `/auto-do-todos` adopts |
 | The dev interrupts | Always wins |
 
+## Phase 3.5 - Closing question round
+
+Runs once a Phase 3 stop condition fires, before Phase 4.5, for every condition except "the dev
+interrupts". The dev started the loop to clear the backlog's questions, so a question one of its
+cycles parked is asked here, not left for a later invocation (todo 1240: a run that stopped with
+three fresh `## Open questions` blocks "for the next Phase 0" was exactly what the dev objected to).
+
+1. Run Phase 0's steps 1, 3, 4 and 5 over every `## Open questions` block in the backlog, the ones
+   this loop's cycles wrote and any still there from before. Step 2's deferred gate is not repeated:
+   Phase 0 already offered those. Same single card, same standing options, same timeout rule, same
+   write-back table.
+2. No survivors after step 3's filter: go straight to Phase 4.5.
+3. **Re-enter the loop** only when all of these hold: the stop condition was "AUTO queue empty" or
+   "zero todos completed", at least one answer moved a todo into the AUTO queue, the cycle cap is
+   not reached, and the last Phase 2 `/test` was green. Then start the next Phase 1 cycle. When it
+   stops again, this round runs again over only the questions written since its last card; none
+   means straight to Phase 4.5.
+4. Otherwise go to Phase 4.5. Answers that unblock a todo while re-entry is ruled out are written
+   back by step 1 all the same, so the next run starts on them.
+
+This is placed before Phase 4.5, not after it, so the per-commit review still runs exactly once,
+after the loop's real last cycle.
+
 ## Phase 4 - Respawn only when context is low
 
 After Phase 2, before the next cycle, run:
@@ -170,9 +195,10 @@ over.
 ## Phase 5 - Final report
 
 One summary at the end covering: cycles used of the cap, todos completed per cycle with commit
-shas, the stop condition that fired, questions asked and what was applied, questions autopiloted
-and what was picked, todos skipped by the dev, everything Step 8 parked for the next invocation,
-and the final `/test` + `/e2e` result.
+shas, the stop condition that fired, questions asked and what was applied (Phase 0 and Phase
+3.5's closing round, kept apart), questions autopiloted and what was picked, todos skipped by the
+dev, and the final `/test` + `/e2e` result. A question still open after the closing round is
+listed with the reason it stayed open (card timed out, dev chose skip).
 
 ## Notes
 
