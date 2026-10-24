@@ -31,7 +31,7 @@ Because the default slug is derived deterministically from the filename, just re
 
 When the input is one or more `.md` paths, or a directory of them, render first, then fall through to the same HTML steps below - there is no second delivery path.
 
-1. Run the renderer to produce one self-contained HTML file: a sidebar listing each input document plus an anchor nav of that document's own headings, tables/code blocks/nested lists/links rendered, styling centralised in the script (never per-session).
+1. Run the renderer to produce one self-contained HTML file: a sidebar listing each input document plus an anchor nav of that document's own headings, tables/code blocks/nested lists/links rendered, styling centralised in the script (never per-session). The page is responsive by default (phone-readable in the preview panel): under 700px the sidebar becomes a collapsible "Contents" block at the top, tables become labelled cards, and it follows `prefers-color-scheme`.
    ```powershell
    python "C:\Users\tecno\.claude\skills\preview\render_markdown.py" <path.md> [<path2.md> ...] [--title "<text>"] [--out "<out.html>"]
    ```
