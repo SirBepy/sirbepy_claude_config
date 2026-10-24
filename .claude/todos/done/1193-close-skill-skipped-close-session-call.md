@@ -45,3 +45,4 @@ every time, or the script itself refuses to proceed silently when that call was 
 ## Notes
 
 - [TOOLING] Run this todo in an attended session (say which). Its fix writes to `hooks/` or `settings.json`, which `hooks/sensitive-file-guard.py` gates with a permission ask, and the autopilot rules bar a dispatched subagent from those writes, so an unattended loop cannot land it. - dev delegated to autopilot on 2026-10-24 (Jarvis answered for Joe; re-check found the fix lands in `skills/close/`, not `hooks/`).
+- rename-session.ps1/.sh -Close now refuse (exit 3, REFUSED line) in an SDK-hosted session (CLAUDE_CODE_ENTRYPOINT sdk-*), since the host respawns a killed process; /close Phase 6 says so next to the script block, and -Force/--force covers an SDK host without close_session. Test: skills/close/test_rename_session_close.py (refusal paths only; the kill path cannot run from a test without killing the session).
