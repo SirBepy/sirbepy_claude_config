@@ -1,16 +1,18 @@
 #!/bin/sh
 # Mac/Linux port of rename-session.ps1
-# Usage: rename-session.sh --name "Session name" [--close]
+# Usage: rename-session.sh --name "Session name" [--close [--force]]
 #        rename-session.sh --get-id
 
 NAME=""
 CLOSE=0
 GET_ID=0
+FORCE=0
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --name|-n) NAME="$2"; shift; shift ;;
         --close)   CLOSE=1; shift ;;
+        --force)   FORCE=1; shift ;;
         --get-id)  GET_ID=1; shift ;;
         *) echo "Unknown arg: $1" >&2; exit 1 ;;
     esac
@@ -161,6 +163,15 @@ with open(path, 'a', encoding='utf-8') as f:
 fi
 
 if [ "$CLOSE" = "1" ]; then
+    # Same host-managed refusal as rename-session.ps1: an SDK host respawns a killed process,
+    # so only its close_session tool ends the chat.
+    case "$CLAUDE_CODE_ENTRYPOINT" in
+        sdk-*)
+            if [ "$FORCE" != "1" ]; then
+                echo "REFUSED: host-managed session (CLAUDE_CODE_ENTRYPOINT=$CLAUDE_CODE_ENTRYPOINT). Killing the process does not close this chat; the host respawns it. Call close_session instead - if it already returned, nothing more is needed. Pass --force only for an SDK host that has no close_session tool."
+                exit 3
+            fi ;;
+    esac
     (sleep 0.8 && kill "$SESSION_PID" 2>/dev/null) &
     echo "Scheduled kill of claude pid $SESSION_PID in 800ms."
 fi

@@ -278,7 +278,9 @@ If all clear: first, if the `close_session` MCP tool is available (Conductor-hos
 
 **HARD ORDERING RULE:** running the rename/kill script WITHOUT having called `close_session` first, in a session where that tool exists, leaves Conductor chats permanently un-closed - killing the process is MEANINGLESS to the daemon, it respawns the process every turn, so only the tool call actually ends the chat. If `close_session` is in your tool list, the script line below is FORBIDDEN until the tool call has returned.
 
-Then run for your OS (literal paths hardcoded - dynamic `$env:` expressions fail the harness permission matcher and cause per-invocation prompts):
+**The script enforces this itself.** In an SDK-hosted session (`CLAUDE_CODE_ENTRYPOINT` starting `sdk-`, which a Conductor chat reports as `sdk-cli`) `-Close` refuses with exit 3 and a `REFUSED: host-managed session` line instead of killing. Once `close_session` has returned, the script is not needed at all: the host ends the process at turn end. Seeing that `REFUSED` line before `close_session` was called means the call was skipped - make it now. `-Force` / `--force` exists only for an SDK host with no `close_session` tool.
+
+Otherwise (a plain terminal), run for your OS (literal paths hardcoded - dynamic `$env:` expressions fail the harness permission matcher and cause per-invocation prompts):
 
 **Mac/Linux:**
 ```sh

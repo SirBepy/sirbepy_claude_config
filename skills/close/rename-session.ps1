@@ -2,7 +2,8 @@ param(
     [Parameter(Mandatory=$false)]
     [string]$Name = "",
     [switch]$Close,
-    [switch]$GetId
+    [switch]$GetId,
+    [switch]$Force
 )
 
 # Resolve the current session by matching $env:CLAUDE_CODE_SESSION_ID against
@@ -204,6 +205,15 @@ if ($Name) {
 }
 
 if ($Close) {
+    # An SDK-hosted session (CLAUDE_CODE_ENTRYPOINT "sdk-*"; a Conductor chat reports "sdk-cli")
+    # is respawned by its host on the next turn, so killing the process never ends the chat -
+    # only the host's close_session tool does. Refusing here, loudly, is what catches a /close
+    # that skipped that call; the prose ordering rule alone was skipped in practice. -Force is
+    # the escape for an SDK host that has no close_session tool.
+    if (-not $Force -and "$env:CLAUDE_CODE_ENTRYPOINT" -like 'sdk-*') {
+        Write-Host "REFUSED: host-managed session (CLAUDE_CODE_ENTRYPOINT=$env:CLAUDE_CODE_ENTRYPOINT). Killing the process does not close this chat; the host respawns it. Call close_session instead - if it already returned, nothing more is needed. Pass -Force only for an SDK host that has no close_session tool."
+        exit 3
+    }
     $record = Resolve-SessionRecord
     if (-not $record) {
         Write-Warning "Close requested but session record could not be resolved. Skipping kill."
