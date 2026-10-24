@@ -7,21 +7,27 @@ running that path from a test would kill the session running the test.
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parent / "rename-session.ps1"
 
 
 def run_close(entrypoint):
-    env = dict(os.environ)
-    env["CLAUDE_CODE_ENTRYPOINT"] = entrypoint
-    proc = subprocess.run(
-        ["powershell.exe", "-NoProfile", "-NonInteractive", "-File", str(SCRIPT), "-Close"],
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=60,
-    )
+    # The script exits early when %USERPROFILE%\.claude\sessions is missing, as it is on a bare
+    # CI runner, so give it an empty one of its own instead of depending on this machine's.
+    with tempfile.TemporaryDirectory() as home:
+        (Path(home) / ".claude" / "sessions").mkdir(parents=True)
+        env = dict(os.environ)
+        env["USERPROFILE"] = home
+        env["CLAUDE_CODE_ENTRYPOINT"] = entrypoint
+        proc = subprocess.run(
+            ["powershell.exe", "-NoProfile", "-NonInteractive", "-File", str(SCRIPT), "-Close"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
     return proc.returncode, proc.stdout + proc.stderr
 
 
