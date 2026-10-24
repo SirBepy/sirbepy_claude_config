@@ -322,6 +322,14 @@ the two sorted sets for equality says nothing about it, and a stale rewrite woul
    destroyed exactly this). Skip the reorder entirely, make no write, and report "reorder skipped:
    MEMORY.md is hand-sectioned (`## ` headings found), flattening it would be destructive" in
    Step 7. Otherwise continue.
+
+   **Where the canonical headings go.** They are block separators, not entries: drop them from
+   `before` and from every line-set comparison below, sort the entry lines into blocks by the
+   Axioms/Recent/Rest rule alone (never by which heading a line sat under before), sort within
+   each block, then write. If `before` held at least one canonical heading, write `## Axioms`,
+   `## Recent` and `## Rest` each directly above its block, omitting the heading of an empty
+   block; if it held none, write no headings. Lines above the first entry (a `# Memory Index`
+   title, a preamble) stay at the top, unmoved.
 3. **Compute the target order** from `before` and diff it against the current order. If they
    already match, make no edit and report "index already ordered, no-op" in Step 7 - this is what
    keeps a second run over an already-ordered index a true no-op. Otherwise continue.
