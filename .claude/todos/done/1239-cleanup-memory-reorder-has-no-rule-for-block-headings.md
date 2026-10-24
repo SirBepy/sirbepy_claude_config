@@ -30,3 +30,7 @@ strict guard; and make the rubric and the step agree on headings vs bold items.
 
 A dry read of Step 6.5 on an index with the three headings gives one unambiguous result, and the
 rubric names the same block markers the step accepts.
+
+## Notes
+
+- Step 6.5 now treats the three canonical headings as block separators: dropped before sorting and from the line-set checks, block membership comes from the Axioms/Recent/Rest rule only, and the headings are rewritten above each non-empty block only when the index already had them. memory-rubric.md says blocks may be marked with exactly those headings or left unmarked. Prose-only step, no script to test.

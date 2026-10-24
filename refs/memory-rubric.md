@@ -119,6 +119,10 @@ Keep the index in three ordered blocks, top to bottom:
 2. **Recent** - file mtime within 7 days of today.
 3. **Rest** - everything else.
 
+Blocks may be marked with the exact headings `## Axioms`, `## Recent` and `## Rest`, or left
+unmarked; either shape is valid, and `/cleanup-memory` Step 6.5 keeps whichever one the index
+already has. Those three are the only `## ` headings the reorder accepts.
+
 Within a block: sort by file mtime descending (newest first); break ties by filename ascending.
 Deterministic on purpose - re-sorting an already-sorted index must be a no-op.
 
