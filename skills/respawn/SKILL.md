@@ -120,8 +120,7 @@ session is intact - a retry or a manual handoff is still possible.
 The close is already done: `respawn` flagged this chat and its own pump tears it down at turn end.
 Do NOT call `close_session` - it is redundant here.
 
-Tell Joe the successor's session id, then run the rename/kill script from `/close`'s Phase 6:
-
-```powershell
-& "C:\Users\tecno\.claude\skills\close\rename-session.ps1" -Close
-```
+Tell Joe the successor's session id, and stop there. Do not run `/close`'s rename/kill script:
+the pump already ends this chat, and in a Conductor chat that script refuses with exit 3 and a
+`REFUSED: host-managed session ... call close_session` line. That line is expected after a respawn
+and is never a reason to call `close_session`.

@@ -138,8 +138,8 @@ cycles parked is asked here, not left for a later invocation (todo 1240: a run t
 three fresh `## Open questions` blocks "for the next Phase 0" was exactly what the dev objected to).
 
 1. Run Phase 0's steps 1, 3, 4, 5 and 6 over every `## Open questions` block in the backlog, the ones
-   this loop's cycles wrote and any still there from before. Step 2's deferred gate is not repeated:
-   Phase 0 already offered those. Same single card, same standing options, same timeout rule, same
+   this loop's cycles wrote and any still there from before. `## Deferred questions` blocks are not
+   collected and step 2's deferred gate is not repeated: Phase 0 already offered those. Same single card, same standing options, same timeout rule, same
    write-back table.
 2. No survivors after step 3's filter: go straight to Phase 4.5.
 3. **Re-enter the loop** only when all of these hold: the stop condition was "AUTO queue empty" or
