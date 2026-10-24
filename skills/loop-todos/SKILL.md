@@ -137,14 +137,16 @@ interrupts". The dev started the loop to clear the backlog's questions, so a que
 cycles parked is asked here, not left for a later invocation (todo 1240: a run that stopped with
 three fresh `## Open questions` blocks "for the next Phase 0" was exactly what the dev objected to).
 
-1. Run Phase 0's steps 1, 3, 4 and 5 over every `## Open questions` block in the backlog, the ones
+1. Run Phase 0's steps 1, 3, 4, 5 and 6 over every `## Open questions` block in the backlog, the ones
    this loop's cycles wrote and any still there from before. Step 2's deferred gate is not repeated:
    Phase 0 already offered those. Same single card, same standing options, same timeout rule, same
    write-back table.
 2. No survivors after step 3's filter: go straight to Phase 4.5.
 3. **Re-enter the loop** only when all of these hold: the stop condition was "AUTO queue empty" or
    "zero todos completed", at least one answer moved a todo into the AUTO queue, the cycle cap is
-   not reached, and the last Phase 2 `/test` was green. Then start the next Phase 1 cycle. When it
+   not reached, and the last Phase 2 `/test` was green. Then run Phase 4's context check, which may
+   hand the loop to a successor, and start the next Phase 1 cycle with the skip list step 1 just
+   rebuilt (a todo the dev skipped in this round is excluded from it, and from the handoff). When it
    stops again, this round runs again over only the questions written since its last card; none
    means straight to Phase 4.5.
 4. Otherwise go to Phase 4.5. Answers that unblock a todo while re-entry is ruled out are written
