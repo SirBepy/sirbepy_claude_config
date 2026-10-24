@@ -37,3 +37,7 @@ edit in the same commit.
 
 - `batch-todos`' frontmatter, its trigger line, both callers and `CLAUDE.md:102` agree.
 - `python ci/check_skill_frontmatter.py` reports nothing for batch-todos.
+
+## Notes
+
+- Kept the flag (e0cc2a9's stated intent: internal-only, same as auto-do-todos and mega-todos). batch-todos' trigger line now says callers read the file instead of a Skill-tool call, auto-do-todos Step 3 says the same, and CLAUDE.md's executor list names /auto-do-todos instead of /batch-todos (token-neutral, budget check PASS). check_skill_frontmatter.py reports nothing for batch-todos; its one FAIL is the uncommitted impeccable re-vendor.

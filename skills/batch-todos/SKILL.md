@@ -8,9 +8,10 @@ disable-model-invocation: true
 
 > Dedupe AI todos, auto-batch the easy ones, then surface the hard ones for the dev to choose.
 
-**Trigger:** `/batch-todos` only. Never auto-invoke. In practice this runs as `/auto-do-todos`
-Step 3 (and transitively inside `/mega-todos`) rather than standalone - the dev does not invoke it
-directly day-to-day.
+**Trigger:** never standalone. It runs as `/auto-do-todos` Step 3 (and transitively inside
+`/mega-todos`), whose callers read this file and follow it rather than calling it through the Skill
+tool: `disable-model-invocation: true` keeps it out of the skill listing, so a Skill-tool call
+cannot reach it. A dev typing `/batch-todos` still loads it.
 
 Backlog rules (location, format, claims, done/, PLAN.md) live in
 `~/.claude/skills/close/ai-todos-format.md` - follow that contract for every file operation here.

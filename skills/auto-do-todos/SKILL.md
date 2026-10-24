@@ -98,6 +98,8 @@ Cleanout mode and attended mode are independent and may both be active in the sa
 1. Record `START_SHA` (`git rev-parse HEAD`) - Step 9 diffs against it.
 2. `/cleanup-todos`, unattended - always runs (Steps 2-3).
 3. `/batch-todos`, unattended, unless Step 2 left nothing EASY - its EASY batch executes here.
+   It is flagged internal-only, so read `skills/batch-todos/SKILL.md` and follow it; never a
+   Skill-tool call.
 4. Triage the remaining queue into AUTO and DEV (Step 4).
 5. The one question round, if it triggers (Step 5).
 6. Grind the AUTO queue (Step 6).
