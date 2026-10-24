@@ -247,11 +247,15 @@ def build_page(files, page_title):
                 )
 
         # Namespace each doc's own anchor ids with its slug so two docs that
-        # both have e.g. an "#overview" heading don't collide on one page.
-        for tok in toc:
-            body_html = re.sub(
-                rf'id="{re.escape(tok["id"])}"', f'id="{slug}-{tok["id"]}"', body_html, count=1
-            )
+        # both have e.g. an "#overview" heading don't collide on one page, and
+        # rewrite the doc's own "#id" links to match. One pass over the html, so
+        # a renamed id can never be matched again by a later heading's rename.
+        heading_ids = {tok["id"] for tok in toc}
+        body_html = re.sub(
+            r'(id="|href="#)([^"]+)"',
+            lambda m: f'{m.group(1)}{slug}-{m.group(2)}"' if m.group(2) in heading_ids else m.group(0),
+            body_html,
+        )
 
         section_parts.append(
             f'<section id="{slug}" class="doc">'
