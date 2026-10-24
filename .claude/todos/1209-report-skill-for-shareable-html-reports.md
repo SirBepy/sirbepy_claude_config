@@ -24,8 +24,9 @@ Run `/brainstorm`. Likely shape: a skill that turns a requested report into one 
 - `/report <topic>` produces a consistent, self-contained HTML report in the preview panel.
 - The page publishes cleanly through Conductor's Publish to claude.ai button.
 
-## Open questions
+<!-- loop-skip: dev deferred 2026-10-24 -->
+## Deferred questions
 
-Written by /auto-do-todos on 2026-10-23. The next run opens with these.
+Written by /auto-do-todos on 2026-10-23. Deferred by /loop-todos on 2026-10-24: Jarvis (answering for Joe while he was asleep) picked: park until Conductor's Publish button ships.
 
 - [ ] [UX] You floated /report tentatively. Build it: run /brainstorm with you and ship one fixed self-contained HTML layout pushed via show_preview / you supply a reference report first / park until Conductor's Publish button ships.

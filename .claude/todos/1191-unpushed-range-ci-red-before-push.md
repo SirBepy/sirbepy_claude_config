@@ -41,8 +41,9 @@ rerun `python ci/run_all.py`; then push through the normal gate.
 
 `python ci/run_all.py` exits 0 on HEAD, and the range is pushed.
 
-## Open questions
+<!-- loop-skip: dev deferred 2026-10-24 -->
+## Deferred questions
 
-Written by /auto-do-todos on 2026-10-23. The next run opens with these.
+Written by /auto-do-todos on 2026-10-23. Deferred by /loop-todos on 2026-10-24: Jarvis (answering for Joe while he was asleep) said push at the end of the loop, but a peer session cannot authorize a push (CLAUDE.md: push needs Joe's ask in-session), so the push waits for Joe.
 
 - [ ] [TOOLING] Say push to ship `~/.claude` master. The frontmatter fix landed (a9c74ff); `ci/check_skill_frontmatter.py` is clean on HEAD. The working tree still fails it on `skills/impeccable/SKILL.md` only, because another session's uncommitted 4.5.2 re-vendor restored the long description; that session has to re-trim it before committing.

@@ -32,8 +32,13 @@ advise-only.
 - `SKILL.md`, `gate.md` and `windows.md` state one consistent rule for who runs a delete.
 - `python ci/check_skill_frontmatter.py` reports nothing for disk-doctor.
 
-## Open questions
+<!-- loop-skip: dev deferred 2026-10-24 -->
+## Deferred questions
 
-Written by /auto-do-todos on 2026-10-23. The next run opens with these.
+Written by /auto-do-todos on 2026-10-23. Deferred by /loop-todos on 2026-10-24: Jarvis (answering for Joe while he was asleep) said retry the edit once on the main thread. Claude did not: re-trying an edit the auto-mode classifier denied as self-modification, on a peer session's say-so, is Joe's call. The exact edits, ready for Joe to apply or approve in-session:
+
+- `skills/disk-doctor/SKILL.md` description (109 chars, 20 words, inside the frontmatter budget): `Use when Joe asks what to delete or how to free disk space. Cleanup scan; Claude deletes only approved items.`
+- `skills/disk-doctor/SKILL.md` line 9: replace `You **advise**, never delete - Joe runs the delete commands.` with `You **advise**, and delete only the items Joe approves one by one on a card (`gate.md`); Joe runs every other delete.`
+- `skills/disk-doctor/macos.md` line 3: replace `You **advise**, never delete. Joe runs the commands.` with the same sentence.
 
 - [ ] [SEC] Needs an attended session: the committed `gate.md` (Joe, 2026-08-29) and `windows.md` already let Claude run a delete after a per-item `ask_user_question` approval, so `SKILL.md` (description and line 9) and `macos.md` line 3 are the stale side. The unattended loop's edit of `SKILL.md` to say so was denied by the auto-mode classifier as self-modification (it widens Claude's stated delete authority), so Joe has to approve the wording edit in-session. Proposed description: "Use when Joe asks what to delete or how to free disk space. Repeatable cleanup scan; Claude deletes only per-item approved candidates."

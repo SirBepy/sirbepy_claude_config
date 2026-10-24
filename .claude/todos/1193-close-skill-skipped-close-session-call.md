@@ -42,8 +42,6 @@ Two independent angles, either is worth doing on its own:
 A `/close` run in a Conductor-hosted session either calls `close_session` before the kill script
 every time, or the script itself refuses to proceed silently when that call was skipped.
 
-## Open questions
+## Notes
 
-Written by /auto-do-todos on 2026-10-23. The next run opens with these.
-
-- [ ] [TOOLING] Run this todo in an attended session (say which). Its fix writes to `hooks/` or `settings.json`, which `hooks/sensitive-file-guard.py` gates with a permission ask, and the autopilot rules bar a dispatched subagent from those writes, so an unattended loop cannot land it.
+- [TOOLING] Run this todo in an attended session (say which). Its fix writes to `hooks/` or `settings.json`, which `hooks/sensitive-file-guard.py` gates with a permission ask, and the autopilot rules bar a dispatched subagent from those writes, so an unattended loop cannot land it. - dev delegated to autopilot on 2026-10-24 (Jarvis answered for Joe; re-check found the fix lands in `skills/close/`, not `hooks/`).
