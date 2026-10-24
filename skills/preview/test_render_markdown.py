@@ -178,6 +178,18 @@ def test_h1_led_docs(root):
     check('id="one-overview"' in html and 'id="two-overview"' in html, "nested heading ids are namespaced per doc")
     check('id="overview"' not in html, "no bare nested heading id is left to collide across docs")
 
+    proc, html = render(
+        root,
+        "inlinks",
+        {"one.md": "# T\n\nSee [a](#a) and [site](https://x.test/#a).\n\n## A\n\ntext\n\n## One A\n\ntext\n"},
+    )
+    check('href="#one-a"' in html and 'href="#a"' not in html, "an in-doc #id link follows its renamed heading id")
+    check('href="https://x.test/#a"' in html, "an external link's fragment is left alone")
+    check(
+        '<h2 id="one-a">A</h2>' in html and '<h2 id="one-one-a">One A</h2>' in html,
+        "a heading whose id equals another's renamed id keeps its own id",
+    )
+
 
 def test_narrow_css(root):
     _, html = render(root, "css", {"t.md": TABLE_MD + "\n```\nlong code line\n```\n"})
