@@ -30,3 +30,7 @@ to its containing doc.
 
 - A test in `skills/preview/test_render_markdown.py` with an H1-led doc shows its H2s in the nav
   and two such docs sharing an H2 title get distinct ids; it fails against the current renderer.
+
+## Notes
+
+- render_markdown.py flattens toc_tokens depth-first (flatten_toc) before both the nav loop and the id namespacing, so an H1-led doc lists its H2/H3 and nested ids get the doc slug. New test_h1_led_docs failed 4 checks before the fix, passes after. The optional heading-id deep link on load was not done.

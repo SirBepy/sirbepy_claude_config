@@ -203,6 +203,17 @@ def collect_md_files(paths):
     return files
 
 
+def flatten_toc(tokens):
+    """Depth-first list of every toc token. Python-Markdown nests each heading
+    under the nearest higher one, so a doc that opens with an H1 keeps all its
+    H2/H3 in that token's children."""
+    flat = []
+    for tok in tokens:
+        flat.append(tok)
+        flat.extend(flatten_toc(tok.get("children", [])))
+    return flat
+
+
 def build_page(files, page_title):
     md = markdown.Markdown(extensions=MD_EXTENSIONS)
     seen_slugs = set()
@@ -227,7 +238,8 @@ def build_page(files, page_title):
             f'<a class="nav doc-link" href="#{slug}" data-slug="{slug}">'
             f'<span class="nt">{html_mod.escape(doc_title)}</span></a>'
         )
-        for tok in getattr(md, "toc_tokens", []):
+        toc = flatten_toc(getattr(md, "toc_tokens", []))
+        for tok in toc:
             if tok["level"] <= 3:
                 nav_parts.append(
                     f'<a class="toc-link lvl-{tok["level"]}" '
@@ -236,7 +248,7 @@ def build_page(files, page_title):
 
         # Namespace each doc's own anchor ids with its slug so two docs that
         # both have e.g. an "#overview" heading don't collide on one page.
-        for tok in getattr(md, "toc_tokens", []):
+        for tok in toc:
             body_html = re.sub(
                 rf'id="{re.escape(tok["id"])}"', f'id="{slug}-{tok["id"]}"', body_html, count=1
             )
