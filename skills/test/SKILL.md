@@ -62,8 +62,9 @@ workspace: pass `--manifest-path src-tauri/Cargo.toml` rather than relying on cw
   compile alone nears 10 minutes): start cargo detached with `Start-Process ... -RedirectStandardOutput
   <log> -RedirectStandardError <log2> -PassThru`, then `Monitor` the log for `test result` and the
   pid for liveness, never a pipe (`hooks/cargo-test-pipe-guard.py` blocks one). A harness "stopped
-  at its time limit" note on cargo means lock contention or a long compile, not a hang: switch to the
-  detached form rather than relaunching the same capped job.
+  at its time limit" note on cargo usually means lock contention or a long compile rather than a
+  hang: switch to the detached form rather than relaunching the same capped job, and let its log
+  tell the two apart.
 - **Roblox / Luau:** hand off to `/jest-lua run`; it already owns `scripts/check.sh` and the
   `run-in-roblox` fallback.
 - **Android / Gradle:** `gradlew testDebugUnitTest lintDebug assembleDebug`. `$env:JAVA_HOME` does
