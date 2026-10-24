@@ -330,7 +330,11 @@ the two sorted sets for equality says nothing about it, and a stale rewrite woul
    `## Recent` and `## Rest` each directly above its block, omitting the heading of an empty
    block; if it held none, write no headings. Lines above the first entry (a `# Memory Index`
    title, a preamble) stay at the top, unmoved.
-3. **Compute the target order** from `before` and diff it against the current order. If they
+3. **Compute the target order** from `before` and diff it against the current order. When the
+   index carries canonical headings, compare the whole target layout, headings included: an entry
+   aging from Recent into Rest keeps its linear position and only the heading boundary moves, and
+   a block that empties loses its heading, so an entry-order-only comparison would call both a
+   no-op. If they
    already match, make no edit and report "index already ordered, no-op" in Step 7 - this is what
    keeps a second run over an already-ordered index a true no-op. Otherwise continue.
 4. **Re-read immediately before writing** (`current`), as late as the step allows - this is what
