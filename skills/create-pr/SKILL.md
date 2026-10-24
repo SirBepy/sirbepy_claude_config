@@ -196,51 +196,28 @@ per the global subagent-model rule; never inherit.
      a few characters in a small file). On no: delete both placeholder lines
      (an image line with nothing to show is worse than no image line).
 
-4. **Render + emit preview markers (main agent, cheap - the file is small).**
-   - `Read` the finished `.for_bepy/pr_preview/<branch-slug>.md` and render it
-     inline in the chat so the dev reads it exactly as a reviewer will.
-   - State the tier, the base branch, and any visual outcome.
-   - **Emit the Claude Conductor in-app preview markers.** Base64-encode the
-     body file's contents and the commits-JSON (built from the subagent's
-     reported commit list) via PowerShell:
-     ```
-     $body = [System.IO.File]::ReadAllText("<absolute path to the preview .md>", [System.Text.Encoding]::UTF8)
-     [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($body))
-     ```
-     (Always `ReadAllText` with explicit UTF8, never `Get-Content -Raw`: PS 5.1
-     reads BOM-less UTF-8 files with the ANSI codepage and mangles non-ASCII
-     characters like `→` into mojibake inside the base64 marker.)
-     ```
-     $commitsJson = '[{"sha":"abc1234","msg":"headline"},...]'
-     [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($commitsJson))
-     ```
-     Then emit these three lines as PLAIN TEXT in your response (not in a code
-     block, not in a blockquote - raw text so the app parser strips them from
-     the chat display and shows the PR card instead):
-     ```
-     <cc-pr-title:TITLE_GOES_HERE>
-     <cc-pr-body:BASE64_BODY>
-     <cc-pr-commits:BASE64_COMMITS_JSON>
-     ```
-     The title must not contain `>` characters. The base64 values must be
-     single lines with no spaces or line breaks.
-   - **Step 4 must be the FINAL action of its turn - no tool call after it,**
-     with one exemption below for Claude Conductor. Text emitted right before a
-     tool call can be invisible to the dev, so the rendered preview and the
-     markers have to land in a turn with nothing after them. Step 5's
-     `AskUserQuestion` opens a NEW turn, never the same one.
-   - **Claude Conductor specifically:** Conductor mandates `report_turn_status`
-     as the literal last action of every turn (a Stop hook blocks the turn
-     otherwise), so "no tool call after it" is unsatisfiable there as written.
-     Conductor's card parser reads raw assistant text, not `send_message`
-     payloads - `detectPrPreviewToken`
-     (`src/shared/chat/chat-classifiers.ts:58-80` in claude_usage_in_taskbar),
-     called from the `assistant` branch of `chat-transforms.ts`, gated only on
-     the message being finalized (settled 2026-10-02, pinned by
-     `tests/chat-transforms.test.mjs`). So `report_turn_status` is exempt from
-     the "no tool call after it" rule - it is harness-mandated and carries no
-     user-visible text: emit the markers as plain text same as elsewhere, then
-     call `report_turn_status`.
+4. **Render the preview (main agent, cheap - the file is small).**
+   - **Claude Conductor (an `mcp__cc_conductor__pr_preview` tool exists in
+     this session):** call `pr_preview` with `title`, `body` (the raw markdown
+     of `.for_bepy/pr_preview/<branch-slug>.md`, read with the `Read` tool, no
+     encoding), and `commits` (`[{sha, msg}]` from the subagent's reported
+     commit list, newest first). Conductor renders that call as the PR card,
+     which is the dev's preview, so do not also paste the body into the chat.
+     Put the tier, base branch and any visual outcome in a short
+     `send_message`. Never print `<cc-pr-title/body/commits:...>` marker lines
+     here: since CLI 2.1.304 a marker block with long base64 lines can land in
+     the transcript as a `thinking` block that Conductor never parses, so the
+     card silently fails to appear (claude_usage_in_taskbar todo 1149, root
+     cause 2026-10-23). Conductor still parses old markers in old transcripts.
+     Then call `report_turn_status` and end the turn.
+   - **Anywhere else:** `Read` the finished preview file and render it inline
+     in the chat so the dev reads it exactly as a reviewer will. State the
+     tier, the base branch, and any visual outcome.
+   - **Step 4 must be the last action of its turn** (in Conductor, only the
+     harness-mandated `report_turn_status` follows it). Text emitted right
+     before a tool call can be invisible to the dev, so the preview has to
+     land in a turn with nothing after it. Step 5's `AskUserQuestion` opens a
+     NEW turn, never the same one.
 
 See `skills/create-pr/drafting-rules.md` for the auto-tier rubric, the
 secret-scan check, the visual-scan rules, and the Slack-announcement-block
