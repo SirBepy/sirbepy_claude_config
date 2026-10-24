@@ -20,6 +20,10 @@ In Claude Conductor, `/create-pr` step 4 shows the PR card by calling the app's 
 ## Acceptance
 - A real `/create-pr` run in Conductor shows the card.
 
+## Notes
+
+- Done 2026-10-25 (af0dd983) from claude_usage_in_taskbar /loop-todos with Joe's in-session OK: step 4 calls mcp__cc_conductor__pr_preview in Conductor; a live pr_preview call returned 'PR preview card shown in chat'.
+
 ## Decided
 
 Decided by /auto-do-todos on 2026-10-23.
