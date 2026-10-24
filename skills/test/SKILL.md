@@ -57,7 +57,13 @@ workspace: pass `--manifest-path src-tauri/Cargo.toml` rather than relying on cw
   roughly three full builds, not one plus increments. Any `check`/`build` you do add takes
   `--all-targets`, or `#[cfg(test)]`-only imports report as unused. **If `/supervised-run` has a
   `cargo tauri dev` entry up, stop it first** - the running app holds a lock on the target exe and
-  the test fails with "Access is denied (os error 5)". Restart it after.
+  the test fails with "Access is denied (os error 5)". Restart it after. **A run that can outlast
+  the 10-minute tool cap** (other chats share the checkout and its target-dir lock, or the lib-test
+  compile alone nears 10 minutes): start cargo detached with `Start-Process ... -RedirectStandardOutput
+  <log> -RedirectStandardError <log2> -PassThru`, then `Monitor` the log for `test result` and the
+  pid for liveness, never a pipe (`hooks/cargo-test-pipe-guard.py` blocks one). A harness "stopped
+  at its time limit" note on cargo means lock contention or a long compile, not a hang: switch to the
+  detached form rather than relaunching the same capped job.
 - **Roblox / Luau:** hand off to `/jest-lua run`; it already owns `scripts/check.sh` and the
   `run-in-roblox` fallback.
 - **Android / Gradle:** `gradlew testDebugUnitTest lintDebug assembleDebug`. `$env:JAVA_HOME` does
