@@ -145,7 +145,6 @@ def test_rank_column(root):
 
 def test_multi_doc(root):
     files = {
-        # No leading H1: the renderer only lists top-level toc tokens, which would nest these.
         "alpha.md": "## Overview\n\ntext a\n",
         "beta.md": "## Overview\n\n| X | Y |\n|---|---|\n| 1 | 2 |\n",
         "gamma.md": "### Deep\n\ntext g\n",
@@ -164,6 +163,20 @@ def test_multi_doc(root):
     )
     beta_table = parse_tables(html)[0]
     check([c[1].get("data-label") for c in beta_table[1]] == ["X", "Y"], "tables in a later doc are labelled too")
+
+
+def test_h1_led_docs(root):
+    # Python-Markdown nests every H2/H3 under a leading H1 as that token's children.
+    files = {
+        "one.md": "# One\n\n## Overview\n\ntext\n\n### Detail\n\nmore\n",
+        "two.md": "# Two\n\n## Overview\n\ntext\n",
+    }
+    proc, html = render(root, "h1led", files)
+    check(proc.returncode == 0, "two H1-led docs render", proc.stderr)
+    check('href="#one-overview"' in html and 'href="#two-overview"' in html, "an H1-led doc's H2s are in the nav")
+    check('class="toc-link lvl-3" href="#one-detail"' in html, "an H1-led doc's H3s are in the nav")
+    check('id="one-overview"' in html and 'id="two-overview"' in html, "nested heading ids are namespaced per doc")
+    check('id="overview"' not in html, "no bare nested heading id is left to collide across docs")
 
 
 def test_narrow_css(root):
@@ -192,6 +205,7 @@ def main():
         test_table_labels(root)
         test_rank_column(root)
         test_multi_doc(root)
+        test_h1_led_docs(root)
         test_narrow_css(root)
     if failures:
         print(f"\n{len(failures)} failure(s)")
