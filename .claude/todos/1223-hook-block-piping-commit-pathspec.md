@@ -24,8 +24,9 @@ Add a PreToolUse Bash hook (or extend the cargo guard into a generic "exit-code-
 - `bash .../commit-pathspec.sh -m x -- f | tail -3` is denied; the same command unpiped, or with `set -o pipefail;` first, is allowed.
 - `python ci/run_all.py` passes with the new self-test.
 
-## Open questions
+<!-- loop-skip: dev deferred 2026-10-24 -->
+## Deferred questions
 
-Written by /auto-do-todos on 2026-10-23. The next run opens with these.
+Written by /auto-do-todos on 2026-10-23. Deferred by /loop-todos on 2026-10-24: Jarvis (answering for Joe while he was asleep) picked "you decide"; Claude's 2026-10-24 re-check of the real write target found the fix needs a `hooks/` or `settings.json` write, which prompts for permission, so it waits for an attended session.
 
 - [ ] [TOOLING] Run this todo in an attended session (say which). Its fix writes to `hooks/` or `settings.json`, which `hooks/sensitive-file-guard.py` gates with a permission ask, and the autopilot rules bar a dispatched subagent from those writes, so an unattended loop cannot land it.
