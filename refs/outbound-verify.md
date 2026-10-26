@@ -142,16 +142,17 @@ OUTBOUND-VERDICT: FAIL
 
 - **3 PASS:** post the exact verified text. For a ticket write, write the ground-check marker
   now (it expires after 120 seconds), then post.
-- **Any FAIL, round 1:** fix it without asking. Before rewriting, check the dissenting verifier's
+- **Any FAIL, rounds 1-8:** fix it without asking. Before rewriting, check the dissenting verifier's
   key receipt yourself when it contradicts the others or what is already known; a verifier can be
   wrong too. Then correct or cut each WRONG claim, hedge or cut each UNVERIFIABLE one, and run
   step 2 again on the new text with 3 fresh verifiers. A FAIL whose receipt you disprove at
   file:line needs no rewrite for its own sake, but the hook still counts it against that exact
   text, so the text must change (or Joe decides) before a clean round can count.
-- **Any FAIL, round 2:** stop. Do not post and do not start a round 3. Tell Joe in one message
-  which claims are disputed, what each verifier's receipt says, and the text as it stands.
-- **Opt-in cap of 7:** only when Joe asks for more rounds ("keep going until it doesn't fail"),
-  keep autofixing up to 7 rounds, stopping at the first round where all 3 PASS. Never the default.
+- **Any FAIL, round 9:** stop. Do not post and do not start a round 10. Tell Joe in one message
+  which claims are disputed, what each verifier's receipt says, and the text as it stands. Joe
+  raised the cap from 2 to 9 on 2026-10-26: a round-2 stop had forced a manual post when the
+  only FAIL was a verifier that couldn't reach the Shortcut API. When a claim needs an API the
+  verifiers may be denied, snapshot the response to a file and point them at it.
 
 ## Keeping the verify loop short
 
