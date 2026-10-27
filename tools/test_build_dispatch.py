@@ -142,6 +142,23 @@ def main() -> int:
         "omitting -CommitMessage/-ExpectedBranch without -NoCommitBlock is rejected",
     )
 
+    # Case 6: -WorkingDir = the ~/.claude repo root ($inClaudeDir). The
+    # WORKTREE_LINE removal re-joins lines with CRLF, and the GLOBAL_EDIT_BAN
+    # removal after it must still match its line; otherwise the literal
+    # placeholder ships in the builder prompt.
+    r6 = run_script(
+        "-Owned", "foo/bar.ts",
+        "-OffLimits", "everything else in the repo",
+        "-Task", "do the thing",
+        "-NoCommitBlock",
+        "-WorkingDir", str(ROOT),
+    )
+    check(r6.returncode == 0, f"claude-dir WorkingDir exits 0 (stderr: {r6.stderr[:300]})")
+    check("<GLOBAL_EDIT_BAN>" not in r6.stdout,
+          "claude-dir WorkingDir drops the GLOBAL_EDIT_BAN line (no literal placeholder)")
+    check("<WORKTREE_LINE>" not in r6.stdout,
+          "claude-dir WorkingDir drops the WORKTREE_LINE line (no literal placeholder)")
+
     print()
     if fails:
         print(f"FAIL: {len(fails)} case(s) failed: {fails}")
