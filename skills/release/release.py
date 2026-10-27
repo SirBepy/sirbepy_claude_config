@@ -270,23 +270,40 @@ def cmd_source(repo):
 
 # ---------------------------------------------------------------- kit-sync
 
-def _kit_sha(root):
+def _kit_status(root):
+    """(prefix, checked-out sha) from `git submodule status`; prefix is ' ', '+', '-' or 'U'.
+    None when vendor/tauri_kit is not a submodule."""
     proc = git(root, "submodule", "status", "--", "vendor/tauri_kit")
-    line = proc.stdout.strip()
-    if proc.returncode != 0 or not line:
+    line = proc.stdout.rstrip()
+    if proc.returncode != 0 or not line.strip():
         return None
-    return line.lstrip(" +-U").split()[0][:7]
+    return line[0], line[1:].split()[0][:7]
+
+
+def _kit_gitlink(root):
+    """The sha committed at HEAD for vendor/tauri_kit, or None when HEAD has no such gitlink."""
+    proc = git(root, "ls-tree", "HEAD", "--", "vendor/tauri_kit")
+    fields = proc.stdout.split()
+    if proc.returncode != 0 or len(fields) < 3 or fields[0] != "160000":
+        return None
+    return fields[2][:7]
 
 
 def cmd_kit_sync(repo):
     root = repo_root(repo)
-    old = _kit_sha(root)
-    if old is None:
+    status = _kit_status(root)
+    if status is None:
         return {"changed": False, "reason": "no vendor/tauri_kit"}
-    proc = git(root, "submodule", "update", "--remote", "vendor/tauri_kit", timeout=NET_TIMEOUT_SECONDS)
+    prefix, checked_out = status
+    # `old` is the committed gitlink, not the checkout: a checkout already ahead of HEAD (status '+')
+    # must still report changed, or its uncommitted gitlink never gets a commit.
+    old = _kit_gitlink(root) or checked_out
+    args = ["submodule", "update", "--init", "--remote"] if prefix == "-" else ["submodule", "update", "--remote"]
+    proc = git(root, *args, "vendor/tauri_kit", timeout=NET_TIMEOUT_SECONDS)
     if proc.returncode != 0:
         raise Fail(f"submodule update failed: {proc.stderr.strip()}", 3)
-    new = _kit_sha(root)
+    after = _kit_status(root)
+    new = after[1] if after else checked_out
     return {"changed": new != old, "old": old, "new": new}
 
 

@@ -86,8 +86,47 @@ class KitSyncTest(ReleaseBase):
         self.assertIn("vendor/tauri_kit", fx.git(r, "status", "--porcelain"))
         self.assertEqual(fx.git(r, "log", "-1", "--format=%s"), "add kit")
 
+        # Until the moved gitlink is committed, `old` stays the committed sha, so a re-run still
+        # reports the pending change.
+        rc, pending = self.release("kit-sync", r)
+        self.assertEqual(pending, {"changed": True, "old": first, "new": second})
+
+        fx.git(r, "add", "vendor/tauri_kit")
+        fx.git(r, "commit", "-q", "-m", "bump kit")
         rc, again = self.release("kit-sync", r)
         self.assertEqual(again, {"changed": False, "old": second, "new": second})
+
+    def test_submodule_already_checked_out_ahead_of_gitlink(self):
+        kit = fx.make_repo(self.tmp / "kit", {"lib.txt": "1\n"})
+        first = fx.git(kit, "rev-parse", "--short=7", "HEAD")
+        r = self.repo({"README.md": "x\n"})
+        fx.git(r, "submodule", "add", "-q", str(kit), "vendor/tauri_kit")
+        fx.commit_all(r, "add kit")
+        fx.write(kit, "lib.txt", "2\n")
+        fx.commit_all(kit, "kit moves on")
+        second = fx.git(kit, "rev-parse", "--short=7", "HEAD")
+        # Advance the checkout by hand; the remote has nothing newer, so update --remote is a no-op.
+        fx.git(r / "vendor" / "tauri_kit", "pull", "-q")
+        self.assertTrue(fx.git(r, "submodule", "status", "--", "vendor/tauri_kit").startswith("+"))
+
+        rc, out = self.release("kit-sync", r)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(out, {"changed": True, "old": first, "new": second})
+
+    def test_uninitialized_submodule_is_initialised(self):
+        kit = fx.make_repo(self.tmp / "kit", {"lib.txt": "1\n"})
+        first = fx.git(kit, "rev-parse", "--short=7", "HEAD")
+        origin = fx.make_repo(self.tmp / "origin", {"README.md": "x\n"})
+        fx.git(origin, "submodule", "add", "-q", str(kit), "vendor/tauri_kit")
+        fx.commit_all(origin, "add kit")
+        clone = self.tmp / "clone"
+        fx.git(self.tmp, "clone", "-q", str(origin), str(clone))
+        self.assertTrue(fx.git(clone, "submodule", "status", "--", "vendor/tauri_kit").startswith("-"))
+
+        rc, out = self.release("kit-sync", clone)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(out, {"changed": False, "old": first, "new": first})
+        self.assertTrue((clone / "vendor" / "tauri_kit" / "lib.txt").is_file())
 
 
 class BumpTest(ReleaseBase):

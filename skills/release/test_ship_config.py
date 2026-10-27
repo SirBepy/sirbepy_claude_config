@@ -73,6 +73,29 @@ class ShipConfigTest(unittest.TestCase):
         self.assertIs(out["todo_sweep"], True)
         self.assertIsNone(out["release"])
 
+    def test_missing_client_list_fails_closed_to_unknown(self):
+        r = self.repo("c", "git@github-work:Zirtue-Corp/ZNG-App.git", {"package.json": PKG})
+        missing = self.tmp / "nope" / "clients.txt"
+        self.env["SHIP_CONFIG_CLIENT_LIST"] = str(missing)
+        rc, out = self.get(r)
+        self.assertEqual(rc, 0)
+        self.assertEqual(out["class"], "unknown")
+        self.assertIs(out["todo_sweep"], True)
+        self.assertIsNone(out["release"])
+        self.assertIn(str(missing), out["reason"])
+        rc, err = self.set(r, "release=patch")
+        self.assertEqual(rc, 2)
+        self.assertIn(str(missing), err["error"])
+
+    def test_empty_client_list_fails_closed_to_unknown(self):
+        r = self.repo("c", "https://github.com/someone/tool.git", {"package.json": PKG})
+        empty = self.tmp / "empty.txt"
+        empty.write_text("# only a comment\n\n", encoding="utf-8")
+        self.env["SHIP_CONFIG_CLIENT_LIST"] = str(empty)
+        rc, out = self.get(r)
+        self.assertEqual(out["class"], "unknown")
+        self.assertIn(str(empty), out["reason"])
+
     def test_no_origin_is_unknown(self):
         r = self.repo("n", None)
         rc, out = self.get(r)
