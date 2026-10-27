@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Name availability checker: domains (RDAP / port-43 whois + DNS cross-check), npm, GitHub.
-// Node 20+, zero dependencies. See README-check.md for usage and the reliability of each signal.
+// Node 20+, zero dependencies. See checker-notes.md for usage and the reliability of each signal.
 //
 // Statuses are exactly FREE, TAKEN, UNKNOWN. A lookup that fails (429, 5xx, timeout, odd answer)
 // is retried with backoff and then reported as UNKNOWN, never as FREE.

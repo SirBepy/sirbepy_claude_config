@@ -34,7 +34,8 @@ for (const file of fs.readdirSync(dir)) {
     for (const part of head.split(',')) {
       const word = part.replace(/\(.*?\)/g, '').trim();
       if (!word || /\s/.test(word)) continue;
-      const ascii = word.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'dj').toLowerCase();
+      // Lowercase before the đ swap: NFD leaves Đ intact, so a capital one would otherwise fail the ASCII test.
+      const ascii = word.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/đ/g, 'dj');
       if (/^[a-z]{4,12}$/.test(ascii)) found.add(ascii);
     }
   }

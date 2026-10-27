@@ -250,12 +250,20 @@ def build_page(files, page_title):
         # both have e.g. an "#overview" heading don't collide on one page, and
         # rewrite the doc's own "#id" links to match. One pass over the html, so
         # a renamed id can never be matched again by a later heading's rename.
+        # Only attributes inside real <h1-6> and <a> tags are touched, so prose
+        # or inline code that merely spells id="x" / href="#x" stays literal.
         heading_ids = {tok["id"] for tok in toc}
-        body_html = re.sub(
-            r'(id="|href="#)([^"]+)"',
-            lambda m: f'{m.group(1)}{slug}-{m.group(2)}"' if m.group(2) in heading_ids else m.group(0),
-            body_html,
-        )
+
+        def namespace_tag(m):
+            attr = "id" if m.group(1).startswith("h") else "href"
+            prefix = '="' if attr == "id" else '="#'
+            return re.sub(
+                rf'(\b{attr}{prefix})([^"]+)"',
+                lambda a: f'{a.group(1)}{slug}-{a.group(2)}"' if a.group(2) in heading_ids else a.group(0),
+                m.group(0),
+            )
+
+        body_html = re.sub(r"<(h[1-6]|a)\b[^>]*>", namespace_tag, body_html)
 
         section_parts.append(
             f'<section id="{slug}" class="doc">'
