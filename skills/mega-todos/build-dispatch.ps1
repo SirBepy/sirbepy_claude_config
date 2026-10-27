@@ -260,7 +260,8 @@ and follow it VERBATIM, applying:
     $prompt = ($prompt -split "`n") | Where-Object { $_.TrimEnd("`r") -ne '<WORKTREE_LINE>' } | Out-String
 
     if ($inClaudeDir) {
-        $prompt = ($prompt -split "`n") | Where-Object { $_ -ne '<GLOBAL_EDIT_BAN>' } | Out-String
+        # The WORKTREE_LINE pass above re-joined with CRLF (Out-String), so trim the CR before comparing.
+        $prompt = ($prompt -split "`n") | Where-Object { $_.TrimEnd("`r") -ne '<GLOBAL_EDIT_BAN>' } | Out-String
     } else {
         $prompt = $prompt -replace '<GLOBAL_EDIT_BAN>', (Protect $banCell)
     }
