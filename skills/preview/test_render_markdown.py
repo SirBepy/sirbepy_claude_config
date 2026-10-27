@@ -191,6 +191,28 @@ def test_h1_led_docs(root):
     )
 
 
+def test_literal_id_text(root):
+    # Prose that merely spells an id/href attribute is text, not markup: only real heading ids
+    # and real <a href="#..."> links are namespaced.
+    md = (
+        "# T\n\n## Overview\n\n"
+        'Write `id="overview"` or `href="#overview"` by hand, or [link](#overview).\n'
+    )
+    proc, html = render(root, "literal", {"one.md": md})
+    check(proc.returncode == 0, "doc with literal id text renders", proc.stderr)
+    check('<h2 id="one-overview">Overview</h2>' in html, "the real heading id is namespaced")
+    check('<a href="#one-overview">link</a>' in html, "a real in-doc link is namespaced")
+    check(
+        "<code>id=\"overview\"</code>" in html or "<code>id=&quot;overview&quot;</code>" in html,
+        "inline code spelling an id attribute is left unchanged",
+    )
+    check(
+        "<code>href=\"#overview\"</code>" in html or "<code>href=&quot;#overview&quot;</code>" in html,
+        "inline code spelling an href attribute is left unchanged",
+    )
+    check("one-overview&quot;" not in html and 'one-overview"</code>' not in html, "no literal text was rewritten")
+
+
 def test_narrow_css(root):
     _, html = render(root, "css", {"t.md": TABLE_MD + "\n```\nlong code line\n```\n"})
     check("@media (max-width:700px)" in html, "the narrow media query exists")
@@ -218,6 +240,7 @@ def main():
         test_rank_column(root)
         test_multi_doc(root)
         test_h1_led_docs(root)
+        test_literal_id_text(root)
         test_narrow_css(root)
     if failures:
         print(f"\n{len(failures)} failure(s)")
