@@ -55,9 +55,13 @@ def config_home():
     return Path(os.environ.get("SHIP_CONFIG_HOME") or _CONFIG_HOME)
 
 
-def client_slugs():
+def client_list_path():
     override = os.environ.get("SHIP_CONFIG_CLIENT_LIST")
-    return _client_repo.load_client_slugs(Path(override) if override else None)
+    return Path(override) if override else _client_repo.CLIENT_LIST_PATH
+
+
+def client_slugs():
+    return _client_repo.load_client_slugs(client_list_path())
 
 
 def classify(repo):
@@ -69,6 +73,10 @@ def classify(repo):
     if slug is None:
         return "unknown", None, Path(root), "no resolvable origin remote"
     listed = client_slugs()
+    if not listed:
+        # load_client_slugs returns an empty set on a read error; trusting that would resolve every
+        # client repo as personal (sweep off, patch bump), so an empty list means we cannot classify.
+        return "unknown", slug, Path(root), f"client list {client_list_path()} is missing, unreadable or empty"
     if slug in listed:
         return "client", slug, Path(root), f"{slug} is in client-repos.txt"
     owner = slug.split("/")[0]
@@ -186,6 +194,8 @@ def cmd_set(tokens):
     if cls == "unknown":
         if slug is None:
             raise Fail("no resolvable origin remote: cannot place an override for this repo")
+        if "client list" in why:
+            raise Fail(f"{why}: cannot place an override until the client list is readable")
         owner = slug.split("/")[0]
         raise Fail(f"unlisted repo under client owner {owner}: add {slug} to refs/client-repos.txt "
                    "if it is a client repo")
