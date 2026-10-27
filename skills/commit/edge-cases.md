@@ -63,14 +63,13 @@ leaves them at `.git/lint-staged_unstaged.patch` - apply with `git apply`
 
 ## Cargo.toml version bump (Tauri apps)
 
-`/commit v`'s step 2 widens to Rust crates when `src-tauri/Cargo.toml` (or any
-`Cargo.toml` whose `[package]` name matches the app) exists:
+`release.py bump` (used by `/commit v` and `/release`) widens to Rust crates
+when `src-tauri/Cargo.toml` exists:
 
-1. Rewrite its `version = "..."` line under `[package]` to the new version.
-2. Regenerate `Cargo.lock` via cargo, never hand-edit: `cargo check` from the
-   crate dir (or `cargo update -p <crate> --precise <new-version>` if a full
-   check is too slow).
-3. Include both `Cargo.toml` and `Cargo.lock` in step 8's pathspec.
+1. It rewrites the `version = "..."` line under `[package]` to the new version.
+2. It edits only that package's own `Cargo.lock` entry, line-targeted, with no
+   `cargo` regeneration.
+3. Both files appear in the printed `files`, which is step 8's pathspec.
 4. Scope to the app crate only - never bump a workspace member or a
    vendored/submodule crate (e.g. `vendor/tauri_kit`) alongside the app.
 

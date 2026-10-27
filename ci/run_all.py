@@ -21,6 +21,7 @@ CHECKS = (
     ("tool self-tests", "run_tool_tests.py"),
     ("skill frontmatter", "check_skill_frontmatter.py"),
     ("instruction budget", "check_instruction_budget.py"),
+    ("removed command names", "check_removed_names.py"),
 )
 
 

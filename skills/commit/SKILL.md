@@ -1,12 +1,14 @@
 ---
 name: commit
-description: Triggers on /commit and its subcommands (v, bump, onlybump, onlyv, push, pushbump, pushnbump, fold) to commit changes.
-argument-hint: "[v|bump|push|pushbump|pushnbump|onlyv|onlybump|fold <sha>]"
+description: Triggers on /commit and its subcommands (v, bump, onlybump, onlyv, push, fold) to commit changes.
+argument-hint: "[v|bump|push|onlyv|onlybump|fold <sha>]"
 ---
 
 # /commit
 
 > Commit changes into clean, well-organized commits.
+
+> Removed: `/commit pushbump` and `/commit pushnbump`. A version bump is `/release`. If invoked with either, stop and tell Joe to use `/release`; never fall back to a plain push.
 
 ## `/commit`
 
@@ -107,23 +109,23 @@ If nothing to commit, say so and stop.
 Same as `/commit` but also bumps the patch version before committing (e.g. 1.0.0 -> 1.0.1).
 
 Version bump procedure:
-1. Before bumping, compare the current version across `package.json`, any other root `.json` with a top-level `"version"` field, and `src-tauri/Cargo.toml` if present. If they disagree, the repo is already drifted: bring every one of them to the new version in this same commit, not just whichever file the last `VERSION:` commit happened to touch, and say so in the summary. A run of prior commits that all touched one file is evidence of an unfixed habit, not a per-repo convention this procedure defers to.
-2. Find `package.json` in the repo root. If it exists, it is the **source of truth** - read the version from it, increment the patch number, and write it back.
-3. Find any other `.json` files in the repo root that contain a top-level `"version"` field (e.g. `tauri.conf.json`, `manifest.json`). Update each one to match the new version. If a Rust crate manifest exists for the app (`src-tauri/Cargo.toml`), it needs the same bump too - see `skills/commit/edge-cases.md` for the lockfile-regen and scope rules.
-4. Include all modified version files in step 8's commit pathspec, alongside the other changed files.
+1. Run `python C:/Users/tecno/.claude/skills/release/release.py bump <repo>`. It prints `{"version","build","label","files"}` and edits the version files itself (see `skills/commit/edge-cases.md` for the Cargo scope rules).
+2. Include every path in the printed `files` in step 8's commit pathspec, alongside the other changed files.
 
 Commit message follows the normal style - no need to mention the version bump.
 
-If no `package.json` exists, skip the version step and commit normally.
+`bump` exits 2 with an `error`. When it starts "no version source", report it and commit normally without a bump. Any other error (a version file already dirty, a non-version line changed) means the bump was refused and its files restored: report it and stop, since committing first and then running `/commit onlyv` is usually the fix.
 
 ## Push pipeline
 
-The full ordered sequence for `/commit push`, `/commit pushbump` and `/commit pushnbump`. This list is the ONLY place the whole sequence is enumerated: `CLAUDE.md`, snippets and memories point here instead of restating it, because every restated copy has drifted the moment a step was added (the todo sweep reached this file while two summaries still listed only `/code-check` + `/e2e`). Adding, removing or reordering a push step means editing this list in the same commit. When describing what a push will run, read this list, never a summary of it.
+The full ordered sequence for every push (`/commit push`, a plain push request, and `/release`); steps marked `/release only` are skipped otherwise. This list is the ONLY place the whole sequence is enumerated: `CLAUDE.md`, snippets and memories point here instead of restating it, because every restated copy has drifted the moment a step was added (the todo sweep reached this file while two summaries still listed only `/code-check` + `/e2e`). Adding, removing or reordering a push step means editing this list in the same commit. When describing what a push will run, read this list, never a summary of it.
 
-1. **Commit** - steps 1-8 above, including step 6b's gate (`/test` plus the test-coverage check). `pushbump` adds the version bump; `pushnbump` adds kit sync and a separate version commit.
+1. **Commit** - steps 1-8 above, including step 6b's gate (`/test` plus the test-coverage check).
+1b. **Kit sync** (`/release only`) - `release.py kit-sync <repo>`, then a `CHORE: bump tauri_kit <old> -> <new>` commit when the submodule pointer moved. Before the sweep and gate so `/code-check` and `/e2e` cover the new kit code.
 2. **Pre-push todo sweep** - fold small backlog todos sitting in the files the push already touches.
 3. **Pre-push transcript check** - stop on any dev message since the last push that was never addressed.
 4. **Pre-push gate** - `/code-check` over `@{u}..HEAD`, then `/e2e` (or its no-suite note), then mark HEAD cleared.
+4b. **Version bump** (`/release only`) - `release.py version-diff`, then `release.py bump` and a `VERSION: <label>` commit. After the gate so sweep folds and `/code-check` fix folds never land in the VERSION commit and a red gate never leaves a bump behind; the `mark` follows the bump.
 5. **`git push`**.
 6. **Post-push ticket move** - every ticket the push shipped goes to Testing.
 7. **Build watch** - `skills/commit/build-watch.md`.
@@ -132,16 +134,16 @@ The full ordered sequence for `/commit push`, `/commit pushbump` and `/commit pu
 
 ## Pre-push todo sweep
 
-Runs first for `/commit push`, `/commit pushbump`, and `/commit pushnbump`, before the transcript check and pre-push gate below - it can change what the push ships, so both of those must see the final range. Catches a small backlog todo sitting in the exact files the push already touches, while folding it in is still free.
+Runs first for every push (`/commit push`, a plain push request, and `/release`), before the transcript check and pre-push gate below - it can change what the push ships, so both of those must see the final range. Catches a small backlog todo sitting in the exact files the push already touches, while folding it in is still free.
 
-1. Skip silently when the repo has no `.claude/todos/` backlog with open todos. Skip on an unattended run too (nobody to answer step 3), with one line in the run's report saying the sweep was skipped.
+1. Skip silently when `python C:/Users/tecno/.claude/skills/release/ship-config.py get <repo>` reports `todo_sweep: false` (personal repos default to off, client and unknown repos to on), or when the repo has no `.claude/todos/` backlog with open todos. Skip on an unattended run too (nobody to answer step 3), with one line in the run's report saying the sweep was skipped.
 2. Dispatch ONE read-only subagent (`model: 'sonnet'`, canonical preamble from `refs/builder-preamble.md` with the `READ-ONLY DISPATCH` opt-out). Hand it the backlog path and `git log --format='%H %s' --name-only @{u}..HEAD`. A todo qualifies only when all three hold: it touches files an unpushed commit already changes, it is EASY by `/batch-todos`'s table, and it is the same concern or ticket as that commit. Todos with a live claim in `.claims/` and PRODUCT todos never qualify. It returns per hit: todo id, target commit sha, files, and one line on why it fits; zero hits is a valid answer, never padded.
 3. Zero hits: proceed silently. Otherwise one `ask_user_question` card, `multiSelect`, one option per hit (todo id, target commit subject, why it fits) plus "none, push as is".
 4. Per approved todo: claim it per `skills/close/ai-todos-format.md`, implement it, rerun the fast checks, then fold it into its target commit - Case A in `snippets/auto-commit.md` when the target is HEAD, `/commit fold <sha>` otherwise. When the fold path refuses (overlap with a later commit), commit it on top as its own commit instead, never force the fold. Close the todo and release the claim per the contract.
 
 ## Pre-push transcript check
 
-Runs only for `/commit push`, `/commit pushbump`, and `/commit pushnbump`, right before the `git push` call in each - never for a plain `/commit` or version-only bump, which stay untaxed. Catches a dev instruction that landed in the transcript but never reached the working context, before the push ships whatever got built on the gap (todo 902: a rejected layout was built, committed, and pushed because a peer relay sat between the dev's correction and the next turn).
+Runs for every push (`/commit push`, a plain push request, and `/release`), right before the `git push` call in each - never for a plain `/commit` or version-only bump, which stay untaxed. Catches a dev instruction that landed in the transcript but never reached the working context, before the push ships whatever got built on the gap (todo 902: a rejected layout was built, committed, and pushed because a peer relay sat between the dev's correction and the next turn).
 
 1. Resolve the transcript path via `skills/close/SKILL.md`'s "Transcript grounding" recipe (`~/.claude/sessions/*.json` for `sessionId`, then the sanitised-cwd `.jsonl`) - do not re-derive it. `Grep`, never `Read`: transcripts embed full tool payloads and run to megabytes.
 2. Reference point: this session's own last successful push, recalled from an earlier push report in this conversation, never re-derived from git. No prior push this session: the transcript's first line.
@@ -152,16 +154,16 @@ Runs only for `/commit push`, `/commit pushbump`, and `/commit pushnbump`, right
 
 ## Pre-push gate
 
-Runs right after the Pre-push transcript check, for the same three push modes, in every repo. `hooks/push-gate.py` blocks the push until this gate clears HEAD, so skipping it only earns a denied `git push`.
+Runs right after the Pre-push transcript check, for every push, in every repo. `hooks/push-gate.py` blocks the push until this gate clears HEAD, so skipping it only earns a denied `git push`.
 
 1. `/code-check` over what this push ships (`@{u}..HEAD`). Fix findings about lines the push changes, recommit per the fold rules, rerun; findings about untouched code go to the backlog. When the range is a long unpushed stack (a `/loop-todos` or `/autopilot` run, roughly 10+ commits), also run `skills/review-unpushed/SKILL.md`'s per-commit correctness review first: `/code-check` reviews structure, not each commit's logic.
 2. `/e2e` against the same range. **No suite** means `/e2e`'s Run-mode table matches only its "anything else" row (no scripted path). Then branch on `python C:/Users/tecno/.claude/hooks/_client_repo.py is-client <repo>`: `client` gets `/e2e`'s drive-it-by-hand fallback, per `snippets/client-repo.md`; `personal` skips e2e without asking and records "e2e: no suite" in the mark reason.
-3. All green: `python C:/Users/tecno/.claude/hooks/push-gate.py mark <repo> --reason "<what passed, e.g. code-check + e2e passed, or code-check passed, e2e: no suite>"`, then push. **The `mark` call and `git push` must be separate tool calls, never chained with `&&`/`;`** - same reason the commit-guard marker at the top of this file must be its own call: the hook inspects the whole command string before any of it runs, so a chained `mark && git push` is denied because the mark has not been written yet when the hook checks for it.
+3. All green (under `/release`, step 4b runs first and its `--reason` names "version bump after gate"): `python C:/Users/tecno/.claude/hooks/push-gate.py mark <repo> --reason "<what passed, e.g. code-check + e2e passed, or code-check passed, e2e: no suite>"`, then push. **The `mark` call and `git push` must be separate tool calls, never chained with `&&`/`;`** - same reason the commit-guard marker at the top of this file must be its own call: the hook inspects the whole command string before any of it runs, so a chained `mark && git push` is denied because the mark has not been written yet when the hook checks for it.
 4. Either one red or impossible to run: ask the dev through `ask_user_question` whether to push anyway, naming the failure. Yes: mark with `--reason` naming the failure and his approval, then push. No, or an unattended run with nobody to ask: do not push, report the failure.
 
 ## Post-push ticket move
 
-Runs right after a successful `git push`, in all three push modes, attended or not. QA works from the board, not the git log, so a pushed fix still sitting in In Progress never reaches the person who tests it next (2026-09-03: eight pushed tickets left in In Progress; 2026-10-05: sc-54701 pushed and left In Progress, then Claude asked Joe where to move it instead of moving it).
+Runs right after a successful `git push`, in every push mode, attended or not. QA works from the board, not the git log, so a pushed fix still sitting in In Progress never reaches the person who tests it next (2026-09-03: eight pushed tickets left in In Progress; 2026-10-05: sc-54701 pushed and left In Progress, then Claude asked Joe where to move it instead of moving it).
 
 1. Collect ticket ids from the subjects of the commits the push shipped (record `@{u}..HEAD` before pushing): `<id>:` prefixes, `sc-<id>`, `[SC-<id>]`, or a Linear key. No ids: skip silently.
 2. Infer the tracker from `origin` the way `/ticket` does. Move a ticket only when Joe owns it and it sits before Testing (Backlog, To Do, In Progress, Blocked, PR Review, On hold). Shortcut: GET the story, then PUT only `workflow_state_id` with the Testing state of the story's own workflow (ENG - Core Workflow: `500018257`). Never send `custom_fields`, because PUT replaces them. If the story's workflow has no Testing-equivalent state, skip it and say so. Linear: the team's Testing/review state, same rules.
@@ -171,49 +173,20 @@ Runs right after a successful `git push`, in all three push modes, attended or n
 
 ## `/commit push`
 
-Same as `/commit` but also runs `git push` after committing, following the **Push pipeline** above in order.
+Same as `/commit` but also runs `git push` after committing, following the **Push pipeline** above in order. A plain push never bumps a version: that is `/release`.
+
+**Pending-bump note:** before pushing, run `python C:/Users/tecno/.claude/skills/release/release.py version-diff <repo> --no-fetch`. When it prints `pending: true`, add "range includes a pending version bump <base> -> <head>" to the push report, so a bump left behind by a failed `/release` never ships silently. A non-zero exit is non-blocking: omit the note.
 
 **Push rule:** if the commit step failed, do not push. If there was nothing to commit, don't stop there either - check `git rev-list --count @{u}..HEAD` (if `@{u}` doesn't resolve, say so and offer `git push -u origin <branch>` instead of silently doing nothing). Zero ahead: say "nothing to commit, nothing to push" and stop. One or more ahead: run the **Pre-push todo sweep**, **Pre-push transcript check** and **Pre-push gate** above, then push those existing commits and report how many.
 
 After a successful push, run the **Post-push ticket move**, then the **Build watch** (see `skills/commit/build-watch.md`).
-
-## `/commit pushbump`
-
-Same as `/commit v` but also runs `git push` after committing.
-
-Same push rule as `/commit push` above, including the **Pre-push todo sweep**, **Pre-push transcript check** and **Pre-push gate**.
-
-After a successful push, run the **Post-push ticket move**, then the **Build watch** (see `skills/commit/build-watch.md`).
-
-## `/commit pushnbump`
-
-Commits changes and version as **two separate commits**, then pushes.
-
-Order:
-0. **Kit sync (before anything else):** if `vendor/tauri_kit` exists as a submodule, pull its latest remote commits:
-   - Record the current SHA: `git submodule status vendor/tauri_kit` (note the sha before the space).
-   - Run `git submodule update --remote vendor/tauri_kit`.
-   - Check if the SHA changed by running `git submodule status vendor/tauri_kit` again.
-   - If it changed: commit it as a standalone commit by pathspec, `git commit -m "CHORE: bump tauri_kit <old-short-sha> → <new-short-sha>" -- vendor/tauri_kit` (7-char shas). This commit lands before the main changes commit so the two concerns stay separate in git blame.
-   - If unchanged or the submodule doesn't exist: skip silently.
-1. Do the normal commit for changed files (same as `/commit`).
-2. Bump the patch version (same procedure as `/commit v`).
-3. Commit ONLY the version files, by pathspec: `git commit -m "<message>" -- <version-file> ...`.
-4. Message: `VERSION: <new-version>`, where `<new-version>` is the full version string after bumping. If a build number field (e.g. `"build"` in `package.json` or `tauri.conf.json`) exists alongside the version, append it: `VERSION: 1.0.1+21`.
-5. Run the **Pre-push todo sweep**, **Pre-push transcript check** and **Pre-push gate** above, then `git push`.
-
-Do not push if either commit step failed. Otherwise same push rule as `/commit push` above - a clean-tree branch that's still ahead of its upstream still gets pushed, it just won't happen here since the version commit always produces new changes.
-
-After a successful push, run the **Post-push ticket move**, then the **Build watch** - see `skills/commit/build-watch.md` for the full detect/launch/gated-auto-fix procedure (not needed for a plain `/commit`).
 
 ## `/commit onlyv` / `/commit onlybump`
 
 Only bumps the patch version. No other changes staged.
 Commit message is always: `CHORE: bump to v1.0.1` (with the actual new version).
 
-Version bump procedure: same as `/commit v` above.
-
-If no `package.json` exists, say so and stop.
+Version bump procedure: same as `/commit v` above. When `bump` exits 2 (no version source), report its error and stop.
 
 ## `/commit fold <sha>`
 

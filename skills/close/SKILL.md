@@ -16,7 +16,7 @@ argument-hint: "[--dont-close] [--skip-review] [--light] [/commit ...] [/sleep-w
 /close --skip-review                    # skip the parallel code-health review subagents
 /close --light                          # high-context mode: short Phase 1, delegate Phase 2+3 to subagents
 /close /commit                          # commit, then close terminal
-/close /commit pushnbump                # commit pushnbump, then close terminal
+/close /release                         # release (push pipeline plus version bump), then close terminal
 /close --dont-close /commit             # commit but keep terminal open
 /close /commit /sleep-when-done        # commit, sleep PC, then close terminal
 ```
@@ -34,7 +34,7 @@ until the next `/`). Empty remaining args = bare /close (retrospect + persist, t
 
 Examples:
 
-- `/close /commit pushnbump` → dont-close: false, chain: `[/commit pushnbump]`
+- `/close /release` → dont-close: false, chain: `[/release]`
 - `/close --dont-close /commit v` → dont-close: true, chain: `[/commit v]`
 - `/close /sleep-when-done` → dont-close: false, chain: `[/sleep-when-done]`
 
@@ -270,7 +270,7 @@ If no chained commands, skip this phase.
 - Any chained command in Phase 5 failed.
 - Any background work is still running in this session: spawned `Agent` with `run_in_background: true`, a Bash command with `run_in_background: true`, active `/loop`, or pending `ScheduleWakeup`. Check before killing.
 
-**Explicit non-blocker: a CI/release build watcher.** `commit/build-watch.md`'s watcher (launched after `/commit push`/`pushbump`/`pushnbump`) does NOT count as background work above and must NEVER hold Phase 6 open, even mid-watch. It is fire-and-forget by design - the dev checks the result later via `gh run list`/GitHub directly, not by keeping this terminal alive. Closing kills the watcher process; that is accepted, not a bug. Proceed through Phase 6 normally regardless of watcher state.
+**Explicit non-blocker: a CI/release build watcher.** `commit/build-watch.md`'s watcher (launched after `/commit push`/`/release`) does NOT count as background work above and must NEVER hold Phase 6 open, even mid-watch. It is fire-and-forget by design - the dev checks the result later via `gh run list`/GitHub directly, not by keeping this terminal alive. Closing kills the watcher process; that is accepted, not a bug. Proceed through Phase 6 normally regardless of watcher state.
 
 **Supervised servers.** If wrapping up this session means stopping any `supervised-run` entry, call `list_peers` first - see that skill's Stop step. A live peer in the same repo may be depending on it as shared infra, not this session's own orphan; default to leaving it running and saying so instead of stopping it. A port still answering a probe after the process dies is not proof anything is alive (2026-09-01, zng-app incident).
 
