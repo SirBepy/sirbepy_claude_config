@@ -337,6 +337,11 @@ def main():
             fence = tag if tag == "~~~" else f"```{tag}"
             check(fake not in recall.redact(f"Password:\n{fence}\n{fake}\n```"),
                   f"a value inside a {tag}-tagged fence under the label is redacted")
+        crlf = recall.redact(f"Password:\r\n\r\n{fake}\r\nnext\r\n")
+        check(crlf == "Password:\r\n\r\n[REDACTED:labelled_password]\r\nnext\r\n",
+              "a value under a label in CRLF text is redacted and the line endings are kept")
+        check(fake not in recall.redact(f"Password:\n``` text\n{fake}\n```"),
+              "a value inside a fence whose info string follows a space is redacted")
         prose = recall.redact("Password:\nthis next line is ordinary prose")
         check(prose == "Password:\nthis next line is ordinary prose", "prose with spaces after a label stays intact")
         unlabelled = recall.redact(f"Log in here\n\n> {fake}")
