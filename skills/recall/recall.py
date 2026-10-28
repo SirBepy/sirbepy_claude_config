@@ -965,6 +965,8 @@ def main(argv=None) -> int:
     sh.add_argument("session")
     sh.add_argument("--grep")
     sh.add_argument("--max-chars", type=int, default=40000)
+    sh.add_argument("--append-to", type=Path,
+                    help="append the output to this file instead of printing it, so a long dump never passes through the caller's context")
     ds = sub.add_parser("digest-save")
     ds.add_argument("session")
     ds.add_argument("--replace", action="store_true")
@@ -1021,7 +1023,13 @@ def main(argv=None) -> int:
     elif args.cmd == "search":
         print(cmd_search(index, args.terms, args.repo, args.since, args.until, args.limit))
     elif args.cmd == "show":
-        print(cmd_show(index, args.session, args.grep, args.max_chars))
+        shown = cmd_show(index, args.session, args.grep, args.max_chars)
+        if args.append_to:
+            with args.append_to.open("a", encoding="utf-8") as f:
+                f.write(shown + "\n")
+            print(f"Appended {len(shown)} chars to {args.append_to}")
+        else:
+            print(shown)
     elif args.cmd == "digest-save":
         code, msg = cmd_digest_save(index, args.session, sys.stdin.read(), args.replace)
         print(msg)
