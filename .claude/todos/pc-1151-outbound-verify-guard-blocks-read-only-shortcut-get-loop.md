@@ -4,6 +4,11 @@
 
 **Type:** skill-improvement
 **Origin:** ai
+**Summary:** A read-only Shortcut GET with curl is never blocked by the outbound-verify guard, even when the story id comes from a shell loop variable.
+
+## Why
+
+Reproduced on 2026-10-08 and 2026-10-13: a pure GET in a for-loop was denied with a misleading "write blocked" message, costing a wasted call.
 
 ## Goal
 

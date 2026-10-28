@@ -4,6 +4,11 @@
 
 **Type:** task
 **Origin:** ai
+**Summary:** One shared implementation decides whether a repo's origin matches a repo list, so the client-repo and local-only-tests lists can never disagree.
+
+## Why
+
+Found by the pre-push /code-check on 2026-10-08: the bash copy of the URL-parsing rule can drift from the Python one and treat the same origin differently.
 
 ## Goal
 

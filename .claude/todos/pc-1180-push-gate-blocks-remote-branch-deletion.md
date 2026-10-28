@@ -4,6 +4,11 @@
 
 **Type:** skill-improvement
 **Origin:** ai
+**Summary:** A push that only deletes remote branches goes through the push gate without needing a clearance mark.
+
+## Why
+
+On 2026-10-15 deleting a squash-merged remote branch was denied by the gate, which led to a question card and a clearance mark on a HEAD that was never checked.
 
 ## Goal
 

@@ -4,6 +4,11 @@
 
 **Type:** skill-improvement
 **Origin:** ai
+**Summary:** The flutter working-directory guard no longer denies a command where "flutter" is only a word inside a quoted grep pattern.
+
+## Why
+
+On 2026-10-15 a harmless sed and grep pipeline was denied because the guard split on a pipe inside a quoted regex, and the command had to be rewritten.
 
 ## Goal
 

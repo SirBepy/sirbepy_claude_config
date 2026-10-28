@@ -4,6 +4,11 @@
 
 **Type:** task
 **Origin:** ai
+**Summary:** The /name-brainstorm availability checker gives correct results under concurrency, does not call an unpublished npm name free, and its scripts have tests.
+
+## Why
+
+Found by the 2026-10-28 pre-push code-check of 2ae0d60: a bootstrap race, an npm 404 counted as FREE, no tests, and .co results never shown.
 
 ## Goal
 `/name-brainstorm`'s availability checker reports correct results under concurrency, does not call an unpublished npm name FREE, and its pure scripts are covered by tests.

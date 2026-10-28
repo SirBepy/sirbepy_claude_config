@@ -4,6 +4,11 @@
 
 **Type:** task
 **Origin:** ai
+**Summary:** Five small prose defects in skill files are fixed so each skill does what it says when followed literally.
+
+## Why
+
+Found by the 2026-10-28 pre-push code-check and review: for example auto-respawn tells a successor to call a skill that cannot be invoked that way.
 
 ## Goal
 Five small prose defects in skill files are fixed so each skill does what it says when followed literally.

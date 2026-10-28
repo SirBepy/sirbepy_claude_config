@@ -4,6 +4,11 @@
 
 **Type:** task
 **Origin:** ai
+**Summary:** The commit secret scan stops reporting the OAuth protocol word Bearer as a secret.
+
+## Why
+
+On 2026-10-28 in dashboard-a a builder stopped on token_type: 'Bearer' in a test file, and the controller had to rename a constant as a workaround.
 
 ## Goal
 

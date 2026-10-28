@@ -5,9 +5,14 @@
 
 **Type:** skill-improvement
 **Origin:** dev
+**Summary:** /code-check runs automatically right after code is written, from a fresh context, instead of only when a session closes.
 
 > **SPLIT 2026-08-22 by Joe. Half of this shipped; what remains is the TRIGGER only, and it is
 > sequenced behind todo 427 in phase 6. Read "Status" at the bottom before doing anything.**
+
+## Why
+
+Joe proposed this on 2026-08-20. His reasoning: AI is very bad at reviewing its own code, so the review should come soon after writing but from a context that did not write it.
 
 ## Goal
 

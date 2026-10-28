@@ -4,6 +4,11 @@
 
 **Type:** task
 **Origin:** ai
+**Summary:** The CI check suite passes on the unpushed commits in the global Claude config repo, so they can go through the push gate.
+
+## Why
+
+A pre-push /code-check on 2026-10-17 found the skill frontmatter check failing on files that range adds (auto-respawn and the vendored asd-ste100 skill).
 
 ## Goal
 

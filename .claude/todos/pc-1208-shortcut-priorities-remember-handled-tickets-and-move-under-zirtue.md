@@ -4,6 +4,11 @@
 
 **Type:** skill-improvement
 **Origin:** dev
+**Summary:** Re-running /shortcut-priorities stops re-flagging tickets already decided, and the skill moves under the Zirtue-specific skills.
+
+## Why
+
+"we should start keeping track of what me and you already talked about in these shortcut priorities chats" (Joe, 2026-10-20). The skill's constants are also Zirtue-specific.
 
 ## Goal
 

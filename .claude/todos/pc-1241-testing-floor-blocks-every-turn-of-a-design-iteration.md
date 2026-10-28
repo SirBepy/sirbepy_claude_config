@@ -4,6 +4,11 @@
 
 **Type:** skill-improvement
 **Origin:** ai
+**Summary:** A session mid design iteration, with tests knowingly red, can end a question turn without the testing hook re-blocking it three times per round.
+
+## Why
+
+During the 2026-10-23/24 dashboard redesign about six rounds each triggered three hook cycles of 2-4 minutes, and the only skip switches are global.
 
 ## Goal
 A session mid design-iteration, whose failing tests are a known, acknowledged state pending the dev's approval of the design, can end a question turn without the hook re-blocking it three times per round.

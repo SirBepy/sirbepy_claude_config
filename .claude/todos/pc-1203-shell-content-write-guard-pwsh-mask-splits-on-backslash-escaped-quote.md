@@ -8,6 +8,11 @@
 
 **Type:** skill-improvement
 **Origin:** ai
+**Summary:** The shell file-write guard no longer blocks a Bash command whose quoted argument contains a backslash-escaped inner quote with a > inside it.
+
+## Why
+
+Hit live on 2026-10-20 while committing: a commit message containing an escaped "</body>" was rejected as a file write through the shell.
 
 ## Goal
 

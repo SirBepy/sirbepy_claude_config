@@ -4,6 +4,11 @@
 
 **Type:** skill-improvement
 **Origin:** ai
+**Summary:** The disk-doctor skill states one consistent rule about who runs deletes, instead of contradicting its own supporting files.
+
+## Why
+
+Found 2026-10-23: SKILL.md says Claude never deletes, while gate.md and windows.md describe Claude running approved deletes.
 
 ## Goal
 

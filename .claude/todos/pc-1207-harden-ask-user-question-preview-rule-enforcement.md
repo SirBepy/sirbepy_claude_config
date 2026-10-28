@@ -4,6 +4,11 @@
 
 **Type:** skill-improvement
 **Origin:** ai
+**Summary:** Question-card previews built from hand-styled imitation markup instead of the app's real markup get caught mechanically, not by memory alone.
+
+## Why
+
+The rule was violated three times (2026-10-18 and twice on 2026-10-20). Joe: "these previews are so useless, i literally dont understand what im looking at" (2026-10-20).
 
 ## Goal
 

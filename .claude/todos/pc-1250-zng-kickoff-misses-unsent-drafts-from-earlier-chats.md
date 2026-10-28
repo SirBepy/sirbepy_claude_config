@@ -4,6 +4,11 @@
 
 **Type:** skill-improvement
 **Origin:** ai
+**Summary:** /zng-kickoff finds unsent drafts from earlier chats and reports "post the existing draft" instead of drafting a duplicate reply.
+
+## Why
+
+On 2026-10-26 it drafted a new reply to sc-56344 when the Oct 23 chat had already drafted one. Joe asked "r u 100% sure we didnt already reply to that".
 
 ## Goal
 `/zng-kickoff` step 2 finds every still-unsent draft in the project's Drafts panel and any handoff from the previous day's hub chat. A feed item that already has a reply draft waiting is reported as "post the existing draft", never drafted a second time.

@@ -4,6 +4,11 @@
 
 **Type:** skill-improvement
 **Origin:** dev
+**Summary:** A /report skill turns a requested report into one consistent, self-contained HTML page that publishes cleanly through Conductor.
+
+## Why
+
+"sometimes youll make me a /report (myb we should maek that a skill) and whatever that looks like is what we should share with others" (Joe, 2026-10-20). He was tentative about scope.
 
 ## Goal
 

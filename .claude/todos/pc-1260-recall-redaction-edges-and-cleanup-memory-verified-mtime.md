@@ -4,6 +4,11 @@
 
 **Type:** task
 **Origin:** ai
+**Summary:** Recall's redaction never leaves a labelled password visible in two remaining shapes, and re-verifying a memory does not push it into the index's Recent block.
+
+## Why
+
+Found by the 2026-10-28 pre-push reviews: a multi-word fence info string and a repeated label both leak the password value.
 
 ## Goal
 `recall.py redact()` never leaves a labelled password visible in the two remaining edge shapes, and `/cleanup-memory` re-verification does not push old memories into the index's Recent block.

@@ -4,6 +4,11 @@
 
 **Type:** hook-bug
 **Origin:** ai
+**Summary:** A scratch file outside any repo no longer triggers the testing check, and a passing Flutter suite is no longer reported as failed.
+
+## Why
+
+On 2026-10-13, in two sessions, the only edits were scratch files outside any git repo, yet the turn was blocked with "flutter check failed (exit 0)" on a suite that passes.
 
 ## Goal
 

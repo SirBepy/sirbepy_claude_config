@@ -5,6 +5,11 @@
 **Type:** bug
 **Origin:** ai
 **Priority:** High
+**Summary:** The end-of-turn testing check cleans up only the Node processes it started and never kills another session's running vitest or turbo.
+
+## Why
+
+Found 2026-10-08 in cueline: a backgrounded vitest run died mid-suite with no error, and the sweep matches every vitest process on the machine. Cause is plausible but unverified.
 
 ## Goal
 

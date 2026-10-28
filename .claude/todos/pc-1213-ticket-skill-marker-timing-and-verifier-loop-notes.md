@@ -4,6 +4,11 @@
 
 **Type:** skill-improvement
 **Origin:** ai
+**Summary:** The /ticket skill and its refs say what actually works when filing a Shortcut story through the outbound guards, so gotchas are not rediscovered.
+
+## Why
+
+Surfaced while filing sc-56468 on 2026-10-21: the marker had to be written in its own prior call, a curl GET was blocked, and four verify rounds failed.
 
 ## Goal
 

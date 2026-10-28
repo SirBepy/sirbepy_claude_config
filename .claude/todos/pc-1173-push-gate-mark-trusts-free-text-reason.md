@@ -4,6 +4,11 @@
 
 **Type:** skill-improvement
 **Origin:** ai
+**Summary:** The push gate refuses to mark a push as cleared unless this session actually loaded the /test and /e2e skills since the last push.
+
+## Why
+
+On 2026-10-13 Claude ran the checks by hand, skipped the skills, wrote its own reason text and pushed; Joe asked if it had really run them and the honest answer was no.
 
 ## Goal
 Make `hooks/push-gate.py mark` refuse, or at least warn, unless this session's transcript shows the `/test` skill and the `/e2e` skill (plus `/flutter-e2e` when `/e2e` routes there) were actually loaded since the last push.
