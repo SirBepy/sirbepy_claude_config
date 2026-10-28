@@ -136,6 +136,7 @@
       "Read(**/service-account*.json)",
       "Read(**/.env)",
       "Read(**/.env.*)",
+      "Read(!**/.env.example)",
       "Read(**/node_modules/**)",
       "Read(**/__pycache__/**)",
       "Read(**/*.pyc)",
