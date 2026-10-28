@@ -70,3 +70,17 @@ In `skills/flutter-bump/SKILL.md`:
 ## Answers 2026-10-08
 
 - Joe, 2026-10-08 (todo-questions chat): build the smoke helper at the next Flutter bump, when zng-api is running anyway. Not before.
+
+## Notes (2026-10-13 bump, 3.47.6 -> 3.47.7)
+
+This WAS "the next Flutter bump" Joe meant, and the committed helper still did not get built: this
+todo wasn't re-read until a `/close` pass after all three repos were already bumped and pushed, so
+the smoke check was hand-written again as two more throwaway scripts instead
+(`zng-admin/.for_bepy/flutterbump-smoke.cjs`, `zng-biller/.for_bepy/flutterbump-smoke.cjs`, both
+confirmed PASS against local zng-api on :3009, same recipe as before). Per CLAUDE.md, editing the
+actual skill file/scripts is not something a project session does unprompted, so this still needs a
+dedicated `~/.claude` session to: (1) generalize the two scripts above into
+`skills/flutter-bump/scripts/smoke.cjs` (repo, email, nav-JSON params), (2) put the accounts/coords
+in a references file, (3) wire 2e to call it instead of hand-writing one. The two 2026-10-13 scripts
+are a closer-to-final reference than the 2026-10-02 one (`c:\tmp\zng-smoke.cjs`, since deleted) -
+use them as the base.
