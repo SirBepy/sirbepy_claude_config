@@ -31,7 +31,7 @@ Deliberately a hard block, unlike `todo-duplicate-guard.py`'s advisory
 duplicate check: there is no legitimate case for a subagent to create or
 edit a backlog `.md` here (claiming and heartbeating a todo write to
 `.claims/`, a sibling directory `todos_target_dir` already excludes, never
-to a `\\d+-*.md` file in `todos/` itself), so a false positive would only
+to a todo-named `*.md` file in `todos/` itself), so a false positive would only
 ever block a write the doctrine already says should not happen - the
 subagent's correct move is always to report the finding instead.
 """

@@ -14,17 +14,20 @@
     1. Prune reservation markers whose mtime is older than 4 hours (mirrors the claims
        staleness rule) so an abandoned reservation cannot inflate ids forever.
     2. Scan .claude/todos/*.md, .claude/todos/done/*.md, and remaining
-       .claude/todos/*-.reserved markers for the current max numeric prefix; candidate =
-       max + 1. Reserved markers are scanned so two concurrent callers cannot both land on
-       max+1 before either has written the real file yet.
-    3. Write a private temp file, then Move-Item it onto ".claude/todos/<candidate>-.reserved"
+       .claude/todos/*-.reserved markers for the current max number carrying THIS device's
+       label (~/.claude/device-label; each device counts on its own, so pc and mac never
+       collide); candidate = max + 1. A legacy bare-numeric name counts as label "pc".
+       Reserved markers are scanned so two concurrent callers cannot both land on max+1
+       before either has written the real file yet.
+    3. Write a private temp file, then Move-Item it onto ".claude/todos/<label>-<NNNN>-.reserved"
        WITHOUT -Force (fails if the destination exists). Retry once after ~2s on a transient
        Windows filter-driver error before concluding it's a real collision.
     4. Success -> return the candidate id. Collision -> loop (the rescan in step 2 will skip
        past the id that was just taken).
 
   Reservation lifecycle: the CALLER deletes ".claude/todos/<id>-.reserved" immediately after
-  writing the real "<id>-<slug>.md" file. An abandoned reservation (crash between reserve and
+  writing the real "<id>-<slug>.md" file, where <id> is the canonical "pc-0007" form this
+  script prints. An abandoned reservation (crash between reserve and
   write) self-heals: the next call to this script prunes it once its mtime exceeds 4 hours
   AND the pid recorded in it is confirmed dead - confirmed by pid plus that pid's own start
   time, not a bare pid number, since Windows recycles pids and a bare number can belong to a
@@ -49,8 +52,11 @@
   (todo 1082). Defaults to Get-Date for real reservations.
 
 .OUTPUTS
-  Writes the reserved numeric id (and nothing else) to the success stream so a caller can do
+  Writes the reserved id in canonical "<label>-<NNNN>" form (e.g. pc-0007; number zero-padded
+  to 4 digits, growing past 9999) and nothing else to the success stream so a caller can do
   $id = & reserve-todo-id.ps1 -RepoRoot $root. All other messages go via Write-Host.
+  Fails loudly (non-zero exit) when ~/.claude/device-label is missing or invalid - it never
+  defaults a label, since a second machine defaulting to "pc" would collide.
 
 .EXAMPLE
   $id = & ~/.claude/skills/close/reserve-todo-id.ps1 -RepoRoot C:\Users\joe\Projects\my-app
@@ -67,6 +73,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $effectiveNow = if ($Now) { $Now } else { Get-Date }
+
+. (Join-Path $PSScriptRoot '_shared.ps1')
+$deviceLabel = Get-DeviceLabel
 
 function Write-Info($msg) { Write-Host $msg }
 function Write-Fail($msg) { Write-Error $msg }
@@ -122,18 +131,21 @@ function Remove-StaleReservations {
         }
 }
 
+# Max number among names carrying THIS device's label only. Other devices' numbers never
+# raise it: each device owns its own counter.
 function Get-MaxId {
-    param([string]$TodosDir, [string]$DoneDir)
-    $ids = @(0)
-    Get-ChildItem -Path $TodosDir -Filter '*.md' -File -ErrorAction SilentlyContinue |
-        ForEach-Object { if ($_.Name -match '^0*(\d+)-') { $ids += [int]$matches[1] } }
+    param([string]$TodosDir, [string]$DoneDir, [string]$Label)
+    $files = @(Get-ChildItem -Path $TodosDir -Filter '*.md' -File -ErrorAction SilentlyContinue)
     if (Test-Path $DoneDir) {
-        Get-ChildItem -Path $DoneDir -Filter '*.md' -File -ErrorAction SilentlyContinue |
-            ForEach-Object { if ($_.Name -match '^0*(\d+)-') { $ids += [int]$matches[1] } }
+        $files += @(Get-ChildItem -Path $DoneDir -Filter '*.md' -File -ErrorAction SilentlyContinue)
     }
-    Get-ChildItem -Path $TodosDir -Filter '*-.reserved' -File -ErrorAction SilentlyContinue |
-        ForEach-Object { if ($_.Name -match '^0*(\d+)-\.reserved$') { $ids += [int]$matches[1] } }
-    return ($ids | Measure-Object -Maximum).Maximum
+    $files += @(Get-ChildItem -Path $TodosDir -Filter '*-.reserved' -File -ErrorAction SilentlyContinue)
+    $max = [int64]0
+    foreach ($f in $files) {
+        $info = Get-TodoNameInfo $f.Name
+        if ($info -and $info.Label -eq $Label -and $info.Number -gt $max) { $max = $info.Number }
+    }
+    return $max
 }
 
 function Try-Rename {
@@ -157,7 +169,7 @@ while ($attempt -lt $MaxAttempts -and -not $reservedId) {
     $attempt++
 
     Remove-StaleReservations -TodosDir $todosDir -Now $effectiveNow
-    $candidateId = (Get-MaxId -TodosDir $todosDir -DoneDir $doneDir) + 1
+    $candidateId = Format-TodoId $deviceLabel ((Get-MaxId -TodosDir $todosDir -DoneDir $doneDir -Label $deviceLabel) + 1)
 
     $markerPath = Join-Path $todosDir "$candidateId-.reserved"
     $tempPath   = Join-Path $todosDir "$candidateId-.reserved.tmp-$PID"

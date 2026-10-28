@@ -25,6 +25,11 @@ PATH_CASES = [
     (r"C:\Users\tecno\.claude\.claude\todos\363-x.md", True, "real double-.claude absolute path", True),
     (".claude/todos/363-x.md", True, "relative forward-slash path", False),
     (".claude\\todos\\363-x.md", True, "relative backslash path", True),
+    (r"C:\Users\tecno\.claude\.claude\todos\pc-1407-x.md", True, "device-prefixed absolute path", True),
+    (".claude/todos/mac2-0003-x.md", True, "device-prefixed relative path, multi-digit label", False),
+    (".claude/todos/pc-7-x.md", True, "unpadded device-prefixed number", False),
+    (r"C:\Users\tecno\.claude\.claude\todos\done\pc-1407-x.md", False, "device-prefixed done/ file is not a new-write target", False),
+    (r"C:\Users\tecno\.claude\.claude\todos\.claims\pc-1407.claim", False, "device-prefixed claim excluded", False),
     (r"C:\Users\tecno\.claude\.claude\todos\done\307-x.md", False, "done/ subfolder is not a new-write target", False),
     (r"C:\Users\tecno\.claude\.claude\todos\.claims\363-x.claim", False, ".claims/ subfolder excluded", False),
     (r"C:\Users\tecno\.claude\.claude\todos\PLAN.md", False, "filename without digit prefix", False),
@@ -61,10 +66,18 @@ def check_tokens(case) -> bool:
 
 
 # (name, expected_id_or_None, label)
+# The id is a padding-free "<label>-<number>" string key: a legacy bare-numeric
+# name reads as label pc, and the label is half the identity.
 ID_CASES = [
-    ("492-todo-guard-checks-content.md", 492, "plain numeric prefix"),
-    ("007-leading-zeros.md", 7, "leading zeros normalize"),
-    ("260-.reserved", 260, "reserved marker suffix"),
+    ("492-todo-guard-checks-content.md", "pc-492", "legacy plain numeric prefix reads as label pc"),
+    ("007-leading-zeros.md", "pc-7", "legacy leading zeros normalize"),
+    ("260-.reserved", "pc-260", "legacy reserved marker suffix"),
+    ("pc-1407-x.md", "pc-1407", "device-prefixed file"),
+    ("pc-01407-x.md", "pc-1407", "extra padding normalizes"),
+    ("pc-7-x.md", "pc-7", "unpadded number"),
+    ("mac-0007-x.md", "mac-7", "another device's label is part of the key"),
+    ("mac2-0007-x.md", "mac2-7", "multi-digit label"),
+    ("pc-0260-.reserved", "pc-260", "device-prefixed reserved marker"),
     ("PLAN.md", None, "no numeric prefix"),
     ("not-a-number-x.md", None, "non-numeric prefix"),
 ]
@@ -237,7 +250,81 @@ def check_integration() -> list:
             "<!-- duplicate-checked: forgot to close this comment"
         )
 
+        # Device-prefixed ids (pc-1407): the guard must not fail open on a prefixed write.
+        (todos_dir / "pc-1407-prefixed-live-todo-about-zzz-widgets.md").write_text(
+            "# Prefixed live todo about zzz widgets\n\nGoal: exists.\n", encoding="utf-8",
+        )
+        (done_dir / "pc-1408-prefixed-done-todo.md").write_text(
+            "# Prefixed done todo about qqq gadgets\n\nDone.\n", encoding="utf-8",
+        )
+        (todos_dir / "mac-1409-other-device-todo.md").write_text(
+            "# Other device todo about kkk sprockets\n\nGoal: exists.\n", encoding="utf-8",
+        )
+        (todos_dir / "pc-1410-.reserved").write_text("session: test\npid: 1\n", encoding="utf-8")
+
+        pref_taken_path = todos_dir / "pc-1407-totally-different-slug.md"
+        pref_taken_content = "# Totally different topic about vvv thingamajigs\n\nGoal: unrelated.\n"
+        pref_unpadded_taken_path = todos_dir / "pc-01407-padding-variant.md"
+        pref_other_label_path = todos_dir / "mac-1407-same-number-other-device.md"
+        pref_other_label_content = "# Same number other device about yyy flanges\n\nGoal: fine.\n"
+        pref_done_taken_path = todos_dir / "pc-1408-reusing-a-done-prefixed-id.md"
+        pref_legacy_vs_prefixed_path = todos_dir / "pc-0130-collides-with-legacy-130.md"
+        pref_legacy_vs_prefixed_content = "# Collides with legacy 130 about ppp bearings\n\nGoal: unrelated.\n"
+        pref_reserved_path = todos_dir / "pc-1410-written-into-its-own-reservation.md"
+        pref_reserved_content = "# Written into its own reservation about rrr gaskets\n\nGoal: reserved.\n"
+        pref_inplace_path = todos_dir / "pc-1407-prefixed-live-todo-about-zzz-widgets.md"
+        pref_inplace_content = "# Prefixed live todo about zzz widgets\n\nGoal: exists, updated.\n"
+        pref_dup_path = todos_dir / "pc-1411-v2-verify-screen-adds-a-seventh-debit-card-form.md"
+        pref_dup_content = "# v2 verify screen adds a seventh debit card form\n\nGoal: same as 130.\n"
+        pref_free_path = todos_dir / "pc-1412-brand-new-lunar-telescope-calibration.md"
+        pref_free_content = "# Brand new lunar telescope calibration\n\nGoal: fresh.\n"
+
         cases = [
+            (
+                {"tool_name": "Write", "tool_input": {"file_path": str(pref_taken_path), "content": pref_taken_content}},
+                2,
+                "prefixed write reusing a live prefixed id (pc-1407) blocks",
+            ),
+            (
+                {"tool_name": "Write", "tool_input": {"file_path": str(pref_unpadded_taken_path), "content": pref_taken_content}},
+                2,
+                "same id with different spelling (pc-1407 vs pc-01407-style padding) still collides",
+            ),
+            (
+                {"tool_name": "Write", "tool_input": {"file_path": str(pref_other_label_path), "content": pref_other_label_content}},
+                0,
+                "same number under another device label (mac-1407) is a different id and passes",
+            ),
+            (
+                {"tool_name": "Write", "tool_input": {"file_path": str(pref_done_taken_path), "content": pref_taken_content}},
+                2,
+                "prefixed write reusing an id that exists in done/ blocks",
+            ),
+            (
+                {"tool_name": "Write", "tool_input": {"file_path": str(pref_legacy_vs_prefixed_path), "content": pref_legacy_vs_prefixed_content}},
+                2,
+                "prefixed pc-0130 collides with the legacy 130-*.md file (legacy reads as pc)",
+            ),
+            (
+                {"tool_name": "Write", "tool_input": {"file_path": str(pref_reserved_path), "content": pref_reserved_content}},
+                0,
+                "prefixed reserve-then-write: writing the id's own pc-1410-.reserved marker passes",
+            ),
+            (
+                {"tool_name": "Write", "tool_input": {"file_path": str(pref_inplace_path), "content": pref_inplace_content}},
+                0,
+                "in-place rewrite of an existing prefixed file passes",
+            ),
+            (
+                {"tool_name": "Write", "tool_input": {"file_path": str(pref_dup_path), "content": pref_dup_content}},
+                2,
+                "content-duplicate check also runs for a prefixed write (plausible dup of 130)",
+            ),
+            (
+                {"tool_name": "Write", "tool_input": {"file_path": str(pref_free_path), "content": pref_free_content}},
+                0,
+                "prefixed write with a free id and distinct content passes",
+            ),
             (
                 {"tool_name": "Write", "tool_input": {"file_path": str(new_dup_path), "content": new_dup_content}},
                 2,

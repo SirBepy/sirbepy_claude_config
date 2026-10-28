@@ -1,4 +1,6 @@
-"""Self-test for reserve-todo-id.ps1's stale-reservation pruning (todo 988).
+"""Self-test for reserve-todo-id.ps1: stale-reservation pruning (todo 988) and the
+device-prefixed id scheme (`<label>-<NNNN>`, per-label counter, loud failure without
+~/.claude/device-label).
 
 Run directly: python tools/test_close_reserve_todo_id.py
 Exits 0 on all-pass, 1 on any failure, printing a PASS/FAIL line per case.
@@ -29,6 +31,12 @@ sys.path.insert(0, str(ROOT / "hooks"))
 
 import _testlib  # noqa: E402
 
+# Every run points the script at a throwaway label file through CLAUDE_DEVICE_LABEL_FILE,
+# so no case here ever reads or writes the real ~/.claude/device-label.
+_LABEL_DIR = tempfile.TemporaryDirectory()
+LABEL_FILE = Path(_LABEL_DIR.name) / "device-label"
+LABEL_FILE.write_text("pc\n", encoding="utf-8")
+
 SCRIPT = Path(os.environ.get(
     "CLOSE_RESERVE_SCRIPT", str(ROOT / "skills" / "close" / "reserve-todo-id.ps1")
 ))
@@ -37,7 +45,8 @@ TIMEOUT_SECONDS = 60
 fails = []
 
 
-def run_script(repo_root: Path, now: "datetime.datetime | None" = None) -> subprocess.CompletedProcess:
+def run_script(repo_root: Path, now: "datetime.datetime | None" = None, label_file: "Path | None" = None) -> subprocess.CompletedProcess:
+    env = dict(os.environ, CLAUDE_DEVICE_LABEL_FILE=str(label_file or LABEL_FILE))
     args = ["powershell.exe", "-NoProfile", "-NonInteractive", "-File", str(SCRIPT),
             "-RepoRoot", str(repo_root)]
     if now is not None:
@@ -47,7 +56,7 @@ def run_script(repo_root: Path, now: "datetime.datetime | None" = None) -> subpr
         # CI load (todo 1082) - the real failure mode, not the compare itself.
         args += ["-Now", now.isoformat()]
     return subprocess.run(
-        args, capture_output=True, text=True, timeout=TIMEOUT_SECONDS,
+        args, capture_output=True, text=True, timeout=TIMEOUT_SECONDS, env=env,
     )
 
 
@@ -113,23 +122,23 @@ with tempfile.TemporaryDirectory() as tmp:
     anchor = anchor_dt.timestamp()
 
     # A: two-signal, pid alive, ticks MATCH, age 100h - never pruned regardless of age.
-    marker_a = todos / "101-.reserved"
+    marker_a = todos / "pc-0101-.reserved"
     content_a = write_marker(marker_a, pid=own_pid, start_ticks=own_ticks, age_hours=100, sentinel="fixture-a", anchor=anchor)
 
     # B: two-signal, pid alive but ticks MISMATCH (recycled pid), age 5h (past 4h) - pruned.
-    marker_b = todos / "102-.reserved"
+    marker_b = todos / "pc-0102-.reserved"
     content_b = write_marker(marker_b, pid=own_pid, start_ticks=1, age_hours=5, sentinel="fixture-b", anchor=anchor)
 
     # C: two-signal, pid alive, ticks mismatch, age 2h (under 4h) - not yet stale.
-    marker_c = todos / "103-.reserved"
+    marker_c = todos / "pc-0103-.reserved"
     content_c = write_marker(marker_c, pid=own_pid, start_ticks=1, age_hours=2, sentinel="fixture-c", anchor=anchor)
 
     # D: legacy marker (no procStartTicks field), age 1h - survives (< 24h fallback).
-    marker_d = todos / "104-.reserved"
+    marker_d = todos / "pc-0104-.reserved"
     content_d = write_marker(marker_d, pid=own_pid, start_ticks=None, age_hours=1, sentinel="fixture-d", anchor=anchor)
 
     # E: legacy marker (no procStartTicks field), age 25h - pruned (> 24h fallback).
-    marker_e = todos / "105-.reserved"
+    marker_e = todos / "pc-0105-.reserved"
     content_e = write_marker(marker_e, pid=own_pid, start_ticks=None, age_hours=25, sentinel="fixture-e", anchor=anchor)
 
     proc = run_script(repo, now=anchor_dt)
@@ -148,8 +157,18 @@ with tempfile.TemporaryDirectory() as tmp:
         fails.append("E: legacy over-24h pruned")
 
 
-# --- Functional smoke: still reserves the expected next id ---
+# --- Functional: reserves the next id in canonical <label>-<NNNN> form ---
 
+def last_line(proc) -> str:
+    return proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else ""
+
+
+def case(label: str, ok: bool) -> None:
+    if not _testlib.report(ok, label):
+        fails.append(label)
+
+
+# Legacy bare-numeric names count as label pc, so the new id continues that counter.
 with tempfile.TemporaryDirectory() as tmp:
     repo = Path(tmp)
     todos = repo / ".claude" / "todos"
@@ -157,9 +176,76 @@ with tempfile.TemporaryDirectory() as tmp:
     (todos / "05-foo.md").write_text("# 05-foo\n", encoding="utf-8")
 
     proc = run_script(repo)
-    reserved = proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else ""
-    ok = proc.returncode == 0 and reserved == "6" and (todos / "6-.reserved").exists()
-    if not _testlib.report(ok, f"reserves next id 6 after an existing 05-foo.md (out={proc.stdout!r})"):
-        fails.append("functional next-id")
+    case(f"a legacy 05-foo.md makes the next id pc-0006, 4-digit padded (out={proc.stdout!r}, err={proc.stderr!r})",
+         proc.returncode == 0 and last_line(proc) == "pc-0006" and (todos / "pc-0006-.reserved").exists())
+
+# Per-label max: another device's higher number never raises this device's counter.
+with tempfile.TemporaryDirectory() as tmp:
+    repo = Path(tmp)
+    todos = repo / ".claude" / "todos"
+    (todos / "done").mkdir(parents=True)
+    (todos / "pc-0003-a.md").write_text("# a\n", encoding="utf-8")
+    (todos / "mac-0099-b.md").write_text("# b\n", encoding="utf-8")
+    (todos / "done" / "pc-0010-c.md").write_text("# c\n", encoding="utf-8")
+    (todos / "mac2-0500-d.md").write_text("# d\n", encoding="utf-8")
+
+    proc = run_script(repo)
+    case(f"per-label max: pc-0010 in done/ wins, mac-0099 and mac2-0500 ignored -> pc-0011 (out={proc.stdout!r})",
+         proc.returncode == 0 and last_line(proc) == "pc-0011")
+
+    proc = run_script(repo)
+    case(f"the pc-0011 marker is itself counted, so a second reserve yields pc-0012 (out={proc.stdout!r})",
+         proc.returncode == 0 and last_line(proc) == "pc-0012" and (todos / "pc-0011-.reserved").exists())
+
+# A second device counts on its own.
+with tempfile.TemporaryDirectory() as tmp:
+    repo = Path(tmp)
+    todos = repo / ".claude" / "todos"
+    todos.mkdir(parents=True)
+    (todos / "pc-0042-a.md").write_text("# a\n", encoding="utf-8")
+    (todos / "mac-0007-b.md").write_text("# b\n", encoding="utf-8")
+    mac_label = Path(_LABEL_DIR.name) / "device-label-mac"
+    mac_label.write_text("mac", encoding="utf-8")
+
+    proc = run_script(repo, label_file=mac_label)
+    case(f"label mac reserves mac-0008 regardless of pc-0042 (out={proc.stdout!r})",
+         proc.returncode == 0 and last_line(proc) == "mac-0008" and (todos / "mac-0008-.reserved").exists())
+
+# Empty backlog starts at 1; past 9999 the number simply grows.
+with tempfile.TemporaryDirectory() as tmp:
+    repo = Path(tmp)
+    proc = run_script(repo)
+    case(f"empty backlog reserves pc-0001 (out={proc.stdout!r})",
+         proc.returncode == 0 and last_line(proc) == "pc-0001")
+
+with tempfile.TemporaryDirectory() as tmp:
+    repo = Path(tmp)
+    todos = repo / ".claude" / "todos"
+    todos.mkdir(parents=True)
+    (todos / "pc-9999-big.md").write_text("# big\n", encoding="utf-8")
+    proc = run_script(repo)
+    case(f"past 9999 the number grows to pc-10000 (out={proc.stdout!r})",
+         proc.returncode == 0 and last_line(proc) == "pc-10000")
+
+# Missing / invalid device label fails loudly with the one-line fix and reserves nothing.
+with tempfile.TemporaryDirectory() as tmp:
+    repo = Path(tmp)
+    todos = repo / ".claude" / "todos"
+    todos.mkdir(parents=True)
+    missing = Path(_LABEL_DIR.name) / "does-not-exist"
+    proc = run_script(repo, label_file=missing)
+    combined = proc.stdout + proc.stderr
+    case(f"missing device-label: non-zero exit, names the fix, reserves nothing (rc={proc.returncode}, out={combined!r})",
+         proc.returncode != 0 and "device-label" in combined and '"pc" or "mac"' in combined
+         and not any(todos.glob("*.reserved")))
+
+    bad = Path(_LABEL_DIR.name) / "device-label-bad"
+    bad.write_text("PC 1!", encoding="utf-8")
+    proc = run_script(repo, label_file=bad)
+    combined = proc.stdout + proc.stderr
+    case(f"invalid device-label content: non-zero exit and nothing reserved (rc={proc.returncode}, out={combined!r})",
+         proc.returncode != 0 and "Invalid device label" in combined and not any(todos.glob("*.reserved")))
+
+_LABEL_DIR.cleanup()
 
 sys.exit(_testlib.summarize(fails, style="count"))

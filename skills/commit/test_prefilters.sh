@@ -316,6 +316,21 @@ out=$(cd "$tr1" && "$gate" code3.js); rc=$?
 check "todo-ref.sh flags a five-digit todo id" \
   1 'todo-ref\.sh' '' "$out" "$rc"
 
+printf 'function a() {\n  // see todo pc-1407 for why\n}\n' > "$tr1/code4.js"
+out=$(cd "$tr1" && "$gate" code4.js); rc=$?
+check "todo-ref.sh flags a device-prefixed todo id (space form)" \
+  1 'todo-ref\.sh' '' "$out" "$rc"
+
+printf 'function b() {\n  // see todo-mac2-0003 for why\n}\n' > "$tr1/code5.js"
+out=$(cd "$tr1" && "$gate" code5.js); rc=$?
+check "todo-ref.sh flags a device-prefixed todo id (dash form, multi-digit label)" \
+  1 'todo-ref\.sh' '' "$out" "$rc"
+
+printf 'function c() {\n  // todo list handling is below\n}\n' > "$tr1/code6.js"
+out=$(cd "$tr1" && "$gate" code6.js); rc=$?
+check "todo-ref.sh does not flag the word todo followed by a plain word" \
+  0 '' 'todo-ref\.sh' "$out" "$rc"
+
 # --- binary detection window: a NUL in the first 8000 bytes marks an extensionless file binary,
 # a NUL only past that window leaves it scannable text (the window git's own sniff uses) ---
 nulrepo=$(new_repo); tmp_dirs+=("$nulrepo")

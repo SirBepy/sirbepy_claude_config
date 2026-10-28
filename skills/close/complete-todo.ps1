@@ -8,15 +8,19 @@
     2. Delete .claude/todos/.claims/<id>.claim if present.
     3. Prune any "- [ ] <id> ..." line from .claude/todos/PLAN.md, re-reading the file
        fresh immediately before the write (CAS discipline - PLAN.md may be hand-edited
-       or touched by another session between read and write).
+       or touched by another session between read and write). <id> is the device-prefixed
+       form (pc-1407); the prune also matches any zero padding and, for label pc, the bare
+       number older lines carry.
 
   Idempotent: re-running against an already-completed id reports clearly and makes no
   further changes, rather than erroring or double-acting.
 
 .PARAMETER Id
-  The numeric todo id (leading zeros optional - "07" and "7" both match a file named
-  "07-fix-auth-redirect.md"). Also accepts a full filename stem (e.g. "434-real-slug")
-  to disambiguate an id shared by two files without needing -Slug. Typed [string[]] to
+  The todo id: device-prefixed ("pc-1407", "pc-7") or a bare number ("1407", resolved by
+  _shared.ps1's Resolve-TodoFile: this device's label first, else a unique match on another
+  label, else an error naming the candidates). Leading zeros optional. Also accepts a full
+  filename stem (e.g. "pc-0434-real-slug") to disambiguate an id shared by two files
+  without needing -Slug. Typed [string[]] to
   match claim-todo.ps1's -Id, but this script completes one todo per call - an array is
   joined back into a single id and is not a batch-complete form.
 
@@ -35,11 +39,11 @@
   after ## Acceptance (and before any ## Open questions block) when absent. Written BOM-less.
 
 .EXAMPLE
-  ~/.claude/skills/close/complete-todo.ps1 -Id 286
+  ~/.claude/skills/close/complete-todo.ps1 -Id pc-0286
   ~/.claude/skills/close/complete-todo.ps1 -Id 07 -RepoRoot C:\Users\joe\Projects\my-app
-  ~/.claude/skills/close/complete-todo.ps1 -Id 434 -Slug chat-row-style-decide-and-delete-loser
-  ~/.claude/skills/close/complete-todo.ps1 -Id 434-chat-row-style-decide-and-delete-loser
-  ~/.claude/skills/close/complete-todo.ps1 -Id 286 -Note "completed, commit abc1234"
+  ~/.claude/skills/close/complete-todo.ps1 -Id pc-0434 -Slug chat-row-style-decide-and-delete-loser
+  ~/.claude/skills/close/complete-todo.ps1 -Id pc-0434-chat-row-style-decide-and-delete-loser
+  ~/.claude/skills/close/complete-todo.ps1 -Id pc-0286 -Note "completed, commit abc1234"
 #>
 param(
     [Parameter(Mandatory = $true)]
@@ -142,31 +146,20 @@ if (-not (Test-Path $todosDir)) {
 # --- Step 1: move the backlog file to done/ (or detect it's already there) ---
 
 $resolved = Resolve-TodoFile -Dir $todosDir -RawId $Id -Slug $Slug
-$numericId = $resolved.NumericId
-$canonicalId = $resolved.CanonicalId
+if ($resolved.Error) { Write-Fail $resolved.Error }
+$todoId = $resolved.Id
 $Slug = $resolved.Slug
-$idPattern = $resolved.Pattern
-$backlogMatches = $resolved.Matches
-
-$slugPattern = $null
-if ($Slug) { $slugPattern = "^0*$([regex]::Escape($canonicalId))-$([regex]::Escape($Slug))\.md$" }
+$backlogMatches = @($resolved.Matches)
 
 if ($resolved.FellBack) {
-    Write-Warning "[$RepoRoot] Todo '$Id' has no numeric prefix, which ai-todos-format.md treats as malformed. Archiving it anyway; future files should get an id from reserve-todo-id.ps1."
+    Write-Warning "[$RepoRoot] Todo '$Id' has no device-prefixed id, which ai-todos-format.md treats as malformed. Archiving it anyway; future files should get an id from reserve-todo-id.ps1."
 }
 
-# Apply the slug filter whenever one is known - not only when the id is
-# currently ambiguous, or a stale/mismatched -Slug could silently resolve to
-# the WRONG file once a sibling collision is no longer present.
-if ($backlogMatches -and $Slug) {
-    $backlogMatches = $backlogMatches | Where-Object { $_.Name -match $slugPattern }
-}
-
-if ($backlogMatches -and $backlogMatches.Count -gt 1) {
+if ($backlogMatches.Count -gt 1) {
     Write-Fail "Ambiguous id '$Id': multiple files match in $todosDir - $($backlogMatches.Name -join ', '). Retry with -Slug <slug> or pass the full filename stem as -Id."
 }
 
-if ($backlogMatches -and $backlogMatches.Count -eq 1) {
+if ($backlogMatches.Count -eq 1) {
     $todoFile = $backlogMatches[0]
 
     if ($Note) {
@@ -191,22 +184,22 @@ if ($backlogMatches -and $backlogMatches.Count -eq 1) {
     Write-Info "Moved $($todoFile.Name) -> done\$($todoFile.Name)"
 }
 else {
-    # Not in the active backlog - check whether it's already been completed.
-    $doneMatches = @()
+    # Not in the active backlog - check whether it's already been completed. Resolved
+    # against done\ on its own, so a bare number follows the same this-device-first rule.
+    $doneResolved = $null
     if (Test-Path $doneDir) {
-        $doneMatches = Get-ChildItem -Path $doneDir -Filter '*.md' -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -match $idPattern }
+        $doneResolved = Resolve-TodoFile -Dir $doneDir -RawId $Id -Slug $Slug
+        if ($doneResolved.Error) { Write-Fail $doneResolved.Error }
     }
-
-    if ($doneMatches.Count -gt 0 -and $Slug) {
-        $doneMatches = $doneMatches | Where-Object { $_.Name -match $slugPattern }
-    }
+    $doneMatches = if ($doneResolved) { @($doneResolved.Matches) } else { @() }
 
     if ($doneMatches.Count -gt 1) {
         Write-Fail "Ambiguous id '$Id' in done\: $($doneMatches.Name -join ', '). Retry with -Slug <slug> or pass the full filename stem as -Id."
     }
     elseif ($doneMatches.Count -eq 1) {
-        Write-Warning "[$RepoRoot] Todo $numericId already completed (found in done\$($doneMatches[0].Name)) - NOTHING was moved and NO note was appended this run."
+        $resolved = $doneResolved
+        $todoId = $resolved.Id
+        Write-Warning "[$RepoRoot] Todo $todoId already completed (found in done\$($doneMatches[0].Name)) - NOTHING was moved and NO note was appended this run."
     }
     else {
         Write-Fail "No todo file matching id '$Id' found in $todosDir or $doneDir."
@@ -217,26 +210,16 @@ else {
 # Claim files are normally "<id>.claim", but claim-todo.ps1 names them
 # "<id>-<slug>.claim" when the id collides, so a sibling task's claim survives.
 
+# Claim names are matched by (label, number) via the shared parser, so a pre-migration
+# claim ("8.claim", "08.claim") releases the same as the canonical "pc-0008.claim".
 $claimMatches = @()
-if (Test-Path $claimsDir) {
-    if ($Slug) {
-        $claimMatches = Get-ChildItem -Path $claimsDir -Filter '*.claim' -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -match "^0*$([regex]::Escape($canonicalId))-$([regex]::Escape($Slug))\.claim$" }
-    }
-    if ($claimMatches.Count -eq 0) {
-        # Canonical (zero-stripped) id, not the literal $numericId: a batch claim-todo.ps1
-        # call can write an unpadded claim (e.g. "8.claim") for an id the caller still
-        # refers to padded ("-Id 08") - PowerShell's own unquoted comma-list parsing strips
-        # the padding before claim-todo.ps1 ever runs (todo 1024). Anchoring on the literal
-        # padded id here reproduced the leaked-claim, false-warning bug this fixes.
-        $claimMatches = Get-ChildItem -Path $claimsDir -Filter '*.claim' -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -match "^0*$([regex]::Escape($canonicalId))\.claim$" }
-    }
-    if ($claimMatches.Count -eq 0) {
-        $wildcard = Get-ChildItem -Path $claimsDir -Filter '*.claim' -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -match "^0*$([regex]::Escape($canonicalId))-.*\.claim$" }
-        if ($wildcard.Count -eq 1) { $claimMatches = $wildcard }
-    }
+if ($resolved.Label) {
+    $claimMatches = @(Find-TodoClaims -ClaimsDir $claimsDir -Label $resolved.Label -Number $resolved.Number -Slug $Slug)
+}
+elseif (Test-Path $claimsDir) {
+    # Prefix-less (malformed) todo: claim-todo.ps1 names its claim after the stem itself.
+    $claimMatches = @(Get-ChildItem -Path $claimsDir -Filter '*.claim' -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -ieq "$todoId.claim" })
 }
 
 if ($claimMatches.Count -ge 1) {
@@ -249,7 +232,7 @@ else {
     # Can't distinguish never-claimed from already-released - no artifact records
     # release history. Warn anyway: per CLAUDE.md, claiming is non-negotiable, so
     # an absent claim at completion time is worth a reviewer's eyes either way.
-    Write-Info "WARNING: todo $numericId is being completed with no claim on record - either it was executed without claiming, or the claim was released early (see close/ai-todos-format.md). Not blocking."
+    Write-Info "WARNING: todo $todoId is being completed with no claim on record - either it was executed without claiming, or the claim was released early (see close/ai-todos-format.md). Not blocking."
 }
 
 # --- Step 3: prune the PLAN.md line, CAS-style (fresh read immediately before write) ---
@@ -260,14 +243,16 @@ if (Test-Path $planPath) {
     # underscore/backtick wrapping and "[P]" too, since hand-edits use them and
     # a stale line in any style still needs pruning. Step 1 already resolved a
     # single file for this id, so every matching line here is that same file's.
-    $idPart = "0*$([regex]::Escape($canonicalId))"
+    # The id spelling itself (padding, the bare number older lines carry) comes from
+    # _shared.ps1 so no second copy of the id shape lives here.
+    $idPart = if ($resolved.Label) { Get-TodoPlanIdPattern -Label $resolved.Label -Number $resolved.Number } else { [regex]::Escape($todoId) }
     $backtick = [char]0x60
     $wrappedId = "(\*\*$idPart\*\*|__${idPart}__|$backtick$idPart$backtick|$idPart)"
     $lineIdPattern = "^\s*-\s*\[\s*\]\s*$wrappedId(\s*\[P\])?(\s|$)"
     $matchCount = ($lines | Where-Object { $_ -match $lineIdPattern }).Count
 
     if ($matchCount -eq 0) {
-        Write-Info "WARNING: no PLAN.md line matched todo $Id - searched for pattern '$lineIdPattern' (plain/bold/underscore/backtick id, optional [P]). If a line for this id exists in a format outside that set, it was NOT pruned."
+        Write-Info "WARNING: no PLAN.md line matched todo $todoId - searched for pattern '$lineIdPattern' (plain/bold/underscore/backtick id, optional [P]). If a line for this id exists in a format outside that set, it was NOT pruned."
     }
     else {
         # Drop the whole markdown list item, not just its first line: a wrapped entry's
@@ -287,10 +272,10 @@ if (Test-Path $planPath) {
         $utf8NoBom = New-Object System.Text.UTF8Encoding $false
         [System.IO.File]::WriteAllText($planPath, (($keptLines -join "`r`n") + "`r`n"), $utf8NoBom)
         if ($matchCount -gt 1) {
-            Write-Info "Pruned $matchCount PLAN.md line(s) for todo $Id (multiple formatting variants matched the same id)."
+            Write-Info "Pruned $matchCount PLAN.md line(s) for todo $todoId (multiple formatting variants matched the same id)."
         }
         else {
-            Write-Info "Pruned PLAN.md line(s) for todo $Id"
+            Write-Info "Pruned PLAN.md line(s) for todo $todoId"
         }
     }
 }
@@ -298,4 +283,4 @@ else {
     Write-Info "No PLAN.md at $planPath - skipping prune step."
 }
 
-Write-Info "Completion bookkeeping done for todo $Id."
+Write-Info "Completion bookkeeping done for todo $todoId."

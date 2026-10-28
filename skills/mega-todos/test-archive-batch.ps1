@@ -23,13 +23,24 @@
 #>
 $ErrorActionPreference = 'Stop'
 
+# Ids resolve through the device label; point it at a throwaway file so this test never reads
+# or writes the real ~/.claude/device-label.
+$labelDir = Join-Path $env:TEMP "archive-batch-test-label-$([guid]::NewGuid().ToString('N').Substring(0, 8))"
+New-Item -ItemType Directory -Path $labelDir -Force | Out-Null
+[System.IO.File]::WriteAllText((Join-Path $labelDir 'device-label'), "pc`n", (New-Object System.Text.UTF8Encoding $false))
+$env:CLAUDE_DEVICE_LABEL_FILE = Join-Path $labelDir 'device-label'
+
 $failures = New-Object System.Collections.Generic.List[string]
 function Assert($Condition, $Message) {
     if ($Condition) { Write-Host "  PASS: $Message" }
     else { $failures.Add($Message); Write-Host "  FAIL: $Message" }
 }
 
-function New-ScratchRepo([string]$Path) {
+# -Legacy seeds the pre-device-label bare-numeric names (scenario 2 replays the old code, which
+# only knows those); the default seeds device-prefixed names.
+function New-ScratchRepo([string]$Path, [switch]$Legacy) {
+    $trackedName = if ($Legacy) { '100-tracked-todo.md' } else { 'pc-0100-tracked-todo.md' }
+    $untrackedName = if ($Legacy) { '200-untracked-todo.md' } else { 'pc-0200-untracked-todo.md' }
     New-Item -ItemType Directory -Path $Path -Force | Out-Null
     git -c init.defaultBranch=main init -q $Path
     git -C $Path config user.email "test@example.com"
@@ -39,14 +50,14 @@ function New-ScratchRepo([string]$Path) {
     New-Item -ItemType Directory -Path $todosDir -Force | Out-Null
 
     $utf8NoBom = New-Object System.Text.UTF8Encoding $false
-    $trackedPath = Join-Path $todosDir '100-tracked-todo.md'
+    $trackedPath = Join-Path $todosDir $trackedName
     [System.IO.File]::WriteAllText($trackedPath, "# Tracked todo`r`n`r`n## Acceptance`r`n`r`n- done`r`n", $utf8NoBom)
-    $untrackedPath = Join-Path $todosDir '200-untracked-todo.md'
+    $untrackedPath = Join-Path $todosDir $untrackedName
     [System.IO.File]::WriteAllText($untrackedPath, "# Untracked todo`r`n`r`n## Acceptance`r`n`r`n- done`r`n", $utf8NoBom)
 
-    git -C $Path add -- '.claude/todos/100-tracked-todo.md'
+    git -C $Path add -- ".claude/todos/$trackedName"
     git -C $Path commit -q -m "seed tracked todo"
-    # 200-untracked-todo.md deliberately NOT added - mirrors the untracked-source
+    # The untracked todo is deliberately NOT added - mirrors the untracked-source
     # shape from todo 848 that must stay excluded from the pathspec.
 
     [PSCustomObject]@{
@@ -62,6 +73,8 @@ $stamp = [guid]::NewGuid().ToString('N').Substring(0, 8)
 $scratchNew = Join-Path $env:TEMP "archive-batch-test-new-$stamp"
 $scratchOldData = Join-Path $env:TEMP "archive-batch-test-olddata-$stamp"
 $scratchOldCode = Join-Path $env:TEMP "archive-batch-test-oldcode-$stamp"
+$scratchLegacy = Join-Path $env:TEMP "archive-batch-test-legacy-$stamp"
+$scratchAmbig = Join-Path $env:TEMP "archive-batch-test-ambig-$stamp"
 
 try {
     # --- Scenario 1: current (fixed) code ---
@@ -69,12 +82,13 @@ try {
     $seed = New-ScratchRepo -Path $scratchNew
     $scriptPath = Join-Path $PSScriptRoot 'archive-batch.ps1'
 
-    $result = & $scriptPath -Items "100|closed in test", "200|closed in test" -RepoRoot $seed.Root
+    # A full id and a bare number in one batch: both must resolve to this device's pc label.
+    $result = & $scriptPath -Items "pc-0100|closed in test", "200|closed in test" -RepoRoot $seed.Root
 
     Assert ($result.Failures.Count -eq 0) "zero archive failures (got: $($result.Failures -join '; '))"
 
-    $doneTracked = Join-Path $seed.TodosDir 'done\100-tracked-todo.md'
-    $doneUntracked = Join-Path $seed.TodosDir 'done\200-untracked-todo.md'
+    $doneTracked = Join-Path $seed.TodosDir 'done\pc-0100-tracked-todo.md'
+    $doneUntracked = Join-Path $seed.TodosDir 'done\pc-0200-untracked-todo.md'
 
     Assert ($result.Pathspec -contains $seed.Tracked) "tracked source '$($seed.Tracked)' IS in .Pathspec (todo 932 fix)"
     Assert ($result.Pathspec -contains $doneTracked) "tracked dest '$doneTracked' is in .Pathspec"
@@ -96,7 +110,7 @@ try {
     # rather than separate add/delete lines - --no-renames forces it back apart
     # so the assertion can see both paths named explicitly.
     $statOutput = (git -C $seed.Root show --stat --no-renames HEAD | Out-String)
-    Assert ($statOutput -match [regex]::Escape('.claude/todos/100-tracked-todo.md') -and $statOutput -match [regex]::Escape('.claude/todos/done/100-tracked-todo.md')) "HEAD's stat names both halves of the tracked move"
+    Assert ($statOutput -match [regex]::Escape('.claude/todos/pc-0100-tracked-todo.md') -and $statOutput -match [regex]::Escape('.claude/todos/done/pc-0100-tracked-todo.md')) "HEAD's stat names both halves of the tracked move"
 
     Write-Host "--- git status --porcelain (scenario 1, after commit) ---"
     if ($statusAfter) { $statusAfter | ForEach-Object { Write-Host "  $_" } } else { Write-Host "  (clean)" }
@@ -119,10 +133,13 @@ try {
     # Real close/_shared.ps1 and close/complete-todo.ps1 are off limits to EDIT, not to
     # READ - the old script dot-sources/calls them by relative path, so an unmodified
     # copy has to sit next to the replayed script for that resolution to work at all.
-    Copy-Item (Join-Path $repoRoot 'skills\close\_shared.ps1') (Join-Path $oldSkillsRoot 'close\_shared.ps1')
-    Copy-Item (Join-Path $repoRoot 'skills\close\complete-todo.ps1') (Join-Path $oldSkillsRoot 'close\complete-todo.ps1')
+    # The replayed script must meet the helpers it shipped with, so those come from HEAD too.
+    foreach ($helper in 'close/_shared.ps1', 'close/complete-todo.ps1') {
+        $helperContent = (git -C $repoRoot show "HEAD:skills/$helper" | Out-String)
+        [System.IO.File]::WriteAllText((Join-Path $oldSkillsRoot ($helper -replace '/', '\')), $helperContent, $utf8NoBom)
+    }
 
-    $seedOld = New-ScratchRepo -Path $scratchOldData
+    $seedOld = New-ScratchRepo -Path $scratchOldData -Legacy
     $oldResult = & $oldScriptPath -Items "100|closed in test" -RepoRoot $seedOld.Root
 
     $oldDoneTracked = Join-Path $seedOld.TodosDir 'done\100-tracked-todo.md'
@@ -138,12 +155,33 @@ try {
 
     Write-Host "--- git status --porcelain (scenario 2, pre-fix, after commit) ---"
     if ($oldStatusAfter) { $oldStatusAfter | ForEach-Object { Write-Host "  $_" } } else { Write-Host "  (clean)" }
+
+    # --- Scenario 3: legacy bare-numeric names, an unresolvable id and the defence-in-depth check ---
+    Write-Host "=== Scenario 3: legacy names, ambiguity, failures ==="
+    $seed3 = New-ScratchRepo -Path $scratchLegacy -Legacy
+    $result3 = & $scriptPath -Items "100|legacy by bare number", "pc-200|legacy by full id" -RepoRoot $seed3.Root
+    Assert ($result3.Failures.Count -eq 0) "legacy bare-numeric files archive via a bare number and via pc-200 (got: $($result3.Failures -join '; '))"
+    Assert (Test-Path (Join-Path $seed3.TodosDir 'done\100-tracked-todo.md')) "legacy 100-tracked-todo.md lands in done\ under its own name"
+    Assert ($result3.Pathspec -contains $seed3.Tracked) "legacy tracked source is in .Pathspec"
+
+    $seed4 = New-ScratchRepo -Path $scratchAmbig
+    $macPath = Join-Path $seed4.TodosDir 'mac-0300-a.md'
+    $mac2Path = Join-Path $seed4.TodosDir 'mac2-0300-b.md'
+    [System.IO.File]::WriteAllText($macPath, "# a`r`n", (New-Object System.Text.UTF8Encoding $false))
+    [System.IO.File]::WriteAllText($mac2Path, "# b`r`n", (New-Object System.Text.UTF8Encoding $false))
+    $ErrorActionPreference = 'Continue'
+    $result4 = & $scriptPath -Items "300|ambiguous", "pc-9999|missing", "mac-0300|full id on another device" -RepoRoot $seed4.Root 3>$null
+    $ErrorActionPreference = 'Stop'
+    Assert ($result4.Failures.Count -eq 2) "ambiguous bare 300 and missing pc-9999 are reported as failures, not archived (got: $($result4.Failures -join '; '))"
+    Assert (($result4.Failures -join ' ') -match 'mac-0300' -and ($result4.Failures -join ' ') -match 'mac2-0300') "the ambiguity failure names both candidates"
+    Assert ((Test-Path (Join-Path $seed4.TodosDir 'done\mac-0300-a.md')) -and (Test-Path $mac2Path)) "the full id mac-0300 archived only its own file; mac2-0300 stays"
+    Assert ($result4.Pathspec -contains (Join-Path $seed4.TodosDir 'done\mac-0300-a.md')) "the other-device archive is in .Pathspec (prefix check accepts a full-id input)"
 }
 finally {
-    foreach ($p in @($scratchNew, $scratchOldData, $scratchOldCode)) {
+    foreach ($p in @($scratchNew, $scratchOldData, $scratchOldCode, $scratchLegacy, $scratchAmbig, $labelDir)) {
         if (Test-Path $p) { Remove-Item -Path $p -Recurse -Force }
     }
-    $stillThere = @($scratchNew, $scratchOldData, $scratchOldCode) | Where-Object { Test-Path $_ }
+    $stillThere = @($scratchNew, $scratchOldData, $scratchOldCode, $scratchLegacy, $scratchAmbig, $labelDir) | Where-Object { Test-Path $_ }
     if ($stillThere) {
         Write-Warning "scratch dirs still present after cleanup: $($stillThere -join ', ')"
     }

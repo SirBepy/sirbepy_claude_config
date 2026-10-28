@@ -12,6 +12,13 @@ tmp_dirs=()
 cleanup() { for d in "${tmp_dirs[@]}"; do rm -rf "$d"; done; }
 trap cleanup EXIT
 
+# --todo resolves ids through hooks/_todo_ids.py, which reads the device label. Every case below
+# points it at a throwaway label file so none of them touches the real ~/.claude/device-label.
+label_dir=$(mktemp -d) || { echo "FAIL: mktemp -d"; exit 1; }
+tmp_dirs+=("$label_dir")
+printf 'pc\n' > "$label_dir/device-label"
+export CLAUDE_DEVICE_LABEL_FILE="$label_dir/device-label"
+
 new_repo() {
   local d
   d=$(mktemp -d) || { echo "FAIL: mktemp -d"; exit 1; }
@@ -1054,6 +1061,80 @@ if ! git -C "$r37" ls-files --error-unmatch -- .claude/todos/done/1106-untracked
 else
   echo "PASS: --todo (untracked) - the done/ destination landed"
 fi
+
+# --- --todo with device-prefixed ids: a full id (any padding), a bare number resolved to this
+# device's label, and a legacy bare-numeric file all find the same archive-move paths ---
+r36b=$(new_repo); tmp_dirs+=("$r36b")
+mkdir -p "$r36b/.claude/todos/done"
+printf 'prefixed tracked\n' > "$r36b/.claude/todos/pc-1405-prefixed.md"
+printf 'bare-resolved tracked\n' > "$r36b/.claude/todos/pc-1406-bare.md"
+printf 'other device, same number\n' > "$r36b/.claude/todos/mac-1405-theirs.md"
+git -C "$r36b" add .claude/todos
+git -C "$r36b" commit -q -m "seed prefixed todos"
+branch=$(git -C "$r36b" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r36b" rev-parse HEAD)
+mv "$r36b/.claude/todos/pc-1405-prefixed.md" "$r36b/.claude/todos/done/pc-1405-prefixed.md"
+mv "$r36b/.claude/todos/pc-1406-bare.md" "$r36b/.claude/todos/done/pc-1406-bare.md"
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r36b" --expect-branch "$branch" --expect-sha "$sha" \
+  --todo pc-1405 --todo 1406 -m "archive prefixed todos via --todo" -- 2>&1); rc=$?
+check "--todo pc-1405 and a bare 1406 commit both archive moves (source deletion + done/ destination)" \
+  0 '\[commit\] committed' 'REFUSED|ERROR' "$out" "$rc"
+tracked=$(git -C "$r36b" ls-files -- .claude/todos | sort | tr '\n' ' ')
+if [ "$tracked" = ".claude/todos/done/pc-1405-prefixed.md .claude/todos/done/pc-1406-bare.md .claude/todos/mac-1405-theirs.md " ]; then
+  echo "PASS: --todo pc-1405 moved only pc-1405 (mac-1405 untouched) and the bare 1406 resolved to pc-1406"
+else
+  echo "FAIL: --todo with prefixed ids - unexpected tracked set: $tracked"
+  fail=1
+fi
+
+r36c=$(new_repo); tmp_dirs+=("$r36c")
+mkdir -p "$r36c/.claude/todos/done"
+printf 'padded\n' > "$r36c/.claude/todos/done/pc-1407-padded.md"
+printf 'legacy\n' > "$r36c/.claude/todos/done/0108-legacy.md"
+branch=$(git -C "$r36c" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r36c" rev-parse HEAD)
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r36c" --expect-branch "$branch" --expect-sha "$sha" \
+  --todo pc-01407 --todo pc-108 -m "archive via differently padded ids" -- 2>&1); rc=$?
+check "--todo accepts a differently padded full id and finds a legacy bare-numeric file as pc" \
+  0 'done/pc-1407-padded\.md' 'REFUSED|ERROR' "$out" "$rc"
+if [ -n "$(git -C "$r36c" ls-files -- .claude/todos/done/0108-legacy.md)" ] \
+  && [ -n "$(git -C "$r36c" ls-files -- .claude/todos/done/pc-1407-padded.md)" ]; then
+  echo "PASS: both the padded pc-1407 file and the legacy 0108 file landed"
+else
+  echo "FAIL: --todo padded/legacy - not both files landed"
+  fail=1
+fi
+
+r36d=$(new_repo); tmp_dirs+=("$r36d")
+mkdir -p "$r36d/.claude/todos/done"
+printf 'a\n' > "$r36d/.claude/todos/done/mac-1409-a.md"
+printf 'b\n' > "$r36d/.claude/todos/done/mac2-1409-b.md"
+branch=$(git -C "$r36d" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r36d" rev-parse HEAD)
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r36d" --expect-branch "$branch" --expect-sha "$sha" \
+  --todo 1409 -m "ambiguous bare id" -- 2>&1); rc=$?
+check "--todo with a bare number on several other labels refuses (exit 2) and names every candidate" \
+  2 'mac-1409.*mac2-1409' '\[commit\] committed' "$out" "$rc"
+if [ "$(git -C "$r36d" rev-parse HEAD)" = "$sha" ]; then
+  echo "PASS: the ambiguous --todo left HEAD untouched"
+else
+  echo "FAIL: the ambiguous --todo created a commit"
+  fail=1
+fi
+
+r36e=$(new_repo); tmp_dirs+=("$r36e")
+mkdir -p "$r36e/.claude/todos/done"
+printf 'x\n' > "$r36e/.claude/todos/done/pc-1410-x.md"
+branch=$(git -C "$r36e" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r36e" rev-parse HEAD)
+out=$(CLAUDE_DEVICE_LABEL_FILE="$label_dir/does-not-exist" COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r36e" --expect-branch "$branch" --expect-sha "$sha" \
+  --todo 1410 -m "bare id with no device label" -- 2>&1); rc=$?
+check "--todo with a bare number and no device-label fails loudly with the fix, never guessing pc" \
+  2 'device-label' '\[commit\] committed' "$out" "$rc"
+out=$(CLAUDE_DEVICE_LABEL_FILE="$label_dir/does-not-exist" COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r36e" --expect-branch "$branch" --expect-sha "$sha" \
+  --todo pc-1410 -m "full id needs no device label" -- 2>&1); rc=$?
+check "--todo with a full device-prefixed id needs no device-label" \
+  0 '\[commit\] committed' 'REFUSED|ERROR' "$out" "$rc"
 
 # --- AI attribution refusal: a Co-Authored-By: Claude/Anthropic trailer line never lands,
 # checked before any repo work so the refusal is cheap and creates no commit ---

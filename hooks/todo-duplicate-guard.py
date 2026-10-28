@@ -14,8 +14,11 @@ before with guess-based hooks), so a plausible hit blocks with the candidate
 listed and an explicit override marker, never a silent or unresolvable stop.
 
 Id uniqueness (todo 492) is a separate, unconditional check: two files ever
-sharing a numeric prefix breaks every `-Id`-addressed tool downstream, so it
-is a hard block with no override marker, unlike the content heuristic above.
+sharing an id breaks every `-Id`-addressed tool downstream, so it is a hard
+block with no override marker, unlike the content heuristic above. An id is
+`<label>-<number>` (`pc-1407`; a legacy bare-numeric name reads as `pc`), keyed
+as a string through hooks/_todo_ids.py so `pc-1407` and `mac-1407` never
+collide while `pc-1407`, `pc-01407` and a legacy `1407-x.md` do.
 
 Todo 851: the check does not delete a matched `*-.reserved` marker on a
 passing write. A PreToolUse hook deleting files is a surprising side effect;
@@ -41,6 +44,12 @@ except Exception as e:
     sys.stderr.write(f"[todo-duplicate-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
 
+try:
+    from _todo_ids import is_todo_filename, name_key, format_todo_id, parse_todo_name
+except Exception as e:
+    sys.stderr.write(f"[todo-duplicate-guard] FATAL: cannot import _todo_ids ({e}); blocking to avoid silently disabling this guard.\n")
+    sys.exit(2)
+
 OVERRIDE_MARKER = "<!-- duplicate-checked -->"
 # Todo 834: matches the bare marker AND `<!-- duplicate-checked: reason -->`,
 # since inlining the reason next to the marker is the natural move and the
@@ -60,8 +69,6 @@ COMMON_TOKEN_MIN_DOCS = 3
 COMMON_TOKEN_MIN_CORPUS = 8
 
 PATH_SEP_RE = re.compile(r"[\\/]+")
-FILENAME_RE = re.compile(r"^\d+-.*\.md$", re.IGNORECASE)
-ID_RE = re.compile(r"^0*(\d+)-")
 TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
 TOKEN_RE = re.compile(r"[A-Za-z0-9]+")
 
@@ -79,14 +86,15 @@ STOPWORDS = {
 
 def todos_target_dir(file_path: str) -> Path | None:
     """The `.claude/todos` directory if `file_path` is a new backlog file
-    written directly inside it (name matches `\\d+-*.md`), else None. A
+    written directly inside it (a todo filename per _todo_ids: `pc-1407-x.md`
+    or a legacy `1407-x.md`), else None. A
     `done/` or `.claims/` child never matches, since it has an extra path
     segment between `todos` and the filename.
     """
     if not file_path:
         return None
     p = Path(file_path)
-    if not FILENAME_RE.match(p.name):
+    if not is_todo_filename(p.name):
         return None
     segments = [s.lower() for s in PATH_SEP_RE.split(str(p.parent)) if s]
     if len(segments) < 2 or segments[-2] != ".claude" or segments[-1] != "todos":
@@ -194,11 +202,11 @@ def find_hits(todos_dir: Path, target_name: str, tokens: list[str]) -> list[tupl
     # and it names nearly every id in the backlog, so it matched everything.
     candidates = [
         f for f in sorted(todos_dir.glob("*.md"))
-        if f.name.lower() != target_name and FILENAME_RE.match(f.name)
+        if f.name.lower() != target_name and is_todo_filename(f.name)
     ]
     done_dir = todos_dir / "done"
     if done_dir.is_dir():
-        candidates += [f for f in sorted(done_dir.glob("*.md")) if FILENAME_RE.match(f.name)]
+        candidates += [f for f in sorted(done_dir.glob("*.md")) if is_todo_filename(f.name)]
 
     texts = []
     for f in candidates:
@@ -226,28 +234,29 @@ def find_hits(todos_dir: Path, target_name: str, tokens: list[str]) -> list[tupl
     return hits
 
 
-def extract_id(name: str) -> int | None:
-    """Numeric prefix of a backlog filename or `<id>-.reserved` marker, with
-    leading zeros normalized (so "007-x.md" and "7-y.md" are the same id).
+def extract_id(name: str) -> str | None:
+    """Padding-free `<label>-<number>` key of a backlog filename or
+    `<id>-.reserved` marker (so "pc-0007-x.md", "pc-7-y.md" and a legacy
+    "07-z.md" are all `pc-7`; `mac-7` is a different id). A string key, not an
+    int: the label is half of the identity.
     """
-    m = ID_RE.match(name)
-    return int(m.group(1)) if m else None
+    return name_key(name)
 
 
-def find_id_collision(todos_dir: Path, target_name: str, target_id: int) -> Path | None:
+def find_id_collision(todos_dir: Path, target_name: str, target_id: str) -> Path | None:
     """Path of a differently-named file or reservation marker that already
-    claims `target_id`, else None. A same-name match in `todos_dir` itself is
-    an in-place rewrite, not a collision - same precedent as `find_hits`. A
-    `<target_id>-.reserved` marker in `todos_dir` is the caller's own
-    reservation, not a collision either: `reserve-todo-id.ps1`'s atomic
-    no-overwrite rename guarantees at most one marker per id ever exists, so
-    a marker sharing `target_id` can only be the write this same id was
-    reserved for.
+    claims `target_id` (an `extract_id` key), else None. A same-name match in
+    `todos_dir` itself is an in-place rewrite, not a collision - same
+    precedent as `find_hits`. A `<target_id>-.reserved` marker in `todos_dir`
+    is the caller's own reservation, not a collision either:
+    `reserve-todo-id.ps1`'s atomic no-overwrite rename guarantees at most one
+    marker per id ever exists, so a marker sharing `target_id` can only be the
+    write this same id was reserved for.
     """
-    candidates = [f for f in sorted(todos_dir.glob("*.md")) if FILENAME_RE.match(f.name)]
+    candidates = [f for f in sorted(todos_dir.glob("*.md")) if is_todo_filename(f.name)]
     done_dir = todos_dir / "done"
     if done_dir.is_dir():
-        candidates += [f for f in sorted(done_dir.glob("*.md")) if FILENAME_RE.match(f.name)]
+        candidates += [f for f in sorted(done_dir.glob("*.md")) if is_todo_filename(f.name)]
     candidates += sorted(todos_dir.glob("*-.reserved"))
 
     for f in candidates:
@@ -289,8 +298,10 @@ def main() -> None:
     if target_id is not None:
         collision = find_id_collision(todos_dir, target_name.lower(), target_id)
         if collision is not None:
+            info = parse_todo_name(target_name)
+            shown_id = format_todo_id(info.label, info.number)
             deny(
-                f"[todo-duplicate-guard] Id {target_id} is already claimed by "
+                f"[todo-duplicate-guard] Id {shown_id} is already claimed by "
                 f"{collision.name}. Ids must be unique across .claude/todos/, done/, "
                 f"and *-.reserved markers - run `skills/close/reserve-todo-id.ps1 "
                 f"-RepoRoot {repo_root}` to reserve a free one instead of picking by hand."

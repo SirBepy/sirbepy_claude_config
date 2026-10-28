@@ -4,23 +4,30 @@
 
 .DESCRIPTION
   Implements the documented protocol: write claim content to a private temp file,
-  atomically rename it to .claims/<id>.claim with no-overwrite semantics, retry once
-  after ~2s on a transient Windows filter-driver error before concluding anything, and
-  treat an existing claim as stale (safe to steal) only when its mtime is older than 4
-  hours AND the recorded pid is no longer alive on this machine.
+  atomically rename it to .claims/<id>.claim (<id> = the canonical device-prefixed form,
+  e.g. pc-1407.claim) with no-overwrite semantics, retry once after ~2s on a transient
+  Windows filter-driver error before concluding anything, and treat an existing claim as
+  stale (safe to steal) only when its mtime is older than 4 hours AND the recorded pid is
+  no longer alive on this machine.
+
+  Id resolution lives in _shared.ps1's Resolve-TodoFile: a full id (pc-1407, any padding)
+  is used as-is; a bare number (1407) resolves to THIS device's label first, else a unique
+  match on another label, else an error naming the candidates; a legacy bare-numeric
+  filename reads as label pc.
 
   Batch form: -Id accepts a comma-separated list, either as separate PowerShell
-  arguments (-Id 03,04,05) or as one quoted string (-Id "03,04,05") - both bind and
-  claim every one of them in this single call. Handling N todos together this way costs
-  one remembered claim call, the same as handling one - see close/ai-todos-format.md's
+  arguments (-Id pc-0003,pc-0004) or as one quoted string (-Id "03,04,05") - both bind
+  and claim every one of them in this single call. Handling N todos together this way
+  costs one remembered claim call, the same as handling one - see close/ai-todos-format.md's
   Claims section for the incident (todo 484) this closes: a claim call that has to be
   remembered once per todo gets skipped exactly when several todos move at once.
 
-  The two forms are NOT equivalent when any id is zero-padded: PowerShell parses an
-  unquoted comma list as numeric literals before this script ever runs, so -Id 08,20
-  arrives here as "8","20" with the padding already gone (todo 1024) - complete-todo.ps1
-  still finds the resulting claim either way, but the quoted form (-Id "08,20") is the
-  one that preserves the id exactly as typed. Prefer it whenever an id might be padded.
+  A bare unquoted number list is NOT equivalent to the quoted form: PowerShell parses an
+  unquoted comma list of digits as numeric literals before this script ever runs, so
+  -Id 08,20 arrives here as "8","20" with the padding already gone (todo 1024). Padding is
+  irrelevant to the claim name (it is always the canonical 4-digit form), but the quoted
+  form (-Id "08,20") still preserves the id exactly as typed, and a full device-prefixed id
+  (pc-0008) sidesteps the issue entirely. Prefer one of those.
 
   Duplicate-id-safe: if an id matches more than one backlog file (a known collision
   case in this project), -Slug picks one and the claim is named "<id>-<slug>.claim" so
@@ -28,10 +35,10 @@
   the full filename stem instead of using -Slug (which only disambiguates a single id).
 
 .PARAMETER Id
-  A numeric todo id (leading zeros optional), a full filename stem to disambiguate an id
-  shared by two files (e.g. "434-real-slug"), or a comma-separated list of either for a
-  batch claim - as separate arguments (03,04,05) or one quoted string ("03,04,05" or
-  "03,434-real-slug,05"), both work.
+  A todo id (pc-1407, or a bare number 1407; leading zeros optional), a full filename stem
+  to disambiguate an id shared by two files (e.g. "pc-0434-real-slug"), or a
+  comma-separated list of either for a batch claim - as separate arguments or one quoted
+  string ("03,04,05" or "03,pc-0434-real-slug,05"), both work.
 
 .PARAMETER Slug
   Optional disambiguator when a single id matches more than one backlog file. Not valid
@@ -41,10 +48,10 @@
   Project root containing .claude/todos/. Defaults to the current directory.
 
 .EXAMPLE
+  ~/.claude/skills/close/claim-todo.ps1 -Id pc-0286
   ~/.claude/skills/close/claim-todo.ps1 -Id 286
-  ~/.claude/skills/close/claim-todo.ps1 -Id 434 -Slug chat-row-style-decide-and-delete-loser
-  ~/.claude/skills/close/claim-todo.ps1 -Id 03,04,05
-  ~/.claude/skills/close/claim-todo.ps1 -Id "03,04,05"
+  ~/.claude/skills/close/claim-todo.ps1 -Id pc-0434 -Slug chat-row-style-decide-and-delete-loser
+  ~/.claude/skills/close/claim-todo.ps1 -Id "pc-0003,pc-0004,pc-0005"
 #>
 param(
     [Parameter(Mandatory = $true)]
@@ -87,7 +94,7 @@ if ($rawIds.Count -eq 0) {
     exit 2
 }
 if ($rawIds.Count -gt 1 -and $Slug) {
-    Write-Host "ERROR: -Slug applies to a single id only. For a batch with a colliding id, pass its full filename stem inline instead (e.g. -Id 03,434-real-slug,05)." -ForegroundColor Red
+    Write-Host "ERROR: -Slug applies to a single id only. For a batch with a colliding id, pass its full filename stem inline instead (e.g. -Id `"pc-0003,pc-0434-real-slug,pc-0005`")." -ForegroundColor Red
     exit 2
 }
 
@@ -106,42 +113,95 @@ function Try-Rename {
     }
 }
 
+# Stale = mtime > 4h AND the recorded pid is no longer THIS identity. Returns the numbers
+# the callers' messages need alongside the verdict.
+function Get-ClaimStaleness {
+    param([string]$ClaimFile)
+
+    $existing = Get-Item -Path $ClaimFile
+    $existingPid = $null
+    $existingStartTicks = $null
+    $existingContent = Get-Content -Path $ClaimFile -Raw -ErrorAction SilentlyContinue
+    if ($existingContent -match 'pid:\s*(\d+)') {
+        $existingPid = [int]$matches[1]
+    }
+    if ($existingContent -match 'procStartTicks:\s*(\d+)') {
+        $existingStartTicks = [int64]$matches[1]
+    }
+
+    # A bare pid is not a reliable liveness signal: Windows recycles pids, so an
+    # unrelated later process can inherit the number and keep a dead session's
+    # claim alive forever (same recycled-pid failure the reservation markers hit).
+    # When the claim carries procStartTicks, liveness requires the pid to be
+    # running AND its own start time to match what was recorded. A claim written
+    # before this field existed has no start time to confirm against, so it
+    # falls back to the old pid-only check.
+    $hasStartSignal = [bool]$existingStartTicks
+    $pidAlive = $false
+    if ($existingPid -and $hasStartSignal) {
+        $proc = Get-Process -Id $existingPid -ErrorAction SilentlyContinue
+        if ($proc) { $pidAlive = ($proc.StartTime.Ticks -eq $existingStartTicks) }
+    }
+    elseif ($existingPid) {
+        $pidAlive = [bool](Get-Process -Id $existingPid -ErrorAction SilentlyContinue)
+    }
+
+    $ageHours = ((Get-Date) - $existing.LastWriteTime).TotalHours
+    return [pscustomobject]@{
+        IsStale  = (($ageHours -gt 4) -and (-not $pidAlive))
+        Pid      = $existingPid
+        AgeHours = $ageHours
+    }
+}
+
 # Claims one id; returns a result record instead of exiting, so a batch keeps going
 # past one bad id rather than aborting the whole call.
 function Claim-One {
     param([string]$RawId, [string]$SlugParam)
 
     $resolved = Resolve-TodoFile -Dir $todosDir -RawId $RawId -Slug $SlugParam
-    $numericId = $resolved.NumericId
-    $canonicalId = $resolved.CanonicalId
+    $todoId = $resolved.Id
     $slugLocal = $resolved.Slug
-    $idPattern = $resolved.Pattern
-    $backlogMatches = $resolved.Matches
+    $backlogMatches = @($resolved.Matches)
+
+    if ($resolved.Error) {
+        return [ordered]@{ Id = $todoId; Reason = 'error'; Message = $resolved.Error }
+    }
 
     if ($resolved.FellBack) {
-        Write-Info "WARNING: todo '$RawId' has no numeric prefix, which ai-todos-format.md treats as malformed. Claiming it anyway; rename it via reserve-todo-id.ps1 so it can be referenced by id."
+        Write-Info "WARNING: todo '$RawId' has no device-prefixed id, which ai-todos-format.md treats as malformed. Claiming it anyway; rename it via reserve-todo-id.ps1 so it can be referenced by id."
     }
 
     if ($backlogMatches.Count -eq 0) {
-        return [ordered]@{ Id = $numericId; Reason = 'error'; Message = "No active todo matching id '$RawId' found in $todosDir." }
-    }
-
-    $siblingCount = $backlogMatches.Count
-
-    if ($backlogMatches.Count -gt 0 -and $slugLocal) {
-        $slugPattern = "^0*$([regex]::Escape($canonicalId))-$([regex]::Escape($slugLocal))\.md$"
-        $backlogMatches = $backlogMatches | Where-Object { $_.Name -match $slugPattern }
-        if ($backlogMatches.Count -eq 0) {
-            return [ordered]@{ Id = $numericId; Reason = 'error'; Message = "No active todo matching id '$RawId' with slug '$slugLocal' found in $todosDir." }
+        if ($resolved.SiblingCount -gt 0 -and $slugLocal) {
+            return [ordered]@{ Id = $todoId; Reason = 'error'; Message = "No active todo matching id '$RawId' with slug '$slugLocal' found in $todosDir." }
         }
+        return [ordered]@{ Id = $todoId; Reason = 'error'; Message = "No active todo matching id '$RawId' found in $todosDir." }
     }
 
     if ($backlogMatches.Count -gt 1) {
-        return [ordered]@{ Id = $numericId; Reason = 'error'; Message = "Ambiguous id '$RawId': multiple files match in $todosDir - $($backlogMatches.Name -join ', '). Retry with -Slug <slug> or pass the full filename stem as -Id." }
+        return [ordered]@{ Id = $todoId; Reason = 'error'; Message = "Ambiguous id '$RawId': multiple files match in $todosDir - $($backlogMatches.Name -join ', '). Retry with -Slug <slug> or pass the full filename stem as -Id." }
     }
 
     $todoFile = $backlogMatches[0]
-    $claimName = if ($siblingCount -gt 1) { "$numericId-$slugLocal.claim" } else { "$numericId.claim" }
+    $claimName = if ($resolved.SiblingCount -gt 1) { "$todoId-$slugLocal.claim" } else { "$todoId.claim" }
+
+    # A claim a live session holds under an older name (a bare "1407.claim" from before
+    # device-prefixed ids) guards the same todo; leaving it be would let a second session
+    # claim it again under the canonical name.
+    if ($resolved.Label) {
+        $claimSlug = $null
+        if ($resolved.SiblingCount -gt 1) { $claimSlug = $slugLocal }
+        $olderNamed = @(Find-TodoClaims -ClaimsDir $claimsDir -Label $resolved.Label -Number $resolved.Number -Slug $claimSlug |
+            Where-Object { $_.Name -ne $claimName })
+        foreach ($old in $olderNamed) {
+            $oldState = Get-ClaimStaleness -ClaimFile $old.FullName
+            if (-not $oldState.IsStale) {
+                return [ordered]@{ Id = $todoId; Reason = 'conflict'; Message = "Todo $todoId already claimed under the older name $($old.Name) (pid $($oldState.Pid), age $([math]::Round($oldState.AgeHours, 2))h) - not stale, skipping." }
+            }
+            Remove-Item -Path $old.FullName -Force
+        }
+    }
 
     $claimPath = Join-Path $claimsDir $claimName
     $tempPath  = Join-Path $claimsDir "$claimName.tmp-$PID"
@@ -171,58 +231,28 @@ function Claim-One {
     }
 
     if ($claimed) {
-        return [ordered]@{ Id = $numericId; Reason = 'claimed'; Message = "Claimed todo $numericId ($($todoFile.Name)) -> .claims\$claimName" }
+        return [ordered]@{ Id = $todoId; Reason = 'claimed'; Message = "Claimed todo $todoId ($($todoFile.Name)) -> .claims\$claimName" }
     }
 
     if (-not (Test-Path $claimPath)) {
         Remove-Item -Path $tempPath -Force -ErrorAction SilentlyContinue
-        return [ordered]@{ Id = $numericId; Reason = 'error'; Message = "Failed to claim todo ${numericId}: rename to '$claimPath' did not succeed and no existing claim blocks it." }
+        return [ordered]@{ Id = $todoId; Reason = 'error'; Message = "Failed to claim todo ${todoId}: rename to '$claimPath' did not succeed and no existing claim blocks it." }
     }
 
-    # Destination exists - a real conflict. Stale = mtime > 4h AND recorded pid is dead.
-    $existing = Get-Item -Path $claimPath
-    $existingPid = $null
-    $existingStartTicks = $null
-    $existingContent = Get-Content -Path $claimPath -Raw -ErrorAction SilentlyContinue
-    if ($existingContent -match 'pid:\s*(\d+)') {
-        $existingPid = [int]$matches[1]
-    }
-    if ($existingContent -match 'procStartTicks:\s*(\d+)') {
-        $existingStartTicks = [int64]$matches[1]
-    }
-
-    # A bare pid is not a reliable liveness signal: Windows recycles pids, so an
-    # unrelated later process can inherit the number and keep a dead session's
-    # claim alive forever (todo 1083, same root cause 988 fixed for reservations).
-    # When the claim carries procStartTicks, liveness requires the pid to be
-    # running AND its own start time to match what was recorded. A claim written
-    # before this field existed has no start time to confirm against, so it
-    # falls back to the old pid-only check.
-    $hasStartSignal = [bool]$existingStartTicks
-    $pidAlive = $false
-    if ($existingPid -and $hasStartSignal) {
-        $proc = Get-Process -Id $existingPid -ErrorAction SilentlyContinue
-        if ($proc) { $pidAlive = ($proc.StartTime.Ticks -eq $existingStartTicks) }
-    }
-    elseif ($existingPid) {
-        $pidAlive = [bool](Get-Process -Id $existingPid -ErrorAction SilentlyContinue)
-    }
-
-    $ageHours = ((Get-Date) - $existing.LastWriteTime).TotalHours
-    $isStale = ($ageHours -gt 4) -and (-not $pidAlive)
-
-    if (-not $isStale) {
+    # Destination exists - a real conflict.
+    $state = Get-ClaimStaleness -ClaimFile $claimPath
+    if (-not $state.IsStale) {
         Remove-Item -Path $tempPath -Force -ErrorAction SilentlyContinue
-        return [ordered]@{ Id = $numericId; Reason = 'conflict'; Message = "Todo $numericId already claimed (pid $existingPid, age $([math]::Round($ageHours, 2))h) - not stale, skipping." }
+        return [ordered]@{ Id = $todoId; Reason = 'conflict'; Message = "Todo $todoId already claimed (pid $($state.Pid), age $([math]::Round($state.AgeHours, 2))h) - not stale, skipping." }
     }
 
     Remove-Item -Path $claimPath -Force
     if (Try-Rename -From $tempPath -To $claimPath) {
-        return [ordered]@{ Id = $numericId; Reason = 'claimed'; Message = "Existing claim for $numericId was stale (age $([math]::Round($ageHours, 2))h, pid $existingPid not alive or recycled) - reclaimed ($($todoFile.Name)) -> .claims\$claimName" }
+        return [ordered]@{ Id = $todoId; Reason = 'claimed'; Message = "Existing claim for $todoId was stale (age $([math]::Round($state.AgeHours, 2))h, pid $($state.Pid) not alive or recycled) - reclaimed ($($todoFile.Name)) -> .claims\$claimName" }
     }
 
     Remove-Item -Path $tempPath -Force -ErrorAction SilentlyContinue
-    return [ordered]@{ Id = $numericId; Reason = 'error'; Message = "Failed to reclaim stale claim for todo $numericId after clearing it." }
+    return [ordered]@{ Id = $todoId; Reason = 'error'; Message = "Failed to reclaim stale claim for todo $todoId after clearing it." }
 }
 
 $results = @()

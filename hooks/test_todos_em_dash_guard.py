@@ -22,6 +22,8 @@ ED = chr(0x2014)
 PATH_CASES = [
     (r"C:\Users\tecno\.claude\.claude\todos\318-x.md", True, "real double-.claude absolute path"),
     (".claude/todos/318-x.md", True, "relative forward-slash path"),
+    (".claude/todos/pc-0318-x.md", True, "device-prefixed todo file is in scope"),
+    (".claude/todos/done/mac2-0318-x.md", True, "device-prefixed done/ file is in scope"),
     (".claude\\todos\\318-x.md", True, "relative backslash path"),
     (r"C:\Users\tecno\.claude\.claude\todos\done\307-x.md", True, "done/ subfolder still in scope"),
     (r"C:\Users\tecno\.claude\skills\commit\em-dash.sh", False, "unrelated skill file"),
