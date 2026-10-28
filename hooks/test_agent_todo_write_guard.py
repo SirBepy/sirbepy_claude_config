@@ -63,6 +63,13 @@ def check_integration() -> list:
 
         done_path = done_dir / "291-old-thing.md"
 
+        # Device-prefixed ids (pc-1407): the guard must still block these, not fail open
+        # because the filename no longer starts with a digit.
+        prefixed_backlog_path = todos_dir / "pc-1407-new-finding-a-subagent-should-not-file.md"
+        other_label_backlog_path = todos_dir / "mac2-0003-new-finding-from-another-device.md"
+        prefixed_claim_path = claims_dir / "pc-1407.claim"
+        prefixed_done_path = done_dir / "pc-1407-old-thing.md"
+
         agent_payload_base = {"agent_id": "aaaeae68dcacc2c9d", "agent_type": "general-purpose"}
         orchestrator_payload_base = {"session_id": "top-level-session"}
 
@@ -103,6 +110,30 @@ def check_integration() -> list:
             (
                 agent_payload_base, "Bash", backlog_path, "content", backlog_content, 0,
                 "non-Write/Edit tool is out of scope regardless of agent_id",
+            ),
+            (
+                agent_payload_base, "Write", prefixed_backlog_path, "content", backlog_content, 2,
+                "subagent Write of a NEW device-prefixed backlog .md (pc-1407-*) is denied",
+            ),
+            (
+                agent_payload_base, "Edit", prefixed_backlog_path, "new_string", "updated body", 2,
+                "subagent Edit of a device-prefixed backlog .md is denied",
+            ),
+            (
+                agent_payload_base, "Write", other_label_backlog_path, "content", backlog_content, 2,
+                "subagent Write under another device label (mac2-0003-*) is denied",
+            ),
+            (
+                orchestrator_payload_base, "Write", prefixed_backlog_path, "content", backlog_content, 0,
+                "orchestrator Write of a device-prefixed backlog .md is allowed",
+            ),
+            (
+                agent_payload_base, "Write", prefixed_claim_path, "content", heartbeat_content, 0,
+                "subagent heartbeat of .claims/pc-1407.claim is allowed",
+            ),
+            (
+                agent_payload_base, "Write", prefixed_done_path, "content", "# Old thing\n", 0,
+                "subagent write targeting done/pc-1407-*.md is out of this guard's scope",
             ),
         ]
 

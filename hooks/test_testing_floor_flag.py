@@ -31,6 +31,7 @@ IS_SOURCE_CASES = [
     ("package.json", False, ".json excluded (config-shaped)"),
     ("Cargo.toml", False, ".toml excluded (config-shaped)"),
     (".claude/todos/427-thing.md", False, "todos dir segment excluded"),
+    (".claude/todos/pc-0427-thing.md", False, "device-prefixed todo file excluded by the same todos segment"),
     ("skills/commit/SKILL.md", False, "skills dir segment excluded (and .md)"),
     ("skills/commit/commit-pathspec.sh", False, "skills dir segment excludes even a .sh"),
     ("refs/process-hygiene.md", False, "refs dir segment excluded"),

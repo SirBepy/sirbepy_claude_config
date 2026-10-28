@@ -102,3 +102,6 @@ hooks/.testing-floor-skip
 
 # impeccable's per-project hook dedup cache, rewritten on every UI edit
 **/.impeccable/hook.cache.json
+
+# Per-machine device label for todo ids (pc, mac, pc2...): differs on every machine, never committed
+device-label

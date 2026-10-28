@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Todo-number-in-comment prefilter: flags an added code comment that cites a backlog todo id by
-# number (a marker, whitespace, then "todo" plus an id - an optional space or dash, an optional
-# "#", then one to four digits) so a builder dispatch's prose instruction isn't the only thing
-# stopping it from landing in source. A bare marker/word with no trailing digits is NOT flagged -
-# only the numbered-id shape is. Fix-and-continue treatment like comment-tense.sh, not a STOP
+# id (a marker, whitespace, then "todo" plus an id - an optional space or dash, an optional "#",
+# an optional device label and dash such as the "pc-" or "mac2-" prefix of a device-prefixed id,
+# then the digits) so a builder dispatch's prose instruction isn't the only thing stopping it
+# from landing in source. A bare marker/word with no trailing digits is NOT flagged - only the
+# numbered-id shape is. Fix-and-continue treatment like comment-tense.sh, not a STOP
 # like secret-scan.sh. This comment block deliberately never spells out a real example in the
 # flagged shape (marker-whitespace-"todo"-id), or the check would flag its own source.
 
@@ -19,8 +20,8 @@ script_dir=$(cd "$(dirname "$0")" && pwd)
 # `--` used as an operator mid-line never matches: the line itself must OPEN with a marker then
 # whitespace. gawk's `\y` is a word-boundary (its `\b` means backspace, not a boundary), which is
 # what keeps an unrelated word ending in digits, or a URL path segment, from matching while still
-# catching the real shape (word, then an optional space-or-dash, an optional "#", then digits),
-# case-insensitively.
+# catching the real shape (word, then an optional space-or-dash, an optional "#", an optional
+# device label plus dash, then digits), case-insensitively.
 AWK='
 BEGIN { IGNORECASE = 1 }
 /^diff --git / { f="?"; next }
@@ -29,7 +30,7 @@ BEGIN { IGNORECASE = 1 }
   if (f ~ /\.(md|mdx)$/) next
   if (f ~ /(^|\/)\.claude\/todos\//) next
   l=substr($0,2)
-  if (l ~ /^[[:space:]]*(\/\/|#|\/\*|\*|--)[[:space:]].*\ytodo[ -]?#?[0-9]+\y/) {
+  if (l ~ /^[[:space:]]*(\/\/|#|\/\*|\*|--)[[:space:]].*\ytodo[ -]?#?([a-z]+[0-9]*-)?[0-9]+\y/) {
     printf "%s: %s\n", f, l
   }
   next

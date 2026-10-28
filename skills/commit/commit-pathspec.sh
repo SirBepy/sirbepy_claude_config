@@ -22,7 +22,10 @@
 # complete-todo.ps1's own output - `.claude/todos/done/<id>-*.md` when that file exists on disk,
 # and `.claude/todos/<id>-*.md` when git still tracks it (an untracked, peer-filed todo has no
 # source half to name, so only the done/ file is added). `--` may be given with zero explicit
-# files when --todo alone supplies the whole pathspec.
+# files when --todo alone supplies the whole pathspec. <id> is the device-prefixed form
+# (`pc-1407`, any padding) or a bare number, resolved by hooks/_todo_ids.py exactly as the
+# PowerShell scripts do (this device's label first, else a unique other label, else an error);
+# a legacy bare-numeric filename still matches as label pc.
 #
 # --own-range is OPTIONAL per file: when a file has no explicit range, this script derives it
 # from the file's own current `@@` hunk headers (the same "1-9999" assumption step 8 already made
@@ -247,11 +250,28 @@ for k in "${!normalized_ranges[@]}"; do explicit_ranges["$k"]="${normalized_rang
 # `git ls-files` on it correctly returns nothing rather than a path to add.
 declare -A todo_seen
 for f in "${files[@]}"; do todo_seen["$f"]=1; done
+todo_ids_py="$dir/../../hooks/_todo_ids.py"
 for tid in "${todo_ids[@]}"; do
-  shopt -s nullglob
-  for donef in "$repo_root"/.claude/todos/done/"$tid"-*.md; do
-    [ -e "$donef" ] || continue
-    rel="${donef#"$repo_root"/}"
+  # Candidate paths: everything in done/ on disk plus everything git still tracks as a live
+  # backlog file (its working-tree copy may already be gone). The id match is delegated to the
+  # shared parser so a bare number, a padded/unpadded label form and a legacy name all resolve
+  # the way complete-todo.ps1 resolved them.
+  candidates=$(
+    {
+      for donef in "$repo_root"/.claude/todos/done/*.md; do
+        [ -e "$donef" ] && printf '%s\n' "${donef#"$repo_root"/}"
+      done
+      git_c ls-files -- ':(glob).claude/todos/*.md' 2>/dev/null
+    }
+  )
+  matched=$(printf '%s\n' "$candidates" | python "$todo_ids_py" match "$tid"); mrc=$?
+  if [ "$mrc" -ne 0 ]; then
+    printf 'ERROR: --todo %s: could not resolve the id (exit %s). Pass a device-prefixed id such as pc-1407.\n' "$tid" "$mrc"
+    exit 2
+  fi
+  while IFS= read -r rel; do
+    rel="${rel%$'\r'}"
+    [ -z "$rel" ] && continue
     # A repo that keeps todos local lists .claude/todos/ in .git/info/exclude; `git add` refuses
     # an ignored path and aborts the whole commit, so the flag drops it instead.
     if git_c check-ignore -q -- "$rel" 2>/dev/null; then
@@ -262,19 +282,7 @@ for tid in "${todo_ids[@]}"; do
       todo_seen["$rel"]=1
       files+=("$rel")
     fi
-  done
-  shopt -u nullglob
-  while IFS= read -r -d '' trackedf; do
-    [ -z "$trackedf" ] && continue
-    if git_c check-ignore -q -- "$trackedf" 2>/dev/null; then
-      printf '[todo] %s skipped as ignored by this repo (--todo %s adds only paths git will stage)\n' "$trackedf" "$tid"
-      continue
-    fi
-    if [ -z "${todo_seen[$trackedf]:-}" ]; then
-      todo_seen["$trackedf"]=1
-      files+=("$trackedf")
-    fi
-  done < <(git_c ls-files -z -- ".claude/todos/${tid}-*.md" 2>/dev/null)
+  done <<< "$matched"
 done
 
 if [ "${#files[@]}" -eq 0 ]; then

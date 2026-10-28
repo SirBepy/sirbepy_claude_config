@@ -23,8 +23,9 @@
   Staged-pathspec coverage check - unchanged.
 
 .PARAMETER Items
-  One or more "<id>|<note>" pairs, e.g. "286|fixed the off-by-one". The note half is
-  optional - "286" alone completes with no Notes bullet appended.
+  One or more "<id>|<note>" pairs, e.g. "pc-0286|fixed the off-by-one". The id is
+  device-prefixed (pc-0286) or a bare number (resolved by Resolve-TodoFile). The note half
+  is optional - "pc-0286" alone completes with no Notes bullet appended.
 
 .PARAMETER RepoRoot
   Project root containing .claude/todos/. Passed through to complete-todo.ps1 unchanged;
@@ -37,7 +38,7 @@
   Exits 1 if any item failed, so the caller cannot mistake a partial batch for a clean one.
 
 .EXAMPLE
-  $result = & ~/.claude/skills/mega-todos/archive-batch.ps1 -Items "286|fixed the bug","97|done"
+  $result = & ~/.claude/skills/mega-todos/archive-batch.ps1 -Items "pc-0286|fixed the bug","pc-0097|done"
   $result.Pathspec
   $result.Failures
 #>
@@ -74,18 +75,26 @@ if (-not (Test-Path $todosDir)) {
 
 . (Join-Path $PSScriptRoot '..\close\_shared.ps1')
 
-# Mirrors Resolve-TodoFile's numericId normalization (strip a leading-zero run before
-# the hyphen) so a filename prefix and an -Items entry compare equal either way.
-function Get-NormalizedTodoId([string]$RawId) {
-    if ($RawId -match '^0*(\d+)-(.+)$') { return $matches[1] }
-    return $RawId
+# Normalises an -Items id for the defence-in-depth check at the bottom, via the shared
+# parser so no second copy of the id shape lives here. A labelled id compares as its
+# canonical form (any padding), a bare number as a number matching ANY label (resolution
+# picks the label - this device's first - so the check must not second-guess it), and a
+# prefix-less stem as the whole stem.
+function Add-InputId([string]$RawId) {
+    $parsed = Parse-TodoId $RawId
+    if ($null -eq $parsed) { [void]$inputIds.Add("stem:$($RawId.ToLowerInvariant())"); return }
+    if ($parsed.Label) { [void]$inputIds.Add((Format-TodoId $parsed.Label $parsed.Number)) }
+    else { [void]$inputIds.Add("num:$($parsed.Number)") }
 }
 
-# Prefix-less stems (Resolve-TodoFile's fallback path) have no "<id>-" to strip,
-# so the whole stem IS the id for matching purposes.
-function Get-FilenameIdPrefix([string]$Name) {
-    if ($Name -match '^0*(\d+)-') { return $matches[1] }
-    return [System.IO.Path]::GetFileNameWithoutExtension($Name)
+# The same normalisation for a returned pathspec entry's filename: true when it traces
+# back to an input id.
+function Test-FilenameInInput([string]$Name) {
+    $info = Get-TodoNameInfo $Name
+    if ($null -eq $info) {
+        return $inputIds.Contains("stem:$([System.IO.Path]::GetFileNameWithoutExtension($Name).ToLowerInvariant())")
+    }
+    return ($inputIds.Contains((Format-TodoId $info.Label $info.Number)) -or $inputIds.Contains("num:$($info.Number)"))
 }
 
 $pathspec = New-Object System.Collections.Generic.List[string]
@@ -96,19 +105,18 @@ foreach ($item in $Items) {
     $parts = $item -split '\|', 2
     $id = $parts[0].Trim()
     $note = if ($parts.Count -gt 1) { $parts[1].Trim() } else { $null }
-    [void]$inputIds.Add((Get-NormalizedTodoId $id))
+    Add-InputId $id
 
     # Resolve against the LIVE backlog only, before archiving moves the file -
     # done/ is never globbed here, which is the bug this script exists to kill.
     $resolved = Resolve-TodoFile -Dir $todosDir -RawId $id
-    $matches_ = $resolved.Matches
-    # Resolve-TodoFile extracts a slug from a full "<id>-<slug>" stem but does not
-    # itself filter by it (complete-todo.ps1 does this filter inline; mirrored here
-    # so a stem passed as -Id can disambiguate a live-backlog id collision too).
-    if ($matches_ -and @($matches_).Count -gt 1 -and $resolved.Slug) {
-        $slugPattern = "^0*$([regex]::Escape($resolved.NumericId))-$([regex]::Escape($resolved.Slug))\.md$"
-        $matches_ = $matches_ | Where-Object { $_.Name -match $slugPattern }
+    if ($resolved.Error) {
+        $failures.Add("id '$id': $($resolved.Error)")
+        continue
     }
+    # Resolve-TodoFile already narrows by the slug in a full "<id>-<slug>" stem, so a
+    # stem passed as -Id disambiguates a live-backlog id collision.
+    $matches_ = @($resolved.Matches)
     if (-not $matches_ -or @($matches_).Count -ne 1) {
         $failures.Add("id '$id': $(@($matches_).Count) live backlog matches, expected 1 - not archived")
         continue
@@ -163,9 +171,9 @@ foreach ($p in $pathspec) {
     if (-not $normalized.StartsWith($todosDir, [System.StringComparison]::OrdinalIgnoreCase)) {
         throw "archive-batch.ps1: refusing to return pathspec entry '$p' - not under '$todosDir' and not PLAN.md"
     }
-    $prefix = Get-FilenameIdPrefix (Split-Path -Leaf $p)
-    if (-not $inputIds.Contains($prefix)) {
-        throw "archive-batch.ps1: refusing to return pathspec entry '$p' - id prefix '$prefix' was not in the input id set"
+    $leaf = Split-Path -Leaf $p
+    if (-not (Test-FilenameInInput $leaf)) {
+        throw "archive-batch.ps1: refusing to return pathspec entry '$p' - '$leaf' does not trace back to any input id"
     }
 }
 

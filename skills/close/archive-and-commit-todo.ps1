@@ -31,7 +31,7 @@
   individual call would.
 
 .PARAMETER Id
-  The numeric todo id (or full "<id>-<slug>" stem), same as complete-todo.ps1's -Id.
+  The todo id (pc-1407, a bare number, or full "<id>-<slug>" stem), same as complete-todo.ps1's -Id.
   Must resolve to exactly one file in the LIVE backlog (.claude\todos\, not done\) - this
   script archives a todo, it does not re-commit one that is already archived. If the todo
   is already in done\, there is nothing left to move: call commit-pathspec.sh directly.
@@ -74,13 +74,13 @@
   (matches commit-pathspec.sh's own exit code for "could not run").
 
 .EXAMPLE
-  ~/.claude/skills/close/archive-and-commit-todo.ps1 -Id 978 `
+  ~/.claude/skills/close/archive-and-commit-todo.ps1 -Id pc-0978 `
     -Note "shipped --own-since and this wrapper" `
     -Message "FEAT: archive-and-commit-todo wrapper, --own-since (todo 978)" `
     -Files skills/commit/commit-pathspec.sh, skills/commit/test_commit_pathspec.sh, skills/close/archive-and-commit-todo.ps1
 
 .EXAMPLE
-  ~/.claude/skills/close/archive-and-commit-todo.ps1 -Id 434 -Slug chat-row-style-decide-and-delete-loser `
+  ~/.claude/skills/close/archive-and-commit-todo.ps1 -Id pc-0434 -Slug chat-row-style-decide-and-delete-loser `
     -Message "CHORE: archive todo 434" -Files @() -OwnSince a1b2c3d
 #>
 param(
@@ -154,11 +154,11 @@ if (-not (Test-Path $todosDir)) {
 . (Join-Path $PSScriptRoot '_shared.ps1')
 
 $resolved = Resolve-TodoFile -Dir $todosDir -RawId $Id -Slug $Slug
-$liveMatches = $resolved.Matches
-if ($liveMatches -and $resolved.Slug) {
-    $slugPattern = "^0*$([regex]::Escape($resolved.NumericId))-$([regex]::Escape($resolved.Slug))\.md$"
-    $liveMatches = $liveMatches | Where-Object { $_.Name -match $slugPattern }
+if ($resolved.Error) {
+    Write-Error "[$RepoRoot] archive-and-commit-todo.ps1: $($resolved.Error)"
+    exit 1
 }
+$liveMatches = $resolved.Matches
 if (-not $liveMatches -or @($liveMatches).Count -ne 1) {
     $count = @($liveMatches).Count
     Write-Error "[$RepoRoot] archive-and-commit-todo.ps1: expected exactly 1 LIVE backlog match for id '$Id' in $todosDir, found $count. This script only archives a todo that is still live - if '$Id' is already in done\, there is nothing to move: call commit-pathspec.sh directly with your changed files."
