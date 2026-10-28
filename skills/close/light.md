@@ -43,7 +43,7 @@ Then dispatch ONE `Agent` call with `subagent_type: "general-purpose"`, `model: 
 > Memory dir: derive from the current project per the Global Knowledge Vault section of CLAUDE.md (vault for cross-project facts and people, native per-project Auto Memory under `~/.claude/projects/<sanitized-cwd>/memory/` for project-local ones) - never hardcode a project path.
 > For each entry in `memory`: write the file at `<memory dir>/<file>` with the given frontmatter + body. Then append a pointer line to `MEMORY.md` if not already present.
 >
-> `.claude/todos/`: for each entry in `ai_todos`, follow `C:\Users\tecno\.claude\skills\close\ai-todos-format.md` - reserve the id via `~/.claude/skills/close/reserve-todo-id.ps1 -RepoRoot <repo>` (never hand-scan for max+1), write `<id>-<slug>.md` with standard sections including `**Type:**` and `**Origin:**` lines (the entry's own `origin` value), and self-heal the `.git/info/exclude` entries per that doc's Git policy.
+> `.claude/todos/`: for each entry in `ai_todos`, follow `C:\Users\tecno\.claude\skills\close\ai-todos-format.md` - reserve the id via `~/.claude/skills/close/reserve-todo-id.ps1 -RepoRoot <repo>` (never hand-scan for max+1), write `<id>-<slug>.md` (the reserved id, `pc-NNNN` form) with standard sections including `**Type:**`, `**Origin:**` (the entry's own `origin` value) and `**Summary:**` (required, one plain sentence) lines, plus a `## Why` section only when the entry states the reason (never invented), and self-heal the `.git/info/exclude` entries per that doc's Git policy.
 >
 > Payload: `<JSON>`
 

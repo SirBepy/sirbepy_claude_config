@@ -2,7 +2,7 @@
 
 Single source of truth for the per-project todo system. Every skill that reads or writes todos
 (`/close`, `/create-todo`, `/code-check`, `/batch-todos`, `/plan-todos`, `/pickup`, autopilot,
-ad-hoc "do todo 07" runs) follows this file instead of restating its rules.
+ad-hoc "do todo pc-0007" runs) follows this file instead of restating its rules.
 
 ## Layout
 
@@ -10,9 +10,9 @@ All per-project, at the project root:
 
 ```
 .claude/todos/
-  07-fix-auth-redirect.md      # backlog: one md file per task
-  12-continue-plan-layer.md    # handoffs are normal todos too
-  PLAN.md                      # ordered To-Do lane (optional per project)
+  pc-0007-fix-auth-redirect.md   # backlog: one md file per task
+  pc-0012-continue-plan-layer.md # handoffs are normal todos too
+  PLAN.md                        # ordered To-Do lane (optional per project)
   done/                        # completed todos (moved here, ids stay burned)
   .claims/                     # active-claim lock files (NEVER git-tracked)
   dropped-findings.log         # findings /code-check dropped rather than filed (append-only)
@@ -33,6 +33,12 @@ Historical note: this folder replaced `.for_bepy/ai_todos/` (migrated 2026-07-15
 `.for_bepy/ai_todos/` still exists in some repo, treat it as unmigrated legacy: move its files
 into `.claude/todos/` before working.
 
+Historical note: ids were bare numbers (`1407-slug.md`) until 2026-10-28, when
+`tools/migrate-todo-ids.py` renamed every backlog file, `done/` file, PLAN.md line, claim and
+reserve marker to the device-prefixed form (`pc-1407-slug.md`) in one pass. A repo the migration
+has not reached yet still works: a bare-numeric filename reads as label `pc` (see "Backlog file:
+filename and id").
+
 ## Git policy
 
 Default: NOT committed anywhere. Any skill that writes into `.claude/todos/` first ensures
@@ -52,21 +58,40 @@ Appending the missing line(s) is idempotent self-healing; do it silently at poin
 
 ## Backlog file: filename and id
 
-Zero-padded numeric prefix + kebab-case slug: `03-tighten-onboarding-step-redirect.md`.
-The prefix is the stable id; the dev references tasks by id ("do todo 03").
+`<label>-<NNNN>-<kebab-slug>.md`: a device label, a zero-padded number, then the slug, e.g.
+`pc-0007-tighten-onboarding-step-redirect.md`. `<label>-<NNNN>` is the stable id (`pc-0007`); the
+dev references tasks by id ("do todo pc-0007").
+
+- **Device label** = kind + number, lowercase, regex `^[a-z]+[0-9]*$`: `pc`, `mac`, `pc2`, `mac2`.
+  Each machine stores its own label, one line, in the untracked `~/.claude/device-label`. Scripts
+  that need it fail loudly with a one-line fix when the file is missing and never fall back to a
+  default: a second PC defaulting to `pc` would hand out ids that collide with the first. Why a
+  label at all: todos filed on two machines can merge into one backlog (git, sync, a mirrored
+  peer) without their ids clashing.
+- **Number**: written zero-padded to 4 digits (`pc-0007`; past 9999 it simply grows), read with
+  any padding (`pc-7` is `pc-0007`). **One counter per device**: the next number is that label's
+  own max + 1, so `pc` and `mac` count independently.
+- **Canonical form in all output and PLAN.md/claims/markers is `pc-0007`.**
+- **Bare-number references** ("do todo 1407", `-Id 1407`) resolve to THIS device's label first;
+  if this device has no such number, a unique match under another label is accepted; several
+  labels matching is an ambiguity error naming every candidate, never a guess.
+- **Legacy bare-numeric files** (`1407-slug.md`, `07-x.md`) still resolve and read as label `pc`
+  (every legacy todo was made on the pc), so a repo the migration has not reached does not break.
+  Writers never create one.
 
 **Picking the next id: reserve it, don't just read it.** Reading the directory for max+1 and
 then writing has a race window between two concurrent sessions - observed three times in a row
-on 2026-08-14 in this exact backlog (see [[336-todo-id-allocation-races-between-concurrent-sessions]]).
+on 2026-08-14 in this exact backlog (see [[pc-0336-todo-id-allocation-races-between-concurrent-sessions]]).
 The id is claimed the same way execution is claimed:
 
 1. Run `~/.claude/skills/close/reserve-todo-id.ps1 -RepoRoot <repo root>`. It scans
    `.claude/todos/*.md`, `done/*.md`, and any live `*-.reserved` markers for the current max
-   numeric prefix, then atomically claims `max+1` by renaming a private temp file onto
-   `.claude/todos/<id>-.reserved` with no-overwrite semantics (fails if the destination
-   exists, same primitive the Claims mutex below uses). On collision it retries with a fresh
-   scan, up to 20 attempts, so two sessions filing at once get two different ids without
-   either overwriting the other. It prints the reserved id.
+   number carrying THIS device's label (other labels' ids never move this device's counter),
+   then atomically claims `max+1` by renaming a private temp file onto
+   `.claude/todos/<id>-.reserved` (e.g. `pc-1407-.reserved`) with no-overwrite semantics (fails
+   if the destination exists, same primitive the Claims mutex below uses). On collision it
+   retries with a fresh scan, up to 20 attempts, so two sessions filing at once get two
+   different ids without either overwriting the other. It prints the reserved id (`pc-1407`).
 2. Write `.claude/todos/<id>-<slug>.md` using that id.
 3. Delete `.claude/todos/<id>-.reserved` immediately after the write succeeds. This is the
    only way a reservation is consumed - do not leave it lying around.
@@ -84,9 +109,10 @@ overwrite, never renumber the other session's file.
 <slug>` or the full filename stem as `-Id` to `claim-todo.ps1` / `complete-todo.ps1`; an
 ambiguous id with no disambiguator errors naming both candidate filenames rather than guessing.
 
-**A backlog file with NO numeric prefix is malformed.** The prefix IS the id, so a prefix-less file
-cannot be referenced by the dev, cannot appear in PLAN.md, and cannot be ordered by `/plan-todos`.
-Rename it via `reserve-todo-id.ps1` to give it one. Both helper scripts still accept its bare stem
+**A backlog file with NO `<label>-<number>-` prefix (and no legacy bare-numeric prefix) is
+malformed.** The prefix IS the id, so a prefix-less file cannot be referenced by the dev, cannot
+appear in PLAN.md, and cannot be ordered by `/plan-todos`. Rename it via `reserve-todo-id.ps1` to
+give it one. Both helper scripts still accept its bare stem
 as `-Id` and emit a warning naming that fix, deliberately: refusing outright would leave the file
 archivable only by hand, and hand-archiving bypasses the claims mutex, which is the exact race the
 mutex exists to prevent (three such files hit this during the 2026-08-19 run). Settled 2026-08-25
@@ -118,8 +144,9 @@ autopilot): never block on this - log the supersession and continue. `/create-to
 Anti-patterns section carries the concrete recipe this mirrors.
 
 Backstopped by `hooks/todo-duplicate-guard.py`, a `PreToolUse` hook on `Write` matching
-`\.claude/todos/\d+-.*\.md$`: it greps the destination backlog and `done/` for salient tokens
-from the new file's title and blocks advisory-style, listing the candidate hit(s), when the
+a backlog filename (`.claude/todos/<label>-<number>-<slug>.md`, or a legacy bare-numeric one):
+it greps the destination backlog and `done/` for salient tokens from the new file's title and
+blocks advisory-style, listing the candidate hit(s), when the
 overlap is real (3+ shared tokens, or 2+ covering most of a short title) - a shared word or two
 never trips it. Resolve a genuine hit via the three outcomes above; a false positive on a
 distinct todo that only shares vocabulary is unblocked by adding `<!-- duplicate-checked -->`
@@ -133,6 +160,12 @@ anywhere in the new content.
 
 **Type:** task | skill-improvement
 **Origin:** ai | dev
+**Summary:** <one plain sentence: the outcome, readable by Joe at a glance>
+
+## Why
+
+<What Joe wants / why this exists, ideally his own words with a date. OPTIONAL: only when the
+reason is actually known. Never invent one; omit the section instead.>
 
 ## Goal
 
@@ -177,6 +210,15 @@ next session.
   unknown, and unknown is treated exactly like `ai` - nothing silently escapes the `/cleanup-todos`
   gate. Whoever WRITES the todo sets `Origin`; it is never upgraded from `ai` to `dev` just because
   the dev later read it or approved executing it - approval to execute is not authorship.
+- `**Summary:**` is required on every new todo: ONE plain sentence naming the outcome, in words
+  Joe can read at a glance (no jargon-only shorthand, no file paths needed). It is what the
+  Conductor Backlog panel and any list view show instead of opening the file, so Goal and Summary
+  are not the same text: Goal is the working statement for the executor, Summary is the headline.
+  An older todo without one is read with Goal's first sentence as the fallback.
+- `## Why` is optional and sits before `## Goal`: what Joe wants and why this exists, ideally his
+  own words with a date ("Joe, 2026-10-28: ..."). Write it only when the reason is actually known
+  from the session or the file; when it is not, omit the section. An invented reason is worse
+  than none, since a cold session will trust it.
 - **Context's receipt-or-UNVERIFIED contract is the only way causal claims are enforced here.**
   2026-09-28, `claude_usage_in_taskbar`: a Context section asserted a test failure's cause
   outright with no measurement behind it, that cause was relayed to a peer session making a
@@ -204,6 +246,9 @@ is exactly the case that produced the original incident (two todos already cover
 caught only by luck reading filenames). Fill every section from the session itself, no
 clarifying questions:
 
+- **Summary** - one plain sentence naming the outcome the next session is after.
+- **Why** - the dev's own words (dated) on why this work matters, when the session states it;
+  omitted otherwise.
 - **Goal** - what the dev is ultimately trying to achieve (the original ask, not the last subtask).
 - **Context** - what was tried and in what order, where it failed or stalled, what the
   misunderstandings were (places the dev corrected course, wrong assumptions made), and any
@@ -243,22 +288,25 @@ Pointers only - task content lives in the todo files, never copied here.
 
 ## <optional phase heading>
 
-- [ ] 12 - continue plan-layer work
-- [ ] 07 [P]
-- [ ] 09 [P]
+- [ ] pc-0012 - continue plan-layer work
+- [ ] pc-0007 [P]
+- [ ] pc-0009 [P]
 ```
 
-- A line is `- [ ] <id>` plus an optional ` - <short label>` (a human-skimming courtesy; the id
+- A line is `- [ ] <id>` (the full `pc-1407` form) plus an optional ` - <short label>` (a human-skimming courtesy; the id
   is the only authoritative part - never trust a label over the todo file's title) and an
   optional `[P]` marker meaning "safe to run in parallel with adjacent [P] items" (used by
   orchestrators dispatching subagents; unmarked = sequential).
-- **The id is written plain, never bold/underscored/backtick-wrapped** (`- [ ] 12`, not
-  `- [ ] **12**`). This settles a conflict found 2026-08-19: practice had drifted to bold ids,
+- **The id is written plain, never bold/underscored/backtick-wrapped** (`- [ ] pc-0012`, not
+  `- [ ] **pc-0012**`). This settles a conflict found 2026-08-19: practice had drifted to bold ids,
   and `complete-todo.ps1`'s prune step didn't recognize that style, so completed todos left
   stale bold lines behind while the script reported success. The prune regex now tolerates
   `**id**`/`__id__`/`` `id` `` on read (so old bold lines and hand-edits still get cleaned up),
   but every writer of a NEW line uses the plain form from here on.
-- `## Phase` headings group items; order within and across phases is top-to-bottom execution order.
+- `## ` headings are the plan groups (a phase, or one group per release); order within and across
+  groups is top-to-bottom execution order. The Conductor Backlog panel reorders lines and moves
+  items between groups and the unplanned Backlog, and its edits are line-scoped CAS edits exactly
+  like the rule below, so hand-editing PLAN.md stays safe alongside it.
 - NO claim or done state lives here. Claims live in `.claims/`; done = the line gets deleted.
 - **Vanished ids:** a line whose todo file no longer exists in the backlog is silently pruned by
   the next reader - never an error.
@@ -270,10 +318,10 @@ Pointers only - task content lives in the todo files, never copied here.
 
 ## Claims - the mutex every executor obeys
 
-Before ANY execution of a todo (picker, /batch-todos, autopilot, ad-hoc "do todo 07"): claim it.
+Before ANY execution of a todo (picker, /batch-todos, autopilot, ad-hoc "do todo pc-0007"): claim it.
 Reading/browsing todos needs no claim - only execution does. Creation needs no claim either
 (the filename race guard covers it), and neither does archiving one when nothing was executed to
-reach that outcome: a dev-instructed archival ("archive 05 and 12") or a verdict-only close with no
+reach that outcome: a dev-instructed archival ("archive pc-0005 and pc-0012") or a verdict-only close with no
 code written has no execution window a concurrent session could collide with - move it straight to
 `done/` via `complete-todo.ps1`, no claim needed. This is not a loophole for skipping real work: any
 todo where code is written, a file is edited, or a command is run to decide the outcome still claims
@@ -282,7 +330,7 @@ showed two of four unclaimed completions were exactly this case, not a violation
 
 **Claiming is a side effect of the call that starts the work, never a separate remembered step.**
 Every executor below (`/pickup`, `/batch-todos`, `/auto-do-todos`) claims in the same tool call that
-begins reading or acting on the todo(s) - chained (`claim-todo.ps1 -Id 07; Get-Content <path>`), not
+begins reading or acting on the todo(s) - chained (`claim-todo.ps1 -Id pc-0007; Get-Content <path>`), not
 a preceding standalone call the model has to recall on its own. **Handling N todos in one pass costs
 one remembered claim call, the same as handling one:** claim every id in the batch up front, in a
 single `claim-todo.ps1` invocation, before starting work on any of them - see the batch form below.
@@ -290,7 +338,7 @@ A claim that has to be remembered once per todo is exactly the case that gets sk
 todos move together; collapsing N calls into one removes that failure mode without adding a fifth
 place that says "remember to claim".
 
-**Claim = one file per task:** `.claude/todos/.claims/<id>.claim`.
+**Claim = one file per task:** `.claude/todos/.claims/<id>.claim` (e.g. `.claims/pc-1407.claim`).
 
 1. Ensure `.claims/` exists and the git-policy exclude lines are present (self-heal above).
 2. Write your claim content to a private temp name: `.claims/<id>.tmp-<pid>`.
@@ -309,11 +357,13 @@ Scripted mechanism for the whole sequence above: `~/.claude/skills/close/claim-t
 [-Slug <slug>] [-RepoRoot <path>]`. Implements steps 1-4 verbatim, including the retry and the
 staleness rule below. When the id matches more than one backlog file (a known collision case -
 see below), pass `-Slug <slug>` or the full filename stem as `-Id`; the claim is then named
-`<id>-<slug>.claim` so the two files claim independently.
+`<id>-<slug>.claim` so the two files claim independently. `-Id` takes the full `pc-1407` or a
+bare `1407`; a bare number resolves per the id rules above and the claim file is always named by
+the canonical `pc-1407` form.
 
-**Batch form:** `-Id` accepts a comma-separated list (`-Id 03,04,05`) and claims every one of them
+**Batch form:** `-Id` accepts a comma-separated list (`-Id pc-0003,pc-0004,pc-0005`) and claims every one of them
 in this single call. `-Slug` only disambiguates a single id, so embed a colliding id's slug inline
-as its full stem within the list instead (`-Id 03,434-real-slug,05`). Each id in the batch is
+as its full stem within the list instead (`-Id pc-0003,pc-0434-real-slug,pc-0005`). Each id in the batch is
 attempted independently - one bad or already-claimed id does not stop the rest from being claimed.
 Exit codes cover the whole batch: 0 when every id claimed clean (fresh or reclaimed-stale), 1
 (informational, not an error) when one or more ids lost to a live non-stale claim - those ids are
@@ -340,7 +390,7 @@ confirmed alive is NOT stale - a long session is working; skip that todo.
 also means: move the todo to `done/`, delete its PLAN.md line.
 
 Archiving is a two-path change (a delete in `.claude/todos/`, an add under `done/`): a commit
-pathspec naming only one half drops the other, the exact recurrence `done/495-commit-pathspec-drops-the-source-half-of-a-git-mv.md`
+pathspec naming only one half drops the other, the exact recurrence `done/pc-0495-commit-pathspec-drops-the-source-half-of-a-git-mv.md`
 traces - `/commit`'s "Staged-pathspec coverage check" bullet (step 8 of `skills/commit/SKILL.md`) is
 what catches it, so name both paths there rather than re-deriving the check here.
 `skills/commit/commit-pathspec.sh --todo <id>` builds both halves itself (todo 1105): hand the
@@ -363,7 +413,7 @@ manual three-step sequence above remains the documented fallback if the script i
 ## Two endings, and the tell that picks between them
 
 **Every executor obeys this**, not just `/pickup`: `/batch-todos`, `/autopilot`, `/auto-do-todos`,
-`/mega-todos` and an ad-hoc "do todo 07" all end a todo through this contract. Decide against the
+`/mega-todos` and an ad-hoc "do todo pc-0007" all end a todo through this contract. Decide against the
 todo FILE, not against how the session felt.
 
 - **Completed** - every `## Acceptance` item is satisfied AND the Goal does not name an epic or

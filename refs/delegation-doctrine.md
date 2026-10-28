@@ -97,7 +97,7 @@ and keep `Explore`.
 that todo via `claim-todo.ps1` BEFORE dispatching the builder, and releases it via
 `complete-todo.ps1` once the builder's report lands and the work is committed - or releases without
 completing on an abort. This is the root `CLAUDE.md` claim rule ("before EXECUTING any todo, claim
-it ... every path, including ad-hoc 'do todo 07'") applied to the dispatch path specifically: the
+it ... every path, including ad-hoc 'do todo pc-0007'") applied to the dispatch path specifically: the
 claim is the orchestrator's own action, never the builder's, since a subagent cannot reliably reach
 `.claude/todos/` at all (`hooks/agent-todo-write-guard.py` blocks it) and the claim has to outlive
 the builder's own lifetime regardless. `/autopilot` inherits this from here rather than restating it
@@ -290,7 +290,7 @@ Re-probe before trusting this if the CLI version has moved on; the finding is ve
 
 Every dispatch instead asks for an "Out-of-scope findings" section in the report: what was found,
 and why it sits outside this dispatch's lane. The orchestrator turns each one into a properly
-allocated todo after the fan-out returns, per the reporting requirement named above.
+allocated todo (reserved device-prefixed id, one-sentence `**Summary:**`, no invented `## Why`) after the fan-out returns, per the reporting requirement named above.
 
 File each dispatch's out-of-scope findings the moment that dispatch's report lands, before the next
 round launches - not batched to run end. A finding held only in the orchestrator's own context does

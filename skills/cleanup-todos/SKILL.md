@@ -60,7 +60,7 @@ a blind move.
 
 ## Step 4 - Triage
 
-Sort every todo from Step 1 by ascending numeric id - this is the full pre-dedupe set. Split that
+Sort every todo from Step 1 by ascending id (label, then number) - this is the full pre-dedupe set. Split that
 ranking into chunks of at most `DEEP_CHUNK_SIZE` (30) todos, and give the first `DEEP_MAX_CHUNKS`
 (6) chunks a deep pass - 180 todos of real coverage. A dedupe-loser is chunked by its id like any
 other todo, never added out-of-band.
@@ -230,7 +230,7 @@ Step 2's dedupe pairs.
    `EASY`: that same execution run's own queue (`/batch-todos`'s EASY batch, or `/auto-do-todos`'s
    AUTO grind) executes every source together minutes later regardless of whether they were merged
    first, so the merge would be written and its sources archived back-to-back for nothing - exactly
-   the wasted Pass A write and abandoned `36-.reserved` marker from the todo 34/35 incident this
+   the wasted Pass A write and abandoned `pc-0036-.reserved` marker from the todo 34/35 incident this
    todo was filed over. Report the group in Step 6 as `<ids> - will be executed together, merge
    skipped` instead of a merge proposal; it never reaches Step 7's write queue. A group with any
    `HARD`-complexity member, or any `dev`-origin member, is unaffected by this skip and proceeds
@@ -495,7 +495,7 @@ into the closing summary as still-pending, for confirmation on a later run.
 - `CLEANUP_STALE_DAYS = 14` - the staleness-nag threshold. A constant, not a flag, for v1; tune
   here directly if it needs to change.
 - `DEEP_CHUNK_SIZE = 30`, `DEEP_MAX_CHUNKS = 6` - 180 todos of deep coverage per run, chunked by
-  ascending id over the full pre-dedupe set. Overflow gets the shallow pass (Step 4). Constants, not
+  ascending id (label, then number) over the full pre-dedupe set. Overflow gets the shallow pass (Step 4). Constants, not
   flags; tune here.
 - `MERGE_FILE_FANOUT = 8` - a file named by more than this many todos is treated as a hub and
   excluded from Step 4.5's overlap key, so a barrel/constants file can't drag unrelated todos into

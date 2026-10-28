@@ -56,6 +56,11 @@ own invocation (`disable-model-invocation: true`), so the dev is always the one 
 
 ## Step 3 - Write the file
 
+Both modes write a `**Summary:**` line (required, one plain sentence) and, only when the session
+states the reason, a `## Why` section in the dev's own words with a date - see
+`ai-todos-format.md`'s content template. Never invent a Why. The filename is `<id>-<slug>.md`
+with the reserved id (`pc-0007` form).
+
 **Deferral mode:** fill Goal/Context/Approach/Acceptance from the discussion. If there isn't
 enough to fill Context/Approach meaningfully, ask one clarifying question rather than write a
 thin file.

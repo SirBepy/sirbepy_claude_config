@@ -62,7 +62,7 @@ The report has four parts:
 touches. Do not just list filenames:
 
 ```
-### EASY - will auto-execute in id order (each verified first, then `/commit`)
+### EASY - will auto-execute in id order, label then number (each verified first, then `/commit`)
 
 | id | What it does | Area / files touched | Why EASY |
 |----|--------------|----------------------|----------|
@@ -112,7 +112,7 @@ Show the DO/SKIP/FLAG breakdown before proceeding to step 6.
 ## Step 6 - Execute EASY todos
 
 **Claim the whole DO-verdict set in one call before executing any of them**, per the contract's
-batch-claim form: `claim-todo.ps1 -Id <id1>,<id2>,...` in id order. Handling N todos this way costs
+batch-claim form: `claim-todo.ps1 -Id <id1>,<id2>,...` in id order (label, then number). Handling N todos this way costs
 one remembered claim call, not N. Any id the batch reports as lost to a live session (exit 1, named
 in its per-id line) is dropped from this run with a note; ids that hit a genuine error (exit 2) are
 surfaced and dropped the same way.
@@ -169,6 +169,6 @@ auto-answered - unattended mode changes the Step 4 gate only, not the FLAG/HARD 
 ## Notes
 
 - Source of truth: `.claude/todos/` only.
-- This skill executes in id order regardless of PLAN.md ordering - plan-ordered execution is `/pickup`'s job. It still prunes PLAN.md lines of todos it completes.
+- This skill executes in id order (by label, then number) regardless of PLAN.md ordering - plan-ordered execution is `/pickup`'s job. It still prunes PLAN.md lines of todos it completes.
 - Never commit directly. `/commit` is invoked and read in full once per run; every completed todo's
   commit after that follows its procedure directly.
