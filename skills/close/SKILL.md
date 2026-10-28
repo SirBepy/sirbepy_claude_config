@@ -214,7 +214,7 @@ Run in this order:
    - Phase 1 steps 3-4 (repeated manual steps, skill rule violations) - tag `**Type:**
      skill-improvement`, `**Origin:** ai`, Approach section names the skill file involved.
 
-   Follow `ai-todos-format.md` (this skill's folder) for everything: template, filename/id rules, git-policy self-heal. The bar: a future cold AI session must be able to execute the task from the file alone, without re-reading session history. Skip if no items. Note: Phase 2 review findings are written to the backlog by `/code-check` directly - do not re-write them here.
+   Follow `ai-todos-format.md` (this skill's folder) for everything: template (every todo gets a one-sentence `**Summary:**`, plus a `## Why` only when the session states the reason), filename/id rules (`<id>-<slug>.md`, id from `reserve-todo-id.ps1`, `pc-NNNN` form), git-policy self-heal. The bar: a future cold AI session must be able to execute the task from the file alone, without re-reading session history. Skip if no items. Note: Phase 2 review findings are written to the backlog by `/code-check` directly - do not re-write them here.
 3. **Screenshot summary.** `/close` no longer deletes screenshots - todo 324 moved that to
    `/disk-doctor`, which ages folders out later while Joe decides. If Phase 0 recorded any
    screenshots captured this session, count the files under this session's own

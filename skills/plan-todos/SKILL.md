@@ -2,7 +2,7 @@
 name: plan-todos
 description: Creates or reorders PLAN.md, the ordered lane of pointers into the todos backlog.
 disable-model-invocation: true
-argument-hint: "[show | free-text ordering like 'do 07 then 03, 09 and 12 in parallel']"
+argument-hint: "[show | free-text ordering like 'do pc-0007 then pc-0003, pc-0009 and pc-0012 in parallel']"
 ---
 
 # /plan-todos
@@ -31,9 +31,9 @@ Args are natural language:
   plain-text prompt asking whether to reorder, add unplanned items, or leave it - never a
   same-turn `AskUserQuestion` (it erases prior text for Joe's client; the house pattern
   `/batch-todos` and `/rate-it` both document). Wait for Joe's plain-text reply.
-- **Free-text ordering** ("do 07 then 03", "09 and 12 can run together", "phase 1 is the auth
+- **Free-text ordering** ("do pc-0007 then pc-0003", "pc-0009 and pc-0012 can run together", "phase 1 is the auth
   stuff"): translate to plan lines - sequence order, `[P]` for items named as parallel-safe,
-  `## Phase` headings when the dev groups. Ids the dev names by topic instead of number: resolve
+  `## ` group headings (a phase, a release) when the dev groups. A bare number the dev says ("do 7") resolves per the contract's id rules; write the full `pc-NNNN` form into the plan. Ids the dev names by topic instead of number: resolve
   against backlog titles, confirm the mapping in the summary.
 - **Bare invocation with NO plan:** propose one - read backlog titles + Goals, suggest a sensible
   order (handoffs and blockers first, quick wins next, big open-ended items last), and present it

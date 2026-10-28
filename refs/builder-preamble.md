@@ -79,7 +79,7 @@ submodule's root, not the parent's), so a mix of parent-repo and submodule paths
 fine (todo 412). Exit 0 is clean. Exit 2 means the gate could not run (bad path, no repo found) -
 fix the invocation and rerun, it is not a finding. Exit 1 means em-dash, secret-scan, or todo-ref.sh
 flagged something, and these do NOT all get the same
-treatment: em-dash and todo-ref.sh (a comment citing a backlog item by numeric id) = fix the
+treatment: em-dash and todo-ref.sh (a comment citing a backlog item by its id) = fix the
 flagged added lines now, do not ask; secret-scan = STOP, never auto-fix it and never work around
 it, leave your work as it stands and report the hit naming the file.
 

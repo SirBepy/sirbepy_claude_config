@@ -24,10 +24,12 @@ Merge mode Step M1 for why unattended auto-detection is refused.
 Read `.claude/todos/PLAN.md`, pruning vanished ids per the contract.
 
 - `--merge` was passed: skip this whole step and go to Merge mode below instead.
-- If an explicit `<id>` arg was given: that's the pick (it doesn't need a PLAN.md line).
-- If args were given but aren't a bare id (free text): check whether they plausibly match an
+- If an explicit `<id>` arg was given: that's the pick (it doesn't need a PLAN.md line). An id is
+  the full `pc-1407` form or a bare number (`1407`, any padding); a bare number resolves per
+  `ai-todos-format.md`'s id rules (this device first, else a unique match, else an ambiguity error).
+- If args were given but aren't an id (free text): check whether they plausibly match an
   existing backlog item by slug or title. A match - confirm it in one line before proceeding
-  ("this looks like todo NN - <title>, continuing with that?"). No match - do not infer a target
+  ("this looks like todo pc-0012 - <title>, continuing with that?"). No match - do not infer a target
   from the git branch, project memory, or working-tree state; state plainly that the args don't
   correspond to any backlog item and ask what to do via `AskUserQuestion`.
 - Otherwise (no args): the first plan line, top to bottom, whose id has no active (non-stale)
@@ -101,7 +103,7 @@ Finish by naming the next item on the lane (or "lane empty") so the dev knows wh
 ## Merge mode (`--merge`)
 
 Collapses several outstanding handoff todos into one reconciled brief, per
-`.claude/todos/457-merge-several-sessions-into-one-via-handoffs.md`'s Approach. This section only
+`.claude/todos/pc-0457-merge-several-sessions-into-one-via-handoffs.md`'s Approach. This section only
 covers what happens before a normal pickup starts - Step M5 falls through to Steps 3-7 above
 unchanged, run once against the merged brief this section produces instead of N times against
 the sources.
@@ -142,7 +144,9 @@ with the subset that succeeded:
 Read every claimed todo file in full. Reserve a fresh id (`reserve-todo-id.ps1`, same as any
 other backlog write) and write ONE new todo that becomes the merge's working brief:
 
-- `**Type:** task`, `**Origin:** dev` (it still records the dev's own in-flight work).
+- `**Type:** task`, `**Origin:** dev` (it still records the dev's own in-flight work), and a
+  one-sentence `**Summary:**`. Carry a source's `## Why` over (attributed) only when it has one;
+  never invent one.
 - **Goal** - the union of what the dev is trying to achieve across the merged sessions.
 - **Context** - what each session tried, in what order, where each stalled; name which source id
   each fact came from so a contradiction stays traceable back to its origin.
@@ -155,7 +159,7 @@ other backlog write) and write ONE new todo that becomes the merge's working bri
   domain fits) exactly like any other open decision, so Step 4's existing decisions gate below
   picks it up with no new mechanism.
 
-Reference every source id by number in Context. Add `<!-- duplicate-checked -->` up front - a
+Reference every source id by its full `pc-NNNN` form in Context. Add `<!-- duplicate-checked -->` up front - a
 merged brief predictably shares vocabulary with the sources it just read and would otherwise trip
 `hooks/todo-duplicate-guard.py` against them. Prepend it to PLAN.md per Handoff mode's own PREPEND
 convention (newest next).

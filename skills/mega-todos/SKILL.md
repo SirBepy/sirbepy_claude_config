@@ -70,7 +70,7 @@ documented path, not an exception to invent mid-run.
 Record `START_SHA` (`git rev-parse HEAD`) and `EXPECTED_BRANCH` (`git rev-parse --abbrev-ref HEAD`).
 `EXPECTED_BRANCH` is substituted into every builder's branch guard, so a peer session moving HEAD
 mid-run stops the agents instead of scattering commits onto someone else's branch (see
-`.claude/todos/done/55-commit-must-recheck-branch-before-each-commit.md`; a long wide run is the worst
+`.claude/todos/done/pc-0055-commit-must-recheck-branch-before-each-commit.md`; a long wide run is the worst
 case for that hazard). Then verify, in the target repo, the five conditions the injected commit block
 depends on. Each is a one-line check and each has a defined consequence:
 
@@ -543,7 +543,7 @@ Archival is **main-thread only**, because `complete-todo.ps1` prunes the shared 
    `~/.claude/skills/mega-todos/archive-batch.ps1 -Items "<id>|<what happened>", ...` once for the
    whole batch instead of hand-rolling the `complete-todo.ps1` loop and pathspec - it resolves each
    id against the live backlog only, never a `done/` glob (the exact shape that broke twice, see
-   `done/855-mega-todos-step-e-archival-is-hand-rolled-every-barrier.md`), and returns `.Pathspec`
+   `done/pc-0855-mega-todos-step-e-archival-is-hand-rolled-every-barrier.md`), and returns `.Pathspec`
    naming both halves of every move plus `PLAN.md`, and `.Failures` for any id it could not resolve
    to exactly one file. A todo that advanced but left `## Acceptance` items unmet is not archived,
    however clean its builder's report read; a non-empty `.Failures` is not archived either until
@@ -561,7 +561,7 @@ Archival is **main-thread only**, because `complete-todo.ps1` prunes the shared 
 Then the wrap-up, per `/auto-do-todos` Step 9: `/code-check START_SHA..HEAD`, the full fast-check
 floor, e2e if runnable. Park every unresolved DEV fork into its todo's `## Open questions` block per
 `/auto-do-todos` Step 8. Also drain every builder's "Out-of-scope findings" section gathered during
-Step D: file each as a properly allocated todo, `**Origin:** ai`, per `refs/delegation-doctrine.md`'s
+Step D: file each as a properly allocated todo (with a `**Summary:**` line), `**Origin:** ai`, per `refs/delegation-doctrine.md`'s
 "Out-of-scope findings" section - never the builder itself. Alongside it, drain every builder's
 `## Decisions made` section (todo 1018): this is the one channel for a decide-or-won't-fix ending,
 since the hook blocks the builder from writing it itself - write it into that todo's own file

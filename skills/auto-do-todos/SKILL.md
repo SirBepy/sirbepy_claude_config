@@ -361,7 +361,7 @@ fan-out buys context economy, not capability, so inline loses nothing but main-t
    Playwright/Cypress config) - best effort, skip with a one-line note if there is no headless way.
 
 Also drain every builder's "Out-of-scope findings" section gathered during Step 6: the orchestrator
-files each one as a properly allocated todo, `**Origin:** ai`, per `refs/delegation-doctrine.md`'s
+files each one as a properly allocated todo (with a `**Summary:**` line), `**Origin:** ai`, per `refs/delegation-doctrine.md`'s
 "Out-of-scope findings" section - never the builder itself.
 
 Fix anything trivial and re-verify inline, then `/commit`. Anything else found becomes an

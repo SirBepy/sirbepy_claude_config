@@ -275,6 +275,7 @@ Merge findings from Steps 0-4, minus anything Step 4a applied or dropped.
 
 **Type:** task
 **Origin:** ai
+**Summary:** [one plain sentence: the outcome, readable at a glance]
 
 ## Goal
 [what needs to happen]
@@ -288,6 +289,10 @@ Merge findings from Steps 0-4, minus anything Step 4a applied or dropped.
 ## Acceptance
 [how to verify it is done]
 ```
+
+`Summary` is required. Leave out `## Why`: a code-check finding has no stated dev reason, and the
+contract says to omit the section rather than invent one. The filename is `<id>-<slug>.md` with
+the reserved id (`pc-NNNN` form).
 
 **If not in a project (no repo root):** print all findings inline, one block per finding.
 
