@@ -4,6 +4,11 @@
 
 **Type:** task
 **Origin:** ai
+**Summary:** The kickoff feed retries a 401 with the full header set, warns on the page cap, and shows a no-upstream branch as unpushed work.
+
+## Why
+
+Found by the 2026-10-28 per-commit review of 8347382: a valid cookie can be reported dead, old events are silently lost, and a git error prints as a commit line.
 
 ## Goal
 `skills/zng-kickoff/scripts/kickoff.py` stops reporting a valid Shortcut cookie as dead, stops silently losing old feed events, and shows a no-upstream branch as unpushed work instead of a fake commit line.

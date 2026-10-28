@@ -4,6 +4,11 @@
 
 **Type:** task
 **Origin:** dev
+**Summary:** Claude does not create or edit tickets or post PR comments for a client repo between 23:00 and 10:59 without Joe's in-session OK.
+
+## Why
+
+At about 03:00 on 2026-10-22 Joe said "i dont wanna create a ticket at 3am"; today only commits and pushes are guarded by the night window.
 
 ## Goal
 

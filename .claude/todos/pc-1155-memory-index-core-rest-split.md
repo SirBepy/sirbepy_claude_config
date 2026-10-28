@@ -3,6 +3,11 @@
 
 **Type:** task
 **Origin:** dev
+**Summary:** No project's memory index overflows the load cut again, and memories outside the always-loaded core are still findable on demand.
+
+## Why
+
+On 2026-10-08 zng-app's MEMORY.md was 24,853 bytes, past the cut, so its bottom entries never loaded; claude-usage-in-taskbar's was already 23,050.
 
 ## Goal
 

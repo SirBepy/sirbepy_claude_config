@@ -4,6 +4,11 @@
 
 **Type:** skill-improvement
 **Origin:** ai
+**Summary:** A subagent dispatch prompt that leaves out the auto-background paragraph of the builder preamble is rejected.
+
+## Why
+
+On 2026-10-13 a builder with a paraphrased preamble sat parked about 45 minutes and 410k tokens waiting on its own backgrounded command, until the orchestrator stopped it.
 
 ## Goal
 

@@ -6,6 +6,11 @@
 **Type:** skill-improvement
 **Origin:** ai
 **Created:** 2026-10-02
+**Summary:** A /flutter-bump run reaches the push without improvising, because the skill covers the push gate and the steps it keeps missing.
+
+## Why
+
+On the 2026-10-02 bump from 3.47.5 to 3.47.6 all three pushes were denied by the push gate, which the skill never mentions, and the run needed a hand-written smoke test.
 
 ## Goal
 

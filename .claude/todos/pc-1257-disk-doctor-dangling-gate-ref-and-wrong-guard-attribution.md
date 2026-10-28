@@ -4,6 +4,11 @@
 
 **Type:** task
 **Origin:** ai
+**Summary:** The disk-doctor platform files point only at checks that exist and name the real cause of the C:\tmp removal refusal.
+
+## Why
+
+Found by the 2026-10-28 per-commit review of 10a76b4: windows.md and macos.md cite a gate.md section that is not committed and blame the wrong hook.
 
 ## Goal
 The disk-doctor platform files point only at checks that exist, and name the real cause of the C:\tmp removal refusal.

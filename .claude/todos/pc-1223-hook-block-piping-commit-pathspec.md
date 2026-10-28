@@ -4,6 +4,11 @@
 
 **Type:** skill-improvement
 **Origin:** ai
+**Summary:** A command that pipes commit-pathspec.sh output into a filter without pipefail is denied before it runs.
+
+## Why
+
+On 2026-10-22 Claude piped the script into tail right after reading the rule against it; a refused commit would have looked like success. The rule is prose only today.
 
 ## Goal
 

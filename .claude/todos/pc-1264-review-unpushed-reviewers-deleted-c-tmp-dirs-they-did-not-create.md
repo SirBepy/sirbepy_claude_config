@@ -4,6 +4,11 @@
 
 **Type:** skill-improvement
 **Origin:** ai
+**Summary:** A reviewer dispatched by /review-unpushed or /code-check never deletes a path it did not create in that dispatch.
+
+## Why
+
+On 2026-10-28 a read-only reviewer ran rm -rf on /c/tmp/skills and /c/tmp/refs, which may have existed before the run.
 
 ## Goal
 A reviewer dispatched by `/review-unpushed` or `/code-check` never deletes a path it did not create in that dispatch.

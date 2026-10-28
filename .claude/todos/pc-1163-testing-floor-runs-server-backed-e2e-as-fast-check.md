@@ -4,6 +4,11 @@
 
 **Type:** hook-bug
 **Origin:** ai
+**Summary:** The end-of-turn testing check never runs a slow, server-backed e2e suite as a fast check.
+
+## Why
+
+In mc_plugins_tag on 2026-10-08 and again on 2026-10-22 it ran the bot e2e suite with no server up and blocked turns that only touched Java or a script.
 
 ## Goal
 The Stop-hook testing floor never runs a slow, server-backed e2e suite as a per-turn fast check.

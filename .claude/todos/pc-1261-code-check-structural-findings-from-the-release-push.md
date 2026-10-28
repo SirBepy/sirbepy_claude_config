@@ -4,6 +4,11 @@
 
 **Type:** task
 **Origin:** ai
+**Summary:** The structural and test-gap findings from the release-push code-check are worked through, and any declined as churn get a reason noted.
+
+## Why
+
+Filed, not applied, from the 2026-10-28 pre-push /code-check over a 96-commit range; for example release.py can exit with a traceback despite promising JSON errors.
 
 ## Goal
 Work through the filed (not applied) code-check findings below; decline any that are churn with a reason in Notes.

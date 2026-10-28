@@ -4,6 +4,11 @@
 
 **Type:** skill-improvement
 **Origin:** ai
+**Summary:** The outbound-verify template makes the verdict line unmissable so a verifier never wraps it in numbering the hook cannot match.
+
+## Why
+
+On 2026-10-15 all three verifiers said PASS, but one wrote "4. OUTBOUND-VERDICT: PASS", the hook counted no verdict, and a fourth verifier had to be dispatched.
 
 ## Goal
 

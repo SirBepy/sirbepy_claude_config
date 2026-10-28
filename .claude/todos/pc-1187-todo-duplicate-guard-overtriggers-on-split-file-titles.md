@@ -4,6 +4,11 @@
 
 **Type:** skill-improvement
 **Origin:** ai
+**Summary:** The todo duplicate guard stops flagging unrelated "split this file" or "consider a shared X" todos as duplicates, while still catching real ones.
+
+## Why
+
+On 2026-10-16, 5 of 6 structural findings filed into the Conductor backlog tripped the guard, and every one was a false positive.
 
 ## Goal
 

@@ -3,6 +3,11 @@
 
 **Type:** task
 **Origin:** dev
+**Summary:** A lesson about how Claude should work, learned in one project, reaches every project without growing CLAUDE.md.
+
+## Why
+
+Joe picked this design on 2026-10-08. At that date 803 feedback memories across 86 project memory dirs each loaded only in their own project.
 
 ## Goal
 

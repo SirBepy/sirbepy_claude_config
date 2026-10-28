@@ -4,6 +4,11 @@
 
 **Type:** task
 **Origin:** dev
+**Summary:** A memory file can declare triggers and is injected into context the moment its file, skill or repo is touched, including into subagent dispatches.
+
+## Why
+
+Joe picked this design on 2026-10-08. Past misses: a Clockify run skipped the one memory file holding the meal-gap rule, and Joe had to restate an overlap rule for the third time.
 
 ## Goal
 
