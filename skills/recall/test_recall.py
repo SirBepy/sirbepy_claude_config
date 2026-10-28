@@ -181,6 +181,15 @@ def test_digests():
         check(rc == 0 and "Keep transcripts forever" in (ddir / f"{SID}.md").read_text(encoding="utf-8"),
               "the CLI reads the digest from stdin")
 
+        detail = root / "handoff.respawn.md"
+        detail.write_text("# Respawn detail\n\n## Conversation\n", encoding="utf-8")
+        rc = recall.main(["--projects", str(projects), "--archive", str(archive), "show", SID[:8],
+                          "--append-to", str(detail)])
+        written = detail.read_text(encoding="utf-8")
+        check(rc == 0 and written.startswith("# Respawn detail\n\n## Conversation\n")
+              and recall.FENCE_OPEN in written and "joe:" in written and written.rstrip().endswith(recall.FENCE_CLOSE),
+              "show --append-to appends the fenced conversation after the file's existing content")
+
 
 def memory_file(path, name, body, verified=None, superseded_by=None, modified=None, mtype="reference"):
     fm = ["---", f"name: {name}", f"description: about {name}"]

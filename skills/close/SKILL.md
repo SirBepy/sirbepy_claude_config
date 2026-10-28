@@ -238,6 +238,10 @@ Run in this order:
    Transcript grounding step 1 even when the rest of grounding was skipped as a short session,
    since a short session can still hold a decision worth a digest. It refuses to overwrite an existing digest; never pass
    `--replace` here. Digests feed `recall.py decisions` (design: `refs/permanent-memory.md`).
+5. **Inherited respawn detail file.** If this session's first user message is a `/respawn`
+   handoff naming a `Detail file: <path>.respawn.md`, delete that file: it was written only for
+   this chat (`skills/respawn/SKILL.md` Step 1). Skip silently when there is none or it is already
+   gone. Under `/respawn` this runs too, because the new detail file it writes next supersedes it.
 Note: there is no implicit /commit step anymore. If the dev wants a commit, they chain `/commit` (with whatever subcommand they want) into the /close call.
 
 ## Phase 4 - Counter summary

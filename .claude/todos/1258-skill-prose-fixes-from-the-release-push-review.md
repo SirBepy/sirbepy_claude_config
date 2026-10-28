@@ -21,3 +21,6 @@ Found by the 2026-10-28 pre-push code-check and per-commit review (release sessi
 
 ## Acceptance
 Each of the five points is fixed or explicitly declined with a reason in this file's Notes.
+
+## Notes
+- 1: fixed 2026-10-28 by the `/respawn lite` rework: `skills/auto-respawn/SKILL.md` step 3 now opens the handoff prompt with the literal `/auto-respawn` line. Points 2-5 remain open.

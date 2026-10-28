@@ -47,4 +47,4 @@ Then dispatch ONE `Agent` call with `subagent_type: "general-purpose"`, `model: 
 >
 > Payload: `<JSON>`
 
-Wait for the subagent to return before continuing to Phase 4.
+Wait for the subagent to return, then run the main path's Phase 3 step 5 (inherited respawn detail file) inline: `/respawn lite` runs through this file, and its successors would otherwise never delete the file they inherited. Then continue to Phase 4.
