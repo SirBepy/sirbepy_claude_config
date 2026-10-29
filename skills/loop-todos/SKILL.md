@@ -164,14 +164,15 @@ node ~/.claude/skills/context-left/context-left.mjs
 ```
 
 Below `/auto-do-todos` Step 6's `HARD_STOP_AT` (40% used), start the next cycle in this chat. At or
-above it, run `/respawn lite` (read `~/.claude/skills/respawn/SKILL.md` and follow its Lite mode;
-it skips `/close`'s `/code-check` since `/auto-do-todos`' Step 9 already covered these commits) so the successor
+above it, run `/respawn unattended` (read `~/.claude/skills/respawn/SKILL.md` and follow its
+Unattended mode with the New-work prompt, since the successor takes fresh todos rather than
+resuming this chat's. Unattended skips `/close`'s `/code-check` since `/auto-do-todos`' Step 9 already covered these commits) so the successor
 carries the loop on: a cycle started past that line takes
 no todos, so Phase 3's zero-progress stop would end the loop instead. The boundary lives in Step 6;
 read it there rather than copying the number here.
 
 **The handoff prompt's FIRST characters must be the literal re-invocation**, because a slash
-command only expands at the very start of a turn. Everything `/respawn`'s Step 2 Lite prompt
+command only expands at the very start of a turn. Everything `/respawn`'s Step 2 New-work prompt
 composes goes underneath it:
 
 ```
@@ -179,7 +180,7 @@ composes goes underneath it:
 
 Loop state: Phase 0 discharged <date>, do not re-run it.
 Cycles used: <n> of <cap>. Skipped todos: <ids>.
-<the rest of /respawn's Lite handoff body>
+<the rest of /respawn's New-work handoff body>
 ```
 
 A `--resumed` run skips Phase 0 and reads its cycle count, cap and skip list from that state block.
