@@ -94,7 +94,7 @@ any finding to the unfinished-commitments list below exactly like a visual-work 
 through the same finish-it-first/close-anyway/full-auto handling rather than getting silently
 dropped if nobody reads the raw script output.
 
-Scan the full session for dev-stated commitments: explicit multi-part asks ("we need to do X, Y, Z"), a numbered plan the dev agreed to, or any request with more than one part, plus the visual-work item above if it triggered. For each, check whether it actually got done by the time `/close` was invoked.
+Scan the full session for dev-stated commitments: every request the dev made, a single one-line ask included ("fix the typo"), plus explicit multi-part asks ("we need to do X, Y, Z"), a numbered plan the dev agreed to, and the visual-work item above if it triggered. A one-off request is the most common shape of a short session and the easiest to half-finish, so it is never exempt for having only one part. For each, check whether it actually got done by the time `/close` was invoked.
 
 This is distinct from Phase 1 step 5 (Claude's own unexecuted "want me to...?" offers) - this catches things the dev asked for, not things Claude proposed unprompted.
 
@@ -103,6 +103,8 @@ If everything the dev asked for was completed: proceed silently to Phase 1, no o
 Before asking anything below: search this project's memory for the subject first. If a memory entry already decides this exact fork (a past override, a standing preference for this kind of unfinished item), apply it directly and log which memory decided it, instead of asking again.
 
 If anything is unfinished AND the repo's own `CLAUDE.md` imports `~/.claude/snippets/full-auto.md` (check for the literal `@import` line - mechanical detection, not a guess about repo ownership): treat the fork exactly as the non-interactive branch below does - pick "close anyway", file the item per Phase 3 - then print one line naming the choice and why, e.g. `full-auto repo: filing "<item>" as a task todo instead of asking (repo imports full-auto.md)`. Never post the `AskUserQuestion` card here; this repo opted out of being asked.
+
+If anything is unfinished AND this `/close` was invoked by `/then-close`: the dev already chose **Finish it first**, so do the item without asking and post the card below only for an item that needs the dev (see `then-close/SKILL.md`).
 
 If anything is unfinished AND this `/close` was triggered interactively (the dev typed it, or it's a live chain the dev is watching) AND the repo does NOT import `full-auto.md`: print a short list (what was asked, what state it's in), then ask via `AskUserQuestion` with exactly two options:
 
