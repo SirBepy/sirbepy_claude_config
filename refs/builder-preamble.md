@@ -125,7 +125,7 @@ bare "still waiting" with nothing else.
 | Placeholder | Substitute with | Delete entirely when |
 | --- | --- | --- |
 | `<WORKING_DIR>` | the dispatch's actual working directory | never - always filled |
-| `<STAGING_LINE>` | `Stage your changes but do NOT commit. The main agent will run /commit after your report-back.` by default, or `Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.` for a repo sharing a git index with concurrent sessions (e.g. zng-app, zng-biller) OR whenever this dispatch is one of several builders the orchestrator is running at once in this same tree - staged files from one parallel builder are indistinguishable from another's once both are in the index, so `git diff --cached` can never be the commit pathspec there (todo 1061: a reader's staged deletions rode into a different builder's commit this way) | never - always filled |
+| `<STAGING_LINE>` | `Commit your own work with /commit before your report-back, by pathspec, only the files you changed.` by default: a subagent loads `/commit` through the Skill tool, and its `commit-pathspec.sh` step lands the commit (a raw `git commit` from a subagent is still denied by `hooks/commit-guard.py`; 2026-10-29, `9b74788` was a builder's own commit this way). `Stage your changes but do NOT commit. The main agent will run /commit after your report-back.` only when the orchestrator must review the diff before it lands. `Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.` for every `READ-ONLY DISPATCH`, and for a non-committing builder in a repo sharing a git index with concurrent sessions (e.g. zng-app, zng-biller) OR whenever this dispatch is one of several builders the orchestrator is running at once in this same tree - staged files from one parallel builder are indistinguishable from another's once both are in the index, so `git diff --cached` can never be the commit pathspec there (todo 1061: a reader's staged deletions rode into a different builder's commit this way) | never - always filled |
 | `<WORKTREE_LINE>` | `You run in an isolated worktree that may start from the remote's tip, not the orchestrator's local HEAD. Before anything else run \`git merge --ff-only <orchestrator branch>\`, then confirm with \`git merge-base --is-ancestor <orchestrator branch> HEAD\` (exit 0). If either fails, stop and report instead of editing a stale base.` Fill \`<orchestrator branch>\` with the branch the orchestrator is on (\`git branch --show-current\` there). | the dispatch does NOT pass \`isolation: "worktree"\` (the common case: the builder shares the orchestrator's tree and is already on local HEAD). 2026-10-09, mc_plugins_tag: five worktree builders started at origin's tip 17-121 commits behind local main and would have edited code that no longer existed |
 | `<GLOBAL_EDIT_BAN>` | `Never edit files under \`~/.claude/\` (skills, hooks, settings, global CLAUDE.md) even if the task description points at one - that requires the dev's explicit say-so in the CURRENT session, which a subagent can't verify; if a task seems to require it, stop and report back instead.` | the session's own working directory IS `~/.claude` itself (dev opened the session there, so global work is the whole point and the ban would refuse the assigned task) |
 | `<OFF_LIMITS>` | the per-dispatch OFF LIMITS file list | never - always filled |
@@ -172,17 +172,15 @@ promise a `READ-ONLY DISPATCH`-marked scout that its own Write call will succeed
 three literal substrings - it is a pure string check, not a semantic one, so pasting the block above
 verbatim is what makes a dispatch pass, not merely following its intent:
 
-1. `Stage your changes but do NOT commit` OR `Leave all changes unstaged` (the two `<STAGING_LINE>`
-   variants above).
+1. `Commit your own work with /commit` OR `Stage your changes but do NOT commit` OR `Leave all
+   changes unstaged` (the three `<STAGING_LINE>` variants above). The first combined with
+   `READ-ONLY DISPATCH` is rejected: a read-only dispatch never commits.
 2. `run_in_background` AND `FORBIDDEN` both present (covered by the orphan-check paragraph's
    `run_in_background` sentence in the block above - static, unconditional, never trim it out).
 3. `.for_bepy/screenshots/` OR the literal line `READ-ONLY DISPATCH`.
 
-A dispatch that genuinely commits its own work (e.g. `/mega-todos`'s per-builder `COMMIT_MODE`)
-cannot use `<STAGING_LINE>` truthfully, since the builder does commit. Do not drop the requirement
-or invent a different phrasing to dodge it - quote the normal-case sentence and say plainly that
-this dispatch is the documented exception; see `skills/mega-todos/SKILL.md`'s injected commit block
-for the worked example.
+`/mega-todos`'s per-builder `COMMIT_MODE` follows its own injected commit block in
+`skills/mega-todos/SKILL.md` instead of `/commit`; that block names the exception itself.
 
 ## Todo-backlog writes are blocked for dispatched agents
 
