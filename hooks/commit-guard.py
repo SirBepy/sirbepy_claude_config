@@ -444,11 +444,13 @@ def main() -> None:
     if is_agent:
         deny(
             "[commit-guard] This call carries agent_id - a dispatched subagent, not the "
-            "main session. CLAUDE.md is explicit: subagents never commit, except a "
-            "sanctioned /mega-todos builder, which authorizes via its own fresh per-commit "
-            "`.commit-marker-*` file, never a parent session's marker. No part of this "
-            "call ran. Stop and report your changes uncommitted (or unstaged, per your "
-            "dispatch instructions) - the main agent runs /commit after your report-back."
+            "main session. A subagent never runs a raw `git commit` on its parent's marker: "
+            "a builder whose dispatch says \"Commit your own work with /commit\" loads the "
+            "/commit skill and commits through its `skills/commit/commit-pathspec.sh` step, "
+            "and a /mega-todos builder authorizes via its own fresh per-commit "
+            "`.commit-marker-*` file. No part of this call ran. If your dispatch did not "
+            "ask you to commit, stop and report your changes uncommitted (or unstaged, per "
+            "your dispatch instructions) - the main agent runs /commit after your report-back."
         )
 
     reason = (

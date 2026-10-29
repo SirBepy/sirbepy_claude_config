@@ -26,7 +26,7 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 
 - NEVER commit directly. Invoke and read `/commit` in full once per session, then follow its procedure exactly for every commit after, no exceptions, including in subagent-driven work.
 - Auto-commit is a universal default, not opt-in: `@import ~/.claude/snippets/auto-commit.md` - read it in full once per session. It covers when to commit without asking, and when to fold a correction into the last commit instead of stacking a new one. Applies to every project, personal and client alike. If you catch yourself about to ask "should I commit this?", that snippet already answered it - just run `/commit`.
-- Subagents can't invoke skills, so subagents NEVER commit, except `/mega-todos` agents, which commit via a branch-guarded procedure - see `~/.claude/skills/mega-todos/SKILL.md`. Every subagent dispatch prompt MUST include the staging line, conditional on whether the repo shares a git index with concurrent sessions: default verbatim "Stage your changes but do NOT commit. The main agent will run `/commit` after your report-back."; for a shared-index repo substitute "Leave all changes unstaged. The main agent will run `/commit` by pathspec after your report-back." Background subagents: see `~/.claude/refs/process-hygiene.md` for the READY_TO_COMMIT marker.
+- Builders commit their own work via `/commit` (subagents load skills through the Skill tool). Every dispatch prompt MUST include a staging line: a builder gets verbatim "Commit your own work with /commit before your report-back, by pathspec, only the files you changed."; a `READ-ONLY DISPATCH` gets "Leave all changes unstaged. The main agent will run `/commit` by pathspec after your report-back."; "Stage your changes but do NOT commit" only when main must review first. A subagent's raw `git commit` stays hook-blocked. `/mega-todos` builders follow its `SKILL.md`; background subagents: `refs/process-hygiene.md`.
 - If you're about to commit and can't invoke `/commit`, don't commit - stop, surface the problem, wait for the main agent / human.
 - Client repos: no commit/push 23:00-10:59 local without Joe's in-session OK, timestamps always real; `hooks/commit-window-guard.py` enforces it and says what to do.
 
@@ -128,7 +128,7 @@ Project-local scratch (never global; skip if there's no project): `screenshots/`
 
 ## Subagent-Driven vs Inline Execution
 
-Any `Agent`/`Task` dispatch needs the preamble too, even an ad-hoc one with no skill in the loop: before the first dispatch, include the staging line ("Stage your changes but do NOT commit" or "Leave all changes unstaged"), the `run_in_background` + `FORBIDDEN` line, and the `.for_bepy/screenshots/` id line (or literal `READ-ONLY DISPATCH`) - see `refs/builder-preamble.md`.
+Any `Agent`/`Task` dispatch needs the preamble too, even an ad-hoc one with no skill in the loop: before the first dispatch, include the staging line (Git Commits section), the `run_in_background` + `FORBIDDEN` line, and the `.for_bepy/screenshots/` id line (or literal `READ-ONLY DISPATCH`) - see `refs/builder-preamble.md`.
 
 Choose by task size when a plan is ready to execute:
 

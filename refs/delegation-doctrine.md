@@ -137,16 +137,15 @@ and the out-of-scope-findings channel below are the only guards.
   highest-value part of this channel: it is what caught the dropped item on todo 465, and naming it
   explicitly makes the rescue deliberate instead of lucky (todo 811). The orchestrator files each
   one as a proper todo after the fan-out returns (see "Out-of-scope findings" below).
-- The staging line, conditional on whether the repo shares a git index with concurrent sessions OR
-  with another builder the orchestrator is running at the same time in this same tree: default
-  `Stage your changes but do NOT commit. The main agent will run /commit after your report-back.`;
-  for a shared-index repo (e.g. zng-app, zng-biller) or a parallel-builder dispatch, substitute
-  `Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.`
-  and have that builder name its changed files in its report - the orchestrator commits by that
-  list, never by `git diff --cached`, which can't tell one parallel builder's staged files from
-  another's (see "Parallelism" below, todo 1061). Subagents cannot
-  invoke skills, so they must never commit, except `/mega-todos` agents, which commit via a
-  branch-guarded procedure - see `~/.claude/skills/mega-todos/SKILL.md`. Include this line even
+- The staging line: default `Commit your own work with /commit before your report-back, by
+  pathspec, only the files you changed.` A builder loads `/commit` through the Skill tool, and a
+  pathspec commit never reads the shared index, so parallel builders in one tree cannot sweep each
+  other's files. When the orchestrator must review a diff before it lands, use `Leave all changes
+  unstaged. The main agent will run /commit by pathspec after your report-back.` and have that
+  builder name its changed files in its report - the orchestrator commits by that list, never by
+  `git diff --cached`, which can't tell one parallel builder's staged files from another's (see
+  "Parallelism" below, todo 1061). A `READ-ONLY DISPATCH` always takes the unstaged line.
+  `/mega-todos` agents follow their own commit procedure in `~/.claude/skills/mega-todos/SKILL.md`. Include this line even
   when the dispatch provably touches zero git-tracked files (e.g. a gitignored scratch dir): the
   line is static boilerplate, not a judgment call, and omitting it on a case-by-case read is
   itself the failure mode - no exception, ever.
@@ -159,9 +158,9 @@ and the out-of-scope-findings channel below are the only guards.
   failure recorded for this repo), restated inline. A subagent re-solving a problem memory already
   answered is a wasted dispatch.
 - If the dispatched work matches a skill's own description, that skill's file path(s) - `SKILL.md`
-  plus any refs it points to - not just its rules pasted by hand. Subagents cannot invoke skills at
-  all, only the orchestrator can, so a matching skill never fires on its own inside a dispatch; the
-  file path is the only route the subagent has to that content, and hand-copied rules drift from
+  plus any refs it points to - not just its rules pasted by hand. A subagent can load a skill with
+  the Skill tool (verified 2026-10-29), but nothing makes a matching skill fire on its own inside a
+  dispatch; naming it is the only route the subagent has to that content, and hand-copied rules drift from
   the source over time. Skip this only when the prompt already inlines everything the skill would
   have supplied. (todo 338, 2026-08-14: five Flutter e2e dispatches hand-copied the same driving
   rules instead of pointing at `flutter-e2e`'s files, because the skill can't invoke itself inside
@@ -193,7 +192,8 @@ conditional orphan-check line (`<ORPHAN_CHECK>`) - both are placeholders, not bo
 so neither can be pasted unconditionally by a hurried reader. A `PreToolUse` hook
 (`hooks/dispatch-preamble-guard.py`) blocks a dispatch missing any of three always-required
 markers, named here so a reader who never opens the other file still knows what they are:
-(1) `Stage your changes but do NOT commit` OR `Leave all changes unstaged`, (2) `run_in_background`
+(1) `Commit your own work with /commit` OR `Stage your changes but do NOT commit` OR `Leave all
+changes unstaged`, (2) `run_in_background`
 AND `FORBIDDEN` both present, (3) `.for_bepy/screenshots/` OR the literal line `READ-ONLY
 DISPATCH`. See that file's docstring and `refs/builder-preamble.md`'s read-only opt-out for what it
 does and does not check. The per-dispatch parts - task, scope, OFF LIMITS file list, verify floor specifics -
@@ -210,9 +210,10 @@ by proxy anyway (todo 335).
 runs sequentially, or each builder gets its own worktree. A dispatch with `isolation: "worktree"`
 may start at the remote's tip, not local HEAD (a repo with many unpushed commits can be 100+
 behind), so it fills the preamble's `<WORKTREE_LINE>` to fast-forward onto the orchestrator's branch
-first. Never let two builders write the same file in parallel. Every builder running concurrently with another in the same tree uses the
-`Leave all changes unstaged` staging line (not the default stage-only variant) and names its own
-changed files in its report; the orchestrator commits each chunk by that reported file list, never
+first. Never let two builders write the same file in parallel. Every builder running concurrently with another in the same tree either commits its own work by
+pathspec through `/commit` (the default staging line), or uses the `Leave all changes unstaged`
+line (never the stage-only variant) and names its own changed files in its report; the
+orchestrator commits each such chunk by that reported file list, never
 by `git diff --cached`, which cannot tell one builder's staged files from another's already sitting
 in the same index (todo 1061: another builder's staged deletions rode into an unrelated commit this
 way and left HEAD uncompilable until the second builder's own commit landed).

@@ -41,7 +41,9 @@ CASES = [
         "Commit your own work with /commit satisfies the staging line",
     ),
     (
-        f"READ-ONLY DISPATCH\n\n{COMMIT_OWN}\n\n{BACKGROUND}\n\nDo the task.",
+        # UNSTAGED alongside keeps the staging-line check satisfied, so only the
+        # read-only + commit rule can deny this prompt.
+        f"READ-ONLY DISPATCH\n\n{UNSTAGED}\n\n{COMMIT_OWN}\n\n{BACKGROUND}\n\nDo the task.",
         True,
         "read-only + Commit your own work is denied",
     ),

@@ -160,4 +160,4 @@ proceeds on Joe's answer.
 
 ## Subagent commit handoff (READY_TO_COMMIT marker)
 
-Subagents cannot invoke skills, so they must NEVER commit (the global rule covers the verbatim "stage only" dispatch sentence). For **background** subagents specifically: have them write a short `READY_TO_COMMIT.md` marker (or similar report-back doc) listing what they staged, so when the completion notification arrives the main agent knows there is staged work waiting and can run `/commit` against it.
+A builder normally commits its own work through `/commit` (the global rule covers the staging-line sentences). For a **background** subagent that leaves its work for main to commit instead: have it write a short `READY_TO_COMMIT.md` marker (or similar report-back doc) listing what they staged, so when the completion notification arrives the main agent knows there is staged work waiting and can run `/commit` against it.
