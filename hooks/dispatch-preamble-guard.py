@@ -7,6 +7,12 @@ whether a dispatch runs a dev server is a heuristic guess, and this repo killed
 three guess-based hooks in one day over exactly that failure mode (see
 .claude/todos/PLAN.md, "Hook doctrine"). Pure string comparison only.
 
+The staging line accepts three literal options: "Stage your changes but do NOT
+commit", "Leave all changes unstaged", or "Commit your own work with /commit"
+(the last for a dispatch that is deliberately allowed to commit its own files).
+A READ-ONLY DISPATCH may never combine with the first or third: it has nothing
+to stage or commit.
+
 Screenshot-id check has an explicit opt-out: a prompt containing the literal
 line `READ-ONLY DISPATCH` is read-only by the orchestrator's own declaration,
 so it skips the screenshot marker. See refs/builder-preamble.md.
@@ -34,6 +40,7 @@ DISPATCH_TOOLS = ("Agent", "Task")
 
 STAGING_A = "Stage your changes but do NOT commit"
 STAGING_B = "Leave all changes unstaged"
+STAGING_C = "Commit your own work with /commit"
 SCREENSHOT_MARKER = ".for_bepy/screenshots/"
 READONLY_MARKER = "READ-ONLY DISPATCH"
 READONLY_REPLACEMENT_LINE = (
@@ -44,8 +51,11 @@ READONLY_REPLACEMENT_LINE = (
 
 def missing_markers(prompt: str) -> list[str]:
     missing = []
-    if STAGING_A not in prompt and STAGING_B not in prompt:
-        missing.append("staging line (\"Stage your changes but do NOT commit\" or \"Leave all changes unstaged\")")
+    if STAGING_A not in prompt and STAGING_B not in prompt and STAGING_C not in prompt:
+        missing.append(
+            "staging line (\"Stage your changes but do NOT commit\", "
+            "\"Leave all changes unstaged\", or \"Commit your own work with /commit\")"
+        )
     if "run_in_background" not in prompt or "FORBIDDEN" not in prompt:
         missing.append("run_in_background ... FORBIDDEN line")
     if READONLY_MARKER not in prompt and SCREENSHOT_MARKER not in prompt:
@@ -58,6 +68,12 @@ def missing_markers(prompt: str) -> list[str]:
         missing.append(
             f"READ-ONLY DISPATCH combined with the \"{STAGING_A}\" staging line - "
             f"replace it with: \"{READONLY_REPLACEMENT_LINE}\""
+        )
+    # A read-only dispatch must never commit either.
+    if READONLY_MARKER in prompt and STAGING_C in prompt:
+        missing.append(
+            f"READ-ONLY DISPATCH combined with the \"{STAGING_C}\" staging line - "
+            f"a read-only dispatch must never commit; replace it with: \"{READONLY_REPLACEMENT_LINE}\""
         )
     return missing
 
