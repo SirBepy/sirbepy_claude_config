@@ -15,6 +15,7 @@ guard = _testlib.load_module(
 
 STAGING = "Stage your changes but do NOT commit. The main agent will run /commit after your report-back."
 UNSTAGED = "Leave all changes unstaged. Never run `git add`. The main agent will run /commit by pathspec after your report-back."
+COMMIT_OWN = "Commit your own work with /commit before your report-back, by pathspec, only the files you changed."
 BACKGROUND = "`run_in_background` is FORBIDDEN in builder subagents"
 SCREENSHOT = "save them under `.for_bepy/screenshots/12345-6789/`"
 FULL_PROMPT = f"{STAGING}\n\n{BACKGROUND}\n\n{SCREENSHOT}\n\nDo the task."
@@ -34,6 +35,16 @@ CASES = [
         "read-only + Leave all changes unstaged passes",
     ),
     (FULL_PROMPT, False, "non-read-only + Stage your changes passes"),
+    (
+        f"{COMMIT_OWN}\n\n{BACKGROUND}\n\n{SCREENSHOT}\n\nDo the task.",
+        False,
+        "Commit your own work with /commit satisfies the staging line",
+    ),
+    (
+        f"READ-ONLY DISPATCH\n\n{COMMIT_OWN}\n\n{BACKGROUND}\n\nDo the task.",
+        True,
+        "read-only + Commit your own work is denied",
+    ),
 ]
 
 
