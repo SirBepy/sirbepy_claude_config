@@ -1,6 +1,9 @@
 ---
 name: release
 description: "Triggers on /release or 'make a new version': push pipeline plus kit sync and version bump. Not for a plain push."
+# Every step is a script call or a fixed procedure, so the session's top-tier model buys nothing here.
+model: sonnet
+effort: medium
 ---
 
 # /release

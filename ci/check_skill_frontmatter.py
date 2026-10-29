@@ -17,6 +17,8 @@ from pathlib import Path
 # references(2) license(1) allowed-tools(1) version(1) user-invocable(1).
 # context/agent/background are not from that census: they were read out of the
 # claude binary's own frontmatter schema on 2026-08-20 (todo 418).
+# model/effort come from the same schema, read 2026-10-29: model takes
+# haiku/sonnet/opus/fable/inherit or a full id, effort takes low/medium/high/max or an integer.
 ALLOWED_KEYS = {
     "name",
     "description",
@@ -30,6 +32,8 @@ ALLOWED_KEYS = {
     "context",
     "agent",
     "background",
+    "model",
+    "effort",
 }
 
 REQUIRED_KEYS = ("name", "description")
