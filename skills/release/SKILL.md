@@ -22,6 +22,10 @@ The sequence is `skills/commit/SKILL.md`'s "Push pipeline" list, the only place 
 4. `release: "patch"`: run the Push pipeline with 1b and 4b.
 5. After 1b: when the branch has no upstream (`git rev-list --count @{u}..HEAD` errors), say so and offer `git push -u origin <branch>`, same as `/commit`'s push rule; the count check below applies once an upstream exists. When `git rev-list --count @{u}..HEAD` is 0 and `release.py version-diff <repo>` shows nothing pending, print "nothing to release" and stop. A release is never version-only.
 
+## Gate chat
+
+An attended `/release` always hands the rest of the pipeline (from the todo sweep on, including 4b) to a fresh gate chat that ends with `/then-close`: after 1b and the Mode step 5 check, invoke `/gate-chat` with mode `release` and the resolved `release` value. This chat then stops. Unattended runs keep the gate in place.
+
 ## 1b. Kit sync
 
 `python C:/Users/tecno/.claude/skills/release/release.py kit-sync <repo>` prints `{"changed","old","new"}`. When `changed`, commit `CHORE: bump tauri_kit <old> -> <new>` (ASCII arrow) via `commit-pathspec.sh` with pathspec `vendor/tauri_kit`. It runs before the todo sweep and the gate so `/code-check` and `/e2e` cover the new kit code.

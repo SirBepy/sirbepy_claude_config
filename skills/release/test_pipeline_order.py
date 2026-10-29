@@ -43,14 +43,21 @@ if len(positions) == len(order):
 
 # The transcript check reads the parent session's own transcript, so the hand-off
 # must run it before spawning; a gate chat that ran it would scan an empty history.
+# The procedure lives in the gate-chat skill; commit's "Gate hand-off" section points at it.
 handoff = commit_text.split("\n## Gate hand-off", 1)
 check(len(handoff) == 2, "Gate hand-off section exists")
 if len(handoff) == 2:
     body = re.split(r"\n## ", handoff[1], maxsplit=1)[0]
-    transcript_at = body.find("Pre-push transcript check")
-    spawn_at = body.find("spawn_chat")
+    check("/gate-chat" in body, "Gate hand-off section points at the gate-chat skill")
+
+GATE_CHAT = ROOT / "skills" / "gate-chat" / "SKILL.md"
+check(GATE_CHAT.exists(), "gate-chat skill exists")
+if GATE_CHAT.exists():
+    gate_text = GATE_CHAT.read_text(encoding="utf-8").replace("\r\n", "\n")
+    transcript_at = gate_text.find("Pre-push transcript check")
+    spawn_at = gate_text.find("spawn_chat")
     check(0 <= transcript_at < spawn_at, "hand-off runs the transcript check before spawn_chat")
-    check("/close" in body, "the gate chat closes itself with /close")
+    check("/then-close" in gate_text, "the gate chat closes itself with /then-close")
 
 check(len(labels) == len(set(labels)), "no duplicate step labels")
 
