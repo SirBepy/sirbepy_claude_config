@@ -122,7 +122,7 @@ The full ordered sequence for every push (`/commit push`, a plain push request, 
 
 1. **Commit** - steps 1-8 above, including step 6b's gate (`/test` plus the test-coverage check).
 1b. **Kit sync** (`/release only`) - `release.py kit-sync <repo>`, then a `CHORE: bump tauri_kit <old> -> <new>` commit when the submodule pointer moved. Before the sweep and gate so `/code-check` and `/e2e` cover the new kit code.
-1c. **Gate hand-off** - attended runs only: when this chat has used over 30% of its context, run step 3 here, then hand steps 2 and 4 onward to a fresh gate chat (see "Gate hand-off" below). The gate is the heaviest part of a push, and a long chat runs it on a crowded context.
+1c. **Gate hand-off** - attended runs only, always: run step 3 here, then hand steps 2 and 4 onward to a fresh gate chat that ends with `/then-close` (see "Gate hand-off" below). The gate is the heaviest part of a push, and a chat that has been working all session runs it on a crowded context.
 2. **Pre-push todo sweep** - fold small backlog todos sitting in the files the push already touches.
 3. **Pre-push transcript check** - stop on any dev message since the last push that was never addressed.
 4. **Pre-push gate** - `/code-check` over `@{u}..HEAD`, then `/e2e` (or its no-suite note), then mark HEAD cleared.
@@ -135,18 +135,7 @@ The full ordered sequence for every push (`/commit push`, a plain push request, 
 
 ## Gate hand-off
 
-Runs after step 1 (and 1b under `/release`), in an attended run only. Unattended runs (`/autopilot`, `/auto-do-todos`, `/mega-todos`) keep the gate in place: nobody would answer a gate chat's cards.
-
-1. `node C:/Users/tecno/.claude/skills/context-left/context-left.mjs`. It prints `context left: <n> / <window> (<pct>%)`. 70% or more left: skip this section and continue the pipeline here.
-2. Under 70% left: run the **Pre-push transcript check** now. It reads THIS session's transcript, which a gate chat cannot see, so it never moves.
-3. `spawn_chat` with `cwd` = the repo root and `name` = `Gate: <repo> <push|release>`. The prompt carries everything, since the new chat cannot see this one:
-   - Joe's push request, quoted verbatim, and the mode (`push`, or `/release` with its resolved `release` mode).
-   - Repo path, branch, `git rev-parse HEAD` and `git log --format='%h %s' @{u}..HEAD`.
-   - "The transcript check ran in the parent chat and passed; skip step 3." Plus any in-session client commit-window OK Joe gave here, quoted.
-   - The instruction: run `/commit`'s Push pipeline from step 2 (4b only under `/release`), then `/close`. On a red gate or any question, stay open and ask Joe in that chat.
-4. Tell Joe the gate moved to the new chat, and stop: this chat does not push, and makes no further commits in that repo until the gate chat reports pushed (its HEAD guard would refuse anyway).
-
-A gate chat spawned this way carries the parent's push ask, per `snippets/auto-commit.md`.
+Runs after step 1 (and 1b under `/release`), for every attended push and every `/release`. Invoke `/gate-chat` through the Skill tool and follow it in full: it runs the transcript check here, spawns the gate chat with `/then-close` at the end of its prompt, and stops this chat. Unattended runs (`/autopilot`, `/auto-do-todos`, `/mega-todos`) and a chat that is itself a gate chat skip it and keep the gate in place.
 
 ## Pre-push todo sweep
 
