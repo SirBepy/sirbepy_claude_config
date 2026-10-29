@@ -23,11 +23,12 @@ conversation, and Joe manages those chats' length himself.
 ## When the note arrives
 
 1. Finish the request in hand. Never respawn mid-task.
-2. Run `/respawn lite`: read `~/.claude/skills/respawn/SKILL.md` and follow its Lite mode (it
-   cannot be invoked through the Skill tool). Put this chat's re-arm steps and open items under
-   its **Next steps**.
-3. The handoff prompt's FIRST characters must be the literal line `/auto-respawn`, with the Lite
-   prompt underneath. The opt-in lives in this chat's transcript, so the successor starts opted
+2. Run `/respawn unattended`: read `~/.claude/skills/respawn/SKILL.md` and follow its Unattended
+   mode with the Same-work prompt (it cannot be invoked through the Skill tool). A listener's
+   successor keeps the same role. Put this chat's re-arm steps and open items under its **Next
+   steps**.
+3. The handoff prompt's FIRST characters must be the literal line `/auto-respawn`, with the
+   Same-work prompt underneath. The opt-in lives in this chat's transcript, so the successor starts opted
    out, and a slash command only expands at the very start of a turn: an instruction to "run it"
    further down never reaches the skill, which the model cannot invoke itself.
 

@@ -2,7 +2,7 @@
 name: respawn
 description: Close this chat and hand its work to a fresh one, carrying the whole context in a visible first message.
 disable-model-invocation: true
-argument-hint: "[lite] [optional note / model override, e.g. `opus` or `focus on the daemon half`]"
+argument-hint: "[unattended] [optional note / model override, e.g. `opus` or `next: do pc-1234`]"
 ---
 
 # /respawn
@@ -37,27 +37,45 @@ successor link, and closes nothing.
 
 ## Modes
 
-Too little context costs more than too much: a successor missing one correction repeats the
-mistake, while one with an extra paragraph just skims it (Joe, 2026-10-28: "its always better to
-give more info than not enough"). Both modes therefore record everything in the detail file
-(Step 1); they differ only in how much the successor is made to read up front.
+Two independent questions set how a respawn runs. Each has its own deciding rule, and neither
+decides the other.
 
-| | **Full** (default) | **Lite** (`/respawn lite`) |
+### Who is watching: set by the caller, never judged
+
+| | **Attended** (default) | **Unattended** (`/respawn unattended`) |
 |---|---|---|
 | Used by | Joe typing `/respawn`; `/brainstorm`'s greenfield design-to-build hand-off | `/auto-respawn` and `/loop-todos`, the automatic respawns |
 | /close phases | `/close --dont-close` Phases 0-4 as written | `/close --dont-close --light` Phases 0-4, with the two skips below |
-| Visible prompt | Every section in Step 2 | The Lite subset in Step 2 |
-| Detail file | Written | Written |
 
-Lite's two skips, both because the caller already covers them:
+Unattended's two skips, both because the caller already covers them:
 
-- **Phase 0 never asks.** The automatic callers run unattended, so `/close`'s non-interactive
-  branch applies: unfinished items are filed as todos, and they also go under the prompt's
-  **Next steps** since the successor continues the same work.
+- **Phase 0 never asks.** Nobody is there to answer, so `/close`'s non-interactive branch applies:
+  unfinished items are filed as todos, and the handoff prompt lists them too.
 - **Phase 2 is skipped when the caller already ran `/code-check` over this session's commits**
-  (`/loop-todos` cycles run `/auto-do-todos`, whose Step 9 does this). Otherwise `/close`'s own skip rules decide, as in Full.
+  (`/loop-todos` cycles run `/auto-do-todos`, whose Step 9 does this). Otherwise `/close`'s own
+  skip rules decide, as in Attended.
 
-A leading `lite` token selects Lite. Any other argument is a freeform note or a model override.
+A leading `unattended` token selects Unattended. Any other argument is a freeform note or a model
+override.
+
+### What the successor does next: read from the instruction, defaults to Same work
+
+The instruction is Joe's words for the successor (the note, or his message around the `/respawn`,
+e.g. "then /respawn and tell the next guy to do pc-1234"), or an automatic caller's own next step.
+
+- **Same work** (default): the successor picks up where this chat stopped. Step 2's Same-work
+  prompt, in full.
+- **New work**: the instruction names a task clearly separate from this chat's work, e.g. a
+  different todo id, or a different feature or area. Step 2's New-work prompt opens with that task.
+  This chat's own story shrinks to a fixed floor that is never trimmed.
+
+A follow-up to this chat's work ("now write the tests for it"), or an instruction that leaves room
+for doubt, is Same work. Picking New work wrongly strips context the successor needs. Picking Same
+work wrongly only costs it a skim (Joe, 2026-10-28: "its always better to give more info than not
+enough").
+
+Both shapes write the full detail file (Step 1). They differ only in what the successor is made
+to read up front.
 
 ## What this is NOT
 
@@ -78,7 +96,7 @@ A leading `lite` token selects Lite. Any other argument is a freeform note or a 
 A respawn is a full `/close` that starts a new chat in its place (Joe, 2026-10-08: "/respawn should
 always also do /code-check ... basically do the full /close, but then just start a new chat in its
 place"). Run `/close --dont-close`'s Phases 0, 1, 2, 3 and 4 as written in
-`~/.claude/skills/close/SKILL.md` (Lite: with `--light` and the two skips in Modes above):
+`~/.claude/skills/close/SKILL.md` (Unattended: with `--light` and the two skips in Modes above):
 
 - **Phase 0 - Safe-to-close check.** Same AskUserQuestion prompt when Joe is watching an
   unfinished dev commitment. Unfinished items get filed as todos in Phase 3 below exactly like a
@@ -147,21 +165,25 @@ folders, so it never sweeps the file away early.
 ## Step 2 - Compose the handoff prompt
 
 This is the successor's first message, and Joe reads it too, so the first six lines must stand
-alone as a summary he can skim. After those, Full has no length cap: add every section that has
-content and drop a section only when it is genuinely empty. Lite keeps the sections marked
-**(Lite)** and should fit in about 25 lines above the git block.
+alone as a summary he can skim. Use the template for the shape picked in Modes. Neither has a
+length cap: add every section that has content and drop a section only when it is genuinely empty.
 
 A caller that needs a slash command re-run (`/auto-respawn`, `/loop-todos ... --resumed`) puts it
 as the prompt's literal FIRST characters, above everything below, since a slash command only
 expands at the very start of a turn. Handing off a build phase after a design session, the prompt
 may likewise open with `/autopilot`, since nothing else carries the intended mode forward.
 
-```
-We're continuing <one line: the original ask, not the last subtask>.            (Lite)
+### Same work
 
-**Done so far:** <2-4 sentences>                                                 (Lite)
-**Where it stalled:** <what's blocking, or "nothing - just out of context">      (Lite)
-**Next steps:**                                                                  (Lite)
+The instruction for the successor, if any, is **Next steps** item 1, in Joe's words. It does not
+go at the bottom of the prompt as an extra note.
+
+```
+We're continuing <one line: the original ask, not the last subtask>.
+
+**Done so far:** <2-4 sentences>
+**Where it stalled:** <what's blocking, or "nothing - just out of context">
+**Next steps:**
 1. <concrete>
 2. <concrete>
 
@@ -171,7 +193,7 @@ We're continuing <one line: the original ask, not the last subtask>.            
 **Decisions already settled** (do not re-litigate):
 - <decision + why>
 
-**Corrections Joe made this session:**                                           (Lite)
+**Corrections Joe made this session:**
 - <what was wrong, what he wanted instead>
 
 **Facts learned and dead ends** (do not retry):
@@ -180,17 +202,50 @@ We're continuing <one line: the original ask, not the last subtask>.            
 
 **Verification state:** <what ran and passed, what failed, what never ran>
 
-**Live resources:**                                                              (Lite)
+<FLOOR>
+```
+
+### New work
+
+The previous work gets one line, saying it is closed, so the successor does not resume it.
+Everything else about the old work stays in the detail file.
+
+```
+Next task: <one line: the task the instruction names>.
+
+**Joe's words for it, verbatim:**
+> <the instruction, quoted exactly>
+
+**Previous chat:** <one line: what it was doing>. It is closed; do not resume it.
+**Left open by it:** <todo ids filed in /close Phase 3, or "none">
+
+**Facts and dead ends that bear on the new task:** (only if any)
+- <fact, with its receipt>
+
+<FLOOR>
+```
+
+### The floor: both shapes, never trimmed
+
+The `<FLOOR>` line in each template above stands for this block. Never drop a section here because
+it looks unrelated to the next task. A correction Joe made about the old work usually applies to
+the next one too.
+
+```
+**Corrections Joe made this session:**     (New work only; Same work already has it above)
+- <what was wrong, what he wanted instead>
+
+**Live resources:**
 - <supervised-run servers with id and port, background tasks or agents still running,
   claimed todos, open question cards, peers mid-coordination, or "none">
 
-**Read first:**
+**Read first:**     (only if any)
 - <absolute path> - <why>
 
-**Uncommitted on purpose** - branch `<branch>`, nothing was committed during the handoff:   (Lite)
+**Uncommitted on purpose** - branch `<branch>`, nothing was committed during the handoff:
 <`git status --short` output>
 
-**More detail, only if needed:**                                                 (Lite)
+**More detail, only if needed:**
 - Detail file: <absolute path>. Holds the full conversation verbatim, files touched, commits,
   todos filed, /code-check findings and the retrospective. Temporary: this chat's /close deletes it.
 - Previous transcripts, newest first: <this session's .jsonl path>, <every path listed on this
@@ -206,8 +261,8 @@ Live resources come from real state too: `sv.ps1 ls` (see `/supervised-run`) for
 for this session's own agents, `.claude/todos/.claims/` for claims this session holds. A
 successor that does not know a server is running starts a second one on a new port.
 
-If the invocation carried a freeform note, honor it in the prompt; it never overrides the derived
-context, it adds to it.
+A freeform note never deletes derived context that the chosen shape keeps. Where it goes depends
+on the shape: Next steps item 1 for Same work, the opening line for New work.
 
 ## Step 3 - Respawn
 
