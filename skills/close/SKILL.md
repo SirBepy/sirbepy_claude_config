@@ -79,8 +79,8 @@ filesystem.
 **Orphaned-probe check (todo 968).** If this project has any file under a `verify/`, `e2e/`,
 `tests/`, `test/`, `__tests__/`, `cypress/`, `playwright/`, or `spec(s)/` directory, run
 `python ~/.claude/tools/dead-probe-check.py --root <project root> --against HEAD` (uncommitted
-changes), and if `git rev-parse --abbrev-ref --symbolic-full-name @{u}` resolves, also run it
-`--against @{u}..HEAD` (this session's unpushed commits). It greps removed `title=`/`aria-label=`
+changes), and if `git rev-parse --abbrev-ref --symbolic-full-name '@{u}'` resolves, also run it
+`--against '@{u}..HEAD'` (this session's unpushed commits). It greps removed `title=`/`aria-label=`
 (colon-truncated) and `id=`/`data-testid=`/`name=` (exact) literals against those directories for
 a selector a deleted or renamed UI surface left dangling - no browser, seconds not minutes. Exists
 because `/e2e` is deliberately opt-in per CLAUDE.md's testing floor, so nothing else re-checks a

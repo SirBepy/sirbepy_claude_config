@@ -172,6 +172,15 @@ per the global subagent-model rule; never inherit.
    replace it with an env var or secret-store read, and commit the fix before
    `/create-pr` runs again. This is not auto-fixable.
 
+2c. **Push gate (main agent).** `hooks/push-gate.py` denies step 5's `git push -u origin
+   <branch>` until a gate cleared HEAD, and a code-check fix can change commits, so this runs
+   before any preview. Run `skills/commit/SKILL.md`'s "Pre-push gate" section (steps 1-4) over
+   `<base>..HEAD` (a new branch has no `@{u}`), then, as its own tool call, `python
+   C:/Users/tecno/.claude/hooks/push-gate.py mark <repo> --reason "<what passed>"`. Do not route
+   through `/commit push`: its Gate hand-off spawns a new chat and stops this one, ending this
+   flow. `--no-checks` skips only step 2's fast checks, never this gate. If the gate changed
+   commits, redraft the body (step 2) before step 3.
+
 3. **Visual approval (main agent - live gate, cannot delegate).** If the
    subagent recommended `none`, there's nothing to ask - continue to step 4.
    Otherwise ask the dev a short, dedicated y/n (separate from and before the

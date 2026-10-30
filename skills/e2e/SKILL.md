@@ -1,6 +1,6 @@
 ---
 name: e2e
-description: Runs a project's e2e suite via /flutter-e2e or /jest-lua, or render-diffs a built screenshot against a design tile.
+description: Runs a project's e2e suite (Flutter, Roblox, Node, Android), or render-diffs a built screenshot against a design tile.
 argument-hint: "[flow description | test-plan.md path] | diff --built <png> --built-width N --design <png> --design-width N"
 ---
 
@@ -25,7 +25,7 @@ falls through to the table and its `/flutter-e2e` row.
 | Marker at repo root | Stack | Delegate |
 |---|---|---|
 | `pubspec.yaml` with a `flutter:` dependency | Flutter | `/flutter-e2e` - scripted mode for a flow description, plan-file mode for a `.md` test-plan path |
-| `test.project.json`, `*.rbxlx`, or a `testing/wally.toml` | Roblox / Luau | `/jest-lua run` (its `run-in-roblox` fallback is the client-in-the-loop path for this stack) |
+| `test.project.json`, `*.rbxlx`, or a `testing/wally.toml` | Roblox / Luau | Read `~/.claude/skills/jest-lua/SKILL.md` (Read works; only the Skill tool refuses it) and follow its `run` section (its `run-in-roblox` fallback is the client-in-the-loop path for this stack) |
 | `gradlew` or `settings.gradle(.kts)` at the repo root | Android / Gradle | `gradlew connectedDebugAndroidTest` - requires a booted device/emulator; report "no device" plainly when none is attached, not "no suite". UNINSTALLS the app from the device/emulator when it finishes. |
 | `package.json` with a Playwright config or `snippets/test-e2e.md` import | Node / web | follow `~/.claude/snippets/test-e2e.md` exactly - affected-specs by default, full suite when asked, dispatched to a background subagent |
 | `package.json` with a wdio config (`wdio.conf.*`) or an `@wdio/cli` devDependency | WebdriverIO desktop app (Tauri / native webview) | the project's own documented e2e script: read the Commands section of its `CLAUDE.md` for the exact npm script or wrapper (e.g. a `test:e2e*` script or a sweep script), run it, and report its per-spec verdicts. This row wins over the Playwright row above it when both match. |

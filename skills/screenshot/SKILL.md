@@ -45,13 +45,14 @@ If either is missing, stop and tell the user to restore it.
 
 ## Step 2 - Detect and start the server
 
-| Condition | Port | Command |
-|---|---|---|
-| `vite.config.*` exists | 5173 (or as configured) | `npm run dev` |
-| React/Next in `package.json` | 3000 | `npm run dev` |
-| `index.html`, no `package.json` | 8080 | `python -m http.server 8080` |
+| Condition | `-Cmd` for `/supervised-run` |
+|---|---|
+| `vite.config.*` exists | `npm run dev -- --port {PORT}` |
+| Next in `package.json` | `next dev -p {PORT}` |
+| other React in `package.json` | `npm run dev` (the supervisor sets the `PORT` env var) |
+| `index.html`, no `package.json` | `python -m http.server {PORT}` |
 
-Start with `run_in_background: true`. Poll: `(Invoke-WebRequest -Uri "http://localhost:PORT" -UseBasicParsing -TimeoutSec 1 -ErrorAction SilentlyContinue).StatusCode` up to 15 tries, 1s apart.
+Start it through `/supervised-run` (`hooks/dev-server-guard.py` denies a raw `npm run dev`): `powershell -File "C:\Users\tecno\.claude\skills\supervised-run\sv.ps1" ensure -Project <folder-name> -Cmd "<cmd>" -Kind ephemeral`. Its stdout is `<id> status=<status> port=<port> action=<started|reused-running>`; use that `port` as PORT everywhere below, and note both `id` and `action`. Poll: `(Invoke-WebRequest -Uri "http://localhost:PORT" -UseBasicParsing -TimeoutSec 1 -ErrorAction SilentlyContinue).StatusCode` up to 15 tries, 1s apart. A non-zero exit means the supervisor is unreachable: stop and tell the dev, per `/supervised-run`'s Fallback.
 
 ## Step 3 - Read the project and plan
 
@@ -117,9 +118,7 @@ After it completes, read each screenshot back to verify: not blank, not mid-anim
 
 ## Step 6 - Stop the server
 
-```
-npx --yes kill-port PORT
-```
+Only after every screenshot has been delivered to the dev (`SendUserFile` or `/preview`), and only if THIS session started the entry (`action=started` in Step 2), after the `list_peers` check in `/supervised-run`'s Stop rule: `powershell -File "C:\Users\tecno\.claude\skills\supervised-run\sv.ps1" stop -Id <id>`. A `reused-running` entry is shared and stays up. Never kill by port.
 
 ## Step 7 - Return results
 

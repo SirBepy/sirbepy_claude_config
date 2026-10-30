@@ -27,7 +27,7 @@ A repo can match more than one row (a Tauri app matches Rust *and* Node); run ev
 | `pubspec.yaml` with a `flutter:` dependency | Flutter | `fvm flutter test` |
 | `package.json` | Node / web | resolved from `scripts.test` |
 | `Cargo.toml` or `src-tauri/Cargo.toml` | Rust / Tauri | `cargo test --lib` |
-| `test.project.json`, `*.rbxlx`, or a `testing/wally.toml` | Roblox / Luau | `/jest-lua run` |
+| `test.project.json`, `*.rbxlx`, or a `testing/wally.toml` | Roblox / Luau | read `~/.claude/skills/jest-lua/SKILL.md`, follow its `run` section |
 | `gradlew` or `settings.gradle(.kts)` at the repo root | Android / Gradle | `gradlew testDebugUnitTest lintDebug assembleDebug` |
 | none of the above | scripts / docs repo | see "Scripts repo" below |
 
@@ -65,8 +65,9 @@ workspace: pass `--manifest-path src-tauri/Cargo.toml` rather than relying on cw
   at its time limit" note on cargo usually means lock contention or a long compile rather than a
   hang: switch to the detached form rather than relaunching the same capped job, and let its log
   tell the two apart.
-- **Roblox / Luau:** hand off to `/jest-lua run`; it already owns `scripts/check.sh` and the
-  `run-in-roblox` fallback.
+- **Roblox / Luau:** Read `~/.claude/skills/jest-lua/SKILL.md` (Read works; only the Skill tool
+  refuses it) and follow its `run` section; it owns `scripts/check.sh` and the `run-in-roblox`
+  fallback.
 - **Android / Gradle:** `gradlew testDebugUnitTest lintDebug assembleDebug`. `$env:JAVA_HOME` does
   not persist between tool calls, so pass the JDK inline as `-Dorg.gradle.java.home=<path>`, found
   once from the project's own run-mechanics memory or `JAVA_HOME`.
