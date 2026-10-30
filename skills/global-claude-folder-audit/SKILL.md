@@ -45,18 +45,23 @@ Run folder: `.for_bepy/global-audit/<YYYY-MM-DD>/` (gitignored).
 
 ## Phase 2 - Rubric
 
-Write `<run folder>/RUBRIC.md`: the Hard constraints, Prior-decision check, Severity and Report
-format sections of `skills/audit/rubric-template.md`, then this skill's `lens.md` in place of the
-template's four app lenses, then the context: the usage table, the vendored list, the ledger's
-Declined entries, and the fact that this is a single-developer setup shared by many concurrent
-sessions (so token cost per session and hook latency per tool call are real costs).
+Copy this skill's `rubric.md` to `<run folder>/RUBRIC.md` and fill in its Project context section:
+current counts, the usage window and its known undercounts, the top-used skills, the vendored list,
+and the last run date. The rubric points every auditor at `lens.md` and the ledger itself.
 
 ## Phase 3 - Fan out
 
 Every dispatch: `model: 'sonnet'`, the canonical preamble from `refs/builder-preamble.md` with the
-literal `READ-ONLY DISPATCH` line and its "Leave all changes unstaged" staging variant, and an
-instruction to read `<run folder>/RUBRIC.md` first. Launch in the foreground, in parallel batches:
-background dispatches have been lost across turns in Conductor chats.
+"Leave all changes unstaged" staging line, the screenshot-id line filled in (from
+`skills/close/rename-session.ps1 -GetId`) instead of the read-only marker line, and an OFF LIMITS
+line naming every file except the agent's own `<run folder>/reports/<slice>.md`. Each auditor
+writes its full report to that file and returns only a 15-line summary, so twenty reports never
+land in this session's context; the read-only marker would make that Write fail (see the preamble's
+"Read-only opt-out"). Avoid quoting the stage-and-wait staging phrase anywhere in a prompt next to
+the read-only marker text, even inside a grep pattern: `hooks/dispatch-preamble-guard.py` matches
+literal substrings and rejects the dispatch. Each prompt tells the agent to read
+`<run folder>/RUBRIC.md` first. Launch in the foreground, in parallel batches: background
+dispatches have been lost across turns in Conductor chats.
 
 | Slice | Owns |
 | --- | --- |
@@ -73,8 +78,10 @@ Hand the research report to the slices still being launched, and keep a growing
 
 ## Phase 4 - Verify
 
-`/audit` Phase 4 applies unchanged, using `skills/audit/verify-template.md`, plus one rule of its
-own: **every DELETE and MERGE recommendation goes to a refuter regardless of severity.** A refuter
+`/audit` Phase 4 applies unchanged, using `skills/audit/verify-template.md`, with refuters grouped
+by theme (about 5: hooks, rules/settings/research, deletes, commit/todo, the remaining skills), each
+writing `<run folder>/reports/verify-<theme>.md` the same way. Plus one rule of its own:
+**every DELETE and MERGE recommendation goes to a refuter regardless of severity.** A refuter
 gets the usage numbers and must argue for keeping it. Retiring a skill is the call most often made
 too quickly, and the dev sometimes wants separate skills for autocomplete even when they overlap.
 
