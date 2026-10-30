@@ -57,7 +57,8 @@ if GATE_CHAT.exists():
     transcript_at = gate_text.find("Pre-push transcript check")
     spawn_at = gate_text.find("spawn_chat")
     check(0 <= transcript_at < spawn_at, "hand-off runs the transcript check before spawn_chat")
-    check("/then-close" in gate_text, "the gate chat closes itself with /then-close")
+    check("`/close` as the prompt's last word" in gate_text, "the gate chat closes itself with a trailing /close")
+    check("/then-close" not in gate_text, "the gate chat no longer names the retired /then-close")
 
 check(len(labels) == len(set(labels)), "no duplicate step labels")
 

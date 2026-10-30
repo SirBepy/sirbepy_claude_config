@@ -1,7 +1,7 @@
 ---
 name: close
-description: Session retrospective, code-health review, persist, close terminal.
-argument-hint: "[--dont-close] [--skip-review] [--light] [/commit ...] [/sleep-when-done]"
+description: Retrospect, review, persist, close. Fires on /close as a message's first or last word; finishes open work first.
+argument-hint: "[task text] [--now] [--dont-close] [--skip-review] [--light] [/commit ...] [/sleep-when-done]"
 ---
 
 # /close
@@ -11,7 +11,9 @@ argument-hint: "[--dont-close] [--skip-review] [--light] [/commit ...] [/sleep-w
 ## Usage
 
 ```
-/close                                  # retrospect + review + persist + close terminal
+/close                                  # finish open work, then retrospect + review + persist + close terminal
+fix the typo /close                     # do the task first, then the same as /close
+/close --now                            # skip finishing and waiting: file unfinished items as todos, then close
 /close --dont-close                     # everything except closing, then prompts to run /clear
 /close --skip-review                    # skip the parallel code-health review subagents
 /close --light                          # high-context mode: short Phase 1, delegate Phase 2+3 to subagents
@@ -23,7 +25,20 @@ argument-hint: "[--dont-close] [--skip-review] [--light] [/commit ...] [/sleep-w
 
 ### Arg parsing
 
-`--dont-close`, `--skip-review`, and `--light` are boolean flags, not chained commands. Strip them out first, then parse the rest.
+`--now`, `--dont-close`, `--skip-review`, and `--light` are boolean flags, not chained commands. Strip them out first, then parse the rest. Dev wording that asks to close without finishing ("close now", "close right now", "just close") counts as `--now`.
+
+### Trigger
+
+Fires only on a `/close` token the dev typed as the first or last word of their own message, or that
+ends a gate chat's spawn prompt (which carries the dev's push request). Text before a trailing
+`/close` is a task to finish first (`fix the typo /close`); any other `/command` in it runs as part
+of that task, per `~/.claude/refs/slash-arg-parsing.md`. Claude Code only expands a slash command at
+the very start of a prompt, so a trailing token arrives as plain text and Claude loads this skill
+through the Skill tool itself; that is why the skill stays model-invocable. Never a trigger: `/close`
+mid-sentence, inside quotes, code, tool output or skill text, negated or conditional ("don't /close
+yet", "should I /close?"). If Claude cannot point at the dev's own message ending or starting with the
+token, it does not start. Claude also runs it unprompted under CLAUDE.md's "Task done, no question
+pending: run /close yourself"; that path has nothing in flight by definition, so it never waits.
 
 If `--light` is passed: read `close/light.md` before proceeding. It overrides Phases 1-3 with high-context-mode versions.
 
@@ -44,9 +59,9 @@ Honest reviewer, not cheerleader. Same anti-sycophancy bar as /rate-it. If sessi
 
 ## When to run
 
-Manual only. The dev triggers /close when a session reaches a natural end. Never auto-fire on token thresholds: deciding "this session is done" is what makes the retrospective land.
+The dev triggers /close (see Trigger above), or Claude runs it when a task is done with nothing pending. Never auto-fire on token thresholds: deciding "this session is done" is what makes the retrospective land.
 
-Phases 0-5 start in the SAME turn /close is invoked, never deferred behind in-flight background work (a running Bash command, subagent, `/loop`, etc). Only Phase 6 is gated on background work - see its skip list below. Persistence is the point of this skill, so it cannot wait on optional work landing green.
+Phase 0 starts in the SAME turn /close is invoked, and Phases 1-5 run in that same turn once Phase 0's finishing and waiting are done. Never end a turn to wait for background work to re-invoke the session: on 2026-08-19 a /close that promised to run "once it returns" ended its turn with zero phases, the host marked the chat done, and the retrospective was nearly lost (`.claude/todos/done/close-must-not-be-deferred-behind-background-work.md`). Persistence is the point of this skill, so it cannot hang on optional work forever: Phase 0's wait is in the foreground and capped.
 
 ## Host app integration (Claude Conductor)
 
@@ -91,7 +106,7 @@ warning, not noise: it was measured against 143 real commits before being wired 
 exactly one hit, the one real incident, zero false positives (a bare-word version of the same idea
 measured 9 false positives to 1 true positive on the same corpus and was rejected for that). Add
 any finding to the unfinished-commitments list below exactly like a visual-work item, so it goes
-through the same finish-it-first/close-anyway/full-auto handling rather than getting silently
+through the same Phase 0 finish-or-file handling rather than getting silently
 dropped if nobody reads the raw script output.
 
 Scan the full session for dev-stated commitments: every request the dev made, a single one-line ask included ("fix the typo"), plus explicit multi-part asks ("we need to do X, Y, Z"), a numbered plan the dev agreed to, and the visual-work item above if it triggered. A one-off request is the most common shape of a short session and the easiest to half-finish, so it is never exempt for having only one part. For each, check whether it actually got done by the time `/close` was invoked.
@@ -102,16 +117,17 @@ If everything the dev asked for was completed: proceed silently to Phase 1, no o
 
 Before asking anything below: search this project's memory for the subject first. If a memory entry already decides this exact fork (a past override, a standing preference for this kind of unfinished item), apply it directly and log which memory decided it, instead of asking again.
 
-If anything is unfinished AND the repo's own `CLAUDE.md` imports `~/.claude/snippets/full-auto.md` (check for the literal `@import` line - mechanical detection, not a guess about repo ownership): treat the fork exactly as the non-interactive branch below does - pick "close anyway", file the item per Phase 3 - then print one line naming the choice and why, e.g. `full-auto repo: filing "<item>" as a task todo instead of asking (repo imports full-auto.md)`. Never post the `AskUserQuestion` card here; this repo opted out of being asked.
+If the repo's own `CLAUDE.md` imports `~/.claude/snippets/full-auto.md` (check for the literal `@import` line - mechanical detection, not a guess about repo ownership), the Default branch below still applies, except that an item only the dev can unblock is filed as a `task` todo instead of asked, with one printed line naming it, e.g. `full-auto repo: filing "<item>" as a task todo instead of asking (repo imports full-auto.md)`. This repo opted out of being asked.
 
-If anything is unfinished AND this `/close` was invoked by `/then-close`: the dev already chose **Finish it first**, so do the item without asking and post the card below only for an item that needs the dev (see `then-close/SKILL.md`).
+**What counts as unfinished** (the only set the finish-first default acts on): (a) the dev-stated commitments from the scan above, (b) Claude's offers the dev explicitly accepted, (c) the visual-work and orphaned-probe items. Never in the set: Claude's un-accepted offers (Phase 1 step 5 files those), anything already filed as a todo (a deferred bundle is not reopened at close time), and a push the dev has not asked for. Size brake: an item that would reach beyond what the dev's message implied (files outside the original ask, a multi-step plan the dev only listed) is filed as a `task` todo instead, with one line saying so.
 
-If anything is unfinished AND this `/close` was triggered interactively (the dev typed it, or it's a live chain the dev is watching) AND the repo does NOT import `full-auto.md`: print a short list (what was asked, what state it's in), then ask via `AskUserQuestion` with exactly two options:
+**In-flight background work** (a `run_in_background` Bash command, a background `Agent`, a `/loop` or pending `ScheduleWakeup` this session started) counts as unfinished too: wait for it in the foreground, one bounded call at a time (poll its output file or `ListAgents`, each call with an explicit `timeout`), never by ending the turn. Cap: after 30 minutes, or when `ListAgents` reports it lost or dead, stop waiting, file it as a `task` todo naming what was still running, and continue. A CI/release build watcher (`commit/build-watch.md`) is never waited on.
 
-- **Finish it first** - pause `/close`, do the unfinished work, then resume at Phase 1.
-- **Close anyway** - proceed through the rest of `/close` with the item left unfinished. Hand it to Phase 3 to be filed as a `task` todo (same treatment as an unfinished offer) so it isn't lost.
+Branches, in order:
 
-If anything is unfinished AND `/close` was chained non-interactively (`/sleep-when-done`, autopilot, or any unattended run with nobody to answer a prompt): never block on `AskUserQuestion` - auto-file each unfinished item straight to Phase 3 as a `task` todo (same treatment as "close anyway") and continue.
+- **Unattended chain** (`/sleep-when-done`, autopilot, `/auto-do-todos`, `/loop-todos` cycles, `/respawn` and `/auto-respawn`'s `--dont-close` runs, any run with nobody to answer): never finish, never wait, never ask. File each unfinished item straight to Phase 3 as a `task` todo and continue.
+- **`--now`**: file each unfinished item as a `task` todo, then continue. No finishing, no waiting.
+- **Default** (a dev-typed `/close`, or the gate chat's trailing one): finish every item Claude can do alone, without asking, under every normal rule (testing floor, `/commit` per the auto-commit policy; this grants no push). For an item only the dev can unblock (a decision, a red check Claude cannot fix, a physical action), ask it and end the turn with status `question`: the close stays armed, and once the answer arrives and the work is done, continue at Phase 1 without being told again. A dev message that drops or redirects the work disarms it. In a gate chat this is what keeps a red gate from closing behind the dev's back: it closes only once the push landed.
 
 No silent-drop path either way - every unfinished item either gets done now, or gets filed.
 
@@ -209,7 +225,7 @@ Run in this order:
    reservation, and the same `.git/info/exclude` self-heal a local file gets.
 
    Write a separate `.md` file per item from:
-   - Phase 0 (unfinished dev commitments where the dev chose "close anyway") - tag `**Type:** task`,
+   - Phase 0 (unfinished items filed instead of finished: `--now`, an unattended chain, the size brake, or the wait cap) - tag `**Type:** task`,
      `**Origin:** dev` (the dev asked for it; Claude just didn't finish it in time).
    - Phase 1 step 5 (unfinished offers) - tag `**Type:** task`, `**Origin:** ai` (Claude proposed it
      unprompted and it never got executed).
@@ -312,4 +328,5 @@ If kill was skipped, print on its own line:
 - Auto-committing without `/commit` in the chain. Dev opts in explicitly now.
 - Writing memories about ephemeral session state. Re-read auto-memory rules before writing.
 - Trying to invoke `/exit` as a skill or chained command. Terminal kill is now built into Phase 6 by default.
-- Promising to run /close later. If the dev asked for it, its phases run now.
+- Promising to run /close later, or ending a turn to wait for background work. If the dev asked for it, Phase 0 finishes and waits in the foreground, and the phases run in that same turn.
+- Firing on a mention. Only a `/close` that starts or ends the dev's own message is a trigger.
