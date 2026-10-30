@@ -101,7 +101,9 @@ document.getElementById("o")!.textContent =
   const cb = node("bundle-board.mjs", [path.join(run, "css-literal.src.html"), cssOut]);
   check("bundle-board bundles a board whose CSS strings hold </body> and </style>", cb.status === 0 && fs.existsSync(cssOut), cb.stderr || cb.stdout);
   const cssHtml = fs.existsSync(cssOut) ? fs.readFileSync(cssOut, "utf8") : "";
-  check("a literal </style in CSS cannot close the style element", (cssHtml.match(/<\/style/gi) || []).length === 1, cssHtml.slice(0, 600));
+  // Two closers: the bundled stylesheet's own, and the template tail bundle-board appends.
+  check("a literal </style in CSS cannot close the style element", (cssHtml.match(/<\/style/gi) || []).length === 2, cssHtml.slice(0, 600));
+  check("the panel template tail follows the bundled CSS", /<\/style>\s*<style>html body\{padding:var\(--pv-pad/.test(cssHtml), cssHtml.slice(-400));
   const cssPlan = write("css-plan.json", JSON.stringify({
     settleMs: 1800,
     steps: [{ type: "expectText", selector: "#o", equals: '"</body>""</style>"' }],
