@@ -24,7 +24,7 @@ The sequence is `skills/commit/SKILL.md`'s "Push pipeline" list, the only place 
 
 ## Gate chat
 
-An attended `/release` always hands the rest of the pipeline (from the todo sweep on, including 4b) to a fresh gate chat that ends with `/then-close`: after 1b and the Mode step 5 check, invoke `/gate-chat` with mode `release` and the resolved `release` value. This chat then stops. Unattended runs keep the gate in place.
+An attended `/release` always hands the rest of the pipeline (from the todo sweep on, including 4b) to a fresh gate chat that ends with `/close`: after 1b and the Mode step 5 check, invoke `/gate-chat` with mode `release` and the resolved `release` value. This chat then stops. Unattended runs keep the gate in place.
 
 ## 1b. Kit sync
 
