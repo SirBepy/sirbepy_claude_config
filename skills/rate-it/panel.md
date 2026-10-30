@@ -142,5 +142,5 @@ merge with anchor bias.
    - `Verdict: ESCALATE` - a confirmed flaw is decision-changing, or two or more claims came back
      unverifiable, so the call needs context this panel does not have.
 
-The numeric score line stays exactly where it is and in the same format. `/rate-it-and-commit`
-reads it, and the verdict line is an addition to the block, never a replacement for the number.
+The numeric score line stays exactly where it is and in the same format, and the verdict line is an
+addition to the block, never a replacement for the number.

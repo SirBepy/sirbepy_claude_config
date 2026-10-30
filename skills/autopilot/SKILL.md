@@ -63,7 +63,7 @@ with "start writing files immediately, one file per Write call, keep each respon
 
 4. **BOUNDED iterate-it.** Invoke `/iterate-it --explore-max=2 --polish-max=1 <concrete hypothesis>` (fast convergence, ~50-150k tokens). Take the converged proposal as the decision. Hard cap: at most **3** iterate-it escalations per run; on a 4th genuine call, pick the most reversible option directly and log "escalation-cap hit, guessed" instead of spending more. Never re-litigate a converged call.
 
-5. **Nested-question suppression contract (load-bearing).** Any invoked skill (iterate-it, rate-it, commit, rate-it-and-commit) that would fire `AskUserQuestion` must NOT relay to the dev.
+5. **Nested-question suppression contract (load-bearing).** Any invoked skill (iterate-it, rate-it, commit) that would fire `AskUserQuestion` must NOT relay to the dev.
    - Default rule: auto-select the option the skill marks best/long-term; if none is clearly best, pick the most reversible and log "autopilot guessed".
    - **iterate-it's terminal question is special-cased.** Its final ship / another-round / abandon prompt is control-flow, not an option-quality pick, so the default rule is undefined for it. ALWAYS choose **ship** (take the converged proposal as the decision) when the run hit `--floor` or the phase cap. NEVER auto-select "another round" (re-spends the cap on a converged call) and NEVER "abandon" (discards a decision autopilot explicitly asked for). The only non-ship path is iterate-it's own `unconverged` / `thrash` report: treat THAT as "no confident answer" and fall back to the most reversible option per Hard Stops, do not re-run.
 
