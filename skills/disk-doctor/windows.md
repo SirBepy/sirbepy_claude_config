@@ -211,6 +211,8 @@ At END of scan, append any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCA
 - `C:\Windows\WinSxS` - component store. Deleting corrupts the OS; only DISM may clean it.
 - `pagefile.sys`, `hiberfil.sys`, `swapfile.sys` - system-managed; never manual-delete (disable the feature instead if reclaiming).
 - `C:\Windows\System32`, `C:\Program Files*`, `C:\ProgramData` package installs - not cleanup targets.
+- Heroes of the Storm (`C:\Program Files (x86)\Heroes of the Storm`) - Joe plays it. 2026-10-30, after it had been offered twice in one run: "Stop asking this. Im playing this game".
+- Any regenerable cache or build dir (Rust `target`/`*-target`, Flutter `build`/`.dart_tool`, `~/.gradle\caches`, etc.) whose newest file is under 21 days old. Joe, 2026-10-30: "why delete if itll get rebuilt" - something he is still building just regrows, so deleting it only costs a rebuild. Only build output idle for 21+ days gets offered. Temp older than 2 days and stale screenshots are not covered by this rule.
 
 ## KNOWN SAFE-TO-DELETE (regenerates / re-downloadable)
 
@@ -233,7 +235,6 @@ At END of scan, append any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCA
 
 Cap: 5 entries max. When at cap, drop the entry with the earliest date field before appending; if dates tie, drop the topmost entry. Never reorder remaining entries.
 
-- 2026-08-05: Follow-up scan. C: free 127.8/930.6G (recovered from June's 24-30G). Confirmed claude_usage_in_taskbar's Tauri junk was NOT actively regrowing - all found Rust target dirs (claude_usage_in_taskbar target 19.95G+src-tauri/target 14.93G+target-alt 16.47G, server_supervisor src-tauri/target 12.05G, odysseus desktop/src-tauri/target 9.42G) predate the 2026-07-19 global target-dir fix and were simply never cleaned up. Found + fixed 2 live issues: (1) claude_usage_in_taskbar's settings.local.json (+worktree copy) had 3 pre-approved permissions hardcoding CARGO_TARGET_DIR=src-tauri/target-export, bypassing the global redirect if ever reused - removed. (2) shared unnamespaced D:/cargo-target meant unrelated projects/tools (Claude Conductor build, cargo-audit) already landed in the same debug/release folders - added per-project target-dir overrides (own D: subfolder) to claude_usage_in_taskbar, server_supervisor, pomodoro-overlay, odysseus .cargo/config.toml. Also found D: itself had ~33.6G of stale one-off pre-fix test folders (claude_usage_in_taskbar__src-tauri 18G, server_supervisor__src-tauri 8.9G, pomodoro-overlay__src-tauri 6.7G) - junk isn't C:-only, D: needs the same recurring check. Other wins: Docker 26.5G, npm-cache 7.65G, gradle 4.48G, LocalAppData Temp 19.64G, playwright caches 8.44G, pip 2.51G, revaire-mobile build+.dart_tool 6.7G, odysseus venv 3.8G, llama.cpp build 1.07G. Total addressable ~192G across C: and D:. Judgment calls (kept, not junk): Roblox LocalAppData cache 6.87G, .screenpipe 27.02G.
 - 2026-09-04: `C:\Users\tecno\.screenpipe` no longer exists - Joe deleted Screenpipe and its capture
   database deliberately. Do not go looking for that 27G on a future scan, and do not treat its
   absence as a mystery.
@@ -268,3 +269,14 @@ Cap: 5 entries max. When at cap, drop the entry with the earliest date field bef
   unpinned), Android SDK 18G (six NDKs) + Medium_Phone AVD 6.9G, HF/whisper caches 22.8G, Claude VM bundle
   8.3G, Docker vhdx 27.5G, inZOI folder still on D:\SteamLibrary (no manifest for appid 2456740), Heroes of
   the Storm 19.5G in Program Files (x86). C: games total only about 50G; inZOI/Fellowship live on D:.
+- 2026-10-30: 2 read-only sonnet scouts (standard sweep, plus a per-repo inventory for a "delete stale
+  repos" idea that Joe dropped after /rate-it scored it 3/10). C: free 216.0/930.5G at scan, 211.2G at
+  delete time because other sessions were writing, 222.1G after. Deleted (each approved per item): 20
+  build-output dirs idle 21+ days, ~2.7G (git tracked none of them; VS Code extension `dist` dirs left
+  out), 3,546 Temp items older than 2 days (2 locked, left), and client-repo screenshots (zng-app/admin/
+  biller, revaire-mobile + its rev-7068 worktree, ~224M). Joe declined C:\tmp\cc-target 20.6G and
+  ~/.gradle caches 9.1G because both were used within 3 weeks, and HotS because he plays it. Both rules
+  are now in NEVER-TOUCH. In use, not offered: Ollama 111.8G (dashboard-a eval had qwen3.8:27b loaded),
+  Docker vhdx 34.5G, and HF/whisper 21.8G (the Conductor stt-sidecar, sirbepy_assistant and odysseus
+  load those models). Joe chose to keep the other ~8.7k Claude screenshots (~0.8G) in case he wants them.
+  Every big build (zng-app, joes_tabs, revaire-mobile, zng-biller, 16.6G) was under 21 days old.
