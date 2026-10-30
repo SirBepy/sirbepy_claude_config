@@ -27,14 +27,14 @@ For the duration of an `/autopilot` run, this contract **SUPERSEDES** the global
 
 ## Delegation doctrine (shared, not restated here)
 
-An autopilot run ADOPTS `~/.claude/refs/delegation-doctrine.md` in full: the 90/10 rule (subagents do all building and all broad reading; the main loop keeps only surgical rights), dispatch discipline (scout spec packs, embedded verify floor, the verbatim stage-don't-commit line, restated global rules), orchestrator hygiene (keep one-line outcomes, discard transcripts), and the quality tells for distrusting a report. Read it at the start of the run. `/delegate` adopts the same file for interactive sessions; everything below is the AFK-only layer on top.
+An autopilot run ADOPTS `~/.claude/refs/delegation-doctrine.md` in full: the 90/10 rule (subagents do all building and all broad reading; the main loop keeps only surgical rights), dispatch discipline (scout spec packs, embedded verify floor, the verbatim staging line, restated global rules), orchestrator hygiene (keep one-line outcomes, discard transcripts), and the quality tells for distrusting a report. Read it at the start of the run. `/delegate` adopts the same file for interactive sessions; everything below is the AFK-only layer on top.
 
-`hooks/dispatch-preamble-guard.py` rejects any `Agent`/`Task` dispatch missing three verbatim markers - name them here so a fan-out never gets built before the doctrine file is read: the staging line (`Stage your changes but do NOT commit` or `Leave all changes unstaged`), a `run_in_background` ... `FORBIDDEN` sentence, and either a `.for_bepy/screenshots/` id line or the `READ-ONLY DISPATCH` opt-out for read-only scouts. Paste the canonical block from `refs/builder-preamble.md` into every dispatch prompt.
+`hooks/dispatch-preamble-guard.py` rejects any `Agent`/`Task` dispatch missing three verbatim markers - name them here so a fan-out never gets built before the doctrine file is read: one of the three staging lines (`Commit your own work with /commit` as the default, `Leave all changes unstaged` for read-only dispatches, shared-index repos and parallel builders in one tree, `Stage your changes but do NOT commit` only when the orchestrator must review first), a `run_in_background` ... `FORBIDDEN` sentence, and either a `.for_bepy/screenshots/` id line or the `READ-ONLY DISPATCH` opt-out for read-only scouts. Paste the canonical block from `refs/builder-preamble.md` into every dispatch prompt.
 
-Builders inherit the orchestrator's own effort - the `Agent` tool has no `effort` parameter, so a
+Builders run at the orchestrator's own effort unless the dev asked for a level, so a
 chunk dispatched at a large scope can burn its whole output budget on thinking and return zero tool
 calls (`stop_reason: max_tokens`, nothing written to disk; see `refs/delegation-doctrine.md`'s
-"Builder scope caps effort, not a parameter"). That signature reads identically to a dead agent under
+"Builder scope is the main lever on effort"). That signature reads identically to a dead agent under
 the liveness check above, so treat it the same way: the fix is scope, not a same-scope retry. Split
 any chunk that would touch more than roughly six files before dispatching it, and open the prompt
 with "start writing files immediately, one file per Write call, keep each response short."
@@ -46,7 +46,7 @@ with "start writing files immediately, one file per Write call, keep each respon
 2. **Context discipline (critical for big tasks).** Per the delegation doctrine above, the main loop is an ORCHESTRATOR, not the worker. Two AFK-specific additions:
    - The one-line outcome kept per chunk includes the commit sha (autopilot commits between chunks, so the sha is the only record of what landed).
    - If main context approaches its limit mid-run, write the remaining plan items to a scratch task-list file and continue from the file, not from memory. There is no dev to hand off to verbally.
-   - Cadence: the main loop runs `/commit` between chunks, since subagents stage but never commit.
+   - Cadence: the main loop runs `/commit` between chunks for any work builders left uncommitted (builders commit their own work by default; parallel builders in one tree leave changes unstaged for the main agent).
      Invoke and read the skill in full only for this run's first commit; every commit after that
      follows `/commit`'s procedure directly (session marker already written, prefilters, pathspec
      form, branch/overlap checks all still apply) without re-invoking the skill file. Run that

@@ -48,6 +48,6 @@ OUTPUT RULES:
 - Do NOT include `Riverpod`, `GoRouter`, `Freezed`, etc unless the project has a special meaning for them.
 - Do NOT spawn further subagents.
 - Do NOT call AskUserQuestion.
-- Stage your changes but do NOT commit. The main agent will run /commit after your report-back.
+- Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.
 
 Report back with: line count written, count of terms defined, count of <gap> tags emitted.

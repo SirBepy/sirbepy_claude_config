@@ -53,12 +53,11 @@ A skill adopting this file inherits this clause; it does not need its own copy.
 
 ## Dispatch discipline
 
-**Builder scope caps effort, not a parameter.** The `Agent` tool exposes `description`, `isolation`,
-`model`, `prompt`, `run_in_background`, and `subagent_type` - no `effort` field (checked against the
-live tool schema, 2026-09-10). A builder inherits the orchestrator's own effort at dispatch time, and
-CLAUDE.md's "tune `effort` freely" cannot be executed for a subagent call: there is no knob to turn.
-The only lever that actually exists is dispatch SCOPE - keep a builder small enough that even
-inherited max effort converges before the output cap, and split any dispatch that would create more
+**Builder scope is the main lever on effort.** The `Agent` tool has an `effort` parameter (since
+Claude Code 2.1.292); set it only when the dev or an instruction explicitly asks for a level,
+otherwise omit it and the builder runs at its usual effort. Scope is still what stops a builder
+spending its whole budget thinking: keep a builder small enough that it converges before the
+output cap, and split any dispatch that would create more
 than roughly six files into smaller ones. Open every builder prompt with an instruction to start
 writing files immediately (one file per `Write` call) and keep each response short, rather than
 reasoning at length before the first tool call. The failure this guards against already happened

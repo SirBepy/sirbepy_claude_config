@@ -40,6 +40,6 @@ OUTPUT RULES:
 - Plain prose for explanations, bullet lists for inventories. NotebookLM will be the reader - write like teaching a new hire.
 - Do NOT spawn further subagents.
 - Do NOT call AskUserQuestion.
-- Stage your changes but do NOT commit. The main agent will run /commit after your report-back.
+- Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.
 
 Report back with: line count written, count of <gap> tags emitted, any file you wanted to read but could not.

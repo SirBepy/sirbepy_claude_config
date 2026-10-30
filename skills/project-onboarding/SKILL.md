@@ -26,7 +26,7 @@ argument-hint: "[--compare=<path>]"
 
 - **Exact-match trigger only.** Do not auto-fire on "explain this project", "onboard me", etc.
 - **Overwrite without prompting.** The dev knows this from the description; no backup, no confirmation.
-- **Subs never commit.** Each sub stages files only. Main agent reports `READY_TO_COMMIT` after finish; the dev runs `/commit`.
+- **Subs never commit.** The subs run in parallel in one tree, so each leaves its changes unstaged (the `Leave all changes unstaged` staging line) and the main agent commits by pathspec. Main agent reports `READY_TO_COMMIT` after finish; the dev runs `/commit`.
 - **No flows file.** Static-read flow narratives hallucinate. If the dev asks "what about flows", point them at `state-and-nav.md` (routes) + running the app + asking NotebookLM.
 - **No em dashes anywhere.** All sub prompts forbid em/en dashes. Generated docs use plain hyphens. Reason: em dashes get mangled to mojibake (`â€"`) when any tool reads a UTF-8 file as ANSI, which corrupts the file.
 - **UTF-8 only.** Subs write UTF-8 no BOM. Main agent's finish step MUST use UTF-8-explicit file ops (see `prompts/finish.md`). Never use `Get-Content` then `Set-Content -Encoding UTF8` on non-ASCII content.
@@ -59,7 +59,7 @@ Flutter template content files (5):
 
 If `--compare` passed: also dispatch a 6th sub with `prompts/flutter/compare.md`, substituting `{COMPARE_PATH}` and `{COMPARE_NAME}` (basename of path).
 
-For each sub, the dispatch prompt is the full content of the prompt file with `{REPO_ROOT}` substituted to the absolute cwd, PREPENDED with the canonical preamble from `refs/builder-preamble.md` (the `<STAGING_LINE>` for "Subs never commit" per the Hard rules above is `Stage your changes but do NOT commit...`) - `hooks/dispatch-preamble-guard.py` rejects a prompt missing its markers. Subs are `general-purpose` type, dispatched with `model: 'sonnet'` pinned explicitly (never inherit the session model).
+For each sub, the dispatch prompt is the full content of the prompt file with `{REPO_ROOT}` substituted to the absolute cwd, PREPENDED with the canonical preamble from `refs/builder-preamble.md` (the `<STAGING_LINE>` for "Subs never commit" per the Hard rules above is `Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.`, because the subs run in parallel in one tree) - `hooks/dispatch-preamble-guard.py` rejects a prompt missing its markers. Subs are `general-purpose` type, dispatched with `model: 'sonnet'` pinned explicitly (never inherit the session model).
 
 ### Step 4 - Serial finish (after all subs return)
 

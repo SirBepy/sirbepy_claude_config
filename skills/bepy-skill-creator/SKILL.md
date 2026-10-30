@@ -108,7 +108,7 @@ Rules are split into two severity levels. FAIL means the skill has a real proble
 - [ ] If the skill depends on another skill's conventions, it references that skill by name instead of duplicating rules
 - [ ] No hardcoded user names (e.g. "Joe"). Use "the dev", "the user", or "you" instead. Personal names leak identity and reduce portability.
 - [ ] Every Agent tool dispatch the skill specifies pins `model: 'sonnet'` explicitly (never inherits the session model)
-- [ ] Every subagent dispatch prompt includes the subagents-never-commit boilerplate: "Stage your changes but do NOT commit. The main agent will run `/commit` after your report-back."
+- [ ] Every subagent dispatch prompt includes one of the three staging lines `hooks/dispatch-preamble-guard.py` accepts, from `refs/builder-preamble.md`: the default "Commit your own work with /commit before your report-back, by pathspec, only the files you changed."; "Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back." (read-only dispatches, shared-index repos, parallel builders in one tree); or "Stage your changes but do NOT commit. The main agent will run /commit after your report-back." (only when the orchestrator must review first)
 - [ ] Comment guidance for any code the skill generates follows CLAUDE.md's Code Style rule: a comment says WHY, not what. The numeric cap was removed by todo 922 on 2026-09-05.
 
 ### WARN rules (flag but don't force)

@@ -5,8 +5,8 @@ should not. Not for speculative cleanup, not for code review, and not for a beha
 up as a fix.
 
 Adapted 2026-08-22 from `citypaul/.dotfiles`' `debugging` skill (todo 425, item 4). It is a ref and
-not a skill for the same reason `refs/refactoring-method.md` is: `CLAUDE.md:27` says subagents
-cannot invoke skills, and subagents do most of the work here. The upstream file also routed to six
+not a skill for the same reason `refs/refactoring-method.md` is: builders read it on demand,
+by path, mid-task, and subagents do most of the work here. The upstream file also routed to six
 sibling skills that do not exist in this config, and `skills/AUDIT-2026-08-18.md:27` records this
 repo at zero broken cross-skill references. Keeping it out of `skills/` keeps that true.
 

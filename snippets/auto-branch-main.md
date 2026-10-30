@@ -25,7 +25,7 @@ If a superpowers skill (or a future version that stops treating `@import`s as a 
 - Destructive/irreversible actions on the default branch (force-push, history rewrite, hard reset dropping work, mass delete) still need explicit confirmation. Standing branch consent is not standing demolition consent, and the defensive degrade above never covers these.
 - Recovery stays available: never leave the default branch half-broken. Finish cleanly or stop and say what's incomplete.
 - Submodule discipline: push submodule before bumping parent pointer.
-- Subagents stage-only and never commit; main agent runs /commit.
+- Builders commit their own work via /commit by default; see refs/builder-preamble.md for the variants.
 
 ## Composing with auto-commit
 

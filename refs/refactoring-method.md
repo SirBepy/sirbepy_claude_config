@@ -6,8 +6,8 @@ onto one. That is the class-2 finding `/code-check` Step 4a routes; the classes 
 not restated here.
 
 Adapted 2026-08-22 from `citypaul/.dotfiles`' `refactoring` skill (todo 425, item 2). It is NOT
-adopted as a skill: `CLAUDE.md:27` says subagents cannot invoke skills, and subagents are what
-execute nearly every refactor here, so the method has to arrive in the dispatch or not at all.
+adopted as a skill: subagents are what execute nearly every refactor here and read this file on
+demand, by path, mid-task, so the method has to arrive in the dispatch.
 What follows is only the part that survives without that repo's Vitest/Stryker/TDD apparatus.
 
 ## 1. Establish a recoverable baseline, and say what it is
