@@ -23,7 +23,7 @@ Manual trigger only, `/preview <file-or-html>`. For a STATIC HTML mockup (no bui
 
 ## The iterate-in-place convention (the whole point)
 
-**Same slug = refresh in place.** Re-pushing with the identical `slug` REPLACES the live entry in Conductor's preview panel (version increments) instead of piling up a new one. This is the loop: edit the HTML file, re-run `/preview <file>` with the same default/explicit slug, the panel updates live. A new or omitted slug instead APPENDS a fresh snapshot to the history rail - use that only when the dev explicitly wants to keep an old version around for comparison.
+**Same slug = refresh in place.** Re-pushing with the identical `slug` REPLACES the live entry in Conductor's preview panel (version increments) instead of piling up a new one, and the page it replaced is kept: the panel's version picker (beside the preview's name) lists "Latest" plus the previous 5 versions, so the dev can go back and look. This is the loop: edit the HTML file, re-run `/preview <file>` with the same default/explicit slug, the panel updates live. A new or omitted slug instead adds a separate preview to the panel's name picker - use that only for a genuinely different page (a different mockup, an alternative to compare side by side), never to keep an old version, which the same slug already does. The panel follows a push only while the dev is looking at the latest page of that preview; if they are on an older version or another preview, it stays put and dots the picker.
 
 Because the default slug is derived deterministically from the filename, just re-running `/preview <same-file>` after an edit already does the right thing with no flags needed.
 
@@ -138,4 +138,4 @@ Manifest: a JSON list, or `{"title": "...", "items": [...]}`. Each item is `{"id
 
 - Never open a browser or spin up a localhost server when the push succeeds - that's the exact flow this skill replaces.
 - `source` is always `"terminal"` for this skill (the app also accepts `"chat"` pushes from elsewhere; that's not this path).
-- Don't invent a new slug on every push "to be safe" - that defeats the iterate-in-place loop and litters the history rail. Reuse the derived/given slug across edits of the same file.
+- Don't invent a new slug on every push "to be safe" - that defeats the iterate-in-place loop and litters the preview picker and loses the version history. Reuse the derived/given slug across edits of the same file.
