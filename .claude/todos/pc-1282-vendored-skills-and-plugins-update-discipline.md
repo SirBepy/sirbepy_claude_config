@@ -31,6 +31,12 @@ Every vendored tree has a recorded source and a way to re-apply local overrides,
 
 ## Acceptance
 
-- The Figma MCP the dev uses still works after the change (one live tool call).
+- Figma: settled, see Notes; no Figma change is part of this todo any more.
 - A simulated vendor update followed by the re-apply step leaves `ci/run_all.py` green.
 - Session skill listing drops the hidden/removed entries (check a fresh session's listing).
+
+## Notes
+
+- 2026-10-30, Joe: he uses the remote Figma MCP (the plugin's mcp.figma.com one) and "i wanna be able to use figma still, cuz i do, but its true that ive never once invoked ANY figma skill".
+- 2026-10-30, tested: `skillOverrides` "name-only" has NO effect on plugin skills, with either `figma:figma-use` or bare `figma-use` keys (nested `claude -p` listing check after each edit; both reverted). So the only way to drop the 16 skills is to disable the plugin and re-add the remote MCP directly, e.g. `claude mcp add --transport http figma https://mcp.figma.com/mcp --scope user` (exact flag order UNVERIFIED, check `claude mcp add --help`), then re-authenticate once via `/mcp`. Note six plugin skills (`figma-use`, `figma-design-to-code`, `figma-generate-design`, `figma-generate-diagram`, `figma-generative-plugins`, `figma-shaders`) describe themselves as mandatory prerequisites for MCP tool calls, yet zero were invoked in 9 weeks of transcripts while the MCP was used. Waiting on the dev's choice.
+- 2026-10-30, Joe: "i just wants most efficient... i just want claude to still be able to do equally as good work". A transcript scan (all raw transcripts under `~/.claude/projects`, 2026-08-26..10-30) found zero Figma MCP tool calls of any kind (`mcp__plugin_figma*`, `mcp__figma__*`, `mcp__claude_ai_Figma*`). So the plugin is now disabled at user scope (`settings.json` enabledPlugins `figma@claude-plugins-official: false`). For a repo that does Figma design-to-code work, enable it per project instead (`enabledPlugins` in that repo's `.claude/settings.local.json`, or `/plugin` at project scope), which brings back both the remote MCP and its prerequisite skills there only. zng-admin keeps its own project-scoped `figma` MCP server in `.claude-personal/.claude.json` regardless. Figma part of this todo: done.
