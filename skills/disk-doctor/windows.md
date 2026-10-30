@@ -212,6 +212,9 @@ At END of scan, append any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCA
 - `pagefile.sys`, `hiberfil.sys`, `swapfile.sys` - system-managed; never manual-delete (disable the feature instead if reclaiming).
 - `C:\Windows\System32`, `C:\Program Files*`, `C:\ProgramData` package installs - not cleanup targets.
 - Heroes of the Storm (`C:\Program Files (x86)\Heroes of the Storm`) - Joe plays it. 2026-10-30, after it had been offered twice in one run: "Stop asking this. Im playing this game".
+- `AppData\Roaming\PrismLauncher` - Joe no longer uses it, but its instances hold Minecraft worlds and screenshots he won't risk losing (2026-10-30).
+- `Desktop\Warcraft III Reign of Chaos & The Frozen Throne` - a game copy Joe keeps, even though it has been idle since 2025-12 (2026-10-30).
+- In `C:\tmp`: `salvage` (the only known copy of cueline-core, which has no commits in the cueline repo), `memory-backup-*` (the /cleanup-memory rollback snapshots) and the loose `*.java`/`*.java.bak` plugin sources (edited copies with no repo twin). Exclude all three from any age sweep there.
 - Any regenerable cache or build dir (Rust `target`/`*-target`, Flutter `build`/`.dart_tool`, `~/.gradle\caches`, etc.) whose newest file is under 21 days old. Joe, 2026-10-30: "why delete if itll get rebuilt" - something he is still building just regrows, so deleting it only costs a rebuild. Only build output idle for 21+ days gets offered. Temp older than 2 days and stale screenshots are not covered by this rule.
 
 ## KNOWN SAFE-TO-DELETE (regenerates / re-downloadable)
@@ -280,3 +283,24 @@ Cap: 5 entries max. When at cap, drop the entry with the earliest date field bef
   Docker vhdx 34.5G, and HF/whisper 21.8G (the Conductor stt-sidecar, sirbepy_assistant and odysseus
   load those models). Joe chose to keep the other ~8.7k Claude screenshots (~0.8G) in case he wants them.
   Every big build (zng-app, joes_tabs, revaire-mobile, zng-biller, 16.6G) was under 21 days old.
+  Second round, same day, 222.1 to 267.3G free: 2 unpinned NDKs, 8 idle caches, ~/develop\flutter (not on
+  PATH), HF parakeet + whisper.cpp and ~/.cache\whisper\large-v3.pt (a scout confirmed nothing loads them,
+  dashboard-a's eval included), Meetily uninstalled with /S (its notes DB went to D:\Archive\Meetily
+  first, hash-checked), Zoom (its registered uninstaller was gone, so tmp_bin\Installer.exe /uninstall
+  ran instead), the Hytale game (`Roaming\Hytale\install` only, launcher kept), and ~7.6G of personal
+  files moved to D:\Archive. HF Qwen3-14B GGUF (8.4G) was kept: odysseus's app.db has a dormant endpoint
+  pinned to it. Facts worth reusing:
+  - robocopy double-counts HF cache dirs (a symlink plus its blob), so real size is about half.
+  - The "unattributed 80G" was a stale used-figure. Get-PSDrive was right and nothing was hidden.
+  - Docker prune never shrinks the vhdx, so it frees nothing on C:.
+  Third round, 274.4 to 291.3G free (31.3%, past the 30% target). HF Qwen3-14B deleted, plus odysseus,
+  which Joe has stopped using: its 9 unpushed commits were pushed to his fork first (gate skipped with his
+  OK, remote tip confirmed equal), then the clone and its AppData dirs were deleted. Joe ran
+  `powercfg /h off` for 12.7G after three scouts said remote wake doesn't need it. That wake runs on
+  WOL from S3 sleep and S5 shutdown, via the FRITZ!Box. Hibernation was on only as the Windows default,
+  and nobody had enabled it. /sleep-when-done and Conductor's sleep_pc now do a real S3 sleep instead of
+  an accidental hibernate. Joe also ran the C:\tmp 21-day sweep, with the keepers above excluded. Claude
+  then ran `git worktree prune` in cueline for the two C:\tmp worktrees. Yarn (1.0G) is still pending.
+  - destructive-command-guard also refuses a Remove-Item call whose command line contains `\Yarn\`, a
+    robocopy `/E`, or a `C:\Program Files` Test-Path. Keep Remove-Item in its own call, with only literal
+    user paths in it.
