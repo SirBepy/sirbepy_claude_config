@@ -17,7 +17,7 @@ argument-hint: "[gh-username] [commit-email]  (run from inside the target repo)"
 it automatically to match the current repo's origin remote on every `gh`
 call. This skill wires only the git-identity layer (commit author + push/pull
 auth), which the hook does not touch. If you ever feel tempted to run `gh auth
-switch`, stop - add a `case` line to the hook instead (see step 5 below).
+switch`, stop - add the owner to the hook instead (see step 5 below).
 
 The dev keeps several GitHub accounts. One is the GLOBAL default (personal);
 specific projects map to other accounts by **git remote URL**. This skill
@@ -77,9 +77,18 @@ This layer never mutates the global active account.
    Idempotent: skip if an entry for this owner already exists.
 
 5. **gh-CLI layer.** The global PreToolUse hook (`~/.claude/hooks/gh-account-switch.sh`)
-   owns which `gh` account is active, keyed by the origin remote's owner. Add
-   one `case` line for the new owner: `*<owner>/*) acct=<gh-username> ;;`
-   (see the existing entries in that file for the pattern).
+   owns which `gh` account is active, keyed by the origin remote's owner. Add the
+   new owner in three places in that file, each before its `*) acct=SirBepy ;;`
+   fallback:
+   - The header comment mapping (`# Mapping: zirtue-corp -> JosipMuzicZirtue, ...`):
+     append `<owner> -> <gh-username>`.
+   - The first `case "$remote" in` block (matches the origin URL):
+     `*<owner>/*) acct=<gh-username> ;;`
+   - The second `case "$owner" in` block (the no-origin `gh repo create OWNER/NAME`
+     path, matches the bare owner name): `<owner>) acct=<gh-username> ;;`
+
+   Note the existing `revaire` entry in the first block is `*revaire*)` with no
+   slash; use the `*<owner>/*` form for new owners.
 
 6. **Verify both layers** (do not claim done without this):
    - `git -C <repo> config user.email` -> the new email.

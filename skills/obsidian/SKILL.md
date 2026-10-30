@@ -54,15 +54,15 @@ workflow), fall back to AskUserQuestion with these options:
    - If the dev says "milestones", "sprints", or "versions": swap columns for `Backlog / M1 / M2 / ... / Mn`. No Done column (plugin handles card completion via checkbox).
    - Propose `n` based on task count, target ~5 tasks per milestone, range 3-12. Group tasks semantically (related work clusters together), not chronologically-random.
 4. Discuss goals, blockers, priorities. Ask questions via AskUserQuestion.
-5. Turn conclusions into Kanban cards or `Tasks/<PREFIX>-<N> <Title>.md` notes from `Templates/Task.md` (see Add a ticket for ID assignment). Link with wiki links.
+5. Turn conclusions into Kanban cards or `TaskNotes/Tasks/<PREFIX>-<N> <Title>.md` notes from `Templates/Task.md` (see Add a ticket for ID assignment). Link with wiki links.
 6. Commit and push.
 
 ### Add a ticket
 
 1. Ask which Kanban plus title and context.
 2. Read the project note's `id:` field to get the prefix.
-3. Glob `Tasks/<PREFIX>-*.md`, find max N, use `N+1`.
-4. Create `Tasks/<PREFIX>-<N+1> <Title>.md` from `Templates/Task.md`. Include `id: <PREFIX>-<N+1>` in the frontmatter.
+3. Glob `TaskNotes/Tasks/<PREFIX>-*.md` AND `Tasks/<PREFIX>-*.md` (a few older tickets, e.g. SHRM-1, still sit in `Tasks/`), find max N across both, use `N+1`.
+4. Create `TaskNotes/Tasks/<PREFIX>-<N+1> <Title>.md` (the TaskNotes plugin's `tasksFolder`) from `Templates/Task.md`. Include `id: <PREFIX>-<N+1>` in the frontmatter.
 5. Add `- [ ] [[<PREFIX>-<N+1> <Title>]]` to `Kanbans/<Project>.md` under Backlog by default.
 6. Commit and push.
 
@@ -70,7 +70,7 @@ workflow), fall back to AskUserQuestion with these options:
 
 **Trigger:** direct invocation is `/obsidian-pickup-ticket <ID>` only - natural phrases like "tackle FSM-2" or "pick up CUT-3" must NOT auto-trigger this (the dev also uses Shortcut and other trackers, and ticket-like wording is ambiguous). If the dev asks to "pick up a ticket" without an ID inside this `/obsidian` flow, ask which project, list active tickets from its Kanban, and let him pick one.
 
-1. **Resolve the ticket file.** Glob `Tasks/<ID>*.md` inside the vault. If no match, tell the dev the ID doesn't exist and stop.
+1. **Resolve the ticket file.** Glob `TaskNotes/Tasks/<ID>*.md` and `Tasks/<ID>*.md` inside the vault. If no match, tell the dev the ID doesn't exist and stop.
 2. **Gather context.** Read in this order:
    - The ticket note itself.
    - The project note (find via the ticket's `project:` frontmatter - it's a wiki link, so read `<Project>.md` from vault root).

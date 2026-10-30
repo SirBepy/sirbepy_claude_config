@@ -50,9 +50,11 @@ Characters are GROUPED BY GAME. Layout:
 ```
 
 Resolve `<app-data>` per platform:
-- Windows: `%APPDATA%\claude-usage-tauri`
-- macOS: `~/Library/Application Support/claude-usage-tauri`
-- Linux: `~/.config/claude-usage-tauri`
+- Windows: `%APPDATA%\claude-conductor`
+- macOS: `~/Library/Application Support/claude-conductor`
+- Linux: `~/.config/claude-conductor`
+
+`CC_DATA_DIR`, when set, overrides this location. The pre-rename dir `claude-usage-tauri` is only a legacy source: the app copies its missing files into `claude-conductor` once on first launch.
 
 ### `game.json` schema
 
