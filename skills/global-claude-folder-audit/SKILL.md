@@ -30,7 +30,8 @@ auditor as "do NOT re-report").
 
 1. Start `python skills/global-claude-folder-audit/count_invocations.py --json` with
    `run_in_background: true` (it reads every raw transcript, a few minutes). Persist its output to
-   the run folder the moment its notification lands: the task output file is cleared on completion.
+   `<run folder>/usage.json` (the name `rubric.md` points auditors at) the moment its notification
+   lands: the task output file is cleared on completion.
 2. Meanwhile map the tree: every `skills/*/SKILL.md` with line count, aux-file count and its
    `disable-model-invocation` flag; `CLAUDE.md`, `refs/`, `snippets/`, `code-style/`, `context/`
    with sizes; `hooks/*.py` and which `settings.json` matcher wires each; `agents/`. Mark vendored
