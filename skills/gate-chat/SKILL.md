@@ -7,7 +7,7 @@ description: Hands a push's gate (code-check, e2e, push) to a fresh chat ending 
 
 > The gate is the heaviest part of a push. A fresh chat runs it on an empty context, with its one job being to ship and then close. Called from `/commit`'s Push pipeline step 1c, for every attended push and every `/release`.
 
-Runs after step 1 (and 1b under `/release`), once `git rev-list --count @{u}..HEAD` says there is something to push. It does not apply to:
+Runs after step 1 (and 1b under `/release`), once `git rev-list --count '@{u}..HEAD'` says there is something to push. It does not apply to:
 
 - **Unattended runs** (`/autopilot`, `/auto-do-todos`, `/mega-todos`): nobody would answer the gate chat's cards, so the gate stays in place.
 - **A chat that is itself a gate chat** (its first message quotes a hand-off): it already holds the fresh context, so it skips step 1c and runs the gate where it stands. Without this a gate chat would spawn another forever.
@@ -17,7 +17,7 @@ Runs after step 1 (and 1b under `/release`), once `git rev-list --count @{u}..HE
 1. Run the **Pre-push transcript check** (`skills/commit/SKILL.md`) now. It reads THIS session's transcript, which a gate chat cannot see, so it never moves. An unaddressed dev turn stops the push here, before any spawn.
 2. `spawn_chat` with `cwd` = the repo root and `name` = `Gate: <repo> <push|release>`. The prompt carries everything, since the new chat cannot see this one:
    - Joe's push request, quoted verbatim, and the mode (`push`, or `/release` with its resolved `release` mode).
-   - Repo path, branch, `git rev-parse HEAD` and `git log --format='%h %s' @{u}..HEAD`.
+   - Repo path, branch, `git rev-parse HEAD` and `git log --format='%h %s' '@{u}..HEAD'`.
    - "The transcript check ran in the parent chat and passed; skip step 3." Plus any in-session client commit-window OK Joe gave here, quoted.
    - The instruction: run `/commit`'s Push pipeline from step 2 (4b only under `/release`), skipping step 1c. On a red gate or any question, ask Joe in that chat.
    - The literal token `/then-close` at the end. `/then-close` keeps the chat open on an unanswered question and closes it only once the work is pushed, so a red gate never closes behind Joe's back.

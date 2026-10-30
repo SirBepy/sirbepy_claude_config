@@ -1,6 +1,7 @@
 ---
 name: then-close
 description: Triggers on /then-close anywhere in a message. Finishes the task and any open work, then runs /close.
+argument-hint: "[task text, optional - empty means everything still open]"
 ---
 
 # /then-close
