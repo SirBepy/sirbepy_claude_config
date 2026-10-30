@@ -18,7 +18,9 @@ PKG = '{\n  "name": "x",\n  "version": "1.0.0"\n}\n'
 class ShipConfigTest(unittest.TestCase):
     def setUp(self):
         self._tmp = fx.tempdir()
-        self.tmp = Path(self._tmp.name)
+        # resolve() expands an 8.3 short TEMP (the GitHub runner's RUNNER~1) to the long form
+        # git reports, so expected paths match the script's output.
+        self.tmp = Path(self._tmp.name).resolve()
         self.home = self.tmp / "home"
         self.home.mkdir()
         (self.tmp / "clients.txt").write_text(CLIENT_LIST, encoding="utf-8")

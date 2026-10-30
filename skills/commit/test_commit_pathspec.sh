@@ -1667,7 +1667,10 @@ git -C "$r59" commit -q -m "seed abs.txt"
 branch=$(git -C "$r59" rev-parse --abbrev-ref HEAD)
 sha=$(git -C "$r59" rev-parse HEAD)
 printf 'two\n' > "$r59/abs.txt"
-if command -v cygpath >/dev/null 2>&1; then abs59=$(cygpath -m "$r59/abs.txt"); else abs59="$r59/abs.txt"; fi
+# The root comes from git, not mktemp: an 8.3 short TEMP (the GitHub runner's RUNNER~1) would
+# otherwise give a path the script's long-form repo root can never prefix-match.
+top59=$(git -C "$r59" rev-parse --show-toplevel)
+if command -v cygpath >/dev/null 2>&1; then abs59=$(cygpath -m "$top59/abs.txt"); else abs59="$top59/abs.txt"; fi
 out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r59" --expect-branch "$branch" --expect-sha "$sha" \
   -m "modify abs.txt by absolute path" -- "$abs59" 2>&1); rc=$?
 check "an absolute path to a modified file classifies live, relative in the output (todo 1192)" \
