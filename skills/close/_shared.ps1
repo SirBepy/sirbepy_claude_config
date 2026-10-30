@@ -1,5 +1,5 @@
-# Dot-sourced by claim-todo.ps1, complete-todo.ps1, reserve-todo-id.ps1,
-# archive-and-commit-todo.ps1 and mega-todos/archive-batch.ps1. Not a module - these
+# Dot-sourced by claim-todo.ps1, complete-todo.ps1, reserve-todo-id.ps1
+# and mega-todos/archive-batch.ps1. Not a module - these
 # scripts are invoked directly by path, matching this tree's convention.
 #
 # The single place that knows the todo id shape: "<label>-<NNNN>" (device label, then a

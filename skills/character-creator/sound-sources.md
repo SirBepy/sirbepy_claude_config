@@ -86,4 +86,4 @@ See SKILL.md for the current, authoritative rules - this section only points at 
 
 - `Invoke-WebRequest -UseBasicParsing -Uri <url> -OutFile <path>` for downloads.
 - Temp staging: `$env:TEMP\<game-slug>-sounds\`.
-- Final dest is grouped by game: `$env:APPDATA\claude-usage-tauri\characters\<game-slug>\<char-slug>\`.
+- Final dest is grouped by game: `$env:APPDATA\claude-conductor\characters\<game-slug>\<char-slug>\`.
