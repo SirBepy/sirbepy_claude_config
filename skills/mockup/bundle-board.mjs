@@ -104,6 +104,16 @@ html = html.replace(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"[^>]*>/g
   return css ? `<style>${escapeInlineCss(text(css))}</style>` : tag;
 });
 
+// The panel gives every pushed page a padded, centered body (preview-templates.ts) through
+// zero-specificity rules, which a bundled app stylesheet defeats: tokens.css resets
+// `html, body { padding: 0 }` and base.css pads `html body` for the safe area, both emitted
+// after the panel's rules. Re-apply the template's own custom properties last, from a tag the
+// board's CSS cannot precede. A board override still wins with `html body.<root> { ... }`
+// (the fallbacks only matter when the page is opened outside the panel).
+const TEMPLATE_TAIL =
+  "<style>html body{padding:var(--pv-pad,16px);max-width:var(--pv-max,none);margin-left:auto;margin-right:auto}</style>";
+html = /<\/head>/i.test(html) ? html.replace(/<\/head>/i, () => `${TEMPLATE_TAIL}</head>`) : `${TEMPLATE_TAIL}${html}`;
+
 // Anything still external would 404 inside the panel's opaque-origin sandbox.
 const leftovers = [...html.matchAll(/<(?:script|link)\b[^>]*\b(?:src|href)="(\.\/[^"]+)"/g)].map((m) => m[1]);
 if (leftovers.length) {

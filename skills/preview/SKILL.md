@@ -27,6 +27,17 @@ Manual trigger only, `/preview <file-or-html>`. For a STATIC HTML mockup (no bui
 
 Because the default slug is derived deterministically from the filename, just re-running `/preview <same-file>` after an edit already does the right thing with no flags needed.
 
+## The page standard (applied by the panel, not by you)
+
+Every preview is a real HTML page, and Conductor's panel puts a **template** around it, so a push looks the same whichever producer sent it (`/preview`, `/mockup`, the `show_preview` tool). Do not hand-roll body padding, `max-width`, a viewport meta or zoom handling: the panel adds them.
+
+- **Default template `page`:** body gets a centered column (`max-width: 1040px`) with padding that is 12px on a phone and grows to 28px on a wide panel, `system-ui` type at 1.55 line height, images capped to the column, and a viewport meta if the page has none. A bare fragment (no `<html>`/`<body>`) is wrapped in a dark page first.
+- **Your own CSS wins.** The template's rules have zero specificity, so a page that sets its own `body { padding }`, `max-width` or `font-family` keeps it. `body { margin: 0 }` alone still leaves the template's padding.
+- **Opt out with `<meta name="preview-template" content="bare">`** in `<head>` for a page that owns its whole layout: a sidebar-and-content render (`render_markdown.py` already does this), an app-shell mockup, or a `show_preview` card whose only content is an `<iframe>` of another page (otherwise the card pads around the frame and the framed page pads again). Unknown template names fall back to `page`.
+- **Zoom is built into every pushed page:** two-finger pinch and double-tap on a phone, Ctrl+wheel (a trackpad pinch too) and Ctrl +/-/0 on desktop. The page zooms, the panel chrome does not, and scrolling stays native. Do not add zoom buttons or a pinch handler.
+- "Open in browser" writes the page with the same template, so it matches the panel.
+- A bundled app-CSS board (`/mockup`'s `bundle-board.mjs`) re-applies the template after its bundled CSS, because the app's own `html, body { padding: 0 }` reset would otherwise win; a board override must be written `html body.<root> { ... }`.
+
 ## Markdown branch
 
 When the input is one or more `.md` paths, or a directory of them, render first, then fall through to the same HTML steps below - there is no second delivery path.
@@ -92,7 +103,7 @@ Manifest: a JSON list, or `{"title": "...", "items": [...]}`. Each item is `{"id
 - PNG/JPEG shots are re-encoded to WebP through `ffmpeg` (PNG screenshots shrink several-fold; 28 phone-width shots came to ~610 KB), keeping the original when WebP is not smaller or `ffmpeg` is missing. GIF and WebP are never re-encoded. The same lightbox as the flat gallery is reused, stepping through every shot in order.
 - The budget drops whole items, never half a pair: from the first item that would overflow, it and every later item are dropped, listed in `dropped: [...]`. Report them to the dev and put them in a second manifest (`--slug <slug>-2`).
 - With `--post` the script also prints `render-url: http://127.0.0.1:27182/hooks/preview-render/<id>` on a 200. The panel alone is not enough: Joe answers from the chat and may never open the panel (2026-10-13, he answered a keep/drop card with "id need to see a before and after view" because the gallery sat unseen in the panel).
-- **When the gallery precedes a question, show it inline first.** Send a `show_preview` card whose HTML is an iframe to that `render-url` immediately before the question, then ask. Do not rely on the panel push alone.
+- **When the gallery precedes a question, show it inline first.** Send a `show_preview` card whose HTML is an iframe to that `render-url` (with `<meta name="preview-template" content="bare">` in its head, so the card does not pad around the frame) immediately before the question, then ask. Do not rely on the panel push alone.
 
 ## Steps
 

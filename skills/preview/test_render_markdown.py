@@ -95,6 +95,11 @@ def test_viewport_meta(root):
         '<meta name="viewport" content="width=device-width,initial-scale=1">' in html,
         "viewport meta is present",
     )
+    # The page lays out its own sidebar and column; the panel's centered template would squeeze it.
+    check(
+        '<meta name="preview-template" content="bare">' in html,
+        "page opts out of the panel's page template",
+    )
 
 
 def test_table_labels(root):

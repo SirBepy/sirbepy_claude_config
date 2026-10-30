@@ -273,6 +273,7 @@ def build_page(files, page_title):
 
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="preview-template" content="bare">
 <title>{html_mod.escape(page_title)}</title><style>{CSS}</style></head><body>
 <div id="wrap">
 <aside id="side">

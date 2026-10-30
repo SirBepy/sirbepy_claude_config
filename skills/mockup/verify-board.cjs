@@ -82,15 +82,21 @@ const pass = (msg) => console.log(`ok    ${msg}`);
 
 
 async function loadPanelBuilder() {
-  const ts = fs.readFileSync(panelDoc, "utf8");
   const req = createRequire(path.join(project, "package.json"));
+  // Bundled, not transpiled alone: the document builder imports the panel's template and zoom
+  // modules, and a data: URL import cannot resolve relative specifiers.
   let code;
   try {
-    code = req("esbuild").transformSync(ts, { loader: "ts", format: "esm" }).code;
+    code = req("esbuild").buildSync({ entryPoints: [panelDoc], bundle: true, format: "esm", write: false, logLevel: "silent" }).outputFiles[0].text;
   } catch {
     try {
       const vite = await import(pathToFileURL(resolveViteEsm(req)).href);
-      code = (await vite.transformWithEsbuild(ts, "doc.ts", { loader: "ts", format: "esm" })).code;
+      const built = await vite.build({
+        configFile: false,
+        logLevel: "silent",
+        build: { write: false, minify: false, lib: { entry: panelDoc, formats: ["es"], fileName: "doc" } },
+      });
+      code = (Array.isArray(built) ? built : [built])[0].output.find((o) => o.type === "chunk").code;
     } catch (e) {
       console.error(`verify-board: cannot transpile ${panelDoc}: no esbuild or vite resolvable from ${project} (${e.code || e.message}). Pass --project <dir> or BOARD_PROJECT.`);
       process.exit(3);
@@ -118,7 +124,8 @@ async function loadPanelBuilder() {
   for (const { kind, literal } of lintLiterals(raw)) fail(`inline ${kind} contains literal "${literal}" (breaks the panel's </body> splice)`);
 
   let doc = raw;
-  if (panelDoc) doc = (await loadPanelBuilder())(raw);
+  // zoom:true because the Preview panel always passes it, so the board is verified with the zoom script live.
+  if (panelDoc) doc = (await loadPanelBuilder())(raw, { zoom: true });
   else console.log("note  no --panel-doc: raw board sent, the panel's diagnostics splice is NOT simulated");
 
   let frameAttrs;
