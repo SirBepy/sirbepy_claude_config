@@ -316,6 +316,7 @@ Cap: 5 entries max. When at cap, drop the entry with the earliest date field bef
   and nobody had enabled it. /sleep-when-done and Conductor's sleep_pc now do a real S3 sleep instead of
   an accidental hibernate. Joe also ran the C:\tmp 21-day sweep, with the keepers above excluded. Claude
   then ran `git worktree prune` in cueline for the two C:\tmp worktrees. Yarn (1.0G) is still pending.
-  - destructive-command-guard also refuses a Remove-Item call whose command line contains `\Yarn\`, a
+  - The Claude Code harness's built-in system-path block ("Remove-Item on system path ... is blocked",
+    not destructive-command-guard) also refuses a Remove-Item call whose command line contains `\Yarn\`, a
     robocopy `/E`, or a `C:\Program Files` Test-Path. Keep Remove-Item in its own call, with only literal
     user paths in it.
