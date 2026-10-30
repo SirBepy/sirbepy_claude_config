@@ -159,12 +159,27 @@ Get-ChildItem '<dir>' -Directory -Force -ErrorAction SilentlyContinue | ForEach-
 
 Hard cap: 3 dirs max regardless of how many exceed the threshold.
 
-## Breakdown chart (after the scans, before ANY delete card)
+## Breakdown chart (every run, before ANY delete card, and again at the end)
 
-No delete card, and no "which areas do you want to clear" question, appears until Joe has seen where
+Every /disk-doctor run draws this chart. There is no exception for a quick or narrow run. No
+delete card, and no "which areas do you want to clear" question, appears until Joe has seen where
 the space goes. 2026-10-21: after the scan Claude sent a text summary and a coarse areas card, and
 Joe answered "I wanna kinda see a graph of where all of my storage is going before i decide
-anything"; the chart built then (slug `c-drive-storage-map`) is the worked example.
+anything"; the chart built then (slug `c-drive-storage-map`) is the worked example. 2026-10-30, Joe:
+"i wanna see this preview every time". That run's first chart left 80G unattributed, so he had to
+ask for "a chart showing me all my gbs". Its final version, with a free-space tile, a 30%-target
+meter, every row tagged in use / keep / next, and a "what went today" table, is the shape to copy.
+
+- Take used/free from `Get-PSDrive C` or `Get-Volume C` at chart time, never a figure carried over
+  from an earlier scan. A stale used-figure is where that 80G "gap" came from.
+- If the unattributed remainder is over ~10% of used, run another sizing pass before showing the
+  chart, so it doesn't show a mystery bar.
+- Mark every delete candidate on its row, as a chip, with its evidence in the tooltip. That way the
+  delete cards that follow match rows Joe has already seen.
+- After the deletes, re-push the same slug: current free space vs the 30% target, freed today
+  (start to end), a table of what went, and what's still left ("next" rows: in use for now, pending
+  Joe's own command, or blocked by a rule). Do this as the run's last step, before the final
+  summary message.
 
 1. Group every finding of the scan (including the in-use probe results) into four kinds plus a
    remainder: **regenerable** (caches, build output, Temp, node_modules), **re-downloadable**
