@@ -15,5 +15,6 @@ them; the rationale is in commits d67421e and 8a39e46.
 ## Declined
 
 - 2026-10-30 Deleting `/figma-tiles` and `/figma-pixel-diff`: the dev floated it, the panel showed they are not redundant with the Figma MCP (REST token, board sweeps, rate-limit backoff, offline export, token matching). Kept; see pc-1282.
+- 2026-10-30 Hiding the figma plugin's 16 skills with `skillOverrides`: tested, it has no effect on plugin skills (either key form). Not a lever. Resolved instead by disabling the plugin at user scope (zero Figma MCP calls in the window) and enabling it per project where Figma work happens; see pc-1282.
 - 2026-10-30 Deleting the `test-flow` and `obsidian-pickup-ticket` aliases: settled aliases from the 2026-08-01 audit. Kept.
 - 2026-10-30 A single tracker-guard dispatcher hook: `hooks/linear-create-guard.py:10` keeps one guard per platform on purpose. Rejected by the refuter.
