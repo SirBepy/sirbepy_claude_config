@@ -59,7 +59,7 @@ incident and the 2026-09-07 half-removal were both caused by getting wrong:
    action this skill exists to avoid.
 2. Fast-forwards the main checkout's current branch onto the worktree's branch, if it has commits
    the main checkout lacks. Fast-forward only - `land.ps1` never creates a commit or a merge
-   commit, so it never breaks the "helper skills and subagents never commit" rule. A diverged
+   commit, so it never bypasses `/commit`'s pipeline. A diverged
    branch is reported and left alone, never force-merged or rebased.
 3. Stops the supervised dev-server entry (`-SupervisorId`), best-effort - an open handle on the
    worktree directory is the most likely cause of a step-4 removal failure.

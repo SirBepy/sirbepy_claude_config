@@ -28,3 +28,8 @@ Grep hits found 2026-10-29 (`grep -rn -i "cannot invoke skills\|subagents never 
 
 - The grep above returns no hit outside `.claude/todos/done/`, `.for_bepy/` and history-only incident text.
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- 2026-10-30 (`/global-claude-folder-audit` run, unattended): fixed `skills/cleanup-todos/SKILL.md:72`, `skills/isolated-build/SKILL.md:62`, `refs/debugging-method.md:9`, `refs/refactoring-method.md:9`. The audit's staging-line sweep landed in the same commit: autopilot, delegate, auto-do-todos (all three guard-accepted staging lines, default first), project-onboarding + its 6 flutter prompts ("Leave all changes unstaged" variant, parallel subs), bepy-skill-creator's FAIL rule, `snippets/auto-branch-main.md`, `snippets/auto-execution-mode.md`, and the stale "Agent has no `effort` param" text in `refs/delegation-doctrine.md` and autopilot.
+- Still open: `skills/mega-todos/SKILL.md:387` (weigh against its `barrier` default, deliberately left), `skills/isolated-build/land.ps1:19` comment ("helper skills never commit" wording), `CLAUDE.md:150` ("Agent tool takes no effort parameter", now false: CLAUDE.md edits wait for the dev because of its 24-token CI headroom), and the project memories listed in Context.

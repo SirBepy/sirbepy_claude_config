@@ -19,4 +19,4 @@ When it's a genuine coin-flip, pick inline and say one line why before starting.
 
 - Plan quality (brainstorming/planning rigor untouched).
 - Destructive/irreversible steps still require explicit confirmation regardless of mode.
-- Subagents stage-only and never commit; main agent runs /commit.
+- Builders commit their own work via /commit by default; see refs/builder-preamble.md for the variants.

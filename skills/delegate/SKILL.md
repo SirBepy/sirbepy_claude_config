@@ -18,8 +18,10 @@ remainder. Read that file now and follow it as if it were written here: the 90/1
 discipline, orchestrator hygiene, and the quality tells for distrusting a report.
 
 Read `~/.claude/refs/builder-preamble.md` too, before the first dispatch rather than after one is
-rejected. `hooks/dispatch-preamble-guard.py` string-checks **three** markers: (1) `Stage your
-changes but do NOT commit` OR `Leave all changes unstaged`, (2) `run_in_background` AND `FORBIDDEN`
+rejected. `hooks/dispatch-preamble-guard.py` string-checks **three** markers: (1) one of three staging
+lines: `Commit your own work with /commit` (the default), `Leave all changes unstaged` (read-only
+dispatches, shared-index repos, parallel builders in one tree), or `Stage your changes but do NOT
+commit` (only when the orchestrator must review the diff first), (2) `run_in_background` AND `FORBIDDEN`
 both present, (3) `.for_bepy/screenshots/` OR the literal line `READ-ONLY DISPATCH`. Pure string
 check - pasting the block verbatim is what passes it.
 
@@ -57,7 +59,9 @@ of those points:
 
 - Talks with the dev, plans, and decides.
 - Writes dispatch prompts and reads reports.
-- Runs `/commit` after subagent work lands (subagents stage only, never commit). Invoke and read the
+- Runs `/commit` after subagent work lands for any work the builders left uncommitted (builders commit
+  their own work by default; parallel builders in one tree leave changes unstaged, so the main agent
+  commits those). Invoke and read the
   skill in full only for this run's first commit; every commit after that follows `/commit`'s
   procedure directly (session marker already written, prefilters, pathspec form, branch/overlap
   checks all still apply) without re-invoking the skill file.

@@ -48,6 +48,6 @@ OUTPUT RULES:
 - Keep tone neutral - this isn't a "which is better" doc, it's a "what's different" doc.
 - Do NOT spawn further subagents.
 - Do NOT call AskUserQuestion.
-- Stage your changes but do NOT commit. The main agent will run /commit after your report-back.
+- Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.
 
 Report back with: line count written, count of <gap> tags emitted, summary of biggest difference and biggest similarity.

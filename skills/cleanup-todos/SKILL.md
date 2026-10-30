@@ -69,7 +69,7 @@ The old rule deep-passed only the 40 lowest ids, which silently starved the NEWE
 backlog past 40 - exactly the half most likely to still be wrong. Chunking replaces that.
 
 **Skill-dependency carve-out, independent of size.** A todo whose re-verification can only be done by
-INVOKING a slash command cannot be delegated: subagents cannot invoke skills. The main agent performs
+INVOKING a slash command should not be delegated: a skill run drives its own questions, commits, and nested dispatches, which belong to the main agent. The main agent performs
 that todo's deep pass itself, inline, pulling it out of its chunk before dispatch, even inside an
 otherwise-chunked large backlog. This applies above the threshold below exactly as it does under it.
 Reading a skill's `SKILL.md` is not invoking it, and that is what most re-verification actually needs,
