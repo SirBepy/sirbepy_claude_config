@@ -26,6 +26,13 @@ Found by the 2026-10-30 `/review-unpushed` pass (commits 4d13e60 and da12f82), c
 3. Add a no-upstream check before the range is used, offering `git push -u origin <branch>` as the Push rule already does.
 4. Mark the verbatim field "Joe-invoked only" and give automatic callers a substitute line (the caller skill's name and its trigger).
 
+## Notes
+
+Two more from the same day's pre-push `/code-check`, same hand-off theme:
+
+5. `skills/commit/SKILL.md`: the Pre-push todo sweep, Pre-push transcript check and Pre-push gate section intros still state the pre-1c order ("Runs first ... before the transcript check", "right before the `git push` call", "Runs right after the Pre-push transcript check"). Under 1c an attended push runs the transcript check in the parent chat, then the sweep and gate in the gate chat. Reword the three intros to match the Push pipeline list, which says it is the one authoritative enumeration.
+6. `skills/recall/recall.py:1026-1032` with `cmd_show` (~line 461): `recall show --append-to <file>` appends the "No indexed session starts with ..." / "Ambiguous prefix" error string into the respawn detail file and exits 0, so a successor reads the error as conversation content. Write only when the output starts with the transcript fence, otherwise print to stderr, leave the file untouched and return 1; add an unknown-prefix case to `skills/recall/test_recall.py`.
+
 ## Acceptance
 
 - `skills/release/test_pipeline_order.py` still passes.
