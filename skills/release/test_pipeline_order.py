@@ -59,6 +59,10 @@ if GATE_CHAT.exists():
     check(0 <= transcript_at < spawn_at, "hand-off runs the transcript check before spawn_chat")
     check("`/close` as the prompt's last word" in gate_text, "the gate chat closes itself with a trailing /close")
     check("/then-close" not in gate_text, "the gate chat no longer names the retired /then-close")
+    # Joe's 2026-10-27 rule: a light chat runs the gate in place. Dropping the threshold
+    # made a 13%-context chat spawn a gate chat on 2026-10-30.
+    check("context-left.mjs" in gate_text and "30%" in gate_text, "gate-chat measures context and skips the hand-off under 30% used")
+    check("30%" in commit_text.split("1c. ", 1)[-1].split("\n", 1)[0], "commit step 1c states the 30% threshold")
 
 check(len(labels) == len(set(labels)), "no duplicate step labels")
 

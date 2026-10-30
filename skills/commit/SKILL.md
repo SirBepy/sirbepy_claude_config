@@ -122,7 +122,7 @@ The full ordered sequence for every push (`/commit push`, a plain push request, 
 
 1. **Commit** - steps 1-8 above, including step 6b's gate (`/test` plus the test-coverage check).
 1b. **Kit sync** (`/release only`) - `release.py kit-sync <repo>`, then a `CHORE: bump tauri_kit <old> -> <new>` commit when the submodule pointer moved. Before the sweep and gate so `/code-check` and `/e2e` cover the new kit code.
-1c. **Gate hand-off** - attended runs only, always: run step 3 here, then hand steps 2 and 4 onward to a fresh gate chat that ends with `/close` (see "Gate hand-off" below). The gate is the heaviest part of a push, and a chat that has been working all session runs it on a crowded context.
+1c. **Gate hand-off** - attended runs only, when this chat has used 30% or more of its context: run step 3 here, then hand steps 2 and 4 onward to a fresh gate chat that ends with `/close` (see "Gate hand-off" below). The gate is the heaviest part of a push, and a long chat runs it on a crowded context. Under 30% used, the gate runs in place: a spawned chat costs a cold start and buys nothing on a light context (Joe, 2026-10-27, and again 2026-10-30 after a 13%-context chat spawned one anyway).
 2. **Pre-push todo sweep** - fold small backlog todos sitting in the files the push already touches.
 3. **Pre-push transcript check** - stop on any dev message since the last push that was never addressed.
 4. **Pre-push gate** - `/code-check` over `@{u}..HEAD`, then `/e2e` (or its no-suite note), then mark HEAD cleared.
@@ -135,7 +135,7 @@ The full ordered sequence for every push (`/commit push`, a plain push request, 
 
 ## Gate hand-off
 
-Runs after step 1 (and 1b under `/release`), for every attended push and every `/release`. Invoke `/gate-chat` through the Skill tool and follow it in full: it runs the transcript check here, spawns the gate chat with `/close` at the end of its prompt, and stops this chat. Unattended runs (`/autopilot`, `/auto-do-todos`, `/mega-todos`) and a chat that is itself a gate chat skip it and keep the gate in place.
+Runs after step 1 (and 1b under `/release`), for an attended push or `/release` from a chat that has used 30% or more of its context. Invoke `/gate-chat` through the Skill tool and follow it in full: it measures the context, then runs the transcript check here, spawns the gate chat with `/close` at the end of its prompt, and stops this chat. Under 30% it returns and the pipeline continues here. Unattended runs (`/autopilot`, `/auto-do-todos`, `/mega-todos`) and a chat that is itself a gate chat skip it and keep the gate in place.
 
 ## Pre-push todo sweep
 
