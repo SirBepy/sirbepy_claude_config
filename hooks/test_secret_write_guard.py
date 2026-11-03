@@ -27,7 +27,8 @@ SLACK = "xoxb-" + "111111111111-222222222222-abcdefghijklmnop"
 PEM = "-----BEGIN RSA " + "PRIVATE KEY-----"
 CONN = "postgres://admin:" + "realpassword123" + "@db.internal:5432/app"
 PLAIN_LITERAL = "hunter2" + "hunter2"
-FIREBASE_KEY = "AIza" + "SyCMxWyGRJScXgsl1qa_nNbUdIs5o86w83Y"
+BEARER_PREFIXED = "Bearer" + "abcdef123456"
+FIREBASE_KEY = "AIza" +"SyCMxWyGRJScXgsl1qa_nNbUdIs5o86w83Y"
 FIREBASE_KEY_TOO_LONG = FIREBASE_KEY + "x"
 MIDSTRING_NOT = "cannot-" + "be-rotated-abc123xyz"
 SUFFIXED_FAKE = PLAIN_LITERAL + "-fake"
@@ -87,6 +88,10 @@ CASES = [
     (f"apiKey: '{FIREBASE_KEY}'", False, "generic_assignment: firebase web api key allowed (todo 833)"),
     (f"apiKey: '{FIREBASE_KEY_TOO_LONG}'", True, "generic_assignment: firebase-shaped value one char too long still trips"),
     (f"apiKey: '{FIREBASE_KEY}'\naws_access_key_id = {AKIA}", True, "firebase key alongside a real AWS key in the same file: AWS key still trips"),
+    ('token_type: "Bearer"', False, "generic_assignment: OAuth scheme word Bearer allowed (todo 1267)"),
+    ("const BEARER = 'Bearer'", False, "generic_assignment: Bearer constant named bearer allowed (todo 1267)"),
+    (f'token: "{BEARER_PREFIXED}"', True, "generic_assignment: bearer allow is whole-value anchored, longer Bearer-prefixed value still trips (todo 1267)"),
+    (f'token_type: "{BEARER_PREFIXED}"', True, "generic_assignment: Bearer-prefixed value under token_type still trips (todo 1267)"),
 ]
 
 
