@@ -43,6 +43,12 @@ STAGING_B = "Leave all changes unstaged"
 STAGING_C = "Commit your own work with /commit"
 SCREENSHOT_MARKER = ".for_bepy/screenshots/"
 READONLY_MARKER = "READ-ONLY DISPATCH"
+# First sentence of the auto-background paragraph in refs/builder-preamble.md.
+AUTO_BG_PHRASE = "The harness auto-backgrounds any command past 120 seconds"
+# The compact dispatch shape (skills/mega-todos/build-dispatch.ps1) tells the
+# builder to read the preamble file and follow it VERBATIM instead of pasting it.
+PREAMBLE_FILE = "builder-preamble.md"
+READ_VERBATIM = "VERBATIM"
 READONLY_REPLACEMENT_LINE = (
     "Leave all changes unstaged. Never run `git add`. "
     "The main agent will run /commit by pathspec after your report-back."
@@ -58,6 +64,16 @@ def missing_markers(prompt: str) -> list[str]:
         )
     if "run_in_background" not in prompt or "FORBIDDEN" not in prompt:
         missing.append("run_in_background ... FORBIDDEN line")
+    # A one-line "run_in_background is FORBIDDEN" paraphrase satisfies the check
+    # above yet drops the paragraph that tells a builder what to do when a
+    # command auto-backgrounds (2026-10-13: a paraphrased preamble left a
+    # builder parked ~45 minutes, ~410k tokens). Require the paragraph itself,
+    # or the compact read-the-file shape that points the builder at it.
+    elif not (AUTO_BG_PHRASE in prompt or (PREAMBLE_FILE in prompt and READ_VERBATIM in prompt)):
+        missing.append(
+            f"auto-background paragraph (\"{AUTO_BG_PHRASE}...\") from refs/builder-preamble.md, "
+            f"or an instruction naming {PREAMBLE_FILE} to be followed {READ_VERBATIM}"
+        )
     if READONLY_MARKER not in prompt and SCREENSHOT_MARKER not in prompt:
         missing.append(f"{SCREENSHOT_MARKER} id line (or the READ-ONLY DISPATCH opt-out)")
     # A READ-ONLY DISPATCH has nothing to stage - "Stage your changes" invites

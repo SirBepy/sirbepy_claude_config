@@ -16,7 +16,17 @@ guard = _testlib.load_module(
 STAGING = "Stage your changes but do NOT commit. The main agent will run /commit after your report-back."
 UNSTAGED = "Leave all changes unstaged. Never run `git add`. The main agent will run /commit by pathspec after your report-back."
 COMMIT_OWN = "Commit your own work with /commit before your report-back, by pathspec, only the files you changed."
-BACKGROUND = "`run_in_background` is FORBIDDEN in builder subagents"
+PARAPHRASE = "`run_in_background` is FORBIDDEN in builder subagents"
+# Mirrors the paste of refs/builder-preamble.md's auto-background paragraph.
+BACKGROUND = (
+    f"{PARAPHRASE}. The harness auto-backgrounds any command past 120 seconds "
+    "whether you asked it to or not."
+)
+READ_FILE_SHAPE = (
+    "Read C:\\Users\\tecno\\.claude\\refs\\builder-preamble.md in full now and follow its fenced "
+    "code block as your working preamble VERBATIM.\n\n"
+    "run_in_background is FORBIDDEN in builder subagents."
+)
 SCREENSHOT = "save them under `.for_bepy/screenshots/12345-6789/`"
 FULL_PROMPT = f"{STAGING}\n\n{BACKGROUND}\n\n{SCREENSHOT}\n\nDo the task."
 
@@ -46,6 +56,49 @@ CASES = [
         f"READ-ONLY DISPATCH\n\n{UNSTAGED}\n\n{COMMIT_OWN}\n\n{BACKGROUND}\n\nDo the task.",
         True,
         "read-only + Commit your own work is denied",
+    ),
+    (
+        f"{STAGING}\n\n{PARAPHRASE}\n\n{SCREENSHOT}\n\nDo the task.",
+        True,
+        "paraphrase-only (no auto-background paragraph) is denied",
+    ),
+    (
+        f"{UNSTAGED}\n\n{PARAPHRASE}\n\nREAD-ONLY DISPATCH\n\nDo the task.",
+        True,
+        "read-only + paraphrase-only is denied",
+    ),
+    (
+        # builder-preamble.md named but no VERBATIM instruction: still a paraphrase.
+        f"{STAGING}\n\nSee builder-preamble.md for rules. {PARAPHRASE}\n\n{SCREENSHOT}",
+        True,
+        "preamble file named without VERBATIM is denied",
+    ),
+    (
+        # VERBATIM alone, without naming the file, is not the sanctioned shape.
+        f"{STAGING}\n\nFollow the rules VERBATIM. {PARAPHRASE}\n\n{SCREENSHOT}",
+        True,
+        "VERBATIM without the preamble file is denied",
+    ),
+    (
+        f"{STAGING}\n\n{READ_FILE_SHAPE}\n\n{SCREENSHOT}",
+        False,
+        "read-the-preamble-file + VERBATIM shape passes",
+    ),
+    (
+        f"{UNSTAGED}\n\n{READ_FILE_SHAPE}\n\nREAD-ONLY DISPATCH\n\nDo the task.",
+        False,
+        "read-only + read-the-preamble-file shape passes",
+    ),
+    (
+        f"{UNSTAGED}\n\n{BACKGROUND}\n\nREAD-ONLY DISPATCH\n\nDo the task.",
+        False,
+        "read-only + verbatim auto-background paragraph passes",
+    ),
+    (
+        # Read-file shape that still drops FORBIDDEN stays denied by the older check.
+        f"{STAGING}\n\nRead builder-preamble.md and follow it VERBATIM.\n\n{SCREENSHOT}",
+        True,
+        "read-file shape without run_in_background/FORBIDDEN is denied",
     ),
 ]
 
