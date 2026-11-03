@@ -71,4 +71,24 @@ with tempfile.TemporaryDirectory() as tmp:
     client_list.unlink()
     expect("a missing client list makes every repo personal", lib.client_slug(client), None)
 
+    # --- is-client --list: a second list file answered by the same slug algorithm ---
+    other_list = tmpdir / "local-only-tests.txt"
+    other_list.write_text("# comment\n  SirBepy/Mine  \n", encoding="utf-8")
+
+    def cli(path: Path, *extra: str) -> str:
+        proc = subprocess.run(
+            [sys.executable, "-I", str(_HOOKS_DIR / "_client_repo.py"), "is-client", str(path), *extra],
+            capture_output=True,
+            text=True,
+        )
+        return proc.stdout.strip() or f"rc={proc.returncode} {proc.stderr.strip()[-80:]}"
+
+    expect("--list: origin on the given list is reported", cli(personal, "--list", str(other_list)), "client")
+    expect("--list: origin absent from the given list is not", cli(client, "--list", str(other_list)), "personal")
+    expect("--list: a missing list file matches nothing", cli(personal, "--list", str(tmpdir / "nope.txt")), "personal")
+    expect("client_slug(list_path=...) reads that list", lib.client_slug(personal, other_list), "sirbepy/mine")
+    # Dangerous shape: without --list the real client list still decides, so a repo on the
+    # custom list only does not become a client repo.
+    expect("no --list: default list unchanged by the option existing", lib.client_slug(personal), None)
+
 sys.exit(_testlib.summarize(fails, style="count"))

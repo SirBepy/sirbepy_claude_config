@@ -5,7 +5,8 @@ refs/client-repos.txt. The testing floor and push gate apply to every repo;
 only the rules that snippet lists still key off this.
 
 CLI, for skills and scripts that cannot import this:
-  python _client_repo.py is-client [path]            prints client|personal
+  python _client_repo.py is-client [path] [--list F] prints client|personal
+                                                     (F defaults to refs/client-repos.txt)
 """
 
 import argparse
@@ -55,10 +56,11 @@ def load_client_slugs(path: Path | None = None) -> set[str]:
     return {ln.strip().lower() for ln in lines if ln.strip() and not ln.strip().startswith("#")}
 
 
-def client_slug(path) -> str | None:
-    """The listed slug if `path` is inside a client repo, else None."""
+def client_slug(path, list_path: Path | None = None) -> str | None:
+    """The listed slug if `path` is inside a repo listed in `list_path` (default: the
+    client list), else None."""
     slug = origin_slug(_git(path, "remote", "get-url", "origin") or "")
-    return slug if slug and slug in load_client_slugs() else None
+    return slug if slug and slug in load_client_slugs(list_path) else None
 
 
 def main(argv=None) -> int:
@@ -66,9 +68,12 @@ def main(argv=None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
     p_is = sub.add_parser("is-client")
     p_is.add_argument("path", nargs="?", default=".")
+    # Lets other repo lists (refs/local-only-tests.txt) reuse this slug matching; the output
+    # words stay client|personal whichever list is read.
+    p_is.add_argument("--list", dest="list_path", type=Path, default=None)
     args = parser.parse_args(argv)
 
-    print("client" if client_slug(args.path) else "personal")
+    print("client" if client_slug(args.path, args.list_path) else "personal")
     return 0
 
 
