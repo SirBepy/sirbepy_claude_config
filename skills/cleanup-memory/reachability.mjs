@@ -4,14 +4,18 @@
 // Usage: node reachability.mjs <memory-dir> [--byte-cap=N] [--line-cap=N]
 // Resolves [[token]]/(file.md) links against a target's frontmatter `name:` OR basename.
 //
-// The loaded window is bounded by BYTES, not lines. A hardcoded 200-line default
-// reported orphan-file: 0 on a 27.7KB index that was really dropping 31 files from
-// line 134 on (2026-09-25), because the byte ceiling binds first on any index whose
-// lines are long. The line cap is now derived from the byte cap; --line-cap still
-// overrides it for a host with a genuinely different rule.
+// The loaded window is bounded by BOTH a byte cap and a 200-line cap; whichever is hit
+// first wins. A hardcoded 200-line default alone reported orphan-file: 0 on a 27.7KB
+// index that was really dropping 31 files from line 134 on (2026-09-25), because the
+// byte ceiling binds first on long lines. A byte-only derivation then missed the line
+// cut on 2026-10-27, when the harness warned "MEMORY.md is 201 lines (limit: 200)" on a
+// 23,344-byte index. The effective cap is min(200, line where the byte cap lands);
+// --line-cap still overrides it for a host with a genuinely different rule.
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
+
+const HARNESS_LINE_CAP = 200;
 
 function parseArgs(argv) {
   const dir = argv[2];
@@ -62,12 +66,12 @@ function isSuperseded(text) {
   return Boolean(m && m[1].trim().replace(/^["']|["']$/g, '').trim());
 }
 
-// Any subdirectory other than archive/ is a demotion tier (e.g. cold/, rest/):
-// files there are deliberately unindexed and must never be flagged as
-// orphan-file or proposed for re-indexing. recall.py memory searches every tier.
 // The always-loaded core (MEMORY.md) is capped at 8 KB; /cleanup-memory Step 1.7 demotes into a tier.
 const CORE_CAP = 8192;
 
+// Any subdirectory other than archive/ is a demotion tier (e.g. cold/, rest/):
+// files there are deliberately unindexed and must never be flagged as
+// orphan-file or proposed for re-indexing. recall.py memory searches every tier.
 function collectFiles(dir) {
   const live = [];
   const demoted = [];
@@ -125,8 +129,21 @@ function main() {
   const memoryMdFull = readFileSync(memoryMdPath, 'utf8');
   const memoryMdLines = memoryMdFull.split(/\r?\n/);
   const derivedCap = lineCapFromBytes(memoryMdFull, byteCap);
-  const lineCap = lineCapArg ?? derivedCap;
-  const capSource = lineCapArg === null ? `derived from --byte-cap=${byteCap}` : 'explicit --line-cap';
+  // Both limits apply and the lower one binds. The byte label is used only when the byte cut
+  // actually lands inside the file and before line 200; otherwise 200 is the effective cap.
+  const byteBinds = derivedCap < HARNESS_LINE_CAP && derivedCap < memoryMdLines.length;
+  let lineCap;
+  let capSource;
+  if (lineCapArg !== null) {
+    lineCap = lineCapArg;
+    capSource = 'explicit --line-cap';
+  } else if (byteBinds) {
+    lineCap = derivedCap;
+    capSource = `derived from byte cap, --byte-cap=${byteCap}`;
+  } else {
+    lineCap = HARNESS_LINE_CAP;
+    capSource = 'harness line limit';
+  }
   const indexBytes = Buffer.byteLength(memoryMdFull, 'utf8');
   const memoryMdLoaded = memoryMdLines.slice(0, lineCap).join('\n');
 

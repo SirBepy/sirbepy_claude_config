@@ -97,6 +97,33 @@ try {
     fs.rmSync(bigDir, { recursive: true, force: true });
     check("big scratch dir removed", !fs.existsSync(bigDir), bigDir);
   }
+
+  // The harness also cuts at 200 lines, not only at the byte cap (2026-10-27 warning: "MEMORY.md is
+  // 201 lines (limit: 200)" on a 23,344-byte index). 201 short entries stay far under the byte cap,
+  // so only the line limit can drop line 201.
+  const lineDir = fs.mkdtempSync(path.join(os.tmpdir(), "reach-test-lines-"));
+  try {
+    const entries = Array.from({ length: 201 }, (_, i) => `- [E${i}](e${i}.md) - x`);
+    fs.writeFileSync(path.join(lineDir, "MEMORY.md"), entries.join("\n") + "\n");
+    for (let i = 0; i < 201; i++) fs.writeFileSync(path.join(lineDir, `e${i}.md`), fm([`name: e${i}`, "description: d"]));
+    const lr = spawnSync(process.execPath, [script, lineDir], { encoding: "utf8", timeout: 60000 });
+    const out = lr.stdout.replace(/\r/g, "");
+    check("a 201-line index under the byte cap reports line cap 200 set by the harness line limit",
+      /^line cap: 200 \(harness line limit\)$/m.test(out), out.split("\n").slice(0, 6).join(" | ") + lr.stderr);
+    check("the cut is reported as lines 201-202 never reaching a session",
+      /TRUNCATING: lines 201-\d+ never reach a session/.test(out), out);
+    const auth = /\[authoritative\][\s\S]*?orphan-file: (\d+)\n((?: {4}\S.*\n)*)/.exec(out);
+    check("the file linked on line 201 is the authoritative orphan",
+      auth && auth[1] === "1" && path.basename(auth[2].trim()) === "e200.md", auth ? auth[0] : out);
+
+    // An explicit --line-cap still wins over the 200-line limit.
+    const ex = spawnSync(process.execPath, [script, lineDir, "--line-cap=250"], { encoding: "utf8", timeout: 60000 });
+    check("an explicit --line-cap overrides the 200-line limit and is labelled as such",
+      /^line cap: 250 \(explicit --line-cap\)$/m.test(ex.stdout.replace(/\r/g, "")), ex.stdout);
+  } finally {
+    fs.rmSync(lineDir, { recursive: true, force: true });
+    check("line scratch dir removed", !fs.existsSync(lineDir), lineDir);
+  }
 } finally {
   fs.rmSync(dir, { recursive: true, force: true });
 }

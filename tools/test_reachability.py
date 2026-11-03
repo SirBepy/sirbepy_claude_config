@@ -80,10 +80,35 @@ def check_two_links_one_line_first_label_bracketed() -> bool:
         return _testlib.report(ok, "two links on one line, first label bracketed, both count")
 
 
+def check_201_lines_under_byte_cap_flags_line_201() -> bool:
+    """The harness cuts at 200 lines as well as at the byte cap (2026-10-27 warning:
+    "MEMORY.md is 201 lines (limit: 200)" on a 23,344-byte index). 201 short entries
+    sit far under the byte cap, so only the line limit drops line 201."""
+    with tempfile.TemporaryDirectory() as td:
+        mem = Path(td)
+        entries = []
+        for i in range(201):
+            (mem / f"e{i}.md").write_text("t\n", encoding="utf-8")
+            entries.append(f"- [E{i}](e{i}.md) - x")
+        (mem / "MEMORY.md").write_text("\n".join(entries) + "\n", encoding="utf-8")
+        output = run_reachability(mem)
+        lines = output.splitlines()
+        i = next((n for n, l in enumerate(lines) if l.strip().startswith("[authoritative]")), -1)
+        auth = lines[i + 1: i + 3] if i >= 0 else []
+        ok = (
+            "line cap: 200 (harness line limit)" in output
+            and "TRUNCATING: lines 201-" in output
+            and auth[:1] == ["  orphan-file: 1"]
+            and auth[1:2] == ["    " + str(mem / "e200.md")]
+        )
+        return _testlib.report(ok, "201 lines under the byte cap: cut at 200, line 201's file is the orphan")
+
+
 def main() -> int:
     checks = [
         check_bracketed_label_single_link,
         check_two_links_one_line_first_label_bracketed,
+        check_201_lines_under_byte_cap_flags_line_201,
     ]
     fails = [c.__name__ for c in checks if not c()]
     return _testlib.summarize(fails)
