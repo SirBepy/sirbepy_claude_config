@@ -386,6 +386,16 @@ def main():
         check(recall.redact(f"Password:\n{fake}\nsecond line") == "Password:\n[REDACTED:labelled_password]\nsecond line",
               "only the first value line after a label is redacted")
 
+        # An allowed Bearer token_type must not shield a real token beside it on the same line.
+        real_tok = "ya29." + "a0AfH6SMBrealtokenvalue123456"
+        for order, line in (("scheme first", f'const r = {{ token_type: "Bearer", access_token: "{real_tok}" }};'),
+                            ("token first", f'const r = {{ access_token: "{real_tok}", token_type: "Bearer" }};')):
+            out = recall.redact(line)
+            check(real_tok not in out and '"Bearer"' in out,
+                  f"a real token on the same line as an allowed Bearer token_type is redacted ({order}), the scheme word kept")
+        check(recall.redact('const r = { token_type: "Bearer" };') == 'const r = { token_type: "Bearer" };',
+              "token_type: \"Bearer\" alone is left intact")
+
         header, rows = next((h, r) for h, r in index.sessions() if h["session"] == SID)
         texts = [r["text"] for r in rows]
         joe = [r["text"] for r in rows if r.get("role") == "joe"]

@@ -60,19 +60,28 @@ BEGIN {
   if (skip) { ln++; next }
   lo=tolower(l)
   for (i=1; i<=npat; i++) {
-    if (!match(lo, prex[i])) continue
-    seg=substr(l, RSTART, RLENGTH)
-    if (pname[i] == "generic_assignment") {
-      loseg=substr(lo, RSTART, RLENGTH)
-      if (match(loseg, /['\''"][^'\''"\t ,)]{6,}['\''"]/)) {
-        val=substr(loseg, RSTART+1, RLENGTH-2)
-        allowed=0
-        for (j=1; j<=nallow; j++) if (match(val, arex[j])) { allowed=1; break }
-        if (allowed) continue
+    # Every match on the line is judged on its own: an allowed value (a Bearer token_type)
+    # suppresses only itself, never a real token later on the same line.
+    rest=lo; off=0; hit=0
+    while (match(rest, prex[i])) {
+      ms=RSTART; ml=RLENGTH
+      seg=substr(l, off+ms, ml)
+      allowed=0
+      if (pname[i] == "generic_assignment") {
+        loseg=substr(rest, ms, ml)
+        if (match(loseg, /['\''"][^'\''"\t ,)]{6,}['\''"]/)) {
+          val=substr(loseg, RSTART+1, RLENGTH-2)
+          for (j=1; j<=nallow; j++) if (match(val, arex[j])) { allowed=1; break }
+        }
       }
+      if (!allowed) { hit=1; break }
+      adv=ms+ml-1; if (ml == 0) adv++
+      off+=adv; rest=substr(rest, adv+1)
     }
-    printf "%s:%d: %s\n", f, ln, seg
-    break
+    if (hit) {
+      printf "%s:%d: %s\n", f, ln, seg
+      break
+    }
   }
   ln++
   next

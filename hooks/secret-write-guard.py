@@ -100,21 +100,25 @@ def scan_text(text: str, patterns, allows) -> list:
     for raw_line in text.split("\n"):
         lo = raw_line.lower()
         for name, rx in patterns:
-            m = rx.search(lo)
-            if not m:
+            if name in names:
                 continue
-            if name == "generic_assignment":
-                if has_env_marker(lo):
-                    continue
-                seg = lo[m.start():m.end()]
-                vm = VALUE_RE.search(seg)
+            if name != "generic_assignment":
+                if rx.search(lo):
+                    names.append(name)
+                continue
+            if has_env_marker(lo):
+                continue
+            # Every match on the line is judged on its own: an allowed value (a Bearer
+            # token_type) suppresses only itself, never a real token later on the same line.
+            for m in rx.finditer(lo):
+                vm = VALUE_RE.search(lo[m.start():m.end()])
                 if vm:
                     val = vm.group(1)
                     # "$VAR"/'$VAR' - bash-style dereference, not a literal.
                     if val.startswith("$") or any(a.search(val) for _, a in allows):
                         continue
-            if name not in names:
                 names.append(name)
+                break
     return names
 
 

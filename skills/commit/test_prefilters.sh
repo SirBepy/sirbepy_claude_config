@@ -101,6 +101,21 @@ out=$(cd "$bearer_repo" && "$gate" leak.js); rc=$?
 check "secret-scan.sh still flags a longer value that merely starts with Bearer" \
   1 'leak\.js:1:' '' "$out" "$rc"
 
+# An allowed match must suppress only itself: a real token later on the same line still trips,
+# in either key order. The real-looking value is split so this script's own line never matches.
+real_tok="ya29.""a0AfH6SMBrealtokenvalue123456"
+printf 'const r = { token_type: "Bearer", access_token: "%s" };\n' "$real_tok" > "$bearer_repo/same1.js"
+out=$(cd "$bearer_repo" && "$gate" same1.js); rc=$?
+check "secret-scan.sh flags a real token after an allowed Bearer token_type on the same line" \
+  1 'same1\.js:1:' '' "$out" "$rc"
+printf 'const r = { access_token: "%s", token_type: "Bearer" };\n' "$real_tok" > "$bearer_repo/same2.js"
+out=$(cd "$bearer_repo" && "$gate" same2.js); rc=$?
+check "secret-scan.sh flags a real token before an allowed Bearer token_type on the same line" \
+  1 'same2\.js:1:' '' "$out" "$rc"
+printf 'const r = { token_type: "Bearer", scope: "read" };\n' > "$bearer_repo/same3.js"
+out=$(cd "$bearer_repo" && "$gate" same3.js); rc=$?
+check "secret-scan.sh keeps token_type: \"Bearer\" beside a non-credential key clean" 0 '' 'same3\.js' "$out" "$rc"
+
 # --- prefilter-gate.sh: staged deletion is skipped, not a repo-resolution failure (todo 944) ---
 # git rm'ing the only file in a directory removes the directory too, so the deleted path's own
 # dirname is gone from disk - the exact shape that made repo resolution exit 2 in the wild.
