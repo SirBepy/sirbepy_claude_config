@@ -1872,6 +1872,64 @@ out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r74" --ex
 check "a backslash pathspec still refuses a half-committed move in its directory" \
   1 'coverage-check\] REFUSED.*src/old\.txt' '\[commit\] committed' "$out" "$rc"
 
+# --- a whole-file --own-range on a tracked multi-hunk file warns and lists the hunks, because a
+# range covering every line makes the foreign-hunk check pass by definition ---
+wf_fixture() {
+  local d
+  d=$(new_repo)
+  printf 'line %02d\n' $(seq 1 30) > "$d/multi.txt"
+  git -C "$d" add multi.txt
+  git -C "$d" commit -q -m "seed multi.txt"
+  sed -i '3s/.*/line 03 CHANGED/' "$d/multi.txt"
+  sed -i '20s/.*/line 20 CHANGED/' "$d/multi.txt"
+  printf '%s' "$d"
+}
+r75=$(wf_fixture); tmp_dirs+=("$r75")
+branch=$(git -C "$r75" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r75" rev-parse HEAD)
+out=$("$cp" -C "$r75" --expect-branch "$branch" --expect-sha "$sha" --own-range multi.txt:1-9999 \
+  -m "whole-file claim" -- multi.txt 2>&1); rc=$?
+check "a tracked 2-hunk file with --own-range 1-9999 prints the whole-file WARNING and still commits" \
+  0 '\[own-range\] WARNING: multi\.txt claims the whole file; foreign hunks would pass as own\. Hunks:' '' "$out" "$rc"
+check "the whole-file WARNING lists the first hunk header" \
+  0 '@@ -1,6 \+1,6 @@' '' "$out" "$rc"
+check "the whole-file WARNING lists the second hunk header" \
+  0 '@@ -17,7 \+17,7 @@' '' "$out" "$rc"
+
+r76=$(wf_fixture); tmp_dirs+=("$r76")
+sha=$(git -C "$r76" rev-parse HEAD)
+out=$("$cp" -C "$r76" --expect-branch "$branch" --expect-sha "$sha" --own-range multi.txt:1-6,17-23 \
+  -m "exact ranges" -- multi.txt 2>&1); rc=$?
+check "exact per-hunk --own-range prints no whole-file WARNING" \
+  0 'caller-declared own-range 1-6,17-23' 'WARNING' "$out" "$rc"
+
+# A range that starts at 1 and stops at the file's real last line is whole-file too, not just 1-9999.
+r77=$(wf_fixture); tmp_dirs+=("$r77")
+sha=$(git -C "$r77" rev-parse HEAD)
+out=$("$cp" -C "$r77" --expect-branch "$branch" --expect-sha "$sha" --own-range multi.txt:1-30 \
+  -m "whole-file exact length" -- multi.txt 2>&1); rc=$?
+check "--own-range 1-<file line count> also prints the whole-file WARNING" \
+  0 'multi\.txt claims the whole file' '' "$out" "$rc"
+
+# A new untracked file is wholly the committer's, so a whole-file range on it stays silent.
+r78=$(new_repo); tmp_dirs+=("$r78")
+sha=$(git -C "$r78" rev-parse HEAD)
+branch78=$(git -C "$r78" rev-parse --abbrev-ref HEAD)
+printf 'line %02d\n' $(seq 1 30) > "$r78/fresh.txt"
+out=$("$cp" -C "$r78" --expect-branch "$branch78" --expect-sha "$sha" --own-range fresh.txt:1-9999 \
+  -m "new file" -- fresh.txt 2>&1); rc=$?
+check "an untracked new file with a whole-file --own-range prints no WARNING" \
+  0 'caller-declared own-range 1-9999' 'WARNING' "$out" "$rc"
+
+# Negative: the warning is advisory only, so a genuinely foreign hunk outside a declared range
+# is still refused by the foreign-hunk check.
+r79=$(wf_fixture); tmp_dirs+=("$r79")
+sha=$(git -C "$r79" rev-parse HEAD)
+out=$("$cp" -C "$r79" --expect-branch "$branch" --expect-sha "$sha" --own-range multi.txt:1-6 \
+  -m "partial claim" -- multi.txt 2>&1); rc=$?
+check "a partial --own-range still refuses a hunk outside it, with no whole-file WARNING" \
+  1 'foreign-hunk-check\] REFUSED' 'whole file' "$out" "$rc"
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else

@@ -762,6 +762,34 @@ if [ "$multi_session" -eq 1 ] || [ -n "$own_since" ]; then
   [ "${#untracked_for_prime[@]}" -ge 16 ] && prime_head_blob_cache "${untracked_for_prime[@]}"
 fi
 
+# A caller-declared range is trusted as given, so one that spans the whole file (the `1-9999`
+# shortcut) makes every hunk "own" and the foreign-hunk check structurally unable to fire. Prints
+# a warning plus the file's hunk headers so the caller sees what it is claiming; never changes the
+# exit code. Silent for a file with fewer than 2 hunks (nothing to tell apart) and, by the caller
+# in the loop below, for untracked files (a new file is entirely the committer's by definition).
+warn_whole_file_range() {
+  local f="$1" spec="$2" diff="$3" nlines=0 hunks=0 last_end=0 piece a b hit=0 line
+  nlines=$(grep -c '' -- "$repo_root/$f" 2>/dev/null) || nlines=0
+  hunks=$(printf '%s\n' "$diff" | grep -c '^@@ ')
+  [ "$hunks" -ge 2 ] || return 0
+  derive_own_ranges "$diff"
+  [ -n "$DERIVED" ] && last_end=${DERIVED##*-}
+  local -a pieces
+  IFS=',' read -r -a pieces <<<"$spec"
+  for piece in "${pieces[@]}"; do
+    a=${piece%%-*}
+    b=${piece#*-}
+    [[ "$a" =~ ^[0-9]+$ && "$b" =~ ^[0-9]+$ ]] || continue
+    if [ "$a" -le 1 ] && { [ "$b" -ge "$nlines" ] || [ "$b" -ge "$last_end" ]; }; then hit=1; fi
+  done
+  [ "$hit" -eq 1 ] || return 0
+  whole_file_warnings+="[own-range] WARNING: $f claims the whole file; foreign hunks would pass as own. Hunks:"$'\n'
+  while IFS= read -r line; do
+    [[ "$line" == '@@ '* ]] && whole_file_warnings+="  $line"$'\n'
+  done <<<"$diff"
+}
+
+whole_file_warnings=""
 fh_files=()
 fh_own_specs=()
 derive_notes=""
@@ -785,6 +813,7 @@ for f in "${diffable_files[@]}"; do
   if [ -n "${explicit_ranges[$f]:-}" ]; then
     spec="${explicit_ranges[$f]%,}"
     derive_notes+="  - $f: caller-declared own-range $spec"$'\n'
+    [ "${class_of[$f]}" = "untracked" ] || warn_whole_file_range "$f" "$spec" "$diff_out"
   else
     derive_own_ranges "$diff_out"
     spec=$DERIVED
@@ -809,6 +838,7 @@ for f in "${diffable_files[@]}"; do
   fh_own_specs+=("$f:$spec")
 done
 printf '[own-range] derivation:\n%s' "${derive_notes:-  (nothing to derive)$'\n'}"
+[ -z "$whole_file_warnings" ] || printf '%s' "$whole_file_warnings"
 
 if [ "${#fh_files[@]}" -eq 0 ]; then
   printf '[foreign-hunk-check] skipped (no file has new-file content to check)\n'
@@ -1027,31 +1057,17 @@ is_test_path() {
 
 # Local-only-tests repos (Joe's 2026-10-08 reframing): some repos must never get
 # Claude's own tests committed - the team doesn't track them there, so they stay on disk only.
-# Listed in refs/local-only-tests.txt, matched with the exact origin-slug algorithm
-# hooks/_client_repo.py already uses for refs/client-repos.txt (split the origin url on every
-# `/` or `:`, take the last two non-empty parts as owner/repo, strip a trailing `.git`,
-# lowercase) - reimplemented here in bash rather than adding a second list-path argument to that
-# file's CLI, which is off limits while another session edits it and whose `is-client`
-# subcommand has no way to point at a second list file anyway.
+# Listed in refs/local-only-tests.txt, matched by hooks/_client_repo.py's `is-client --list`, the
+# same origin-slug algorithm that reads refs/client-repos.txt, so the two lists can never read the
+# same origin url differently. Its output words stay client|personal whichever list it reads, so
+# "client" here means "listed". No python on PATH means not local-only (the safe direction: the
+# repo then gets the normal test-file requirement).
 local_only_tests_path="$dir/../../refs/local-only-tests.txt"
-origin_slug_bash() {
-  local url="$1" parts owner repo
-  parts=$(printf '%s' "$url" | tr '/:' '\n' | grep -v '^$')
-  [ "$(printf '%s\n' "$parts" | grep -c .)" -lt 2 ] && return 1
-  owner=$(printf '%s\n' "$parts" | tail -n2 | head -n1)
-  repo=$(printf '%s\n' "$parts" | tail -n1)
-  repo="${repo%.git}"
-  { [ -z "$owner" ] || [ -z "$repo" ]; } && return 1
-  printf '%s/%s' "$owner" "$repo" | tr '[:upper:]' '[:lower:]'
-}
 is_local_only_tests_repo() {
-  local url slug
+  local out
   [ -f "$local_only_tests_path" ] || return 1
-  url=$(git_c remote get-url origin 2>/dev/null) || return 1
-  slug=$(origin_slug_bash "$url") || return 1
-  [ -z "$slug" ] && return 1
-  grep -v '^[[:space:]]*#' "$local_only_tests_path" | grep -v '^[[:space:]]*$' \
-    | tr '[:upper:]' '[:lower:]' | sed 's/[[:space:]]*$//' | grep -qxF "$slug"
+  out=$(python "$dir/../../hooks/_client_repo.py" is-client "$repo_root" --list "$local_only_tests_path" 2>/dev/null) || return 1
+  [ "$out" = "client" ]
 }
 # An untracked-or-ignored test-path file modified within the last 24h, anywhere in the repo -
 # the (ii) pass condition below in a local-only-tests repo substitutes for "a test file is
