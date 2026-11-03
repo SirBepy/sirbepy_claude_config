@@ -51,7 +51,12 @@ workspace: pass `--manifest-path src-tauri/Cargo.toml` rather than relying on cw
   from the `packageManager` field if pinned, else the lockfile - a bare `npm`/`yarn` in a pinned
   repo is blocked by the corepack guard and a global Yarn 1 once rewrote a Yarn 4 lockfile. Cap
   concurrency at 5 (`--maxThreads=5` / `--workspace-concurrency=5`), then check for orphans per
-  `refs/process-hygiene.md` before reporting.
+  `refs/process-hygiene.md` before reporting. **A package whose `test` needs a live server** (a
+  bot or browser e2e suite) is not a fast check: add `"testing-floor": "skip"` to its
+  `package.json`, or keep it in a directory named `e2e`. The Stop-hook floor
+  (`hooks/_testing_floor_lib.py`) then skips `npm test` for that package and runs
+  `node --check` over each `.js`/`.mjs`/`.cjs` file edited this turn instead, so a real syntax
+  error still fails the floor. Any other marker value (or a non-string one) opts nothing out.
 - **Rust / Tauri:** `cargo test --lib` alone, which already compiles the lib. Do NOT stack it with
   `cargo check` and `cargo build` - the three emit different artifact sets, so serially they cost
   roughly three full builds, not one plus increments. Any `check`/`build` you do add takes
