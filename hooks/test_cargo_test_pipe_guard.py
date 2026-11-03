@@ -1,5 +1,5 @@
 """Self-test for cargo-test-pipe-guard.py (todo 780, extended by todo 877,
-quote-position fix by todo 881).
+quote-position fix by todo 881; also covers the piped commit-pathspec.sh case).
 
 Run directly: python hooks/test_cargo_test_pipe_guard.py
 Exits 0 on all-pass, 1 on any failure, printing a PASS/FAIL line per case.
@@ -83,12 +83,94 @@ CASES = [
     ("cargo test 2>&1 | nohup tail -f", True, "todo 934: filter behind nohup is now blocked"),
     ("cargo test | env FOO=BAR nohup tail -40", True, "todo 934: stacked env + nohup wrappers still caught"),
     ("cargo test | xargs echo tail", False, "todo 908 regression guard: tail as an xargs argument, not the filter itself, still passes"),
+    # commit-pathspec.sh: a piped filter swallows the script's own non-zero
+    # exit, so a refused commit reads as success.
+    (
+        "bash ~/.claude/skills/commit/commit-pathspec.sh -m x -- f | tail -3",
+        True,
+        "commit-pathspec: acceptance, piped into tail is blocked",
+    ),
+    (
+        'bash "C:/Users/tecno/.claude/skills/commit/commit-pathspec.sh" -m x -- f 2>&1 | tail -6',
+        True,
+        "commit-pathspec: the 2026-10-22 shape (quoted script path, 2>&1, tail) is blocked",
+    ),
+    (
+        "bash ~/.claude/skills/commit/commit-pathspec.sh -m x -- f | sort | head -2",
+        True,
+        "commit-pathspec: filter two segments downstream still blocked",
+    ),
+    (
+        "bash commit-pathspec.sh -m x -- f | grep --line-buffered ok",
+        True,
+        "commit-pathspec: grep --line-buffered still swallows the exit code, so no carve-out",
+    ),
+    (
+        "bash ~/.claude/skills/commit/commit-pathspec.sh -m x -- f | Select-Object -Last 3",
+        True,
+        "commit-pathspec: Select-Object is also a blocked filter",
+    ),
+    (
+        "git status; bash ~/.claude/skills/commit/commit-pathspec.sh -m x -- f | tail",
+        True,
+        "commit-pathspec: piped call in a later statement is blocked",
+    ),
+    (
+        "bash ~/.claude/skills/commit/commit-pathspec.sh -m x -- f",
+        False,
+        "commit-pathspec: unpiped call passes",
+    ),
+    (
+        "bash ~/.claude/skills/commit/commit-pathspec.sh -m x -- f 2>&1",
+        False,
+        "commit-pathspec: stderr merge without a pipe passes",
+    ),
+    (
+        "set -o pipefail; bash ~/.claude/skills/commit/commit-pathspec.sh -m x -- f | tail -3",
+        False,
+        "commit-pathspec: set -o pipefail first lets the pipe through",
+    ),
+    (
+        "bash -o pipefail -c 'bash commit-pathspec.sh -m x -- f | tail -3'",
+        False,
+        "commit-pathspec: bash -o pipefail also counts",
+    ),
+    (
+        "bash ~/.claude/skills/commit/commit-pathspec.sh -m x -- f; echo rc=$? | tail -1",
+        False,
+        "commit-pathspec: a filter after a later statement is not fed by the script",
+    ),
+    (
+        "bash ~/.claude/skills/commit/commit-pathspec.sh -m x -- f > out.log; tail -3 out.log",
+        False,
+        "commit-pathspec: redirect to a file then tail it in a separate statement passes",
+    ),
+    (
+        'git commit -m "docs: never pipe commit-pathspec.sh output | tail" -- f',
+        False,
+        "commit-pathspec: mention inside a quoted -m message passes",
+    ),
+    (
+        '''echo '{"command":"bash commit-pathspec.sh -m x | tail"}' | python hook.py''',
+        False,
+        "commit-pathspec: mention inside a JSON payload string passes",
+    ),
+    (
+        "cat ~/.claude/skills/commit/commit-pathspec.sh | head -20",
+        False,
+        "commit-pathspec: reading the script file is not running it",
+    ),
+    (
+        "grep -n pipefail skills/commit/commit-pathspec.sh | head",
+        False,
+        "commit-pathspec: grep over the script file is not running it",
+    ),
 ]
 
 
 def check(case) -> bool:
     cmd, expect_block, label = case
-    result = guard.find_violation(cmd)
+    result = guard.find_violation(cmd) or guard.find_commit_pathspec_violation(cmd)
     got_block = result is not None
     ok = got_block == expect_block
     print(f"[{'PASS' if ok else 'FAIL'}] {label}: {cmd!r} -> {'BLOCK' if got_block else 'PASS'} ({result})")
