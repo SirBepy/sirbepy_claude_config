@@ -33,3 +33,4 @@ Only fall back to the plain `<id>.claim` when the id resolves to exactly one bac
 Same review, lower value, fold in if cheap:
 - `skills/commit/todo-ref.sh:33`: the optional `label-` group added in b232631 flags comments like `// todo list-3 items remain` or `// TODO handle-1 case` as todo refs. Require the label to match a device label followed by a 4-digit number, or keep requiring digits right after `todo ` for the unlabelled form.
 - `tools/migrate-todo-ids.py:303`: a repo whose `apply_repo` raises midway never reaches the undo log. Low value: the migration already ran.
+- Fixed in 74a1797 (Find-TodoClaims -NoPlainFallback; duplicate-id sibling claims no longer collide).
