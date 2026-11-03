@@ -16,8 +16,9 @@
        shape). Asserts the tracked source's deletion IS in .Pathspec, the untracked
        source stays OUT, and a pathspec commit built from .Pathspec leaves no stray
        ` D` in `git status --porcelain`.
-    2. The pre-fix code, read from this repo's own HEAD (git show, never git checkout -
-       nothing here mutates the real working tree) and replayed against a second
+    2. The pre-fix code, read from the commit before the fix landed (4c0e2f3~1, via git
+       show, never git checkout - nothing here mutates the real working tree), together
+       with the close/ helpers it shipped with, and replayed against a second
        scratch repo with the same tracked todo, to show the bug this fix closes: the
        tracked source is missing from .Pathspec and a stray ` D` survives the commit.
 #>
@@ -117,11 +118,14 @@ try {
     Write-Host "--- git show --stat HEAD (scenario 1) ---"
     Write-Host $statOutput
 
-    # --- Scenario 2: pre-fix code, replayed from this repo's own HEAD ---
-    Write-Host "=== Scenario 2: pre-fix archive-batch.ps1 (git show HEAD, no checkout) ==="
-    $oldContent = (git -C $repoRoot show 'HEAD:skills/mega-todos/archive-batch.ps1' | Out-String)
+    # --- Scenario 2: pre-fix code, replayed from the commit before the fix ---
+    # HEAD already carries the fix, so replaying HEAD would test the fixed code. 4c0e2f3 is the
+    # commit that added the tracked-source pathspec entry; its parent is the last buggy state.
+    $preFixRef = '4c0e2f3~1'
+    Write-Host "=== Scenario 2: pre-fix archive-batch.ps1 (git show $preFixRef, no checkout) ==="
+    $oldContent = (git -C $repoRoot show "${preFixRef}:skills/mega-todos/archive-batch.ps1" | Out-String)
     if (-not $oldContent.Trim()) {
-        throw "could not read HEAD:skills/mega-todos/archive-batch.ps1 - is this repo's HEAD missing the file?"
+        throw "could not read ${preFixRef}:skills/mega-todos/archive-batch.ps1 - is the pre-fix commit missing from this clone?"
     }
 
     $oldSkillsRoot = Join-Path $scratchOldCode 'skills'
@@ -133,9 +137,10 @@ try {
     # Real close/_shared.ps1 and close/complete-todo.ps1 are off limits to EDIT, not to
     # READ - the old script dot-sources/calls them by relative path, so an unmodified
     # copy has to sit next to the replayed script for that resolution to work at all.
-    # The replayed script must meet the helpers it shipped with, so those come from HEAD too.
+    # The replayed script must meet the helpers it shipped with, so those come from the same ref.
     foreach ($helper in 'close/_shared.ps1', 'close/complete-todo.ps1') {
-        $helperContent = (git -C $repoRoot show "HEAD:skills/$helper" | Out-String)
+        $helperContent = (git -C $repoRoot show "${preFixRef}:skills/$helper" | Out-String)
+        if (-not $helperContent.Trim()) { throw "could not read ${preFixRef}:skills/$helper" }
         [System.IO.File]::WriteAllText((Join-Path $oldSkillsRoot ($helper -replace '/', '\')), $helperContent, $utf8NoBom)
     }
 
