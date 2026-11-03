@@ -87,6 +87,20 @@ printf 'nothing to see here\n' > "$repo/clean.txt"
 out=$(cd "$repo" && "$gate" clean.txt); rc=$?
 check "an unremarkable gitignored file still clears the gate" 0 '' '' "$out" "$rc"
 
+# --- secret-scan.sh: the OAuth scheme word Bearer is not a secret ---
+# The allow row is anchored to the whole value, so a longer value assigned to a token key must
+# still trip. The still-trips value is split in two so this script's own line never matches.
+bearer_repo=$(new_repo); tmp_dirs+=("$bearer_repo")
+printf 'const r = { token_type: "Bearer" };\n' > "$bearer_repo/oauth.js"
+out=$(cd "$bearer_repo" && "$gate" oauth.js); rc=$?
+check "secret-scan.sh allows token_type: \"Bearer\" (the OAuth scheme word)" 0 '' 'oauth\.js' "$out" "$rc"
+
+fake_bearer="Bearer""abcdef123456"
+printf 'const r = { token: "%s" };\n' "$fake_bearer" > "$bearer_repo/leak.js"
+out=$(cd "$bearer_repo" && "$gate" leak.js); rc=$?
+check "secret-scan.sh still flags a longer value that merely starts with Bearer" \
+  1 'leak\.js:1:' '' "$out" "$rc"
+
 # --- prefilter-gate.sh: staged deletion is skipped, not a repo-resolution failure (todo 944) ---
 # git rm'ing the only file in a directory removes the directory too, so the deleted path's own
 # dirname is gone from disk - the exact shape that made repo resolution exit 2 in the wild.
