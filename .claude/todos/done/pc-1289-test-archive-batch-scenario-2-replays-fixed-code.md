@@ -26,3 +26,7 @@ Pin scenario 2 to the pre-fix commit (`4c0e2f3~1`) and take its `_shared.ps1` an
 
 - The test exits 0.
 - Scenarios 1, 3 and 4 still assert what they assert today.
+
+## Notes
+
+- Fixed in 83249cb.

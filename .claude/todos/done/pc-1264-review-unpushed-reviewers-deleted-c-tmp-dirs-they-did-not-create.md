@@ -21,3 +21,7 @@ Add to both templates: extract or copy into a fresh uniquely named scratch dir (
 
 ## Acceptance
 Both dispatch templates carry the rule; `hooks/dispatch-preamble-guard.py` still passes them.
+
+## Notes
+
+- Fixed in a331d98.

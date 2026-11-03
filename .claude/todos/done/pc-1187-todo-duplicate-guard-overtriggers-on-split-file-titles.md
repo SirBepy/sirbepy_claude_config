@@ -60,6 +60,10 @@ should still trip it).
   green.
 
 <!-- loop-skip: dev deferred 2026-10-24 -->
+
+## Notes
+
+- Fixed in 5b444a3 (structural vocabulary no longer counts as a match; original false positives were not replayable).
 ## Deferred questions
 
 Written by /auto-do-todos on 2026-10-23. Deferred by /loop-todos on 2026-10-24: Jarvis (answering for Joe while he was asleep) picked "you decide"; Claude's 2026-10-24 re-check of the real write target found the fix needs a `hooks/` or `settings.json` write, which prompts for permission, so it waits for an attended session.

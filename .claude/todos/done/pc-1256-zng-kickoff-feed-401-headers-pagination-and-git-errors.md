@@ -26,3 +26,7 @@ Mirror shortcut-priorities' 401 retry with the full header set; on hitting the p
 
 ## Acceptance
 `skills/zng-kickoff/scripts/test_kickoff.py` gains a case per fix (mocked 401-then-200, page-cap warning, no-upstream branch, quoted token) and passes.
+
+## Notes
+
+- Folded into pc-1249 and fixed in e4d4d4a (401 retry with full headers, quote stripping, page-cap warning, git errors).

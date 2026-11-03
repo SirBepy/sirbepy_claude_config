@@ -31,6 +31,10 @@ Give `hooks/_client_repo.py` a `--list <path>` option (default `refs/client-repo
 - `python ci/run_all.py` passes.
 
 <!-- loop-skip: dev deferred 2026-10-24 -->
+
+## Notes
+
+- Fixed in 7c93ad4 (_client_repo.py --list, commit-pathspec uses it).
 ## Deferred questions
 
 Written by /auto-do-todos on 2026-10-23. Deferred by /loop-todos on 2026-10-24: Jarvis (answering for Joe while he was asleep) picked "you decide"; Claude's 2026-10-24 re-check of the real write target found the fix needs a `hooks/` or `settings.json` write, which prompts for permission, so it waits for an attended session.

@@ -30,3 +30,7 @@ One commit per item; each behaviour change gets its failing-first test.
 
 ## Acceptance
 Every item is fixed or declined in Notes; `python ci/run_all.py` passes.
+
+## Notes
+
+- Items 1, 2, 7, 8, 9 fixed in 61bae4d and 92fa3be; items 3, 4 and 6 declined as churn, item 5 untouched.

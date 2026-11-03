@@ -110,3 +110,4 @@ Written by /auto-do-todos on 2026-10-23. Deferred by /loop-todos on 2026-10-24: 
 - Workaround used this session: reworded the commit message to avoid literal `</body>`-shaped text
   entirely (described it in prose instead of quoting the tag). That is a viable fallback any future
   session can reuse without waiting on this fix, but it costs a retry each time it's rediscovered.
+- Fixed in 4e8a828.

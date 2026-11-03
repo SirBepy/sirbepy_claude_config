@@ -25,3 +25,7 @@ Accept any info string on a fence opener (or treat any fence-opener line as neve
 
 ## Acceptance
 `skills/recall/test_recall.py` gains both shapes (fail first, then pass); cleanup-memory's Step 1.6 and Step 4 no longer contradict.
+
+## Notes
+
+- Fixed in 08c680d (recall redaction) and 92fa3be (cleanup-memory verified: rule).
