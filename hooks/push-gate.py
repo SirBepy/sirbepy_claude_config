@@ -86,11 +86,17 @@ def _pinned_cd(tokens: list[str]) -> str | None:
 
 
 def _git_push_dash_c(tokens: list[str]) -> tuple[bool, str | None]:
-    """(is_push, dash_c_value) for one segment's tokens: walks past global git
-    flags the same way is_git_push_invocation does, but also remembers a `-C`
-    value seen along the way - and only returns it when THIS walk's git
-    invocation reaches `push`, so an earlier, unrelated `git -C X status` in
-    the same chained command is never mistaken for the push's own `-C`."""
+    is_push, dash_c, _args = _git_push_walk(tokens)
+    return is_push, dash_c
+
+
+def _git_push_walk(tokens: list[str]) -> tuple[bool, str | None, list[str]]:
+    """(is_push, dash_c_value, push_args) for one segment's tokens: walks past
+    global git flags the same way is_git_push_invocation does, but also
+    remembers a `-C` value seen along the way - and only returns it when THIS
+    walk's git invocation reaches `push`, so an earlier, unrelated
+    `git -C X status` in the same chained command is never mistaken for the
+    push's own `-C`. push_args are the tokens after `push`."""
     for i, tok in enumerate(tokens):
         if tok != "git":
             continue
@@ -105,8 +111,82 @@ def _git_push_dash_c(tokens: list[str]) -> tuple[bool, str | None]:
             else:
                 j += 1
         if j < len(tokens) and tokens[j] == "push":
-            return True, dash_c
-    return False, None
+            return True, dash_c, tokens[j + 1 :]
+    return False, None, []
+
+
+# Flags that leave a delete-only push delete-only. Anything else (--all,
+# --mirror, --tags, --follow-tags, an unknown or abbreviated long flag) makes
+# the push undecidable here, so it stays gated. Single-dash clusters are
+# checked char by char against SHORT_FLAG_CHARS.
+SAFE_LONG_FLAGS = {
+    "--delete", "--force", "--force-with-lease", "--force-if-includes", "--dry-run",
+    "--quiet", "--verbose", "--no-verify", "--verify", "--progress", "--no-progress",
+    "--porcelain", "--atomic", "--thin", "--no-thin", "--set-upstream",
+}
+SAFE_LONG_FLAG_PREFIXES = ("--force-with-lease=", "--force-if-includes=", "--repo=")
+VALUE_LONG_FLAGS = {"--repo", "--push-option", "--receive-pack", "--exec"}
+SHORT_FLAG_CHARS = set("dfnqvu46")
+REDIRECT_RE = re.compile(r"^\d*[<>]")
+PUSH_WORD_RE = re.compile(r"\bpush\b", re.IGNORECASE)
+PLAIN_REF_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9._/@-]*$")
+
+
+def is_delete_only(args: list[str]) -> bool:
+    """True only when the push args (tokens after `push`) delete remote refs
+    and send nothing else: `--delete`/`-d` with plain branch names, or
+    refspecs that all start with `:`. Fails closed: any unknown flag, mixed
+    refspec, force-with-refspec or missing refspec returns False."""
+    delete_flag = False
+    has_repo_flag = False
+    positionals: list[str] = []
+    i = 0
+    while i < len(args):
+        tok = args[i]
+        i += 1
+        if REDIRECT_RE.match(tok):
+            continue
+        if tok.startswith("--"):
+            name = tok.split("=", 1)[0]
+            if tok == "--delete":
+                delete_flag = True
+            elif name == "--repo":
+                has_repo_flag = True
+                if "=" not in tok:
+                    i += 1
+            elif name in VALUE_LONG_FLAGS:
+                if "=" not in tok:
+                    i += 1
+            elif tok not in SAFE_LONG_FLAGS and not tok.startswith(SAFE_LONG_FLAG_PREFIXES):
+                return False
+        elif tok.startswith("-") and len(tok) > 1:
+            if not set(tok[1:]) <= SHORT_FLAG_CHARS:
+                return False
+            if "d" in tok[1:]:
+                delete_flag = True
+        else:
+            positionals.append(tok)
+    refspecs = positionals if has_repo_flag else positionals[1:]
+    if not refspecs:
+        return False
+    if delete_flag:
+        return all(PLAIN_REF_RE.match(r) for r in refspecs)
+    return all(r.startswith(":") and PLAIN_REF_RE.match(r[1:]) for r in refspecs)
+
+
+def all_pushes_delete_only(command: str) -> bool:
+    """True when every `git push` in `command` is delete-only. The segment walk
+    must account for every `push` word in the command, so a push it can't see
+    (a `$(...)` subshell, a quoted nested command) keeps the command gated.
+    A stray `push` word elsewhere only over-gates, which is the safe side."""
+    pushes = []
+    for segment in CHAIN_SPLIT_RE.split(command):
+        is_push, _dash_c, args = _git_push_walk(_tokenize_segment(segment))
+        if is_push:
+            pushes.append(args)
+    if not pushes or len(pushes) != len(PUSH_WORD_RE.findall(command)):
+        return False
+    return all(is_delete_only(args) for args in pushes)
 
 
 def git_dash_c_path(command: str) -> str | None:
@@ -184,6 +264,10 @@ def main() -> None:
     payload = read_payload()
     command = (payload.get("tool_input") or {}).get("command", "") or ""
     if not _load_push_detector()(command):
+        sys.exit(0)
+    # A delete-only push uploads no commits, so /code-check and /e2e have
+    # nothing to check and no clearance mark is needed.
+    if all_pushes_delete_only(command):
         sys.exit(0)
 
     target = resolve_push_target(command, payload.get("cwd") or "")
