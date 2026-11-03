@@ -104,6 +104,11 @@ Manifest: a JSON list, or `{"title": "...", "items": [...]}`. Each item is `{"id
 - The budget drops whole items, never half a pair: from the first item that would overflow, it and every later item are dropped, listed in `dropped: [...]`. Report them to the dev and put them in a second manifest (`--slug <slug>-2`).
 - With `--post` the script also prints `render-url: http://127.0.0.1:27182/hooks/preview-render/<id>` on a 200. The panel alone is not enough: Joe answers from the chat and may never open the panel (2026-10-13, he answered a keep/drop card with "id need to see a before and after view" because the gallery sat unseen in the panel).
 - **When the gallery precedes a question, show it inline first.** Send a `show_preview` card whose HTML is an iframe to that `render-url` (with `<meta name="preview-template" content="bare">` in its head, so the card does not pad around the frame) immediately before the question, then ask. Do not rely on the panel push alone.
+- **A render-url is short-lived.** (App facts below are sourced from todo pc-1286, claude_usage_in_taskbar commit 10d2e4b9, 2026-10-30; not verifiable from this repo.)
+  - It lives in the daemon's memory only, in a 64 MiB LRU of rendered pages. After a daemon restart, or after a lot of later rendering, an inline card iframing an old render-url goes blank.
+  - `show_preview` of a card whose iframe targets a render id the daemon no longer holds is refused (HTTP 410 from `/hooks/preview`) and the session sees a tool error. The check runs at push time only. On that error, re-run `build_gallery.py --post` for a fresh `render-url` and call `show_preview` again. Never ignore the error.
+  - A card that must survive a daemon restart cannot iframe a render-url: inline the image as a `data:` URL `<img>` instead.
+  - If the inline iframe card shows black or white, re-check the page with `build_gallery.py --check` before blaming the page.
 
 ## Steps
 
