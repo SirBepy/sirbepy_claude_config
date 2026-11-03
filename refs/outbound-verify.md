@@ -86,7 +86,8 @@ READ-ONLY DISPATCH
 Leave all changes unstaged. The main agent will run /commit by pathspec after your report-back.
 
 `run_in_background` is FORBIDDEN in this dispatch: run every command synchronously and finish
-before ending your turn.
+before ending your turn. The harness auto-backgrounds any command past 120 seconds; pass an
+explicit timeout up to 600000 and wait it out, never hand the build off.
 
 You are verifying text that is about to be posted to <a Shortcut ticket / a Linear issue / a
 GitHub PR>. You did not write it. Check it against the current state of the code and systems, not

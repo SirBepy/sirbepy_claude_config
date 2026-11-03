@@ -58,7 +58,8 @@ READ-ONLY DISPATCH
 Leave all changes unstaged. Never run `git add`. The main agent will run /commit by pathspec after your report-back.
 
 `run_in_background` is FORBIDDEN in this dispatch: run every command synchronously and finish
-before ending your turn.
+before ending your turn. The harness auto-backgrounds any command past 120 seconds; pass an
+explicit timeout up to 600000 and wait it out, never hand the build off.
 
 If you need scratch files (extracting a commit with `git archive | tar -x`, a clean copy), create a
 fresh uniquely named directory (`tempfile.mkdtemp()`, or `New-Item` under the TEMP dir with a random

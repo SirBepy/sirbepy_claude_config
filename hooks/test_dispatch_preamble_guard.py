@@ -145,4 +145,67 @@ def check_model(case) -> bool:
 
 fails += [f"model: {label}" for (ti, expect, label) in MODEL_CASES if not check_model((ti, expect, label))]
 
+# Dispatch templates that skills ship on disk must pass the guard as written: a
+# template that drops the auto-background sentence is denied at dispatch time
+# (every /code-check and /review-unpushed reviewer dispatch was blocked this way).
+CLAUDE_ROOT = Path(__file__).resolve().parent.parent
+TEMPLATE_FILES = [
+    "skills/code-check/SKILL.md",
+    "skills/review-unpushed/SKILL.md",
+    "refs/outbound-verify.md",
+    "skills/name-brainstorm/angles.md",
+    "skills/rate-it/panel.md",
+    "skills/iterate-it/templates.md",
+]
+
+
+def extract_templates(text: str) -> list[str]:
+    """Fenced code blocks and contiguous blockquote runs that mention both
+    run_in_background and FORBIDDEN, i.e. the dispatch prompt templates."""
+    blocks = []
+    in_fence, cur = False, []
+    quote = []
+    for line in text.splitlines():
+        if line.strip().startswith("```"):
+            if in_fence:
+                blocks.append("\n".join(cur))
+                cur = []
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            cur.append(line)
+        elif line.startswith(">"):
+            quote.append(line[1:].lstrip(" "))
+        elif quote:
+            blocks.append("\n".join(quote))
+            quote = []
+    if quote:
+        blocks.append("\n".join(quote))
+    return [b for b in blocks if "run_in_background" in b and "FORBIDDEN" in b]
+
+
+def check_template_file(rel: str) -> bool:
+    templates = extract_templates((CLAUDE_ROOT / rel).read_text(encoding="utf-8"))
+    ok = bool(templates)
+    detail = f"{len(templates)} template(s)"
+    for i, t in enumerate(templates):
+        missing = guard.missing_markers(t)
+        if missing:
+            ok = False
+            detail += f"; template {i} missing={missing}"
+    print(f"{'PASS' if ok else 'FAIL'}: shipped template in {rel} passes the guard ({detail})")
+    return ok
+
+
+fails += [f"template: {rel}" for rel in TEMPLATE_FILES if not check_template_file(rel)]
+
+# Negative: stripping the auto-background sentence from a shipped template is denied.
+_cc = extract_templates((CLAUDE_ROOT / "skills/code-check/SKILL.md").read_text(encoding="utf-8"))
+_stripped = _cc[0].replace(guard.AUTO_BG_PHRASE, "") if _cc else ""
+if not _testlib.report(
+    bool(_cc) and guard.AUTO_BG_PHRASE in _cc[0] and bool(guard.missing_markers(_stripped)),
+    "code-check template without the auto-background sentence is denied",
+):
+    fails.append("template negative")
+
 sys.exit(_testlib.summarize(fails, style="count"))
