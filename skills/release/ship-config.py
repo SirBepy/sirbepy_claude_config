@@ -5,8 +5,9 @@ Prints one JSON object; a non-zero exit prints {"error": ...}.
   ship-config.py get [repo]                  {"class","todo_sweep","release","slug","source","reason"}
   ship-config.py set [repo] key=value ...    {"path","class"}   (writes the override file, never commits)
 
-Classes: client (origin slug listed in refs/client-repos.txt), unknown (git failed, no origin, or an
-unlisted repo under a client owner, which is probably a client repo nobody listed yet), personal.
+Classes: client (origin slug listed in refs/client-repos.txt), unknown (git failed, no origin, the
+client list missing, unreadable or empty so no repo can be classified, or an unlisted repo under a
+client owner, which is probably a client repo nobody listed yet), personal.
 Overrides, plain `key: value` lines (`#` comments ok), keys `release` (patch|none) and
 `todo_sweep` (yes|no):
   personal         <repo root>/.claude/ship.md
@@ -64,25 +65,35 @@ def client_slugs():
     return _client_repo.load_client_slugs(client_list_path())
 
 
+# Why classify() returned its class; callers branch on these, never on the prose in `why`.
+NOT_A_GIT_REPO = "not-a-git-repo"
+NO_ORIGIN = "no-origin"
+CLIENT_LIST_UNUSABLE = "client-list-unusable"
+LISTED_CLIENT = "listed-client"
+UNLISTED_UNDER_CLIENT_OWNER = "unlisted-under-client-owner"
+PERSONAL = "personal"
+
+
 def classify(repo):
-    """(class, slug_or_None, repo_root_or_None, why)."""
+    """(class, slug_or_None, repo_root_or_None, why, reason_code)."""
     root = _client_repo._git(repo, "rev-parse", "--show-toplevel")
     if root is None:
-        return "unknown", None, None, "not a git repo or git failed"
+        return "unknown", None, None, "not a git repo or git failed", NOT_A_GIT_REPO
     slug = _client_repo.origin_slug(_client_repo._git(repo, "remote", "get-url", "origin") or "")
     if slug is None:
-        return "unknown", None, Path(root), "no resolvable origin remote"
+        return "unknown", None, Path(root), "no resolvable origin remote", NO_ORIGIN
     listed = client_slugs()
     if not listed:
         # load_client_slugs returns an empty set on a read error; trusting that would resolve every
         # client repo as personal (sweep off, patch bump), so an empty list means we cannot classify.
-        return "unknown", slug, Path(root), f"client list {client_list_path()} is missing, unreadable or empty"
+        return ("unknown", slug, Path(root),
+                f"client list {client_list_path()} is missing, unreadable or empty", CLIENT_LIST_UNUSABLE)
     if slug in listed:
-        return "client", slug, Path(root), f"{slug} is in client-repos.txt"
+        return "client", slug, Path(root), f"{slug} is in client-repos.txt", LISTED_CLIENT
     owner = slug.split("/")[0]
     if owner in {s.split("/")[0] for s in listed}:
-        return "unknown", slug, Path(root), f"unlisted repo under client owner {owner}"
-    return "personal", slug, Path(root), f"{slug} is not in client-repos.txt"
+        return "unknown", slug, Path(root), f"unlisted repo under client owner {owner}", UNLISTED_UNDER_CLIENT_OWNER
+    return "personal", slug, Path(root), f"{slug} is not in client-repos.txt", PERSONAL
 
 
 def override_path(cls, slug, root):
@@ -122,7 +133,7 @@ def read_override(path):
 
 
 def cmd_get(repo):
-    cls, slug, root, why = classify(repo)
+    cls, slug, root, why, _code = classify(repo)
     path = override_path(cls, slug, root)
     values = read_override(path)
 
@@ -190,11 +201,11 @@ def cmd_set(tokens):
     if not assignments:
         raise Fail("no key=value given")
 
-    cls, slug, root, why = classify(repo)
+    cls, slug, root, why, code = classify(repo)
     if cls == "unknown":
         if slug is None:
             raise Fail("no resolvable origin remote: cannot place an override for this repo")
-        if "client list" in why:
+        if code == CLIENT_LIST_UNUSABLE:
             raise Fail(f"{why}: cannot place an override until the client list is readable")
         owner = slug.split("/")[0]
         raise Fail(f"unlisted repo under client owner {owner}: add {slug} to refs/client-repos.txt "

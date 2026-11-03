@@ -98,6 +98,24 @@ class ShipConfigTest(unittest.TestCase):
         self.assertEqual(out["class"], "unknown")
         self.assertIn(str(empty), out["reason"])
 
+    def test_classify_returns_a_reason_code_per_unknown_cause(self):
+        # cmd_set picks its refusal message from this code, so it must not depend on prose in `why`.
+        import importlib.util
+        import os
+        spec = importlib.util.spec_from_file_location("ship_config_under_test", fx.SHIP_CONFIG_PY)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        listed = self.repo("l", "https://github.com/Zirtue-Corp/new-repo.git")
+        noorigin = self.repo("n", None)
+        saved = {k: os.environ.get(k) for k in ("SHIP_CONFIG_CLIENT_LIST",)}
+        self.addCleanup(lambda: [os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
+                                 for k, v in saved.items()])
+        os.environ["SHIP_CONFIG_CLIENT_LIST"] = str(self.tmp / "clients.txt")
+        self.assertEqual(mod.classify(listed)[4], mod.UNLISTED_UNDER_CLIENT_OWNER)
+        self.assertEqual(mod.classify(noorigin)[4], mod.NO_ORIGIN)
+        os.environ["SHIP_CONFIG_CLIENT_LIST"] = str(self.tmp / "nope.txt")
+        self.assertEqual(mod.classify(listed)[4], mod.CLIENT_LIST_UNUSABLE)
+
     def test_no_origin_is_unknown(self):
         r = self.repo("n", None)
         rc, out = self.get(r)

@@ -6,7 +6,8 @@ Every subcommand prints exactly one JSON object; a non-zero exit always prints {
   kit-sync [repo]                  {"changed", "old", "new"} | {"changed": false, "reason"}
   bump [repo]                      {"version", "build", "label", "files"}   (never commits)
   version-diff [repo] [--no-fetch] {"pending", "base_version", "head_version", "base_ref", "reason"}
-Exit codes: 2 = refused / bad input, 3 = network (fetch or submodule update failed).
+Exit codes: 1 = unexpected I/O or parse failure (OSError, RecursionError), 2 = refused / bad input,
+3 = network (fetch or submodule update failed).
 
 Stdlib only; runs under `python -I`.
 """
@@ -593,6 +594,14 @@ def main(argv=None):
     except Fail as e:
         print(json.dumps({"error": e.message}))
         return e.code
+    except OSError as e:
+        # A read-only version file or a vanished path: cmd_bump has already restored what it could.
+        print(json.dumps({"error": f"{type(e).__name__}: {e}"}))
+        return 1
+    except RecursionError:
+        # parse_json_spans recurses per nesting level, so a deeply nested JSON file overflows the stack.
+        print(json.dumps({"error": "a version file is nested too deeply to parse"}))
+        return 1
     print(json.dumps(out))
     return 0
 

@@ -178,7 +178,7 @@ async function loadPanelBuilder() {
     await page.screenshot({ path: path.join(shotDir, "board-initial.png") });
 
     let n = 0;
-    for (const step of plan.steps) {
+    for (const step of plan.steps ?? []) {
       n++;
       const label = `step ${n} ${step.type}${step.selector ? " " + step.selector : ""}`;
       try {
