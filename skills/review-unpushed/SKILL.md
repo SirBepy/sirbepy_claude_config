@@ -60,6 +60,12 @@ Leave all changes unstaged. Never run `git add`. The main agent will run /commit
 `run_in_background` is FORBIDDEN in this dispatch: run every command synchronously and finish
 before ending your turn.
 
+If you need scratch files (extracting a commit with `git archive | tar -x`, a clean copy), create a
+fresh uniquely named directory (`tempfile.mkdtemp()`, or `New-Item` under the TEMP dir with a random
+suffix), never an existing shared dir such as `C:\tmp`. Delete only that directory, by its exact
+name, before reporting. Never `rm -rf` a path this dispatch did not create (2026-10-28: a reviewer
+ran `rm -rf /c/tmp/skills /c/tmp/refs` on paths that may have predated it).
+
 You are reviewing commits for CORRECTNESS BUGS only, not structure or style - a separate pass
 already covers file splits, DRY and dead code, so do not repeat that.
 

@@ -51,13 +51,19 @@ and delete that target too, even though it lives outside the worktree (fibo, 202
 baseline worktree's junctioned `node_modules` was removed this way and the main checkout's own
 `node_modules/.bin` went with it, failing 59 tests until `npm install` restored it).
 
+If you need scratch files (extracting a commit with `git archive | tar -x`, a clean copy), create a
+fresh uniquely named directory (`tempfile.mkdtemp()`, or `New-Item` under the TEMP dir with a random
+suffix), never an existing shared dir such as `C:\tmp`. Delete only that directory, by its exact
+name, before reporting. Never `rm -rf` a path this dispatch did not create (2026-10-28: a reviewer
+ran `rm -rf /c/tmp/skills /c/tmp/refs` on paths that may have predated it).
+
 You are reviewing code you did not write, and you are not being told who wrote it or why.
 
 Scope: <scope arg>
 Files: <resolved file list>
 Diff: <the diff, or the command that produces it>
 
-Run Steps 0 through 4 of ~/.claude/skills/code-check/SKILL.md against that scope. Edit nothing.
+Run Steps 0 through 4 (including Step 3b) of ~/.claude/skills/code-check/SKILL.md against that scope. Edit nothing.
 Write no todo files. Return the findings as the JSON blocks that skill defines, each with your
 class-1/2/3 judgement from Step 4a and the reason for it.
 ```
@@ -97,8 +103,8 @@ If scope has no `SKILL.md` files, skip this step.
 After resolving, split the scope into three groups:
 
 - **Prose artifact** - any file literally named `SKILL.md` (filename-keyed: the narrowest detection
-  that needs no repo-root hardcoding and no new config). Keep it in scope for Steps 0 and 4 only.
-  Print `Skipping Steps 1-3 for [file]: prose, not code.` and do not run those steps on it. This is
+  that needs no repo-root hardcoding and no new config). Keep it in scope for Steps 0 and 4 only (Step 3b is skipped with Steps 1-3).
+  Print `Skipping Steps 1-3b for [file]: prose, not code.` and do not run those steps on it. This is
   deliberately NOT "review every `.md`": a README, `CLAUDE.md` edit, or a `refs/`/`code-style/` doc
   has no written FAIL/WARN checklist the way a skill file does, so widening the branch to any
   markdown file would turn Step 4 into an opinion pass with nothing to quote against. Only the
@@ -110,7 +116,7 @@ After resolving, split the scope into three groups:
 If both the prose-artifact and code groups are empty (and Step 0 produced no findings): print
 "No code files in scope." and stop.
 
-**What counts as a finding on a `SKILL.md` (Step 4 only, since Steps 1-3 don't run on it):** a rule
+**What counts as a finding on a `SKILL.md` (Step 4 only, since Steps 1-3b don't run on it):** a rule
 from `skills/bepy-skill-creator/SKILL.md`'s FAIL/WARN checklist is violated - missing frontmatter,
 no `argument-hint` despite taking args, an un-pinned `model:` on a dispatch, a step telling a
 subagent to write into a doc section that the doc it names never defines (the class of bug fixed in
@@ -159,9 +165,39 @@ For each new top-level symbol: `Grep pattern: "\\b<symbol>\\b", output_mode: "co
 { "title": "Dead code: [symbol]", "files": ["path:line"], "problem": "one sentence", "fix": "delete / uncomment / wire up at X" }
 ```
 
+## Step 3b - Comment truth pass
+
+Global Code Style rule, quoted: "A wrong comment is worse than none (AI readers trust it), so fix or
+delete it when its subject changes." A change that leaves a comment false breaches a written rule,
+so a finding here clears Step 4's "quote the rule" bar.
+
+Work from the diff hunks, not whole files. For each changed function or block in the range:
+
+1. Read the comments and doc comments attached to it (above it, inside it, trailing its lines).
+2. Read the comments and doc comments on the symbols it references or that reference it: grep the
+   changed or deleted symbol's name and read the comment hits.
+3. Flag any comment that is now false: it names a symbol, flow, field, or step the range deleted or
+   renamed, states a behaviour the range changed, or describes a constraint the range removed.
+
+**Skip a file** whose changed hunks touch nothing a comment could describe (a whitespace or import
+reorder, a constant value no comment mentions, a rename with no comment hit). It costs no comment
+pass. A range where no file has a comment subject reports nothing from this step. A range that
+deletes a function a nearby doc comment still references reports that comment.
+
+Cap: ~3 Grep calls per changed symbol. Judge falsity only against what the diff shows; a comment you
+cannot prove false from the range is not a finding.
+
+```json
+{ "title": "Stale comment: [symbol or phrase]", "files": ["path:line (comment)", "path:line (changed code)"], "problem": "Code Style says \"A wrong comment is worse than none\"; the comment says X but the range now does Y / removed Z", "fix": "reword to match, or delete the comment" }
+```
+
+Step 4a routes it: class 1 (mechanical) when the fix is rewording or deleting the comment AND a Grep
+for the removed symbol or phrase shows no other live reference (that grep is the exercise test);
+class 3 when deciding what the comment should now say needs a judgment about intent.
+
 ## Step 4 - Project convention pass
 
-Steps 1-3 are language-agnostic structure. This step checks the diff against what THIS project has
+Steps 1-3b are language-agnostic structure. This step checks the diff against what THIS project has
 written down, which is where most of the review value sits: a generic pass will happily bless code
 that breaks a rule the repo spent a page explaining.
 
@@ -220,7 +256,7 @@ finding a human already saw and rejected from costing a fresh review cycle every
 
 | Class | What it covers | Route |
 |-------|----------------|-------|
-| 1 - mechanical | An unused import, a symbol nothing references, a duplicated helper collapsed onto one that already exists, a description over budget | Apply it, if and only if the exercise test below passes |
+| 1 - mechanical | An unused import, a symbol nothing references, a duplicated helper collapsed onto one that already exists, a description over budget, a comment reworded or deleted because the range removed its subject | Apply it, if and only if the exercise test below passes |
 | 2 - structural | Splitting an over-long file, extracting a repeated block, centralising constants | File it, unless the exercise test passes AND the suite is green |
 | 3 - judgment | The abstraction is wrong, the boundary is in the wrong place, a convention breach with a real decision inside it | Always file it. Never apply |
 
@@ -265,7 +301,7 @@ than vanishing silently.
 
 ## Step 5 - Output
 
-Merge findings from Steps 0-4, minus anything Step 4a applied or dropped.
+Merge findings from Steps 0-4 (3b included), minus anything Step 4a applied or dropped.
 
 **If the project has a repo root for `.claude/todos/`:** write each finding as a `.md` file there, per `~/.claude/skills/close/ai-todos-format.md` (filename/id rules, git-policy self-heal; create the folder if missing). A finding whose fix lives in a DIFFERENT repo, typically one about the global `~/.claude` tree hit from a project session, is filed into THAT repo's backlog instead, per root `CLAUDE.md`'s allocation rule: use `skills/create-todo/SKILL.md`'s "Cross-repo filing" flow, which carries the destination-side duplicate guard, id reservation and exclude self-heal. Format:
 
@@ -299,7 +335,7 @@ the reserved id (`pc-NNNN` form).
 Print a summary line:
 
 ```
-code-check: N findings (A size, B DRY, C dead code, D desc, E convention). M written to todos, P applied, Q dropped.
+code-check: N findings (A size, B DRY, C dead code, D desc, E comments, F convention). M written to todos, P applied, Q dropped.
 ```
 
 `P` and `Q` come from Step 4a. Name each applied finding and each dropped one on its own line
