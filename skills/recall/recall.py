@@ -1032,6 +1032,11 @@ def main(argv=None) -> int:
     elif args.cmd == "show":
         shown = cmd_show(index, args.session, args.grep, args.max_chars)
         if args.append_to:
+            # cmd_show returns error text for an unknown or ambiguous prefix; appending that would
+            # hand a respawn successor the error as if it were conversation content.
+            if not shown.startswith(FENCE_OPEN):
+                print(shown, file=sys.stderr)
+                return 1
             with args.append_to.open("a", encoding="utf-8") as f:
                 f.write(shown + "\n")
             print(f"Appended {len(shown)} chars to {args.append_to}")

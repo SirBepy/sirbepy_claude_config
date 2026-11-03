@@ -23,8 +23,10 @@ This restart advice is about `respawn` specifically, because it lives in Conduct
 generated per-session MCP config and can genuinely appear after a Conductor update. It does NOT
 generalize to any other missing MCP tool (Roblox Studio, figma, a project's `.mcp.json` server,
 etc.) - see `~/.claude/refs/conductor-mcp-constraint.md`: `--strict-mcp-config` makes Conductor's
-generated config the only MCP source a chat ever sees, so a non-conductor tool that isn't there
-cannot be made to appear by restarting, respawning, or editing config.
+generated config the only MCP source a chat ever sees, so a local server that isn't there cannot be
+made to appear by restarting, respawning, or editing config. The one other source is claude.ai
+account connectors (`mcp__claude_ai_*`), which Conductor re-adds when the project's
+`claude_ai_connectors` flag is on; a missing one is a flag or connection problem, not a respawn one.
 
 `respawn` does both halves in one call, so there is no ordering to get wrong and no separate
 `close_session`. It also stamps `successor_of` on the new chat, which is what makes the app move
@@ -209,6 +211,8 @@ We're continuing <one line: the original ask, not the last subtask>.
 
 The previous work gets one line, saying it is closed, so the successor does not resume it.
 Everything else about the old work stays in the detail file.
+
+The "Joe's words" field is for a Joe-invoked respawn only. An automatic caller (for example `/loop-todos` Phase 4) has no words of Joe's for the next task, so it must not leave the quote empty or invent one: replace the whole field (heading and quote) with one line naming the caller skill and its trigger, such as `**Started by:** /loop-todos Phase 4, context at or above HARD_STOP_AT; the next cycle takes fresh todos.`
 
 ```
 Next task: <one line: the task the instruction names>.
