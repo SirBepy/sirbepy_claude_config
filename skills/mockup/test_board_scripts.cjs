@@ -72,6 +72,11 @@ document.getElementById("inc")!.addEventListener("click", () => { n++; out.textC
   check("verify-board passes real clicks in the sandbox", v.status === 0, v.stdout + v.stderr);
   check("verify-board wrote a plan screenshot", fs.existsSync(path.join(shots, "after-clicks.png")), "no png");
 
+  // A plan object without a steps key (only a viewport/settleMs) means "render and check, no clicks".
+  const stepless = write("stepless-plan.json", JSON.stringify({ settleMs: 1800, viewport: { width: 900, height: 600 } }));
+  const vs = node("verify-board.cjs", [out, shots, stepless, "--route", "local", ...extra]);
+  check("verify-board accepts a plan with no steps key", vs.status === 0, vs.stdout + vs.stderr);
+
   const bc = path.join(run, "bad-click.html");
   node("bundle-board.mjs", [path.join(run, "bad-click.src.html"), bc]);
   const badPlan = write("bad-plan.json", JSON.stringify([{ type: "click", selector: "#inc" }, { type: "wait", ms: 200 }]));

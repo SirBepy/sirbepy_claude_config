@@ -282,6 +282,18 @@ class BumpTest(ReleaseBase):
         self.assertEqual(rc, 2)
         self.assertEqual(fx.git(r, "status", "--porcelain"), "")
 
+    def test_read_only_source_file_reports_json_error_not_a_traceback(self):
+        # The docstring promises {"error": ...} on every non-zero exit; an OSError from the write
+        # must not escape as a traceback with empty stdout.
+        r = self.repo({"package.json": pkg("1.0.0")})
+        target = Path(r) / "package.json"
+        target.chmod(0o444)
+        self.addCleanup(target.chmod, 0o644)
+        rc, out = self.bump(r)
+        self.assertEqual(rc, 1)
+        self.assertIn("error", out)
+        self.assertIn("package.json", out["error"])
+
     def test_bump_never_commits_or_stages(self):
         r = self.repo({"package.json": pkg("1.0.0")})
         head = fx.git(r, "rev-parse", "HEAD")
