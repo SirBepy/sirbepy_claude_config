@@ -16,7 +16,7 @@ Runs after step 1 (and 1b under `/release`), once `git rev-list --count '@{u}..H
 ## Procedure
 
 1. Run the **Pre-push transcript check** (`skills/commit/SKILL.md`) now. It reads THIS session's transcript, which a gate chat cannot see, so it never moves. An unaddressed dev turn stops the push here, before any spawn.
-2. `spawn_chat` with `cwd` = the repo root and `name` = `Gate: <repo> <push|release>`. The prompt carries everything, since the new chat cannot see this one:
+2. `spawn_chat` with `cwd` = the repo root, `name` = `Gate: <repo> <push|release>`, `model` = `sonnet` and `effort` = `high` (Joe's standing choice for every push and release gate; omitting them makes the child inherit the parent's model, which put a gate on Fable). High, not medium: the gate's code-check judges the final pushed range, and a miss there ships. The prompt carries everything, since the new chat cannot see this one:
    - Joe's push request, quoted verbatim, and the mode (`push`, or `/release` with its resolved `release` mode).
    - Repo path, branch, `git rev-parse HEAD` and `git log --format='%h %s' '@{u}..HEAD'` (the no-upstream case already stopped above, so `@{u}` resolves).
    - "The transcript check ran in the parent chat and passed; skip step 3." Plus any in-session client commit-window OK Joe gave here, quoted.
