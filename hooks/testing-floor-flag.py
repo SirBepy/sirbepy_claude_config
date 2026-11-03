@@ -12,7 +12,8 @@ this file has written a flag for the current session.
 
 Deliberately dumb: it does not itself decide pass/fail, run any check, or
 block anything. It only records "something worth verifying changed" plus
-where to verify it (`root`), and resets the per-session retry-attempt
+where to verify it (`root`, the edited file's own git repo; a file in no
+repo is ignored), and resets the per-session retry-attempt
 counter to 0 - a fresh edit deserves a fresh attempt budget, so one stubborn
 early failure can't eat the whole session's cap before Claude even tries a
 fix (see testing-floor-guard.py for how attempts are then spent).
@@ -81,7 +82,12 @@ def main() -> None:
     if not session_id:
         sys.exit(0)
 
-    root = git_repo_root(str(Path(file_path).parent)) or payload.get("cwd") or "."
+    # The root comes only from the edited file's own repo. Falling back to the
+    # payload cwd gated the turn on an unrelated project whenever the edit was
+    # a scratch file outside every repo (e.g. C:/tmp/helper.js).
+    root = git_repo_root(str(Path(file_path).parent))
+    if not root:
+        sys.exit(0)
     state_dir = resolve_state_dir()
     flag_path = state_dir / session_id
     previous = read_state(flag_path)
