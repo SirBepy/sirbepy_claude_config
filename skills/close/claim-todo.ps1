@@ -192,7 +192,9 @@ function Claim-One {
     if ($resolved.Label) {
         $claimSlug = $null
         if ($resolved.SiblingCount -gt 1) { $claimSlug = $slugLocal }
-        $olderNamed = @(Find-TodoClaims -ClaimsDir $claimsDir -Label $resolved.Label -Number $resolved.Number -Slug $claimSlug |
+        # With sibling files the plain "<id>.claim" belongs to a sibling, so only this file's
+        # own slugged name is looked up; the plain fallback applies to a single-file id only.
+        $olderNamed = @(Find-TodoClaims -ClaimsDir $claimsDir -Label $resolved.Label -Number $resolved.Number -Slug $claimSlug -NoPlainFallback:([bool]$claimSlug) |
             Where-Object { $_.Name -ne $claimName })
         foreach ($old in $olderNamed) {
             $oldState = Get-ClaimStaleness -ClaimFile $old.FullName

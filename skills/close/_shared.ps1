@@ -195,19 +195,23 @@ function Get-TodoPlanIdPattern {
 
 # Claim files in $ClaimsDir for (Label, Number). With -Slug: the slug-suffixed claim; else
 # the plain claim; else a lone slug-suffixed one (claim-todo.ps1 names it that way when the
-# id collides, so a sibling task's claim survives).
+# id collides, so a sibling task's claim survives). -NoPlainFallback with -Slug returns only
+# the slug-suffixed claim: when two backlog files share the id, the plain claim belongs to a
+# sibling, so treating it as this file's own would block or delete the sibling's claim.
 function Find-TodoClaims {
     param(
         [Parameter(Mandatory = $true)][string]$ClaimsDir,
         [Parameter(Mandatory = $true)][string]$Label,
         [Parameter(Mandatory = $true)][int64]$Number,
-        [string]$Slug
+        [string]$Slug,
+        [switch]$NoPlainFallback
     )
     if (-not (Test-Path $ClaimsDir)) { return @() }
     $claims = @(Get-ChildItem -Path $ClaimsDir -Filter '*.claim' -File -ErrorAction SilentlyContinue)
     $forId = @(Select-TodoNameMatches -Items $claims -Label $Label -Number $Number)
     $found = @()
     if ($Slug) { $found = @($forId | Where-Object { (Get-TodoNameInfo $_.Name).Slug -eq $Slug }) }
+    if ($NoPlainFallback -and $Slug) { return $found }
     if ($found.Count -eq 0) { $found = @($forId | Where-Object { -not (Get-TodoNameInfo $_.Name).Slug }) }
     if ($found.Count -eq 0) {
         $slugged = @($forId | Where-Object { (Get-TodoNameInfo $_.Name).Slug })
