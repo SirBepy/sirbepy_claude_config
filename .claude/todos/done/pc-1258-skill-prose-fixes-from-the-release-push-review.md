@@ -29,3 +29,4 @@ Each of the five points is fixed or explicitly declined with a reason in this fi
 
 ## Notes
 - 1: fixed 2026-10-28 by the `/respawn lite` rework: `skills/auto-respawn/SKILL.md` step 3 now opens the handoff prompt with the literal `/auto-respawn` line. Points 2-5 remain open.
+- Points 2 and 5 fixed in batch 2 (pretty-readme preamble and sonnet pins; commit 7a lock numbers dropped); points 1, 3, 4 were already fixed or moot.
