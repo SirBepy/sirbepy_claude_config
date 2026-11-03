@@ -11,8 +11,9 @@ READ-ONLY DISPATCH
 Leave all changes unstaged. Never run `git add`. The main agent will run /commit by pathspec after your report-back.
 
 `run_in_background` is FORBIDDEN in this dispatch: run every command synchronously and finish
-before ending your turn. (See `refs/builder-preamble.md` for the full canonical block this is
-drawn from.)
+before ending your turn. The harness auto-backgrounds any command past 120 seconds; pass an
+explicit timeout up to 600000 and wait it out, never hand the build off. (See
+`refs/builder-preamble.md` for the full canonical block this is drawn from.)
 
 You are the subagent for /iterate-it round <R>, phase <Explore|Polish>. Read ~/.claude/skills/rate-it/SKILL.md and apply the Flaw hunt, Role, Anti-sycophancy rules.
 

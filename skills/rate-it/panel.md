@@ -37,8 +37,9 @@ rather than a real instruction:
 > after your report-back. (Inert here since this dispatch writes nothing.)
 >
 > `run_in_background` is FORBIDDEN in this dispatch: run every command synchronously and finish
-> before ending your turn. (See `refs/builder-preamble.md` for the full canonical block this is
-> drawn from.)
+> before ending your turn. The harness auto-backgrounds any command past 120 seconds; pass an
+> explicit timeout up to 600000 and wait it out, never hand the build off. (See
+> `refs/builder-preamble.md` for the full canonical block this is drawn from.)
 >
 > You are a rating subagent for /rate-it, one of a panel of N. Read the skill file at `C:\Users\tecno\.claude\skills\rate-it\SKILL.md` and rate this hypothesis using the Flaw hunt, Role, Anti-sycophancy, Output format, and How-to-raise rules.
 >
@@ -93,8 +94,9 @@ assigned flaws swapped in:
 > after your report-back. (Inert here since this dispatch writes nothing.)
 >
 > `run_in_background` is FORBIDDEN in this dispatch: run every command synchronously and finish
-> before ending your turn. (See `refs/builder-preamble.md` for the full canonical block this is
-> drawn from.)
+> before ending your turn. The harness auto-backgrounds any command past 120 seconds; pass an
+> explicit timeout up to 600000 and wait it out, never hand the build off. (See
+> `refs/builder-preamble.md` for the full canonical block this is drawn from.)
 >
 > You are an independent verifier. Your job is to REFUTE the claims below, not to weigh them.
 >

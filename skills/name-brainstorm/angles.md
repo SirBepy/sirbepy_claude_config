@@ -46,7 +46,7 @@ The dispatch-preamble guard needs three markers: a staging line, `run_in_backgro
 Windows. PowerShell for shell commands. Working directory: <PROJECT_ROOT>.
 
 Leave all changes unstaged. Never run `git add`. The main agent will run /commit by pathspec after your report-back.
-Never edit files under ~/.claude/. Create or overwrite ONLY the one output file named below, nothing else. `run_in_background` is FORBIDDEN in this subagent, and so is Monitor; do all work synchronously and end with your report. If this dispatch captures screenshots (it should not) they go under .for_bepy/screenshots/<id>/.
+Never edit files under ~/.claude/. Create or overwrite ONLY the one output file named below, nothing else. `run_in_background` is FORBIDDEN in this subagent, and so is Monitor; do all work synchronously and end with your report. The harness auto-backgrounds any command past 120 seconds; pass an explicit timeout up to 600000 and wait it out, never hand the build off. If this dispatch captures screenshots (it should not) they go under .for_bepy/screenshots/<id>/.
 
 First read <out>/00-brief.md in full (and the older name lists it names). It describes the product, the sentence tests and the strict output format.
 
