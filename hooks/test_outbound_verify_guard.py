@@ -28,6 +28,9 @@ LIN = "https://api.linear.app/graphql"
 CLAIM = "The biller address field in CreateLoan.tsx skips validation when the country is empty."
 OTHER = "Totally different claim about the payments service retry loop and its backoff."
 TITLE = "Validate biller address on the CreateLoan screen"
+# The canonical token extraction from refs/shortcut-api.md: its `cut -d=` and `tr -d` carry
+# -d flags that are not curl data flags.
+TOKEN_RECIPE = "TOKEN=$(grep -a '^SHORTCUT_API_TOKEN=' ~/.claude/.env | cut -d= -f2 | tr -d '\\r\"'); "
 
 # (tool_name, tool_input, expect_detected, label)
 DETECT_CASES = [
@@ -36,6 +39,23 @@ DETECT_CASES = [
     ("Bash", {"command": f"curl -X PUT {SC}/123 -d '{{\"description\": \"{CLAIM}\"}}'"}, True, "Shortcut REST description rewrite"),
     ("Bash", {"command": f"curl -X PUT {SC}/123 -d '{{\"workflow_state_id\": 500000011}}'"}, False, "Shortcut state move stays ungated"),
     ("Bash", {"command": f"curl -G {SC}/search -d query=biller"}, False, "Shortcut search read"),
+    ("Bash", {"command": f"for id in 1 2; do curl -s \"{SC}/$id\" -H \"Shortcut-Token: $TOKEN\" -o /c/tmp/s_$id.json; done"}, False, "GET loop with a $id URL passes"),
+    ("Bash", {"command": f"for id in 1 2; do curl -s \"{SC}/${{id}}\" -o /c/tmp/s.json; done"}, False, "GET loop with a ${id} URL passes"),
+    ("Bash", {"command": TOKEN_RECIPE + f"for s in 54369 54384; do curl -s -H \"Shortcut-Token: $TOKEN\" {SC}/$s | python -c \"import sys,json; print(json.load(sys.stdin)['id'])\"; done"}, False, "cut -d= token recipe plus a GET loop passes"),
+    ("Bash", {"command": TOKEN_RECIPE + f"curl -s -H \"Shortcut-Token: $TOKEN\" {SC}/54369"}, False, "cut -d= token recipe plus a literal GET passes"),
+    ("Bash", {"command": TOKEN_RECIPE + f"curl -s -H \"Shortcut-Token: $TOKEN\" \"{SC}?archived=false\""}, False, "cut -d= recipe is not a data flag on a bare /stories read"),
+    ("PowerShell", {"command": f"foreach ($id in 1, 2) {{ Invoke-RestMethod -Uri \"{SC}/$id\" -Headers $h }}"}, False, "PowerShell GET loop with a $id URL passes"),
+    ("Bash", {"command": f"for id in 1 2; do curl -X POST {SC}/$id/comments -d '{{\"text\": \"{CLAIM}\"}}'; done"}, True, "comment POST in a loop with literal text stays gated"),
+    ("Bash", {"command": f"for id in 1 2; do curl -X POST {SC}/$id/comments -d \"$BODY\"; done"}, True, "comment POST to $id with a variable body stays gated"),
+    ("Bash", {"command": f"curl -X POST {SC}/${{id}}/comments -d \"$BODY\""}, True, "comment POST to ${id} with a variable body stays gated"),
+    ("PowerShell", {"command": f"Invoke-RestMethod -Uri \"{SC}/$($s.id)/comments\" -Method Post -Body $b"}, True, "PowerShell comment POST to $($s.id) stays gated"),
+    ("PowerShell", {"command": f"Invoke-RestMethod -Uri \"{SC}/$($a + 1)/comments\" -Method Post -Body $b"}, True, "PowerShell comment POST to a spaced $(...) id stays gated"),
+    ("Bash", {"command": TOKEN_RECIPE + f"curl -X POST {SC} -d \"$BODY\""}, True, "create via -X POST after the cut -d= recipe stays gated"),
+    ("Bash", {"command": TOKEN_RECIPE + f"curl -s {SC} -d '{{\"name\": \"{TITLE}\", \"description\": \"{CLAIM}\"}}'"}, True, "create via -d with no -X after the recipe stays gated"),
+    ("Bash", {"command": TOKEN_RECIPE + f"for id in 1 2; do curl -sd '{{\"description\": \"{CLAIM}\"}}' {SC}/$id; done"}, True, "clustered -sd description rewrite in a loop stays gated"),
+    ("Bash", {"command": f"for id in 1 2; do curl --data-raw '{{\"description\": \"{CLAIM}\"}}' {SC}/$id; done"}, True, "--data-raw description rewrite in a loop stays gated"),
+    ("Bash", {"command": f"bash -c \"curl -d '{{\\\"name\\\": \\\"{TITLE}\\\"}}' {SC}\""}, True, "curl write hidden in a bash -c string stays gated"),
+    ("Bash", {"command": f"xargs curl -d \"$BODY\" {SC}"}, True, "curl behind xargs with a data flag stays gated"),
     ("PowerShell", {"command": f"$b = @{{ text = \"{CLAIM}\" }} | ConvertTo-Json; Invoke-RestMethod -Uri {SC}/9/comments -Method Post -Body $b"}, True, "PowerShell hashtable comment"),
     ("Bash", {"command": f"curl -X POST {LIN} -d '{{\"query\": \"mutation($i: IssueCreateInput!) {{ issue" "Create(input: $i) {{ success }} }}\", \"variables\": {{\"i\": {{\"title\": \"{TITLE}\", \"description\": \"{CLAIM}\"}}}}}}'"}, True, "Linear GraphQL create via variables"),
     ("Bash", {"command": f"curl -X POST {LIN} -d '{{\"query\": \"mutation {{ issue" "Update(id: \\\"x\\\", input: {{stateId: \\\"s\\\"}}) {{ success }} }}\"}}'"}, False, "Linear state move stays ungated"),
@@ -63,6 +83,26 @@ def check_detect(case) -> bool:
     tool_name, tool_input, expect, label = case
     got = guard.detect(tool_name, tool_input, None) is not None
     return _testlib.report(got == expect, f"detect: {label} (got {got})")
+
+
+# (url tail after /stories, expected `rest` capture): a shell variable in the id slot is part of
+# the path, so it must not truncate `rest` to "" (the shape of a bare create).
+REST_CASES = [
+    ("/$id", "/$id"),
+    ("/${id}", "/${id}"),
+    ("/$id/comments", "/$id/comments"),
+    ("/$($s.id)/comments", "/$($s.id)/comments"),
+    ("/123/comments", "/123/comments"),
+    ("", ""),
+    ("?archived=false", ""),
+]
+
+
+def check_rest(case) -> bool:
+    tail, expect = case
+    m = guard.SHORTCUT_URL_RE.search("https://api.app.shortcut.com/api/v3/stories" + tail)
+    got = m.group("rest") if m else None
+    return _testlib.report(got == expect, f"rest capture: stories{tail} (got {got!r})")
 
 
 def draft_prompt(text: str) -> str:
@@ -216,6 +256,30 @@ def check_body_file_msys() -> bool:
     return _testlib.report(ok, "MSYS /c/... body file path is read on Windows")
 
 
+def check_infile_trailing_punct() -> bool:
+    with tempfile.TemporaryDirectory() as tmp:
+        body = Path(tmp) / "sc.json"
+        body.write_text(json.dumps({"text": CLAIM}), encoding="utf-8")
+        ok = True
+        for tail in (";", ",", ")"):
+            command = (f"Invoke-RestMethod -Method Post -Uri {SC}/123/comments "
+                       f"-InFile {body}{tail} \"done\"")
+            try:
+                hit = guard.detect("PowerShell", {"command": command}, tmp)
+            except guard.Unverifiable:
+                hit = None
+            ok = ok and hit is not None and any(CLAIM in v for v in hit.values)
+        # A path the guard cannot read stays Unverifiable, punctuation or not.
+        missing = Path(tmp) / "missing.json"
+        try:
+            guard.detect("PowerShell", {"command": (f"Invoke-RestMethod -Method Post -Uri {SC}/123/comments "
+                                                    f"-InFile {missing}; \"done\"")}, tmp)
+            denied = False
+        except guard.Unverifiable:
+            denied = True
+    return _testlib.report(ok and denied, "-InFile path drops trailing ; , ) and a missing file is still Unverifiable")
+
+
 def check_mcp_e2e() -> bool:
     tool_input = {"storyPublicId": 1, "text": CLAIM}
     blocked = run_hook(tool_input, [], tool_name="mcp__shortcut__stories-create-comment") == 2
@@ -225,11 +289,14 @@ def check_mcp_e2e() -> bool:
 
 def main() -> int:
     fails = _testlib.run_cases(DETECT_CASES, check_detect)
+    fails += _testlib.run_cases(REST_CASES, check_rest)
     fails += _testlib.run_cases(E2E_CASES, check_e2e)
     if not check_body_file():
         fails.append("body file")
     if not check_body_file_msys():
         fails.append("body file msys")
+    if not check_infile_trailing_punct():
+        fails.append("infile trailing punctuation")
     if not check_mcp_e2e():
         fails.append("mcp e2e")
     return _testlib.summarize(fails)
