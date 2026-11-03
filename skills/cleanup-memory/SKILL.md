@@ -37,12 +37,13 @@ Read every file's frontmatter (`name`, `description`, `metadata.type`) and full 
   separators and colons with `-` (e.g. `C:\Users\foo\bar` -> `C--Users-foo-bar`).
   Derive it from the primary working directory shown in the session environment -
   never assume a hardcoded root.
-- **MEMORY.md byte size**: the harness silently truncates at **24.4KB, a byte cap, not a
-  line count**. Warn at 22KB, flag critical at 24KB+. Report the byte size AND the line
-  the cut lands on, which `reachability.mjs` now prints. The old "200 lines" rule here was
-  wrong and hid a live failure: on 2026-09-25 a 150-line index was dropping 31 files from
-  line 134 while every check reported clean, because both this step and the script were
-  measuring lines.
+- **MEMORY.md size limits**: the harness enforces **both a 24.4KB byte cap and a 200-line
+  cap, and whichever is hit first wins**. Warn at 22KB, flag critical at 24KB+. Report the
+  byte size AND the line the cut lands on, which `reachability.mjs` prints with the limit
+  that set it. Neither limit alone is enough. Byte receipt: on 2026-09-25 a 150-line index
+  was dropping 31 files from line 134 while a lines-only check reported clean. Line
+  receipt: on 2026-10-27 the harness warned "MEMORY.md is 201 lines (limit: 200)" on a
+  23,344-byte index, under the byte cap, while a bytes-only check reported clean.
 - **What to do when it breaches**: reorder before you compress. Shortening entries buys a
   few hundred bytes against an index that grows every session, so it is a stopgap. Moving
   task-specific entries below the cut and behavioural rules above it costs nothing, deletes
@@ -68,8 +69,12 @@ its counts (`verified`, `unverified`, `superseded`) in Step 7.
 Flag-only, never in the Step 5 apply set: age alone never drops a memory (Step 4). The list is where
 Step 4's deep pass looks first for tool-version quirks and recorded reproductions, the two shapes
 that go stale silently (`refs/memory-rubric.md` "Freshness and supersession"). A deep-pass memory
-whose claim re-verifies gets `verified:` set to today; one whose fact changed follows the rubric's
-UPDATE-with-supersession (history matters) or DELETE (merely wrong) rows.
+whose claim re-verifies gets `verified:` set to today (the frontmatter date is what this step's
+`--stale-days` scan reads), as a verified-only edit: read the file's mtime first and set it back
+after the write (`os.utime`, or `(Get-Item <file>).LastWriteTime = <old>` in PowerShell), so Step 6.5
+still sees the date of the last content change and the file does not turn into a "Recent" entry.
+One whose fact changed follows the rubric's UPDATE-with-supersession (history matters) or DELETE
+(merely wrong) rows; that edit is real content, so its new mtime stands.
 
 ## Step 1.7 - Core cap (8 KB, read-only candidates)
 
@@ -97,9 +102,10 @@ one 2026-08-26 run before this script shipped. It also excludes any demotion-tie
 below) from every reading automatically.
 
 Cross-check `MEMORY.md`'s entries against the files actually on disk using the **loaded-window
-definition**: reachable means a direct `(file.md)` link sits within MEMORY.md's own first 200
-lines - the window the harness actually loads into a session. A `[[wikilink]]` cross-reference
-between memory files does NOT count as reachable, and neither does a link past line 200: either
+definition**: reachable means a direct `(file.md)` link sits within MEMORY.md's own loaded
+window (the first 200 lines or 24.4KB, whichever ends first) - what the harness actually loads into a
+session. A `[[wikilink]]` cross-reference
+between memory files does NOT count as reachable, and neither does a link past the cut: either
 one still fails to reach a session, which is the only thing this check is trying to answer.
 (Three readings were measured on the same 336-file corpus and gave 72 / 88 / 132 orphans; this
 step uses the 132 reading - the script's `loaded-window, direct-link-only` output - on purpose.
@@ -111,9 +117,10 @@ The other two readings the script prints are context only, never the reported fi
   never add an index line for one in Step 6.
 - A `MEMORY.md` line (within that window) whose linked file doesn't exist: `orphan-index-entry`.
 
-The window ends at the **24.4KB byte cap**, which `reachability.mjs` derives itself. Invoke it with
-no cap flag; passing `--line-cap` above the real cut is what made this check report `orphan-file: 0`
-on a corpus dropping 31 files.
+The window ends at the **24.4KB byte cap or line 200, whichever comes first**, which
+`reachability.mjs` computes itself and labels on its `line cap:` line. Invoke it with no cap flag;
+passing `--line-cap` above the real cut is what made this check report `orphan-file: 0` on a corpus
+dropping 31 files.
 
 Both are mechanical - no subagent needed, no judgment call - and both are deterministic: the same
 corpus produces the same two counts on every run. Report the counts of both (`orphan-file: N`,
@@ -147,7 +154,9 @@ below. Sort candidates by their date in the sidecar log `<memory-dir>/.deep-chec
 rotates through each run. The log is one `<filename><TAB><YYYY-MM-DD>` line per file. Never touch a
 memory file to mark it checked: Step 6.5 sorts the index by file mtime, so a no-op edit or marker
 comment would turn every deep-checked file into a "Recent" entry and bury the files actually
-written this week. Record the files this pass deep-checked (the date is today's) and let Step 6 write
+written this week. The one sanctioned edit is Step 1.6's `verified:` date on a claim that
+re-verified, and only with the file's mtime restored afterward, which keeps Step 6.5's mtime
+meaning "last content change". Record the files this pass deep-checked (the date is today's) and let Step 6 write
 them to the log, since Step 6 is the only step that mutates the memory directory. The log has no
 `.md` extension, so `reachability.mjs` never counts it as a memory (it lists only `*.md` files).
 

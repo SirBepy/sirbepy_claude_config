@@ -63,7 +63,9 @@ Two frontmatter keys, both optional on files written before 2026-10-23:
 
 - `verified: YYYY-MM-DD` - the last day the fact was confirmed against the live system or restated
   by Joe, as an absolute date. Set on every ADD and UPDATE. Re-confirming a fact without changing
-  it is an UPDATE of this one line only.
+  it is an UPDATE of this one line only, and the file's mtime is set back to its prior value
+  afterward: the index's Recent block (below) reads mtime as "last content change", so a
+  verified-only edit must not make an old memory look new.
 - `superseded_by: <name>` - the `name` of the memory that replaced this one. Present means the file
   is history, not a current fact.
 
@@ -94,15 +96,17 @@ system, `feedback` for a rule about how to work.
 
 ## Index ordering (MEMORY.md only)
 
-MEMORY.md truncates at **24.4KB of bytes, not at a line count**; anything past that offset is
-silently dropped. Measured 2026-09-25 on a 150-line index that cut at line 134, nowhere near the
-200 lines this file previously claimed. Lines are the wrong unit because a chained entry
-(`[a](x.md) + [b](y.md) + [c](z.md)`) can run 500 bytes while a short one runs 90, so an index
-breaches on bytes long before it looks long.
+MEMORY.md is cut by **two limits, a 24.4KB byte cap and a 200-line cap, and whichever is hit first
+wins**; anything past that point is silently dropped. Byte receipt: 2026-09-25, a 150-line index
+cut at line 134, because a chained entry (`[a](x.md) + [b](y.md) + [c](z.md)`) can run 500 bytes
+while a short one runs 90, so an index often breaches on bytes long before it looks long. Line
+receipt: 2026-10-27, the harness warned "MEMORY.md is 201 lines (limit: 200)" on a 23,344-byte
+index, under the byte cap, and dropped line 201.
 
-`skills/cleanup-memory/reachability.mjs` derives its line cap from that byte budget by default;
-never pass `--line-cap` unless a host genuinely has a different rule, because a line cap above the
-real cut makes the script report `orphan-file: 0` on a corpus that is dropping files.
+`skills/cleanup-memory/reachability.mjs` applies the lower of the two by default and prints which
+one set the cap; never pass `--line-cap` unless a host genuinely has a different rule, because a
+line cap above the real cut makes the script report `orphan-file: 0` on a corpus that is dropping
+files.
 
 The vault has no such cap, so this section governs the native per-project index only.
 
