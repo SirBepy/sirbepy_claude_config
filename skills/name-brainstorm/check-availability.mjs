@@ -5,7 +5,8 @@
 // Statuses are exactly FREE, TAKEN, UNKNOWN. A lookup that fails (429, 5xx, timeout, odd answer)
 // is retried with backoff and then reported as UNKNOWN, never as FREE.
 
-import { readFileSync, writeFileSync, renameSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, renameSync, existsSync, realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { dirname, basename, extname, join, resolve } from 'node:path';
 import net from 'node:net';
 import dns from 'node:dns';
@@ -276,10 +277,17 @@ function retryWait(r) {
 
 // ---------------------------------------------------------------- domains
 
-let bootstrap = null;
-async function loadBootstrap() {
-  if (bootstrap) return bootstrap;
-  bootstrap = {};
+// The promise (not the map) is memoised: concurrent first callers all await the same fetch instead of
+// reading a half-filled map and falling back to FALLBACK_RDAP. A failed fetch resolves to {} once
+// and is not retried for the rest of the run.
+let bootstrapP = null;
+function loadBootstrap() {
+  bootstrapP ??= fetchBootstrap();
+  return bootstrapP;
+}
+
+async function fetchBootstrap() {
+  const bootstrap = {};
   try {
     const res = await fetch('https://data.iana.org/rdap/dns.json', {
       headers: { 'user-agent': UA },
@@ -413,7 +421,8 @@ async function checkNpm(name) {
     const r = await httpStatus('registry.npmjs.org', url, {
       headers: { accept: 'application/vnd.npm.install-v1+json' },
     });
-    if (r.status === 404) return { done: { status: FREE, note: '' } };
+    // An unpublished package 404s too and npm usually refuses to republish its name, so 404 cannot prove FREE.
+    if (r.status === 404) return { done: { status: UNKNOWN, note: 'npm 404: free or unpublished' } };
     if (r.status === 200) return { done: { status: TAKEN, note: '' } };
     if (r.status === 0) return { retry: `npm network error ${r.error}` };
     if (r.status === 429 || r.status >= 500) return { retry: `npm HTTP ${r.status}`, waitMs: retryWait(r) };
@@ -602,4 +611,9 @@ async function main() {
   if (unknown) console.error(`${unknown} UNKNOWN cell(s): rerun with --resume to retry only those`);
 }
 
-main().catch((e) => die(e.stack || String(e)));
+// Importing this file (the tests do) must not start a run; only `node check-availability.mjs ...` does.
+// realpath on argv[1] because import.meta.url is already symlink-resolved and argv[1] is not.
+const isDirectRun = process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+if (isDirectRun) main().catch((e) => die(e.stack || String(e)));
+
+export { parseArgs, readNames, withRetry, loadBootstrap, rdapBase, checkNpm };
