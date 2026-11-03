@@ -13,6 +13,9 @@ argument-hint: "[task text] [--now] [--dont-close] [--skip-review] [--light] [/c
 ```
 /close                                  # finish open work, then retrospect + review + persist + close terminal
 fix the typo /close                     # do the task first, then the same as /close
+/close fix the typo                     # same: task text after the token is also done first
+fix the typo /close --now               # do the task, then skip finishing other open work and close
+fix the typo /close /sleep-when-done    # do the task, then close, then sleep the PC
 /close --now                            # skip finishing and waiting: file unfinished items as todos, then close
 /close --dont-close                     # everything except closing, then prompts to run /clear
 /close --skip-review                    # skip the parallel code-health review subagents
@@ -27,17 +30,26 @@ fix the typo /close                     # do the task first, then the same as /c
 
 `--now`, `--dont-close`, `--skip-review`, and `--light` are boolean flags, not chained commands. Strip them out first, then parse the rest. Dev wording that asks to close without finishing ("close now", "close right now", "just close") counts as `--now`.
 
+Task text is any text around the `/close` token that is neither a flag nor a slash command: before it (`fix the typo /close`) or directly after it, up to the first flag or `/command` (`/close fix the typo`). Claude does the task first, then runs /close as usual. `--now` never drops the task: it only skips finishing and waiting on other open work. The three shapes with task text, each with one outcome:
+
+- `/close fix the typo` -> task: fix the typo; flags: none; chain: `[]`. Fix the typo, then bare /close.
+- `do X /close --now` -> task: do X; `--now`: true; chain: `[]`. Do X, then close without finishing or waiting on anything else.
+- `do X /close /sleep-when-done` -> task: do X; chain: `[/sleep-when-done]`. Do X, then close, then `/sleep-when-done`.
+
 ### Trigger
 
-Fires only on a `/close` token the dev typed as the first or last word of their own message, or that
-ends a gate chat's spawn prompt (which carries the dev's push request). Text before a trailing
-`/close` is a task to finish first (`fix the typo /close`); any other `/command` in it runs as part
-of that task, per `~/.claude/refs/slash-arg-parsing.md`. Claude Code only expands a slash command at
+Fires only on a `/close` token the dev typed as the first word of their own message, or as the last
+word once trailing flags and chained commands are set aside (`do X /close`, `do X /close --now`,
+`do X /close /sleep-when-done`), or that ends a gate chat's spawn prompt (which carries the dev's push
+request). Text before a trailing `/close` is a task to finish first (`fix the typo /close`); any
+other `/command` in it runs as part of that task, per `~/.claude/refs/slash-arg-parsing.md`. Plain
+text after a leading `/close` is a task too (`/close fix the typo`). Plain text on both sides of a
+mid-message `/close` (`do X /close then Y`) is not a trigger: the token is neither first nor last. Claude Code only expands a slash command at
 the very start of a prompt, so a trailing token arrives as plain text and Claude loads this skill
 through the Skill tool itself; that is why the skill stays model-invocable. Never a trigger: `/close`
 mid-sentence, inside quotes, code, tool output or skill text, negated or conditional ("don't /close
-yet", "should I /close?"). If Claude cannot point at the dev's own message ending or starting with the
-token, it does not start. Claude also runs it unprompted under CLAUDE.md's "Task done, no question
+yet", "should I /close?"). If Claude cannot point at the dev's own message starting with the token, or ending with it
+plus only flags and chained commands, it does not start. Claude also runs it unprompted under CLAUDE.md's "Task done, no question
 pending: run /close yourself"; that path has nothing in flight by definition, so it never waits.
 
 If `--light` is passed: read `close/light.md` before proceeding. It overrides Phases 1-3 with high-context-mode versions.
@@ -67,7 +79,7 @@ Phase 0 starts in the SAME turn /close is invoked, and Phases 1-5 run in that sa
 
 When this session is hosted by Claude Conductor (claude_usage_in_taskbar), the host handles the "Closing" row state and the teardown itself - no text markers:
 
-- **Closing state:** the host marks the row "Closing" automatically the moment a `/close` turn starts (it sees the prompt began with `/close`). Nothing to emit for this.
+- **Closing state:** the host marks the row "Closing" automatically the moment a `/close` turn starts, but only for a prompt that BEGINS with `/close`. A trailing `/close` (`do X /close`, a gate chat's spawn prompt) arrives as plain text, so the row is not marked Closing while the task runs. Nothing to emit for this.
 - **Teardown:** confirmed by calling the `close_session` MCP tool in Phase 6 (see below), NOT by any text output. The host then ends the session and kills the process at turn completion.
 
 If the `close_session` tool isn't available (a plain terminal session not hosted by Conductor), just skip it - the Phase 6 script still closes the terminal as usual. Never emit `<cc-close:*>` text markers; they're retired.
