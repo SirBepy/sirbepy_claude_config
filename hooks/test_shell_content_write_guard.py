@@ -117,6 +117,50 @@ CASES = [
     ("cat file.txt", False, "956: cat still allowed"),
     ('echo "use sed -i carefully"', False, "956: mention in prose, quoted, not an invocation"),
     ("sed -f script.sed input-independent.txt", False, "956: a filename merely containing '-i...' is not a flag"),
+    # A bash-escaped quote around a `>` inside a bash/git invocation's
+    # -m argument is string content; the PowerShell-dialect pass read the `\"` as
+    # a real quote boundary and exposed the `>` as a redirect.
+    (
+        'bash commit-pathspec.sh -m "text \\"</body>\\" more" file',
+        False,
+        "1203 repro: bash-escaped quote around </body> in a commit message",
+    ),
+    (
+        'bash "C:/Users/tecno/.claude/skills/commit/commit-pathspec.sh" -m "fix \\"<a>\\" tag" f.txt',
+        False,
+        "1203: same shape through a quoted absolute script path",
+    ),
+    (
+        'git commit -m "the literal \\"</body>\\" got cut" -- f.txt',
+        False,
+        "1203: same shape through git commit -m",
+    ),
+    (
+        'bash commit-pathspec.sh -m "a \\"x\\" b" f.txt > out.txt',
+        True,
+        "1203 negative: a real redirect after the quoted message still blocks",
+    ),
+    (
+        'echo "a\\" > f.txt \\"b"',
+        True,
+        "1203 negative: non-bash-family command keeps the pwsh pass (backslash-quote hiding a redirect)",
+    ),
+    (
+        'powershell -Command "a\\" > f.txt \\"b"',
+        True,
+        "1203 negative: powershell invocation keeps the pwsh pass",
+    ),
+    (
+        'echo "x""y" > f.txt',
+        True,
+        "1203 negative: PowerShell doubled-quote escape followed by a real redirect blocks",
+    ),
+    (
+        'bash x.sh "a\\" ; Set-Content f v \\"b',
+        True,
+        "1203 negative: unbalanced bash quoting after a bash-first token keeps the pwsh pass",
+    ),
+    ("cat > file.txt", True, "1203: plain cat > file stays blocked"),
 ]
 
 
@@ -172,8 +216,31 @@ def run_git_blob_redirect_cases(fails: list) -> None:
         fails.extend(_testlib.run_cases(cases, check_with_cwd))
 
 
+def run_tool_name_cases(fails: list) -> None:
+    """End to end: the guard is tool-name agnostic, so the escaped-quote
+    commit message exits 0 under both tool names and a real redirect exits 2."""
+    import json
+
+    script = str(Path(__file__).resolve().parent / "shell-content-write-guard.py")
+    msg = 'bash commit-pathspec.sh -m "text \\"</body>\\" more" file'
+    for tool in ("Bash", "PowerShell"):
+        for cmd, want_rc, label in (
+            (msg, 0, f"1203 e2e: escaped-quote commit message passes under {tool}"),
+            ("cat > file.txt", 2, f"1203 e2e: plain redirect still denied under {tool}"),
+        ):
+            payload = json.dumps({"tool_name": tool, "tool_input": {"command": cmd}, "cwd": ""})
+            rc = subprocess.run(
+                [sys.executable, script], input=payload, text=True, capture_output=True
+            ).returncode
+            ok = rc == want_rc
+            print(f"[{'PASS' if ok else 'FAIL'}] {label}: rc={rc}")
+            if not ok:
+                fails.append(label)
+
+
 def run() -> int:
     fails = _testlib.run_cases(CASES, check)
+    run_tool_name_cases(fails)
     run_git_blob_redirect_cases(fails)
     return _testlib.summarize(fails)
 

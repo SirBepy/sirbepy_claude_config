@@ -97,6 +97,12 @@ HERESTRING_RE = re.compile(r"@'.*?'@|@\".*?\"@", re.DOTALL)
 DQUOTE_RE_BASH = re.compile(r'"(?:[^"\\]|\\.)*"')
 DQUOTE_RE_PWSH = re.compile(r'"(?:`.|""|[^"])*"')
 SQUOTE_RE = re.compile(r"'[^']*'")
+# First word of the whole command: bash/sh/git, or a path ending in commit-pathspec.sh
+# (optionally quoted), run directly.
+BASH_FAMILY_START_RE = re.compile(
+    r"""^\s*(?:(?:bash|sh|git)(?:\.exe)?\s|["']?[^\s"']*commit-pathspec\.sh["']?(?:\s|$))""",
+    re.IGNORECASE,
+)
 IEX_RE = re.compile(r"\b(iex|Invoke-Expression)\b", re.IGNORECASE)
 
 # \S* in REDIRECT_RE/TEE_RE swallows trailing shell separators glued to the
@@ -254,6 +260,13 @@ def _check_masked(masked: str, cwd: str) -> str | None:
     return None
 
 
+def _is_bash_family_invocation(command: str) -> bool:
+    """True when the command's first word launches a POSIX-side program
+    (bash/sh/git, or the commit-pathspec.sh script directly). Its quoted
+    arguments follow bash escaping, where `\\"` is string content."""
+    return bool(BASH_FAMILY_START_RE.match(command))
+
+
 def find_violation(command: str, cwd: str = "") -> str | None:
     lowered = command.lower()
     if any(hint in lowered for hint in MARKER_HINTS):
@@ -261,7 +274,15 @@ def find_violation(command: str, cwd: str = "") -> str | None:
 
     command = strip_heredocs(command)
     masked_bash = mask_quoted(command, DQUOTE_RE_BASH)
-    masked_pwsh = mask_quoted(command, DQUOTE_RE_PWSH)
+    # PowerShell has no backslash escape for `"`, so under its rules the `\"` in
+    # `-m "text \"</body>\" more"` closes the span early and exposes the `>`.
+    # When a bash-family command also parses with every quote paired under bash
+    # rules (no `"` left in the bash-masked text), bash's reading is the real
+    # one, so the pwsh pass is skipped. An unpaired quote, or any other first
+    # word (echo, powershell, pwsh, ...), keeps the dual pass: that is the
+    # `echo "foo\" ; Set-Content x "bar"` shape the pass exists to catch.
+    skip_pwsh = _is_bash_family_invocation(command) and '"' not in masked_bash
+    masked_pwsh = masked_bash if skip_pwsh else mask_quoted(command, DQUOTE_RE_PWSH)
 
     # iex/Invoke-Expression evaluates its string argument as real code, so a
     # write cmdlet masked away as "just a string" is actually live. Check
