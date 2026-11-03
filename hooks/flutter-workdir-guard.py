@@ -48,6 +48,7 @@ try:
         strip_quotes as _lib_strip_quotes,
         tokenize_segment as tokenize,
         basename,
+        split_command_segments,
     )
 except Exception as e:
     sys.stderr.write(f"[flutter-workdir-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
@@ -66,7 +67,6 @@ DIR_FLAGS = {"-c", "--directory", "--working-directory", "-workingdirectory"}
 
 # Windows drive-letter (C:\...), UNC (\\server\...), or git-bash style (/c/...).
 ABS_PATH_RE = re.compile(r"^(?:[A-Za-z]:[\\/]|\\\\|/[^/\s])")
-CHAIN_SPLIT_RE = re.compile(r"&&|\|\||;|\n|\|")
 
 
 def allow(message: str = "") -> None:
@@ -151,8 +151,12 @@ def main() -> None:
     if os.environ.get(OVERRIDE_ENV):
         allow()
 
+    # Quote-aware split: a `|` inside a quoted grep -E pattern is not a pipeline
+    # boundary, so `grep -E "a|flutter"` never yields a segment led by `flutter`.
+    segments = split_command_segments(command)
+
     if tool_name == "Bash":
-        for segment in CHAIN_SPLIT_RE.split(command):
+        for segment in segments:
             tokens = tokenize(segment)
             if tokens and basename(tokens[0]) in BASH_LEADING_BASENAMES:
                 deny(
@@ -163,7 +167,6 @@ def main() -> None:
                     f"PowerShell tool instead. Bypass: set {OVERRIDE_ENV}=1."
                 )
 
-    segments = CHAIN_SPLIT_RE.split(command)
     prior_pin: str | None = None
     warn_hit = False
 
