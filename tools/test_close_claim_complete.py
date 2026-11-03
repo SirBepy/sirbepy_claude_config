@@ -511,5 +511,63 @@ with tempfile.TemporaryDirectory() as tmp:
     )
 
 
+# --- Test Q: a sibling's plain claim is not "the older name" of the file being claimed ---
+
+with tempfile.TemporaryDirectory() as tmp:
+    # alpha was claimed while it was the only file with pc-0007, so its claim is the plain name.
+    repo = make_backlog(Path(tmp), "pc-0007-alpha.md")
+    c = claims_dir(repo)
+    proc = run_file(CLAIM_SCRIPT, "-Id", "pc-0007", "-RepoRoot", str(repo))
+    check(f"alpha claimed alone writes the plain pc-0007.claim (out={proc.stdout!r})", proc.returncode == 0 and (c / "pc-0007.claim").exists())
+    before = (c / "pc-0007.claim").read_text(encoding="utf-8")
+
+    (repo / ".claude" / "todos" / "pc-0007-beta.md").write_text("# beta\n\n## Acceptance\n\n- done\n", encoding="utf-8")
+    proc = run_file(CLAIM_SCRIPT, "-Id", "pc-0007", "-Slug", "beta", "-RepoRoot", str(repo))
+    check(
+        f"beta claims independently of alpha's live plain claim (rc={proc.returncode}, out={proc.stdout!r})",
+        proc.returncode == 0 and (c / "pc-0007-beta.claim").exists() and "older name" not in proc.stdout,
+    )
+    check(
+        "alpha's pc-0007.claim is untouched by beta's claim",
+        (c / "pc-0007.claim").exists() and (c / "pc-0007.claim").read_text(encoding="utf-8") == before,
+    )
+
+with tempfile.TemporaryDirectory() as tmp:
+    # Negative: a STALE sibling plain claim must survive too, not be deleted as "the old name".
+    repo = make_backlog(Path(tmp), "pc-0007-alpha.md", "pc-0007-beta.md")
+    c = claims_dir(repo)
+    c.mkdir(parents=True)
+    write_claim(c / "pc-0007.claim", pid=99999999, start_ticks=None, age_hours=10)
+    proc = run_file(CLAIM_SCRIPT, "-Id", "pc-0007", "-Slug", "beta", "-RepoRoot", str(repo))
+    check(
+        f"beta claim leaves a stale sibling pc-0007.claim in place (rc={proc.returncode}, out={proc.stdout!r})",
+        proc.returncode == 0 and (c / "pc-0007-beta.claim").exists() and (c / "pc-0007.claim").exists(),
+    )
+
+with tempfile.TemporaryDirectory() as tmp:
+    # A live claim on beta itself is still reported, under its own slugged name.
+    repo = make_backlog(Path(tmp), "pc-0007-alpha.md", "pc-0007-beta.md")
+    c = claims_dir(repo)
+    c.mkdir(parents=True)
+    write_claim(c / "pc-0007-beta.claim", pid=os.getpid(), start_ticks=get_start_ticks(os.getpid()), age_hours=0.1)
+    proc = run_file(CLAIM_SCRIPT, "-Id", "pc-0007", "-Slug", "beta", "-RepoRoot", str(repo))
+    check(
+        f"a live pc-0007-beta.claim still blocks a second claim on beta (rc={proc.returncode}, out={proc.stdout!r})",
+        proc.returncode == 1 and "already claimed" in proc.stdout,
+    )
+
+with tempfile.TemporaryDirectory() as tmp:
+    # A single-file id still migrates a stale older-name claim (the pre-fix behaviour this must keep).
+    repo = make_backlog(Path(tmp), "pc-0009-solo.md")
+    c = claims_dir(repo)
+    c.mkdir(parents=True)
+    write_claim(c / "9.claim", pid=99999999, start_ticks=None, age_hours=10)
+    proc = run_file(CLAIM_SCRIPT, "-Id", "pc-0009", "-RepoRoot", str(repo))
+    check(
+        f"a single-file id replaces its stale older-name 9.claim with pc-0009.claim (rc={proc.returncode}, out={proc.stdout!r})",
+        proc.returncode == 0 and (c / "pc-0009.claim").exists() and not (c / "9.claim").exists(),
+    )
+
+
 _LABEL_DIR.cleanup()
 sys.exit(_testlib.summarize(fails, style="count"))
