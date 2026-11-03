@@ -225,7 +225,16 @@ def cmd_stage(args):
 
 def _parse_hunk_spec(spec: str):
     if ":" not in spec:
-        raise SystemExit(f"--hunk expects path:substring, got {spec!r}")
+        msg = f"--hunk expects path:substring, got {spec!r}"
+        # Git Bash (MSYS) rewrites a path:/substring arg into a Windows path list, turning the
+        # colon into ";" and slashes into backslashes, so either char means the arg was mangled.
+        if ";" in spec or "\\" in spec:
+            msg += (
+                "\nthis looks like Git Bash (MSYS) path conversion rewriting the argument: "
+                "run from the PowerShell tool, or set MSYS_NO_PATHCONV=1 and MSYS2_ARG_CONV_EXCL=* "
+                "and pass the script path in C:/ form"
+            )
+        raise SystemExit(msg)
     path, substring = spec.split(":", 1)
     return path, substring
 

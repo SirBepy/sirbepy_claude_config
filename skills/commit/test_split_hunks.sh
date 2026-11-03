@@ -231,6 +231,18 @@ shown=$(git -C "$d8" show HEAD -- imp.txt 2>&1)
 check "dedupe: commit carries both edits" 0 "\+line03-betaY" "" "$shown" 0
 check "dedupe: the unmatched hunk stays out" 0 "" "other" "$shown" 0
 
+# --- commit: a --hunk arg MSYS already mangled (colon became ";", slashes became backslashes)
+# is rejected with a hint naming the workaround, not just the bare usage line ---
+d9=$(new_repo); tmp_dirs+=("$d9")
+printf 'base\n' > "$d9/h.txt"
+git -C "$d9" add h.txt
+git -C "$d9" commit -q -m seed
+printf 'changed\n' >> "$d9/h.txt"
+out=$("$py" "$sh_py" --repo "$d9" commit -m "mangled" --hunk 'e2e\x.spec.ts;C' 2>&1); ec=$?
+check "mangled --hunk: rejected with the MSYS hint" 1 "MSYS_NO_PATHCONV" "" "$out" "$ec"
+out=$("$py" "$sh_py" --repo "$d9" commit -m "plain" --hunk 'nocolonhere' 2>&1); ec=$?
+check "plain bad --hunk: no MSYS hint" 1 "path:substring" "MSYS" "$out" "$ec"
+
 if [ "$fail" -ne 0 ]; then
   echo "FAIL: one or more split-hunks.py checks failed"
   exit 1
