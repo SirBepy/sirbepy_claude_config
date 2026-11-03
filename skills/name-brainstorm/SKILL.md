@@ -43,7 +43,7 @@ It keeps one-word ASCII names of 4-12 letters, lowercased, deduped, minus the ex
 
 ## Step 5 - Availability and judges (in parallel)
 
-1. Start the checker in the background: `node ~/.claude/skills/name-brainstorm/check-availability.mjs <out>/names.txt --skip hr --extra ai --out <out>/results --resume <out>/results/cache.json`. About 4 checks a second; 300 names take roughly 12 minutes. `.hr` is skipped here because its registry allows about 6 lookups a minute. Read `checker-notes.md` before interpreting results.
+1. Start the checker in the background: `node ~/.claude/skills/name-brainstorm/check-availability.mjs <out>/names.txt --skip hr --extra ai --out <out>/results --resume <out>/results/cache.json`. About 4 checks a second; 300 names take roughly 12 minutes. `.hr` is skipped here because its registry allows about 6 lookups a minute. Read `checker-notes.md` before interpreting results. The npm column is TAKEN or UNKNOWN, never FREE: a registry 404 means free or unpublished (unpublished names usually cannot be republished), so confirm a finalist's npm name by hand.
 2. Dispatch the three judges from `judges.md` at the same time. Judges do not need availability.
 
 ## Step 6 - Finalists and sentence forms
@@ -53,7 +53,7 @@ When both finish, build the finalist list from judge consensus (a name that thre
 - run the checker **with** `.hr` (and `.eu`) on them;
 - if the bare names are taken (real words and first names almost always are), add `hey<name>`, `my<name>`, `ask<name>`, `get<name>` forms and run those with `--skip hr`;
 - run your own standard web search on the top 3 to 5 (one query each is enough; the judges' search is fuzzy, so say so);
-- run `view-cache.mjs` to read statuses (`list a,b,c`, `comfree`, `aifree`).
+- run `view-cache.mjs` to read statuses (`list a,b,c`, `comfree`, `aifree`; it shows `.co` when the run used `--extra co`).
 
 Any domain claim the dev disputes is re-verified directly (DNS `NS`, port-43 whois, RDAP) before you repeat it: the script's TAKEN includes parked names.
 
