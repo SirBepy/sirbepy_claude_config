@@ -83,6 +83,20 @@ STOPWORDS = {
     "more", "most", "less", "least", "very", "just", "todo", "todos",
 }
 
+# Category vocabulary that /code-check's structural findings share by nature
+# ("split X", "extract a shared Y", "consider a render panel"): a long backlog
+# holds dozens of such titles about unrelated files, so these words say which
+# KIND of todo it is, never which SUBJECT. They neither count toward a hit nor
+# pad the ratio's denominator.
+STRUCTURAL_VOCAB = {
+    "split", "module", "file", "shared", "existing", "consider", "extract",
+    "render", "panel", "priority", "duplicate", "helper",
+}
+# A filename-shaped token (`message_drafts`, `api.rs`, `commit-guard.py`) is a
+# subject marker, so it is never structural even if built from such words.
+FILENAME_RE = re.compile(r"[A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)+")
+FILENAME_MIN_LEN = 5
+
 
 def todos_target_dir(file_path: str) -> Path | None:
     """The `.claude/todos` directory if `file_path` is a new backlog file
@@ -167,6 +181,29 @@ def salient_tokens(title: str) -> list[str]:
     return out
 
 
+def is_filename_shaped(token: str) -> bool:
+    return len(token) >= FILENAME_MIN_LEN and bool(FILENAME_RE.fullmatch(token))
+
+
+def is_structural(token: str) -> bool:
+    return token in STRUCTURAL_VOCAB and not is_filename_shaped(token)
+
+
+def match_tokens(title: str) -> list[str]:
+    """`salient_tokens` plus each filename-shaped token kept whole: the word
+    tokenizer splits `message_drafts` into `message` and `drafts`, losing the
+    one thing that identifies two todos as covering the same file.
+    """
+    out = salient_tokens(title)
+    seen = set(out)
+    for raw in FILENAME_RE.findall(title or ""):
+        low = raw.lower()
+        if is_filename_shaped(low) and low not in seen:
+            seen.add(low)
+            out.append(low)
+    return out
+
+
 def matched_tokens(tokens: list[str], text: str) -> list[str]:
     return [t for t in tokens if re.search(r"\b" + re.escape(t) + r"\b", text, re.IGNORECASE)]
 
@@ -174,8 +211,11 @@ def matched_tokens(tokens: list[str], text: str) -> list[str]:
 def is_plausible_hit(tokens: list[str], matched: list[str]) -> bool:
     """Requires real overlap, not a shared word or two: at least 3 salient
     tokens in common, or (for short titles) at least 2 covering >=60% of the
-    new title's tokens.
+    new title's tokens. Structural vocabulary is dropped from both sides first,
+    so a hit always rests on at least two subject-bearing tokens.
     """
+    tokens = [t for t in tokens if not is_structural(t)]
+    matched = [t for t in matched if not is_structural(t)]
     if len(tokens) < 2 or len(matched) < 2:
         return False
     if len(matched) >= 3:
@@ -310,7 +350,7 @@ def main() -> None:
     if OVERRIDE_MARKER_RE.search(content):
         allow(warning)
 
-    tokens = salient_tokens(extract_title(content))
+    tokens = match_tokens(extract_title(content))
     if len(tokens) < 2:
         allow(warning)
 

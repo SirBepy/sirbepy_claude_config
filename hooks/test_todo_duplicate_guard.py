@@ -93,12 +93,35 @@ def check_id(case) -> bool:
 
 # (tokens, matched, expect_hit, label)
 HIT_CASES = [
-    (["split", "verify", "screen"], ["split", "verify"], True, "2 of 3 matched, ratio >= 0.6"),
-    (["split", "verify", "screen", "debit", "card"], ["split", "verify"], False, "2 of 5 matched, ratio too low and count < 3"),
-    (["split", "verify", "screen", "debit", "card"], ["split", "verify", "screen"], True, "3+ matched is always a hit"),
-    (["split", "verify"], ["split"], False, "only 1 matched, never a hit"),
+    (["verify", "screen", "debit"], ["verify", "screen"], True, "2 of 3 matched, ratio >= 0.6"),
+    (["verify", "screen", "debit", "card", "form"], ["verify", "screen"], False, "2 of 5 matched, ratio too low and count < 3"),
+    (["verify", "screen", "debit", "card", "form"], ["verify", "screen", "debit"], True, "3+ matched is always a hit"),
+    (["verify", "debit"], ["verify"], False, "only 1 matched, never a hit"),
     (["split"], [], False, "fewer than 2 salient tokens, no signal"),
+    # pc-1187: structural vocabulary neither counts as a match nor pads the ratio's denominator.
+    (["split", "module", "shared", "panel"], ["split", "module", "shared"], False, "3 matched but all structural, never a hit"),
+    (["split", "module", "shared", "render", "sessions"], ["split", "module", "shared", "render"], False, "4 structural matches and no non-structural one, never a hit"),
+    (["split", "module", "sessions", "drafts"], ["split", "module", "sessions"], False, "structural words do not top up a lone non-structural match"),
+    (["split", "sessions", "drafts"], ["split", "sessions", "drafts"], True, "two non-structural matches of two non-structural tokens still hit"),
+    (["split", "module", "sessions", "drafts", "queue"], ["split", "sessions", "drafts", "queue"], True, "three non-structural matches hit even beside structural tokens"),
+    (["split", "message_drafts", "hooks"], ["split", "message_drafts", "hooks"], True, "a shared filename-shaped token counts as non-structural"),
+    (["split", "message_drafts"], ["split", "message_drafts"], False, "a lone filename-shaped match with no second non-structural token is not enough"),
 ]
+
+# (title, expected match tokens, label): salient words plus filename-shaped tokens.
+MATCH_TOKEN_CASES = [
+    ("Split message_drafts/api.rs into modules", ["split", "message", "drafts", "modules", "message_drafts", "api.rs"], "underscore and dotted names are kept whole beside their parts"),
+    ("Guard hooks/commit-guard.py is too large", ["guard", "hooks", "commit", "large", "commit-guard.py"], "hyphenated filename kept whole"),
+    ("Fix a-b and x_y", [], "short hyphen/underscore pairs are not filename-shaped"),
+]
+
+
+def check_match_tokens(case) -> bool:
+    title, expected, label = case
+    got = guard.match_tokens(title)
+    ok = sorted(got) == sorted(expected)
+    print(f"[{'PASS' if ok else 'FAIL'}] match_tokens: {label}: {title!r} -> {got}")
+    return ok
 
 
 def check_hit(case) -> bool:
@@ -169,6 +192,61 @@ def check_allocation() -> list:
         if not ok:
             fails.append(label)
 
+    return fails
+
+
+def check_structural_vocab() -> list:
+    """pc-1187: titles sharing only category vocabulary must not collide."""
+    fails = []
+    with tempfile.TemporaryDirectory() as tmp:
+        todos_dir = Path(tmp) / ".claude" / "todos"
+        todos_dir.mkdir(parents=True)
+        (todos_dir / "300-split-chat-render-panel.md").write_text(
+            "# Split the chat render panel module, consider extracting a shared helper\n\n"
+            "Goal: the existing priority panel file is too big.\n",
+            encoding="utf-8",
+        )
+        (todos_dir / "301-split-commit-guard.md").write_text(
+            "# Split hooks/commit-guard.py, a shared module of marker checks\n\nGoal: too large.\n",
+            encoding="utf-8",
+        )
+        (todos_dir / "302-flaky-queue-drain.md").write_text(
+            "# Flaky sessions queue drain loses entries on restart\n\nGoal: stop losing entries.\n",
+            encoding="utf-8",
+        )
+
+        cases = [
+            (
+                "310-split-sessions-priority-panel.md",
+                "# Split the sessions priority panel file: extract a shared render helper\n\nGoal: x.\n",
+                0,
+                "sharing only split/panel/shared/render/helper/extract/priority/file with a live todo passes",
+            ),
+            (
+                "311-consider-extracting-existing-module.md",
+                "# Consider a shared existing module: split the duplicate render panel helper\n\nGoal: x.\n",
+                0,
+                "a title made only of structural vocabulary has no signal and passes",
+            ),
+            (
+                "312-guard-file-too-large.md",
+                "# The hooks/commit-guard.py file is too large, split its marker checks\n\nGoal: x.\n",
+                2,
+                "the same filename plus overlapping prose still blocks",
+            ),
+            (
+                "313-sessions-queue-drain-flaky.md",
+                "# Sessions queue drain is flaky and loses entries\n\nGoal: x.\n",
+                2,
+                "the same defect re-filed with a different shape still blocks",
+            ),
+        ]
+        for name, content, expect_code, label in cases:
+            proc = run_hook({"tool_name": "Write", "tool_input": {"file_path": str(todos_dir / name), "content": content}})
+            ok = proc.returncode == expect_code
+            print(f"[{'PASS' if ok else 'FAIL'}] structural: {label} -> exit={proc.returncode} stderr={proc.stderr.strip()!r}")
+            if not ok:
+                fails.append(label)
     return fails
 
 
@@ -446,6 +524,8 @@ def run() -> int:
         _testlib.run_cases(PATH_CASES, check_path)
         + _testlib.run_cases(TOKEN_CASES, check_tokens)
         + _testlib.run_cases(HIT_CASES, check_hit)
+        + _testlib.run_cases(MATCH_TOKEN_CASES, check_match_tokens)
+        + check_structural_vocab()
         + _testlib.run_cases(ID_CASES, check_id)
         + check_integration()
         + check_allocation()
