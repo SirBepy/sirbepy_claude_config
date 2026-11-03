@@ -166,7 +166,7 @@ node ~/.claude/skills/context-left/context-left.mjs
 Below `/auto-do-todos` Step 6's `HARD_STOP_AT` (40% used), start the next cycle in this chat. At or
 above it, run `/respawn unattended` (read `~/.claude/skills/respawn/SKILL.md` and follow its
 Unattended mode with the New-work prompt, since the successor takes fresh todos rather than
-resuming this chat's. Unattended skips `/close`'s `/code-check` since `/auto-do-todos`' Step 9 already covered these commits) so the successor
+resuming this chat's. This caller is automatic, so it has no Joe words: in the template's "Joe's words for it, verbatim" field it writes `**Started by:** /loop-todos Phase 4, context at or above HARD_STOP_AT; the next cycle takes fresh todos.` instead of a quote. Unattended skips `/close`'s `/code-check` since `/auto-do-todos`' Step 9 already covered these commits) so the successor
 carries the loop on: a cycle started past that line takes
 no todos, so Phase 3's zero-progress stop would end the loop instead. The boundary lives in Step 6;
 read it there rather than copying the number here.

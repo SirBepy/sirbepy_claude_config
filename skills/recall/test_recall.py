@@ -190,6 +190,19 @@ def test_digests():
               and recall.FENCE_OPEN in written and "joe:" in written and written.rstrip().endswith(recall.FENCE_CLOSE),
               "show --append-to appends the fenced conversation after the file's existing content")
 
+        # An unknown or ambiguous prefix yields error text, not a transcript: it must never reach the
+        # detail file, where a respawn successor would read it as conversation content.
+        before = detail.read_bytes()
+        err = io.StringIO()
+        sys.stderr, saved_err = err, sys.stderr
+        try:
+            rc = recall.main(["--projects", str(projects), "--archive", str(archive), "show", "zzzzzzzz",
+                              "--append-to", str(detail)])
+        finally:
+            sys.stderr = saved_err
+        check(rc == 1 and detail.read_bytes() == before and "No indexed session starts with" in err.getvalue(),
+              "show --append-to with an unknown prefix leaves the file alone, reports on stderr and exits 1")
+
 
 def memory_file(path, name, body, verified=None, superseded_by=None, modified=None, mtype="reference"):
     fm = ["---", f"name: {name}", f"description: about {name}"]
