@@ -38,6 +38,14 @@ check below demands for processes - kept as its own sentence rather than folded 
 since a directory isn't a process and you're deciding this here, while picking a build location, not
 there.
 
+A scratch install for a package safety check (installing a package for real, then auditing the
+resolved tree) first creates the scratch directory with `New-Item -ItemType Directory`, then passes
+it explicitly on every call - `pnpm --dir <scratch> install`, `npm --prefix <scratch> install`,
+`cargo ... --manifest-path <scratch>/Cargo.toml` - and never relies on the cwd. Before running,
+verify the resolved scratch path is not the repo (or inside it): a bare `pnpm install` whose
+scratch dir did not exist yet ran in the repo root and pruned 10 packages from dashboard-a's
+`node_modules` while another chat's jobs were using that tree (2026-10-29).
+
 Clean up only the exact files you created, by exact name, never by glob or wildcard: never touch
 `hooks/.commit-marker-*` (the guard consumes those itself) or `hooks/.session-markers/` (a live
 session's commit depends on it).
@@ -169,14 +177,21 @@ promise a `READ-ONLY DISPATCH`-marked scout that its own Write call will succeed
 ## What the guard actually enforces
 
 `hooks/dispatch-preamble-guard.py` blocks any `Agent`/`Task` dispatch whose prompt is missing one of
-three literal substrings - it is a pure string check, not a semantic one, so pasting the block above
+three literal checks - it is a pure string check, not a semantic one, so pasting the block above
 verbatim is what makes a dispatch pass, not merely following its intent:
 
 1. `Commit your own work with /commit` OR `Stage your changes but do NOT commit` OR `Leave all
    changes unstaged` (the three `<STAGING_LINE>` variants above). The first combined with
    `READ-ONLY DISPATCH` is rejected: a read-only dispatch never commits.
 2. `run_in_background` AND `FORBIDDEN` both present (covered by the orphan-check paragraph's
-   `run_in_background` sentence in the block above - static, unconditional, never trim it out).
+   `run_in_background` sentence in the block above - static, unconditional, never trim it out),
+   AND either the auto-background paragraph's opening phrase `The harness auto-backgrounds any
+   command past 120 seconds` (a real paste of the block) OR the compact read-the-file shape: the
+   literal `builder-preamble.md` plus the literal `VERBATIM` (what `skills/mega-todos/build-dispatch.ps1`
+   emits). A one-line "run_in_background is FORBIDDEN" paraphrase fails this: on 2026-10-13 one such
+   paraphrase left a builder parked about 45 minutes and 410k tokens on its own auto-backgrounded
+   command, because the paragraph saying what to do then was the part left out. The phrase is the
+   first sentence of that paragraph, so keep it stable if the paragraph is reworded.
 3. `.for_bepy/screenshots/` OR the literal line `READ-ONLY DISPATCH`.
 
 `/mega-todos`'s per-builder `COMMIT_MODE` follows its own injected commit block in
