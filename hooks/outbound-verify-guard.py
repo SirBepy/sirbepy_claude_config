@@ -48,7 +48,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, basename, tokenize_command
+    from _hooklib import read_payload, deny, basename, strip_quotes, tokenize_command
     from _outbound_verify_transcript import (
         MIN_PROSE_CHARS,
         REQUIRED_PASSES,
@@ -72,7 +72,15 @@ GITHUB_TOOL_RE = re.compile(r"^mcp__.*github.*__(?!get_|list_|search_)\w*(pull_r
 # Creating something or commenting always carries text; an update may only move state.
 MCP_REQUIRES_PROSE_RE = re.compile(r"stories-create(-comment)?$|create_issue|issue.?create|comment|create_pull_request$", re.IGNORECASE)
 
-SHORTCUT_URL_RE = re.compile(r"api\.app\.shortcut\.com/api/v3/stories(?P<rest>(?:/[\w-]+)*)", re.IGNORECASE)
+# A path segment may be a literal id or an unexpanded shell variable (`$id`, `${id}`,
+# `$($s.id)`): the hook reads the command string before the shell expands it, and a segment
+# that stopped at `$` would leave `rest` empty, the shape of a bare `POST /stories` create.
+SHORTCUT_URL_RE = re.compile(
+    r"api\.app\.shortcut\.com/api/v3/stories"
+    r"(?P<rest>(?:/(?:[\w.~%-]|\$\{[^}\s\"']*\}|\$\([^)\"']*\)|\$)+)*)",
+    re.IGNORECASE,
+)
+SHORTCUT_COMMENTS_RE = re.compile(r"/[^/]+/comments/?")
 LINEAR_URL_RE = re.compile(r"api\.linear\.app/graphql", re.IGNORECASE)
 LINEAR_REQUIRES_RE = re.compile(r"\b(issueCreate|commentCreate)\b")
 LINEAR_GATED_RE = re.compile(r"\b(issueCreate|commentCreate|issueUpdate|commentUpdate)\b")
@@ -91,6 +99,17 @@ WRITE_VERB_RE = re.compile(
 )
 DATA_FLAG_RE = re.compile(r"(?:^|\s)(?:-d\b|--data(?:-raw|-binary|-urlencode)?\b|--json\b)", re.IGNORECASE)
 GET_FLAG_RE = re.compile(r"(?:^|\s)(?:-G\b|--get\b)", re.IGNORECASE)
+# One argv token that is a curl data flag: `-d`, a short cluster like `-sd`, an attached value
+# like `-d{...}` / `-d@file`, or a long form. The cluster is capped at 4 letters before the d
+# so PowerShell's `-Method` / `-Header` never read as `-d`.
+DATA_TOKEN_RE = re.compile(
+    r"-[A-Za-z]{0,4}[dD](?![A-Za-z])|--(?:data(?:-raw|-binary|-urlencode|-ascii)?|json)(?:=|$)",
+)
+# Commands whose `-d` means something other than an HTTP body (delimiter, delete, date).
+NON_HTTP_COMMANDS = {"cut", "tr", "sort", "uniq", "date", "head", "tail", "grep", "egrep", "fgrep", "du", "wc", "ls", "tee"}
+# Words that precede the real command in a segment without being it.
+COMMAND_PREFIX_WORDS = {"do", "then", "else", "elif", "if", "while", "until", "time", "!", "{", "command", "sudo", "nohup", "exec", "env"}
+SHELL_PUNCT = set("();&|<>")
 
 PROSE_KV_RE = re.compile(
     r"[\"']?\b(?:name|description|text|title|body)\b[\"']?\s*[:=]\s*"
@@ -298,10 +317,55 @@ def detect_gh_api(args: list, cwd: str | None) -> Outbound | None:
     return Outbound(f"gh api {method} {endpoint}", values, requires, found)
 
 
-def is_http_write(command: str) -> bool:
+def shell_segments(command: str, posix: bool) -> list | None:
+    """The command's tokens grouped per simple command, split on ; | & ( ) < > even when they
+    touch a word (`$s|python`, `done;`), which a plain shlex split leaves glued on. None when
+    the quoting does not parse."""
+    lex = shlex.shlex(command, posix=posix, punctuation_chars=True)
+    lex.whitespace_split = True
+    lex.commenters = ""
+    try:
+        tokens = list(lex)
+    except ValueError:
+        return None
+    segments: list = [[]]
+    for tok in tokens:
+        if tok and all(c in SHELL_PUNCT for c in tok):
+            segments.append([])
+        else:
+            segments[-1].append(strip_quotes(tok) if not posix else tok)
+    return segments
+
+
+def segment_has_data_flag(segment: list) -> bool:
+    k = 0
+    while k < len(segment) and (re.match(r"\w+=", segment[k]) or segment[k] in COMMAND_PREFIX_WORDS):
+        k += 1
+    if k >= len(segment) or basename(segment[k]) in NON_HTTP_COMMANDS:
+        return False
+    for tok in segment[k + 1:]:
+        if DATA_TOKEN_RE.match(tok):
+            return True
+        # A nested shell string (`bash -c "curl -d ..."`) is one token holding its own flags.
+        if re.search(r"\s", tok) and DATA_FLAG_RE.search(tok):
+            return True
+    return False
+
+
+def has_http_data_flag(command: str, posix: bool) -> bool:
+    """Whether some command in the string carries a curl-style data flag. Tested per command
+    rather than on the whole string: `cut -d=` and `tr -d` in a token-extraction pipeline are
+    not request bodies. An unparseable string falls back to the whole-string match."""
+    segments = shell_segments(command, posix)
+    if segments is None:
+        return bool(DATA_FLAG_RE.search(command))
+    return any(segment_has_data_flag(s) for s in segments)
+
+
+def is_http_write(command: str, posix: bool = True) -> bool:
     if WRITE_VERB_RE.search(command):
         return True
-    return bool(DATA_FLAG_RE.search(command)) and not GET_FLAG_RE.search(command)
+    return has_http_data_flag(command, posix) and not GET_FLAG_RE.search(command)
 
 
 def rest_prose(command: str, tokens: list, cwd: str | None) -> tuple:
@@ -315,25 +379,34 @@ def rest_prose(command: str, tokens: list, cwd: str | None) -> tuple:
     for body in flag_values(tokens, ("-Body", "-body")):
         found = prose_from_body(body, values) or found
     for path in flag_values(tokens, ("-InFile", "-infile")):
-        found = prose_from_body(read_file(path, cwd), values) or found
+        # PowerShell statement punctuation stays glued to an unquoted path token.
+        found = prose_from_body(read_file(path.rstrip(";,)"), cwd), values) or found
     # A PowerShell hashtable piped through ConvertTo-Json never surfaces as a -Body literal.
     if not found:
         found = regex_prose(command, values)
     return values, found
 
 
-def detect_rest(command: str, tokens: list, cwd: str | None) -> Outbound | None:
+def shortcut_requires_prose(command: str, match: re.Match) -> bool:
+    rest = match.group("rest")
+    if rest == "" or SHORTCUT_COMMENTS_RE.fullmatch(rest):
+        return True
+    # A variable the segment pattern could not swallow whole (a nested `$(...)`, a `$(` with
+    # a space inside) leaves a tail that may hide `/comments`; unknown reads as gated.
+    return rest.endswith("$") or command[match.end():match.end() + 1] in ("(", "{")
+
+
+def detect_rest(command: str, tokens: list, cwd: str | None, posix: bool = True) -> Outbound | None:
     shortcut = SHORTCUT_URL_RE.search(command)
     linear = LINEAR_URL_RE.search(command)
     github = GITHUB_URL_RE.search(command)
     if not (shortcut or linear or github):
         return None
-    if not is_http_write(command):
+    if not is_http_write(command, posix):
         return None
 
     if shortcut:
-        rest = shortcut.group("rest")
-        requires = rest == "" or bool(re.fullmatch(r"/\d+/comments", rest))
+        requires = shortcut_requires_prose(command, shortcut)
         label = "Shortcut REST write"
     elif linear:
         if not LINEAR_GATED_RE.search(command):
@@ -366,7 +439,7 @@ def detect_shell(command: str, cwd: str | None, posix: bool) -> Outbound | None:
             hit = None
         if hit:
             return hit
-    return detect_rest(command, tokens, cwd)
+    return detect_rest(command, tokens, cwd, posix)
 
 
 def detect(tool_name: str, tool_input: dict, cwd: str | None) -> Outbound | None:
