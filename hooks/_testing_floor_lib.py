@@ -359,9 +359,82 @@ def detect_stack(root: Path):
         # false failure, not a missed check.
         is_placeholder = "no test specified" in test_script.lower()
         if test_script and not is_placeholder:
-            matches.append(("node", [npm_cmd(root), "test"]))
+            if _node_package_opted_out(root, pkg):
+                # The package's own `test` needs a live server (a bot e2e
+                # suite), so it is not a per-turn fast check. Edited JS files
+                # still get a syntax check instead of going unverified.
+                matches.append(("node syntax", []))
+            else:
+                matches.append(("node", [npm_cmd(root), "test"]))
 
     return matches
+
+
+# Package.json key that opts a package out of the `npm test` fast check.
+NODE_OPT_OUT_KEY = "testing-floor"
+NODE_OPT_OUT_VALUE = "skip"
+# Directory name that marks a server-backed e2e package without a marker.
+NODE_E2E_DIR_NAME = "e2e"
+NODE_SYNTAX_SUFFIXES = (".js", ".mjs", ".cjs")
+
+
+def _node_package_opted_out(root: Path, pkg: dict) -> bool:
+    marker = pkg.get(NODE_OPT_OUT_KEY)
+    if isinstance(marker, str) and marker.strip().lower() == NODE_OPT_OUT_VALUE:
+        return True
+    return root.name.lower() == NODE_E2E_DIR_NAME
+
+
+def build_node_syntax_commands(root: Path, paths):
+    """One `node --check <file>` per edited .js/.mjs/.cjs path that still
+    exists (a deleted file has nothing to parse), deduped, order preserved.
+    Relative entries resolve against `root`. node_modules paths are skipped:
+    they are not the dev's edits."""
+    commands = []
+    seen = set()
+    for raw in paths or []:
+        if not raw or not str(raw).lower().endswith(NODE_SYNTAX_SUFFIXES):
+            continue
+        p = Path(raw)
+        if not p.is_absolute():
+            p = root / p
+        if "node_modules" in p.parts or not p.is_file():
+            continue
+        key = str(p)
+        if key in seen:
+            continue
+        seen.add(key)
+        commands.append(["node", "--check", key])
+    return commands
+
+
+def run_node_syntax_check(root: Path, timeout: int, runner, paths):
+    """`node --check` over this turn's edited JS files: the fallback for a
+    package whose own `npm test` is opted out. ok only when every file
+    parses; no edited JS files is a pass, not a failure."""
+    commands = build_node_syntax_commands(root, paths)
+    if not commands:
+        return True, "node syntax: package opted out of npm test and no edited .js/.mjs/.cjs files; nothing to verify"
+
+    ok_all = True
+    summaries = []
+    for argv in commands:
+        target = argv[-1]
+        try:
+            proc = runner(argv, cwd=str(root), capture_output=True, text=True, timeout=timeout)
+        except FileNotFoundError as e:
+            summaries.append(f"node syntax ({target}): node not found ({e}); nothing to verify")
+            continue
+        except subprocess.TimeoutExpired:
+            summaries.append(f"node syntax ({target}): timed out after {timeout}s; not verified")
+            continue
+        if proc.returncode == 0:
+            summaries.append(f"node syntax ({target}) passed")
+        else:
+            ok_all = False
+            output = "\n".join(s for s in (proc.stdout, proc.stderr) if s)
+            summaries.append(f"node syntax ({target}) failed (exit {proc.returncode}): ...{output.strip()[-800:]}")
+    return ok_all, " | ".join(summaries)
 
 
 def _scripts_repo_self_test(py_path: Path):
@@ -485,6 +558,9 @@ def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner, pa
     if label == "scripts repo":
         return run_scripts_repo_check(root, timeout, runner, paths)
 
+    if label == "node syntax":
+        return run_node_syntax_check(root, timeout, runner, paths)
+
     launch_argv = resolve_launcher(argv)
     if label == "node":
         bash_exe = resolve_bash()
@@ -523,7 +599,38 @@ def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner, pa
     return ok, f"{label} check {verdict} (exit {proc.returncode}): ...{tail}"
 
 
-def sweep_node_orphans() -> None:
+def list_node_runner_processes() -> "dict[int, str] | None":
+    """{pid: command line} of every node.exe on the machine whose command line
+    mentions vitest, turbo or tinypool; None when the listing itself failed
+    (callers must treat None as "cannot prove anything", never as "empty").
+    """
+    try:
+        proc = subprocess.run(
+            [
+                "powershell", "-NoProfile", "-Command",
+                "$r = @(Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | "
+                "Where-Object { $_.CommandLine -match 'vitest|turbo|tinypool' } | "
+                "ForEach-Object { [pscustomobject]@{ pid = [int]$_.ProcessId; cmd = [string]$_.CommandLine } }); "
+                "ConvertTo-Json -InputObject $r -Compress",
+            ],
+            capture_output=True, text=True, timeout=15,
+        )
+        if proc.returncode != 0:
+            return None
+        text = proc.stdout.strip()
+        rows = json.loads(text) if text else []
+        if isinstance(rows, dict):
+            rows = [rows]
+        return {int(r["pid"]): str(r.get("cmd") or "") for r in rows}
+    except Exception:
+        return None
+
+
+def _norm_path(text: str) -> str:
+    return text.lower().replace("/", "\\")
+
+
+def sweep_node_orphans(before=None, root=None, lister=None, killer=None) -> None:
     """Best-effort orphan sweep after a Node-based check run (process-hygiene
     doctrine's Layer 3). Deliberately does not append concurrency flags to
     the detected `npm test` (etc.) invocation itself - the underlying script
@@ -531,17 +638,42 @@ def sweep_node_orphans() -> None:
     blindly-injected flag can break an invocation that a real Node runner
     would have accepted as-is. This sweep is the safety net instead. Must
     never raise: a failure here is not a check failure.
+
+    Ownership: a matching process is killed only when it did not exist in
+    `before` (the pid snapshot taken ahead of the check) AND its command line
+    names `root`. The machine also runs other sessions' vitest and turbo, and
+    a backgrounded run of this session; a name-only match killed those
+    mid-suite with exit -1. A missing snapshot or root means ownership cannot
+    be proven, so nothing is killed. `lister` and `killer` are test seams.
     """
     try:
-        subprocess.run(
-            [
-                "powershell", "-NoProfile", "-Command",
-                "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | "
-                "Where-Object { $_.CommandLine -match 'vitest|turbo|tinypool' } | "
-                "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
-            ],
-            capture_output=True, text=True, timeout=15,
-        )
+        if before is None or root is None:
+            return
+        after = (lister or list_node_runner_processes)()
+        if after is None:
+            return
+        root_forms = {_norm_path(str(root))}
+        try:
+            root_forms.add(_norm_path(str(Path(root).resolve())))
+        except OSError:
+            pass
+        for pid, cmd in after.items():
+            if pid in before:
+                continue
+            norm_cmd = _norm_path(cmd)
+            if not any(form in norm_cmd for form in root_forms):
+                continue
+            try:
+                if killer is not None:
+                    killer(pid)
+                else:
+                    subprocess.run(
+                        ["powershell", "-NoProfile", "-Command",
+                         f"Stop-Process -Id {int(pid)} -Force -ErrorAction SilentlyContinue"],
+                        capture_output=True, text=True, timeout=15,
+                    )
+            except Exception:
+                pass
     except Exception:
         pass
 
@@ -584,14 +716,18 @@ def run_checks(root: Path, timeout: int = DEFAULT_TIMEOUT_SECONDS, runner=subpro
     if not stacks:
         return True, f"no recognised fast-check stack detected under {root}; nothing to verify"
 
+    has_node = any(label == "node" for label, _argv in stacks)
+    # Snapshot before the check so the sweep can tell its own children from
+    # runs that were already alive.
+    node_before = list_node_runner_processes() if has_node else None
     results = [
         run_stack_check(label, argv, root, timeout, runner, paths=paths, resolve_bash=resolve_bash)
         for label, argv in stacks
     ]
     ok = all(stack_ok for stack_ok, _summary in results)
     summary = " | ".join(stack_summary for _ok, stack_summary in results)
-    if any(label == "node" for label, _argv in stacks):
-        sweep_node_orphans()
+    if has_node:
+        sweep_node_orphans(before=node_before, root=root)
     return ok, summary
 
 

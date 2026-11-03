@@ -23,6 +23,7 @@ Run directly: python hooks/test_testing_floor_guard.py
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -585,6 +586,85 @@ def node_test_script_checks() -> list:
     return fails
 
 
+def node_opt_out_checks() -> list:
+    """A package with a server-backed `npm test` (mc_plugins_tag's e2e/ bot
+    suite) must not run as a per-turn fast check, but a syntax error in an
+    edited .mjs there must still fail the floor."""
+    fails = []
+    lib = _testlib.load_module("testing_floor_lib_for_node_opt_out", _HOOKS_DIR / "_testing_floor_lib.py")
+    real_test = {"scripts": {"test": "node run-all.mjs"}}
+
+    def labels(root):
+        return [label for label, _argv in lib.detect_stack(root)]
+
+    def check(name, ok):
+        print(f"[{'PASS' if ok else 'FAIL'}] node opt-out: {name}")
+        if not ok:
+            fails.append(f"node opt-out: {name}")
+
+    with tempfile.TemporaryDirectory(prefix="testing-floor-optout-") as tmp:
+        root = Path(tmp)
+        (root / "package.json").write_text(json.dumps({**real_test, "testing-floor": "skip"}), encoding="utf-8")
+        got = labels(root)
+        check(f"marker skips the node row and falls back to the syntax row -> {got!r}", got == ["node syntax"])
+
+    with tempfile.TemporaryDirectory(prefix="testing-floor-optout-") as tmp:
+        e2e = Path(tmp) / "e2e"
+        e2e.mkdir()
+        (e2e / "package.json").write_text(json.dumps(real_test), encoding="utf-8")
+        got = labels(e2e)
+        check(f"a package in a directory named e2e is skipped without a marker -> {got!r}", got == ["node syntax"])
+
+    # Negative: any other marker value, and an ordinary directory, still run npm test.
+    for pkg, dirname, label in [
+        ({**real_test, "testing-floor": "run"}, "app", "a marker value other than skip"),
+        ({**real_test, "testing-floor": True}, "app", "a non-string marker"),
+        (real_test, "app", "no marker in an ordinary directory"),
+        (real_test, "e2e-helpers", "a directory merely starting with e2e"),
+    ]:
+        with tempfile.TemporaryDirectory(prefix="testing-floor-optout-") as tmp:
+            root = Path(tmp) / dirname
+            root.mkdir()
+            (root / "package.json").write_text(json.dumps(pkg), encoding="utf-8")
+            got = labels(root)
+            check(f"{label} keeps the node row -> {got!r}", got == ["node"])
+
+    with tempfile.TemporaryDirectory(prefix="testing-floor-optout-") as tmp:
+        root = Path(tmp)
+        (root / "package.json").write_text(json.dumps({**real_test, "testing-floor": "skip"}), encoding="utf-8")
+        (root / "good.mjs").write_text("export const a = 1;\n", encoding="utf-8")
+        (root / "bad.mjs").write_text("export const = ;\n", encoding="utf-8")
+        (root / "notes.md").write_text("not js\n", encoding="utf-8")
+
+        calls = []
+
+        def recording_runner(argv, **kwargs):
+            calls.append(list(argv))
+            return type("P", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+        ok, summary = lib.run_checks(root, runner=recording_runner, paths=["good.mjs", "notes.md", "gone.mjs", "node_modules/x/y.js"])
+        only_node_check = len(calls) == 1 and calls[0][:2] == ["node", "--check"] and calls[0][2].endswith("good.mjs")
+        check(f"edited existing JS gets one node --check and npm test never runs -> calls={calls!r}", ok and only_node_check)
+
+        calls.clear()
+        ok, summary = lib.run_checks(root, runner=recording_runner, paths=["notes.md"])
+        check(f"no edited JS means nothing runs and the turn passes -> calls={calls!r}", ok and calls == [])
+
+        calls.clear()
+        ok, summary = lib.run_checks(root, runner=recording_runner, paths=[])
+        check("an empty path list passes without running anything", ok and calls == [])
+
+        if shutil.which("node"):
+            ok, summary = lib.run_checks(root, paths=["good.mjs"])
+            check(f"real node accepts a valid edited .mjs -> {summary[-80:]!r}", ok)
+            ok, summary = lib.run_checks(root, paths=["good.mjs", "bad.mjs"])
+            check(f"real node still fails a syntax error in an edited .mjs -> ok={ok}", (not ok) and "bad.mjs" in summary)
+        else:
+            print("[SKIP] node opt-out: node not on PATH, real syntax-error case not run")
+
+    return fails
+
+
 def _write_transcript(path: Path, entries: list) -> None:
     path.write_text("\n".join(json.dumps(e) for e in entries) + "\n", encoding="utf-8")
 
@@ -678,6 +758,122 @@ def background_agent_checks() -> list:
             check(label, (got is not None) == expect_block, got)
             if not expect_block:
                 check("deferral keeps the flag for the next turn", flag.is_file(), flag.is_file())
+    return fails
+
+
+def _status_entries(*statuses, user_text="iterate the design") -> list:
+    """A turn: one real user entry, then one report_turn_status call per
+    status in order (the shape iter_turn_tool_uses reads)."""
+    entries = [{"type": "user", "message": {"content": user_text}}]
+    for i, status in enumerate(statuses):
+        entries.append({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": f"toolu_S{i}",
+             "name": "mcp__cc_conductor__report_turn_status", "input": {"status": status}},
+        ]}})
+    return entries
+
+
+def question_status_checks() -> list:
+    """A turn that ends on report_turn_status "question" waits on the dev's
+    answer, so the gate lets it through without running checks or spending a
+    retry attempt, and keeps the flag so the next non-question turn checks."""
+    fails = []
+
+    def check(label, ok, detail):
+        print(f"[{'PASS' if ok else 'FAIL'}] question status: {label} -> {detail}")
+        if not ok:
+            fails.append(f"question status: {label}")
+
+    def fresh_flag(tmp_path, name):
+        state_dir = tmp_path / name
+        state_dir.mkdir(exist_ok=True)
+        flag = state_dir / "s1"
+        flag.write_text(json.dumps({"attempts": 0, "root": str(tmp_path), "paths": []}), encoding="utf-8")
+        return state_dir, flag
+
+    def evaluate(tmp_path, state_dir, transcript, run_fn, **extra):
+        payload = {"session_id": "s1"}
+        if transcript is not None:
+            payload["transcript_path"] = str(transcript)
+        return guard.evaluate(
+            payload, state_dir=state_dir, skip_flag_path=tmp_path / "no-skip",
+            cap=3, run_checks_fn=run_fn, env={}, **extra,
+        )
+
+    with tempfile.TemporaryDirectory(prefix="testing-floor-question-") as tmp:
+        tmp_path = Path(tmp)
+        ran = []
+
+        def spying_failing_checks(root, **kwargs):
+            ran.append(root)
+            return (False, "stubbed summary")
+
+        cases = {
+            "question": _status_entries("question"),
+            "done": _status_entries("done"),
+            "done then question": _status_entries("done", "question"),
+            "question then done": _status_entries("question", "done"),
+            "no status": _status_entries(),
+            "uppercase question": _status_entries(" Question "),
+        }
+        paths = {}
+        for name, entries in cases.items():
+            paths[name] = tmp_path / (name.replace(" ", "_") + ".jsonl")
+            _write_transcript(paths[name], entries)
+
+        for name, expect_block in (
+            ("question", False),
+            ("done", True),
+            ("done then question", False),
+            ("question then done", True),
+            ("no status", True),
+            ("uppercase question", False),
+        ):
+            state_dir, flag = fresh_flag(tmp_path, "s-" + name.replace(" ", "_"))
+            ran.clear()
+            got = evaluate(tmp_path, state_dir, paths[name], spying_failing_checks)
+            check(f"transcript {name!r} blocks={expect_block}", (got is not None) == expect_block, got)
+            if not expect_block:
+                check(f"{name!r}: checks were not run", ran == [], ran)
+                attempts = json.loads(flag.read_text(encoding="utf-8")).get("attempts")
+                check(f"{name!r}: no retry attempt spent", attempts == 0, attempts)
+                check(f"{name!r}: flag kept for the next turn", flag.is_file(), flag.is_file())
+
+        # A question from an EARLIER turn does not exempt this turn: only
+        # statuses after the latest real user entry count.
+        stale = tmp_path / "stale.jsonl"
+        _write_transcript(stale, _status_entries("question") + [
+            {"type": "user", "message": {"content": "looks good, wire it up"}},
+        ])
+        state_dir, _ = fresh_flag(tmp_path, "s-stale")
+        got = evaluate(tmp_path, state_dir, stale, fake_run_checks(False))
+        check("a question from a previous turn does not exempt this one", got is not None, got)
+
+        # Garbage and missing transcripts behave exactly as before: checks run.
+        garbage = tmp_path / "garbage.jsonl"
+        garbage.write_bytes(b"\xff\xfe not json at all\n{{{\n")
+        for label, transcript in (("garbage", garbage), ("missing", tmp_path / "nope.jsonl"), ("absent", None)):
+            state_dir, _ = fresh_flag(tmp_path, "s-" + label)
+            got = evaluate(tmp_path, state_dir, transcript, fake_run_checks(False))
+            check(f"{label} transcript still blocks like before", got is not None, got)
+
+        # The status reader raising must fail open to the old behaviour.
+        def boom(_path):
+            raise RuntimeError("stubbed status failure")
+
+        state_dir, _ = fresh_flag(tmp_path, "s-boom")
+        got = evaluate(tmp_path, state_dir, paths["question"], fake_run_checks(False), status_fn=boom)
+        check("a raising status_fn falls back to running the checks", got is not None, got)
+
+        # Seam: status_fn alone decides, no transcript needed.
+        state_dir, _ = fresh_flag(tmp_path, "s-seam")
+        got = evaluate(tmp_path, state_dir, paths["done"], fake_run_checks(False), status_fn=lambda _p: "question")
+        check("status_fn=question allows the turn", got is None, got)
+
+        # The skip-flag/env escape hatches and the pass path are untouched.
+        state_dir, flag = fresh_flag(tmp_path, "s-pass")
+        got = evaluate(tmp_path, state_dir, paths["done"], fake_run_checks(True))
+        check("passing checks still clear the flag on a done turn", got is None and not flag.exists(), got)
     return fails
 
 
@@ -868,6 +1064,105 @@ def infra_failure_checks() -> list:
     return fails
 
 
+def node_sweep_ownership_checks() -> list:
+    """The node orphan sweep killed every vitest/turbo/tinypool on the machine
+    (cueline 2026-10-08: a backgrounded vitest died mid-suite with exit -1).
+    It may only kill processes that appeared during its own check AND name the
+    check root. Real node canaries stand in for vitest: their command line
+    carries the matched words as inert extra arguments."""
+    import shutil
+    import time
+
+    fails = []
+    lib = _testlib.load_module("testing_floor_lib_for_sweep_test", _HOOKS_DIR / "_testing_floor_lib.py")
+    node = shutil.which("node")
+    if not node:
+        print("[SKIP] sweep: node not on PATH")
+        return fails
+
+    def check(label, good):
+        print(f"[{'PASS' if good else 'FAIL'}] sweep: {label}")
+        if not good:
+            fails.append(f"sweep: {label}")
+
+    def spawn(*extra):
+        return subprocess.Popen(
+            [node, "-e", "setTimeout(()=>{},60000)", *extra],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+
+    def alive(p):
+        return p.poll() is None
+
+    def wait_listed(pids, timeout=15.0):
+        # Win32_Process can lag a freshly spawned process by a moment.
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            seen = lib.list_node_runner_processes() or {}
+            if all(pid in seen for pid in pids):
+                return seen
+            time.sleep(0.3)
+        return lib.list_node_runner_processes() or {}
+
+    with tempfile.TemporaryDirectory(prefix="testing-floor-sweep-") as tmp:
+        root = Path(tmp)
+        procs = []
+        try:
+            old_same_root = spawn("vitest-canary", "tinypool-canary", str(root / "node_modules" / "vitest"))
+            old_other_root = spawn("vitest-canary", "C:\\elsewhere\\node_modules\\vitest")
+            procs += [old_same_root, old_other_root]
+            wait_listed([old_same_root.pid, old_other_root.pid])
+            before = lib.list_node_runner_processes()
+            check("snapshot lists the pre-existing canaries",
+                  before is not None and old_same_root.pid in before and old_other_root.pid in before)
+
+            # Spawned after the snapshot: one names the root (the check's own
+            # child), one names another repo (a peer session's fresh run).
+            new_same_root = spawn("vitest-canary", str(root / "node_modules" / "tinypool"))
+            new_other_root = spawn("vitest-canary", "C:\\elsewhere\\node_modules\\vitest")
+            procs += [new_same_root, new_other_root]
+            wait_listed([new_same_root.pid, new_other_root.pid])
+
+            lib.sweep_node_orphans(before=before, root=root)
+            for _ in range(30):
+                if not alive(new_same_root):
+                    break
+                time.sleep(0.2)
+
+            check("a process that predates the check survives, even naming the root", alive(old_same_root))
+            check("a pre-existing process for another repo survives", alive(old_other_root))
+            check("a new process naming another repo survives", alive(new_other_root))
+            check("a new process naming the check root is cleaned up", not alive(new_same_root))
+
+            # Fail-safe: without a snapshot or root, ownership is unprovable.
+            survivor = spawn("vitest-canary", str(root / "node_modules" / "vitest"))
+            procs.append(survivor)
+            wait_listed([survivor.pid])
+            lib.sweep_node_orphans(before=None, root=root)
+            lib.sweep_node_orphans(before=before, root=None)
+            time.sleep(0.5)
+            check("no snapshot or no root kills nothing", alive(survivor))
+        finally:
+            for p in procs:
+                if p.poll() is None:
+                    p.kill()
+                p.wait()
+
+    # Seam-level negatives: must never raise, and an unavailable listing kills nothing.
+    killed = []
+    lib.sweep_node_orphans(before={}, root=Path("."), lister=lambda: None, killer=killed.append)
+    check("a failed process listing kills nothing", killed == [])
+
+    def boom():
+        raise OSError("listing exploded")
+    try:
+        lib.sweep_node_orphans(before={}, root=Path("."), lister=boom, killer=killed.append)
+        check("a raising lister never propagates", True)
+    except Exception:
+        check("a raising lister never propagates", False)
+    return fails
+
+
 def _guarded(fn):
     def _run():
         try:
@@ -886,10 +1181,13 @@ def run() -> int:
         + dual_stack_checks()
         + scripts_repo_targeting_checks()
         + node_test_script_checks()
+        + _guarded(node_opt_out_checks)()
         + _guarded(background_agent_checks)()
+        + _guarded(question_status_checks)()
         + _guarded(launcher_resolution_checks)()
         + _guarded(git_bash_launcher_checks)()
         + _guarded(infra_failure_checks)()
+        + _guarded(node_sweep_ownership_checks)()
     )
     return _testlib.summarize(fails)
 

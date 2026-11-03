@@ -33,6 +33,12 @@ source file. A prose-only turn, a read-only turn, or a turn that only
 touched a config/doc file therefore never even reaches the check-running
 code below.
 
+Question exemption: a turn whose last report_turn_status (read from the
+payload's own transcript) is "question" is waiting on the dev, not claiming
+done, so it ends without running checks or spending an attempt; the flag is
+kept and the next non-question turn is checked. An unreadable transcript or a
+failing reader means no exemption.
+
 Subagent exclusion: never fires when the payload carries `agent_id` (reuses
 agent-todo-write-guard.py's own `is_agent_call` test, per this dispatch's
 instruction to reuse rather than reinvent it). A dispatched builder has its
@@ -62,7 +68,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload
+    from _hooklib import iter_turn_tool_uses, read_payload
     from _testing_floor_lib import (
         ESCAPE_ENV_VAR,
         clear_state,
@@ -80,6 +86,27 @@ except Exception as e:
     sys.exit(0)
 
 
+def last_turn_status(transcript_path: str) -> str | None:
+    """The status argument of this turn's LAST report_turn_status call,
+    lower-cased, or None when the turn made none or the transcript cannot be
+    read. Same turn scoping as send-message-stop-guard.py: only tool calls
+    after the latest real user entry count, so an earlier turn's "question"
+    never exempts a later turn. Any parse trouble reads as None, which
+    leaves the gate behaving exactly as it did before this reader existed.
+    """
+    if not transcript_path:
+        return None
+    try:
+        status = None
+        for name, tool_input in iter_turn_tool_uses(transcript_path):
+            if name.rsplit("__", 1)[-1] == "report_turn_status" and isinstance(tool_input, dict):
+                value = tool_input.get("status")
+                status = value.strip().lower() if isinstance(value, str) else None
+        return status
+    except Exception:
+        return None
+
+
 def evaluate(
     payload: dict,
     *,
@@ -89,6 +116,7 @@ def evaluate(
     run_checks_fn=run_checks,
     env: dict | None = None,
     running_agents_fn=running_background_agents,
+    status_fn=last_turn_status,
 ):
     """Pure decision core: returns a dict to print+block on, or None to
     allow the turn to end silently. Every dependency (state dir, skip-flag
@@ -118,6 +146,20 @@ def evaluate(
         # Activation gate: testing-floor-flag.py never marked this session
         # dirty, so this turn touched no recognised source file (or hasn't
         # yet). Nothing to verify.
+        return None
+
+    # A turn that ends on report_turn_status "question" is waiting on the dev
+    # (a design iteration whose tests are knowingly red until he approves
+    # the design), so it is not a "done" claim to verify. Allowed without
+    # running checks or spending an attempt, and the flag stays so the next
+    # turn that does not end on a question is checked as usual. Keyed to the
+    # payload's own transcript only, never a shared marker, so a concurrent
+    # session's floor is unaffected.
+    try:
+        turn_status = status_fn(payload.get("transcript_path") or "")
+    except Exception:
+        turn_status = None
+    if turn_status == "question":
         return None
 
     state = read_state(flag_path)
