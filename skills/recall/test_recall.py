@@ -351,6 +351,19 @@ def main():
               "a value under a label in CRLF text is redacted and the line endings are kept")
         check(fake not in recall.redact(f"Password:\n``` text\n{fake}\n```"),
               "a value inside a fence whose info string follows a space is redacted")
+        for opener in ("``` python title", "```python title=\"a.py\" {1,3}", "~~~ text more words", ">   ```  bash   extra"):
+            check(fake not in recall.redact(f"Password:\n{opener}\n{fake}\n```"),
+                  f"a value inside a fence with a multi-word info string ({opener.strip()}) is redacted")
+        check(recall.redact(f"Password:\n``` python title\n{fake}\n```")
+              == "Password:\n``` python title\n[REDACTED:labelled_password]\n```",
+              "a multi-word info string fence opener is kept and only the value line is redacted")
+        repeated = recall.redact(f"Password:\nPassword:\n{fake}")
+        check(fake not in repeated and "[REDACTED:labelled_password]" in repeated,
+              "a repeated label line does not consume the redaction, the real value under it is redacted")
+        check(recall.redact(f"Password:\nPassword:\n\n{fake}\nnext") == "Password:\nPassword:\n\n[REDACTED:labelled_password]\nnext",
+              "a repeated label with a blank line before the value still redacts the value")
+        check(fake not in recall.redact(f"Password:\n```{fake}```"),
+              "an inline triple-backtick value after a label is not mistaken for a fence opener")
         prose = recall.redact("Password:\nthis next line is ordinary prose")
         check(prose == "Password:\nthis next line is ordinary prose", "prose with spaces after a label stays intact")
         unlabelled = recall.redact(f"Log in here\n\n> {fake}")

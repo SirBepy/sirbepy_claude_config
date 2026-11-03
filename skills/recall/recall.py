@@ -84,12 +84,16 @@ _SECRETS = None
 
 # Part of every session's index signature: raising it makes the next `update` re-extract
 # sessions already indexed, so a redaction fix also cleans entries written before it.
-REDACTION_VERSION = 4
+REDACTION_VERSION = 5
 # A line ending in a password-ish label, optionally bold, e.g. "**2.** Log in. Password:".
 LABEL_RE = re.compile(r"\b(?:password|passwort|pin|lozinka)\s*(?:\*\*|__)?\s*:\s*(?:\*\*|__)?\s*$", re.I)
 LABELLED_VALUE_MAX = 64
-# CommonMark allows blanks between the fence and its info string ("``` text").
-FENCE_OPEN_RE = re.compile(r"^[\s>]*(?:`{3,}|~{3,})\s*[\w+.-]*\s*$")
+# CommonMark allows any info string after the fence, blanks and several words included
+# ("``` python title=x"). A backtick fence's info string holds no backtick, so an inline
+# "```value```" is not an opener; the tilde branch is held to the same rule so a line is
+# never read as an opener more loosely than a backtick one (a missed opener only
+# over-redacts, a wrongly matched one leaks).
+FENCE_OPEN_RE = re.compile(r"^[\s>]*(?:`{3,}[^`]*|~{3,}[^~]*)$")
 
 
 def redact(text: str) -> str:
@@ -108,7 +112,10 @@ def redact(text: str) -> str:
             core = re.sub(r"^[\s>]+", "", line).strip(" \t`\r")
             # A fence opener carries a language tag ("```text") that would otherwise pass for
             # the value and leave the real one on the next line unredacted.
-            if FENCE_OPEN_RE.match(line):
+            if FENCE_OPEN_RE.match(line.rstrip("\r")):
+                core = ""
+            # A repeated label is not the value; the real one is further down, so keep waiting.
+            if LABEL_RE.search(line):
                 core = ""
             if core:
                 after_label = False
