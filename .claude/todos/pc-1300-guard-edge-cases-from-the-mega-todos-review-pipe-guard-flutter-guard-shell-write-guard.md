@@ -12,6 +12,8 @@ Each of the four gaps is fixed with a test that fails without the fix, or declin
 ## Context
 Reviewer findings, all reproduced by running the hooks except the last (reviewer was a sonnet agent; re-run before acting):
 - `hooks/cargo-test-pipe-guard.py` `find_commit_pathspec_violation` (about line 218) splits on `;`, `&&` and newline BEFORE building the quote mask, so `bash .../commit-pathspec.sh -m "FIX: a; b" f.txt 2>&1 | tail -6` returns no violation; also missed: `|&`, `(bash ...) | tail`, `{ ...; } | tail`, and piping into tee, cat or sed (not in PIPE_FILTERS).
+  Hit for real on 2026-11-03 (rodge repo-move chat): a commit-pathspec.sh call whose `-m` text held a `;` was piped into
+  `grep -v` without pipefail and the guard let it through; the commit happened to succeed, so nothing was lost.
 - `hooks/flutter-workdir-guard.py` (about line 154): the new quote scanner has no backslash or backtick escape handling, so `echo "a\" b"; fvm flutter build` desyncs the mask and the later command is only warned about; `bash -c "cd x; dart run build_runner build ..."` is now allowed where it was denied.
 - `hooks/shell-content-write-guard.py` (about line 277): the hook matches Bash and PowerShell but ignores tool_name, so a PowerShell-tool command that starts with git, bash or sh skips the pwsh pass: `git commit -m "a \" ; Set-Content f x ; echo \""` passes. Contrived, low severity.
 - `hooks/_testing_floor_lib.py` `sweep_node_orphans`: ownership uses the check root as a substring; UNVERIFIED whether the root can fall back to ".", which would match almost any command line and could kill a peer's new vitest.
