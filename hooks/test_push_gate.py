@@ -124,4 +124,54 @@ with tempfile.TemporaryDirectory() as tmp:
         0,
     )
 
+    # A delete-only push uploads no commits, so the code-check/e2e gate has
+    # nothing to check; anything that also sends a commit stays gated. `client`
+    # has an unmarked HEAD, which is the shape that was wrongly denied.
+    allowed = [
+        "git push origin --delete foo",
+        "git push --delete origin foo",
+        "git push origin :foo",
+        "git push -d origin foo",
+        "git push origin --delete foo bar",
+        "git push origin :foo :bar",
+        "git push https://x-access-token:abc@github.com/o/r.git --delete foo",
+        "git push https://github.com/o/r.git :foo",
+        "git push --force origin --delete foo",
+        "git push --delete --repo=origin foo",
+        "git push origin --delete foo 2>&1",
+        f'git -C "{client}" push origin --delete foo',
+        f'cd "{client}" && git push origin --delete foo',
+    ]
+    for cmd in allowed:
+        expect(f"delete-only passes on an unmarked HEAD: {cmd}", call_main(cmd, client), 0)
+
+    denied = [
+        "git push",
+        "git push origin",
+        "git push origin main",
+        "git push origin main :foo",
+        "git push origin :foo main",
+        "git push origin --delete foo main:main",
+        "git push --delete origin",
+        "git push --delete foo",
+        "git push origin :",
+        "git push --all origin :foo",
+        "git push --mirror origin :foo",
+        "git push --tags origin :foo",
+        "git push --follow-tags origin :foo",
+        "git push --force origin main :foo",
+        "git push origin +main :foo",
+        "git push origin +:foo",
+        "git push --delete origin :foo",
+        "git push origin --delete $branch",
+        "git push --unknown-flag origin :foo",
+        "git push origin --delete foo && git push origin main",
+        "git push origin main && git push origin --delete foo",
+        "git push origin --delete foo; git push",
+        "git push origin --delete foo && echo $(git push origin main)",
+        f'git -C "{client}" status && git push origin main',
+    ]
+    for cmd in denied:
+        expect(f"push that sends a commit stays denied: {cmd}", call_main(cmd, client), 2)
+
 sys.exit(_testlib.summarize(fails, style="count"))
