@@ -123,6 +123,12 @@ WARNING_CASES = [
         True,
         "a real bare flutter call via PowerShell still warns about no directory pin",
     ),
+    (
+        "PowerShell",
+        'grep -E "foo|flutter run" f',
+        False,
+        "flutter after a pipe inside a quoted pattern via PowerShell does not warn",
+    ),
 ]
 
 
@@ -153,6 +159,42 @@ CASES = [
         "fvm leading its own chained segment after cd is still denied",
     ),
     ("Bash", "git commit -m 'fix'", 0, "unrelated command via Bash is allowed"),
+    # Chain splitting is quote-aware: a pipe inside a quoted grep -E alternation
+    # is part of the pattern, not a pipeline boundary.
+    (
+        "Bash",
+        'F="out.txt"; sed \'s/\\x1b\\[[0-9;]*[A-Za-z]//g\' "$F" | grep -a -n -E "FILE-|JUnit totals|flutter  " | cut -c1-200',
+        0,
+        "flutter as the last alternative of a quoted grep -E pattern via Bash is allowed",
+    ),
+    ("Bash", 'grep -E "foo|dart run" f', 0, "dart after a quoted pipe via Bash is allowed"),
+    ("Bash", "flutter --version | head -3", 2, "flutter leading a real pipeline via Bash stays denied"),
+    ("Bash", "cat f | flutter analyze", 2, "flutter after an unquoted pipe via Bash stays denied"),
+    (
+        "Bash",
+        'echo "a; b | c" && flutter analyze',
+        2,
+        "a quoted semicolon and pipe do not hide a real flutter after an unquoted separator",
+    ),
+    ("Bash", "echo hi & flutter analyze", 2, "flutter after a single ampersand via Bash stays denied"),
+    (
+        "PowerShell",
+        'grep -E "foo|dart run build_runner build --delete-conflicting-outputs" f',
+        0,
+        "a destructive command named only inside a quoted pattern is not blocked",
+    ),
+    (
+        "PowerShell",
+        'Select-String "a|b" f; dart run build_runner build --delete-conflicting-outputs',
+        2,
+        "an unpinned destructive build_runner after a quoted-pipe segment stays blocked",
+    ),
+    (
+        "PowerShell",
+        "& fvm flutter pub run build_runner build --delete-conflicting-outputs",
+        2,
+        "the PowerShell call operator before fvm still reaches the destructive-flag block",
+    ),
 ]
 
 
