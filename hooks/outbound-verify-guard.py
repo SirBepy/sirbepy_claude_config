@@ -80,7 +80,6 @@ SHORTCUT_URL_RE = re.compile(
     r"(?P<rest>(?:/(?:[\w.~%-]|\$\{[^}\s\"']*\}|\$\([^)\"']*\)|\$)+)*)",
     re.IGNORECASE,
 )
-SHORTCUT_COMMENTS_RE = re.compile(r"/[^/]+/comments/?")
 LINEAR_URL_RE = re.compile(r"api\.linear\.app/graphql", re.IGNORECASE)
 LINEAR_REQUIRES_RE = re.compile(r"\b(issueCreate|commentCreate)\b")
 LINEAR_GATED_RE = re.compile(r"\b(issueCreate|commentCreate|issueUpdate|commentUpdate)\b")
@@ -317,11 +316,50 @@ def detect_gh_api(args: list, cwd: str | None) -> Outbound | None:
     return Outbound(f"gh api {method} {endpoint}", values, requires, found)
 
 
+def newlines_to_separators(command: str, posix: bool) -> str:
+    """An unquoted line break ends a statement just like `;`, but shlex treats it as plain
+    whitespace, so `ls\\ncurl -d ...` would read as one `ls` command and hide the curl's data
+    flag. Quoted newlines (multi-line strings, PowerShell here-strings) are left alone, and an
+    escaped one (`\\` in Bash, a backtick in PowerShell) is a line continuation, i.e. a space."""
+    out: list = []
+    quote = ""
+    escape = "\\" if posix else "`"
+    i, n = 0, len(command)
+    while i < n:
+        c = command[i]
+        if quote:
+            if c == quote:
+                quote = ""
+            elif c == escape and quote == '"' and i + 1 < n:
+                out.append(c)
+                i += 1
+                c = command[i]
+            out.append(c)
+        elif c in "\"'":
+            quote = c
+            out.append(c)
+        elif c == escape and i + 1 < n:
+            if command[i + 1] in "\r\n":
+                i += 2 if command.startswith("\r\n", i + 1) else 1
+                out.append(" ")
+            else:
+                out.append(c + command[i + 1])
+                i += 1
+        elif c in "\r\n":
+            if c == "\r" and command.startswith("\n", i + 1):
+                i += 1
+            out.append(" ; ")
+        else:
+            out.append(c)
+        i += 1
+    return "".join(out)
+
+
 def shell_segments(command: str, posix: bool) -> list | None:
-    """The command's tokens grouped per simple command, split on ; | & ( ) < > even when they
-    touch a word (`$s|python`, `done;`), which a plain shlex split leaves glued on. None when
-    the quoting does not parse."""
-    lex = shlex.shlex(command, posix=posix, punctuation_chars=True)
+    """The command's tokens grouped per simple command, split on ; | & ( ) < > and unquoted
+    line breaks even when they touch a word (`$s|python`, `done;`), which a plain shlex split
+    leaves glued on. None when the quoting does not parse."""
+    lex = shlex.shlex(newlines_to_separators(command, posix), posix=posix, punctuation_chars=True)
     lex.whitespace_split = True
     lex.commenters = ""
     try:
@@ -387,13 +425,61 @@ def rest_prose(command: str, tokens: list, cwd: str | None) -> tuple:
     return values, found
 
 
+URL_PATH_END_CHARS = set(" \t\r\n\"'?#);|&<>")
+CLOSERS = {"(": ")", "{": "}"}
+
+
+def shortcut_path_segments(command: str, start: int) -> list | None:
+    """The URL path after `/stories` split on top-level slashes, scanned from `start` with
+    `$(...)`, `${...}` and backtick spans kept whole (nesting and inner spaces included), since
+    the hook sees the command before the shell expands it. None when an expansion never closes."""
+    segments: list = [""]
+    i, n = start, len(command)
+    while i < n:
+        c = command[i]
+        if c in URL_PATH_END_CHARS:
+            break
+        if c == "$" and i + 1 < n and command[i + 1] in CLOSERS:
+            opener, depth, j = command[i + 1], 1, i + 2
+            while j < n and depth:
+                depth += (command[j] == opener) - (command[j] == CLOSERS[opener])
+                j += 1
+            if depth:
+                return None
+            segments[-1] += command[i:j]
+            i = j
+            continue
+        if c == "`":
+            j = command.find("`", i + 1)
+            if j < 0:
+                return None
+            segments[-1] += command[i:j + 1]
+            i = j + 1
+            continue
+        if c == "/":
+            segments.append("")
+        else:
+            segments[-1] += c
+        i += 1
+    return segments
+
+
 def shortcut_requires_prose(command: str, match: re.Match) -> bool:
-    rest = match.group("rest")
-    if rest == "" or SHORTCUT_COMMENTS_RE.fullmatch(rest):
+    """True when the call may create a story or comment (text required). Unknown reads as
+    gated: only a literal or single-expansion id optionally followed by literal non-comment
+    segments is a known read/update shape."""
+    segments = shortcut_path_segments(command, match.start("rest"))
+    # segments[0] is whatever touches `/stories` before the first slash; a bare create has none.
+    if segments is None or segments[0] != "" or len(segments) < 2:
         return True
-    # A variable the segment pattern could not swallow whole (a nested `$(...)`, a `$(` with
-    # a space inside) leaves a tail that may hide `/comments`; unknown reads as gated.
-    return rest.endswith("$") or command[match.end():match.end() + 1] in ("(", "{")
+    ids = segments[1:]
+    if not ids[0]:
+        return True
+    tail = ids[1:]
+    if any("$" in s or "`" in s for s in tail):
+        return True
+    # `/comments` or `/comments/` posts a comment; any other literal tail is not prose-creating.
+    return bool(tail) and tail[0].lower() == "comments" and not any(tail[1:])
 
 
 def detect_rest(command: str, tokens: list, cwd: str | None, posix: bool = True) -> Outbound | None:
