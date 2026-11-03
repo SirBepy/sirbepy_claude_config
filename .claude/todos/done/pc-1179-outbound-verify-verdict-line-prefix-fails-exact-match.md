@@ -38,6 +38,10 @@ with something closer to the tightened wording that worked on retry: explicitly 
 - Either the guard script tolerates a stripped leading list-marker, or a code comment in the hook explains why it intentionally doesn't (so the next person doesn't "fix" it into a false-accept).
 
 <!-- loop-skip: dev deferred 2026-10-24 -->
+
+## Notes
+
+- Fixed in dce79fa (template forbids numbered verdict line, transcript reader documents the exact match).
 ## Deferred questions
 
 Written by /auto-do-todos on 2026-10-23. Deferred by /loop-todos on 2026-10-24: Jarvis (answering for Joe while he was asleep) picked "you decide"; Claude's 2026-10-24 re-check of the real write target found the fix needs a `hooks/` or `settings.json` write, which prompts for permission, so it waits for an attended session.

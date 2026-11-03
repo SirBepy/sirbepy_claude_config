@@ -32,3 +32,7 @@ Add an `allow` row for the exact value `bearer` (case-folded, the scan lowercase
 ## Acceptance
 
 `bash skills/commit/test_prefilters.sh` passes with both cases.
+
+## Notes
+
+- Fixed in 2c928bf.

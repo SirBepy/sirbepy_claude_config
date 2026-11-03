@@ -25,3 +25,7 @@ Decide the grammar: text before or after `/close` that is not a slash command or
 
 - Each of the three example messages above has one stated outcome in the skill text.
 - `skills/release/test_pipeline_order.py` still passes.
+
+## Notes
+
+- Fixed in 938920a.

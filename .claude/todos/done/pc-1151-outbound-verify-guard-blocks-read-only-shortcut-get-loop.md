@@ -46,6 +46,7 @@ Written by /auto-do-todos on 2026-10-23. Deferred by /loop-todos on 2026-10-24: 
 - 2026-10-14 recurrence (zng-app session ed37142a): a plain Shortcut GET for 2 stories was blocked as a REST write because the token-extraction pipe used `tr -d '
 '`, which DATA_FLAG_RE (`(?:^|\s)-d\b`) matches. Adding `-X GET` did not help. Workaround that passed: extract the token with a python one-liner, no `tr -d` in the command.
 - 2026-10-22 recurrence (zng-biller, PowerShell): one call with a `foreach` POSTing `story-links` (body from `@{subject_id=...; verb=$l.verb} | ConvertTo-Json`, no prose) followed by a `foreach ($id in 56481, 56482) { Invoke-RestMethod -Uri "https://api.app.shortcut.com/api/v3/stories/$id" }` GET loop was blocked with "its text is not visible in the call". An earlier call with the same link loop but a literal GET URL passed, so the variable-URL GET is the likely trigger (UNVERIFIED). Splitting into literal-JSON link POSTs and a separate GET call passed.
+- Fixed in 2a8087a (shell-variable id and cut -d recipe no longer read as a REST write).
 
 ## Notes
 

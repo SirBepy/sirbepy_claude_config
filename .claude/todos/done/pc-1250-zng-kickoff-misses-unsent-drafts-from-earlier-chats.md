@@ -25,3 +25,7 @@ In `skills/zng-kickoff/SKILL.md` step 2 (and `scripts/kickoff.py leftovers`, if 
 
 ## Acceptance
 A kickoff run where an earlier chat left an unsent `sc-<id> ...` Shortcut draft reports that draft under Leftovers, and its step 3 does not write a new draft for the same ticket.
+
+## Notes
+
+- Fixed in e4d4d4a (drafts view from the Conductor draft store, DRAFT EXISTS annotation).

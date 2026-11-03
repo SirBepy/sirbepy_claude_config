@@ -25,3 +25,7 @@ Memoise the bootstrap promise; mark an npm 404 as UNKNOWN or check the registry'
 
 ## Acceptance
 New tests pass in `python ci/run_all.py`; a concurrent run's first lookups use IANA data (assert via a stubbed fetch).
+
+## Notes
+
+- Fixed in 46e12e1 (npm 404 now UNKNOWN; checker-notes.md lines 27 and 30 still describe the old semantic).

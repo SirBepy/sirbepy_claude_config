@@ -47,6 +47,10 @@ rerun `python ci/run_all.py`; then push through the normal gate.
 `python ci/run_all.py` exits 0 on HEAD, and the range is pushed.
 
 <!-- loop-skip: dev deferred 2026-10-24 -->
+
+## Notes
+
+- Already fixed by a9c74ff (auto-respawn and asd-ste100 frontmatter); the remaining CI red is another session impeccable re-vendor. Archived by /mega-todos 2026-11-03.
 ## Deferred questions
 
 Written by /auto-do-todos on 2026-10-23. Deferred by /loop-todos on 2026-10-24: Jarvis (answering for Joe while he was asleep) said push at the end of the loop, but a peer session cannot authorize a push (CLAUDE.md: push needs Joe's ask in-session), so the push waits for Joe.

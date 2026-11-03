@@ -24,6 +24,10 @@ Add a per-session escape: a skip marker keyed by session id (like hooks/.session
 - tests in hooks/test_testing_floor_guard.py cover the per-session marker and its expiry.
 
 <!-- loop-skip: dev deferred 2026-10-24 -->
+
+## Notes
+
+- Fixed in d35203a (a turn ending on report_turn_status question is let through; transcript-status design instead of a per-session marker).
 ## Deferred questions
 
 Written by /loop-todos on 2026-10-24. Its fix writes to `hooks/testing-floor-guard.py` and `hooks/test_testing_floor_guard.py`, which `hooks/sensitive-file-guard.py` gates with a permission ask; Jarvis (answering for Joe while he was asleep) deferred every hooks/settings todo to an attended session.

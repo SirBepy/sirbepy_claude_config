@@ -23,3 +23,7 @@ If the gate.md section has landed, nothing to do for the first point; otherwise 
 
 ## Acceptance
 `grep "Mtime alone is not last-use evidence" skills/disk-doctor/gate.md` hits, and windows.md no longer attributes the block to destructive-command-guard.py.
+
+## Notes
+
+- Fixed in 15a6985 (windows.md names the harness built-in). Point 1 resolves when the other session commits its skills/disk-doctor/gate.md edit.
