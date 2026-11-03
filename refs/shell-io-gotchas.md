@@ -60,5 +60,16 @@ Use the plain string method `.Replace()` when the intent is a literal substituti
 
 The same class of trap bites a Python heredoc writing this file: `\b` inside a normal (non-raw)
 triple-quoted string is a BACKSPACE byte, not two characters, and it lands in the file where no
-later Edit can match it. Write literal-backslash content with the Write or Edit tool, or with a raw
-string, never through a normal heredoc string.
+later Edit can match it.
+
+A raw string does not rescue this when the heredoc goes through the Bash tool. Reproduced 2026-10-28
+and again 2026-11-03: in `python - <<'EOF'` (quoted delimiter) the raw string `r'/\\/g'` reaches
+Python as 4 characters, `/\/g`, so the Bash tool collapses a doubled backslash to one. It can also
+decode `\uXXXX` before Python sees it (`len(r'﻿')` printed 1, not 6, on 2026-11-03; a second probe
+kept it literal, so treat it as intermittent). `\x41` and `\n` survived both times. The loss is
+silent: the written file just has fewer backslashes.
+
+Never route literal-backslash file content through the Bash tool, quoted heredoc and raw string
+included. Safe options: the Write or Edit tool; `chr(92)` to build each backslash in a `python -c`
+one-liner; or a patch script created with the Write tool and then run. Verify a written file with
+`python -c "print(ascii(open(p).read()))"` when the backslash count matters.
