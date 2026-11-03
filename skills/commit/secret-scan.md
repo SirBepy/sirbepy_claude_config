@@ -70,6 +70,11 @@ manifest that opts into Common Controls v6, and grants nothing. Allowed by Joe
    in scratch verification scripts). Roughly 4 were noise, and 6 more were
    removed by adding an ISO-8601-timestamp branch to the allow row.
 
+   Every `generic_assignment` match on a line is judged separately in all
+   three readers (the hook, `secret-scan.sh`, `skills/recall/recall.py`), so an
+   allowed value suppresses only itself: `{ token_type: "Bearer", access_token:
+   "<real>" }` still trips on the second key.
+
 3. A write-time counterpart, `hooks/secret-write-guard.py`, reads the same
    pattern file and `ask`s before the secret is even saved to disk, so this
    commit-time scan is the last line, not the only one.

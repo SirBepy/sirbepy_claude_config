@@ -28,6 +28,7 @@ PEM = "-----BEGIN RSA " + "PRIVATE KEY-----"
 CONN = "postgres://admin:" + "realpassword123" + "@db.internal:5432/app"
 PLAIN_LITERAL = "hunter2" + "hunter2"
 BEARER_PREFIXED = "Bearer" + "abcdef123456"
+REAL_TOKEN = "ya29." + "a0AfH6SMBrealtokenvalue123456"
 FIREBASE_KEY = "AIza" +"SyCMxWyGRJScXgsl1qa_nNbUdIs5o86w83Y"
 FIREBASE_KEY_TOO_LONG = FIREBASE_KEY + "x"
 MIDSTRING_NOT = "cannot-" + "be-rotated-abc123xyz"
@@ -92,6 +93,10 @@ CASES = [
     ("const BEARER = 'Bearer'", False, "generic_assignment: Bearer constant named bearer allowed (todo 1267)"),
     (f'token: "{BEARER_PREFIXED}"', True, "generic_assignment: bearer allow is whole-value anchored, longer Bearer-prefixed value still trips (todo 1267)"),
     (f'token_type: "{BEARER_PREFIXED}"', True, "generic_assignment: Bearer-prefixed value under token_type still trips (todo 1267)"),
+    (f'const r = {{ token_type: "Bearer", access_token: "{REAL_TOKEN}" }};', True, "generic_assignment: allowed Bearer token_type first does not hide a real token later on the same line"),
+    (f'const r = {{ access_token: "{REAL_TOKEN}", token_type: "Bearer" }};', True, "generic_assignment: real token first, allowed Bearer token_type after still trips"),
+    ('const r = { token_type: "Bearer", scope: "read" };', False, "generic_assignment: Bearer token_type beside a non-credential key stays clean"),
+    ('const r = { token_type: "Bearer", refresh_token: "<your-token-here>" };', False, "generic_assignment: every match on the line allowed stays clean"),
 ]
 
 
