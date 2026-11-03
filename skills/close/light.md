@@ -47,4 +47,4 @@ Then dispatch ONE `Agent` call with `subagent_type: "general-purpose"`, `model: 
 >
 > Payload: `<JSON>`
 
-Wait for the subagent to return, then run the main path's Phase 3 step 5 (inherited respawn detail file) inline: `/respawn unattended` runs through this file, and its successors would otherwise never delete the file they inherited. Then continue to Phase 4.
+Wait for the subagent to return, then run the main path's Phase 3 steps 3, 4 and 5 inline, in that order (all cheap, none belong in the write-subagent): step 3 screenshot count for Phase 4's counter, step 4 `recall.py digest-save <sessionId>` (otherwise `recall.py decisions` never sees a light-closed session), step 5 delete the inherited respawn detail file (`/respawn unattended` runs through this file, and its successors would otherwise never delete the file they inherited). Then continue to Phase 4.
