@@ -411,4 +411,92 @@ with tempfile.TemporaryDirectory() as tmp:
     )
     fails += [] if _testlib.report(ok, f"{label} -> outs={[out1, out2, out3]!r}") else [label]
 
+    # --- review hand-off: a preview or draft for Joe to judge must not end as "done" ---
+
+    SHOW_PREVIEW = "mcp__cc_conductor__show_preview"
+    WRITE_DRAFT = "mcp__cc_conductor__write_draft"
+    REPORT = "mcp__cc_conductor__report_turn_status"
+    SEND = "mcp__cc_conductor__send_message"
+
+    label = "review hand-off: show_preview then status done is blocked, reason names question"
+    t = write_transcript_with_inputs(
+        tmpdir, "r1.jsonl", "design the projects page",
+        [(SHOW_PREVIEW, {"slug": "x"}), (REPORT, {"status": "done"})],
+    )
+    code, out = run_stop(t, "sess-rh1")
+    ok = code == 0 and '"decision": "block"' in out and "question" in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
+
+    label = "review hand-off: write_draft then status done is blocked"
+    t = write_transcript_with_inputs(
+        tmpdir, "r2.jsonl", "draft the reply",
+        [(WRITE_DRAFT, {"text": "hi"}), (REPORT, {"status": "done"})],
+    )
+    code, out = run_stop(t, "sess-rh2")
+    ok = code == 0 and '"decision": "block"' in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
+
+    label = "review hand-off: show_preview plus send_message plus done is still blocked (send_message does not hide it)"
+    t = write_transcript_with_inputs(
+        tmpdir, "r3.jsonl", "design the projects page",
+        [(SHOW_PREVIEW, {"slug": "x"}), (SEND, {"text": "Round 2 is up in the preview panel."}), (REPORT, {"status": "done"})],
+    )
+    code, out = run_stop(t, "sess-rh3")
+    ok = code == 0 and '"decision": "block"' in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
+
+    label = "review hand-off: show_preview then status question passes"
+    t = write_transcript_with_inputs(
+        tmpdir, "r4.jsonl", "design the projects page",
+        [(SHOW_PREVIEW, {"slug": "x"}), (REPORT, {"status": "question"})],
+    )
+    code, out = run_stop(t, "sess-rh4")
+    ok = code == 0 and '"decision"' not in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
+
+    label = "review hand-off: only the LAST status counts (done then question passes)"
+    t = write_transcript_with_inputs(
+        tmpdir, "r5.jsonl", "design the projects page",
+        [(SHOW_PREVIEW, {"slug": "x"}), (REPORT, {"status": "done"}), (REPORT, {"status": "question"})],
+    )
+    code, out = run_stop(t, "sess-rh5")
+    ok = code == 0 and '"decision"' not in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
+
+    label = "review hand-off: no preview or draft, status done passes"
+    t = write_transcript_with_inputs(
+        tmpdir, "r6.jsonl", "fix the build",
+        [("Edit", {}), (REPORT, {"status": "done"})],
+    )
+    code, out = run_stop(t, "sess-rh6")
+    ok = code == 0 and '"decision"' not in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
+
+    label = "review hand-off: preview with no report_turn_status at all passes (no done claim)"
+    t = write_transcript_with_inputs(
+        tmpdir, "r7.jsonl", "design the projects page",
+        [(SHOW_PREVIEW, {"slug": "x"}), (SEND, {"text": "Round 2 is up."})],
+    )
+    code, out = run_stop(t, "sess-rh7")
+    ok = code == 0 and '"decision"' not in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
+
+    label = "review hand-off: stop_hook_active set passes (one-shot, never loops)"
+    t = write_transcript_with_inputs(
+        tmpdir, "r8.jsonl", "design the projects page",
+        [(SHOW_PREVIEW, {"slug": "x"}), (REPORT, {"status": "done"})],
+    )
+    code, out = run_stop(t, "sess-rh8", stop_hook_active=True)
+    ok = code == 0 and '"decision"' not in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
+
+    label = "review hand-off: a malformed (non-dict) report input fails open"
+    t = write_transcript_with_inputs(
+        tmpdir, "r9.jsonl", "design the projects page",
+        [(SHOW_PREVIEW, {"slug": "x"}), (REPORT, "done")],
+    )
+    code, out = run_stop(t, "sess-rh9")
+    ok = code == 0 and '"decision"' not in out
+    fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
+
 sys.exit(_testlib.summarize(fails, style="count"))

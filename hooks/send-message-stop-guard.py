@@ -41,6 +41,11 @@ visible, which it never is in this harness); it only fires when the
 genuine message that happens to use one of these phrases in passing (e.g.
 quoting Joe's own words back) is not blocked - the incident's own stub was
 90 characters, well under the threshold.
+
+Review hand-off check: a turn that called show_preview or write_draft and whose
+last report_turn_status is "done" is blocked once (stop_hook_active makes it
+one-shot) and told to report "question" instead. Joe, 2026-10-26: design rounds
+awaiting his review kept ending "done".
 """
 
 import json
@@ -97,6 +102,9 @@ DECOY_PHRASE_RE = re.compile(
 # own words) stays well above this and is never touched.
 DECOY_SHORT_CHAR_THRESHOLD = 400
 
+# Tools that put something in front of Joe for approval; see _review_handoff_reason.
+REVIEW_HANDOFF_SUFFIXES = {"show_preview", "write_draft"}
+
 
 def _tool_suffix(name: str) -> str:
     return name.rsplit("__", 1)[-1] if "__" in name else name
@@ -106,6 +114,34 @@ def _turn_tool_suffixes(transcript_path: str) -> list:
     if not transcript_path:
         return []
     return [_tool_suffix(name) for name, _ in iter_turn_tool_uses(transcript_path)]
+
+
+def _review_handoff_reason(transcript_path: str) -> str:
+    """Block reason when this turn handed Joe something to judge (a
+    show_preview or write_draft call) yet its last report_turn_status says
+    "done", else "". Joe, 2026-10-26: design rounds waiting on his review kept
+    ending "done"; a turn awaiting his look is "question" (input needed).
+    Only the LAST status counts, and a turn with no report_turn_status makes
+    no done claim, so it is left alone.
+    """
+    if not transcript_path:
+        return ""
+    handed_off = False
+    last_status = None
+    for name, tool_input in iter_turn_tool_uses(transcript_path):
+        suffix = _tool_suffix(name)
+        if suffix in REVIEW_HANDOFF_SUFFIXES:
+            handed_off = True
+        elif suffix == "report_turn_status" and isinstance(tool_input, dict):
+            last_status = tool_input.get("status")
+    if handed_off and isinstance(last_status, str) and last_status.strip().lower() == "done":
+        return (
+            "[send-message-stop-guard] This turn handed Joe something to judge "
+            "(a preview or draft) but ends as status \"done\". A turn waiting "
+            "on his review is not done: call report_turn_status with status "
+            "\"question\" (input needed) before ending the turn."
+        )
+    return ""
 
 
 def _turn_send_message_texts(transcript_path: str) -> list:
@@ -230,15 +266,28 @@ def main() -> None:
                 "substance inlined, not a pointer to it. (todo 782)"
                 % (decoy_text[:200],)
             )
+        # Checked before the early exits: a design turn that posts a preview
+        # normally also send_messages, so checking only past them would
+        # almost never fire.
+        handoff_reason = _review_handoff_reason(transcript_path)
+        if handoff_reason:
+            _block(handoff_reason)
         _reset_counter(session_id)
         sys.exit(0)
 
     if "write_plan" in suffixes:
+        handoff_reason = _review_handoff_reason(transcript_path)
+        if handoff_reason:
+            _block(handoff_reason)
         _reset_counter(session_id)
         sys.exit(0)
 
     if "report_turn_status" not in suffixes:
         sys.exit(0)  # no Conductor signal this turn, nothing to enforce
+
+    handoff_reason = _review_handoff_reason(transcript_path)
+    if handoff_reason:
+        _block(handoff_reason)
 
     last_user_text = _last_real_user_text(transcript_path) if transcript_path else ""
     if _is_relay_input(last_user_text) and all(s in RELAY_SAFE_SUFFIXES for s in suffixes):
