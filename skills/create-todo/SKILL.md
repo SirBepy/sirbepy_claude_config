@@ -26,6 +26,11 @@ surrounding conversation names a specific other repo, or the content being draft
 sense against files outside the current repo, that other repo is the target. If genuinely
 ambiguous between two candidates, ask once via AskUserQuestion naming both.
 
+A bug or feature report to a repo Joe owns ("report this as a bug to claude-conductor") is a
+cross-repo todo in that repo's backlog, never a `write_draft`: the Conductor rule that a message
+for someone else goes in the Drafts panel is for messages to other people (Slack, tickets), not
+for Joe's own repos. For Claude Conductor use `/log-conductor-todo`, which pins the target below.
+
 Same-repo target: continue with Step 1 below. Cross-repo target: Step 1 and Step 2 still apply
 (mode and Type are unaffected by where the file lands), then file under "Cross-repo filing"
 instead of Step 3/Step 4.
@@ -75,6 +80,11 @@ Print the filename and a one-line summary. Do not execute the todo - this skill 
 Handoff mode's confirm wording is defined in the contract's "Handoff mode" section.
 
 ## Cross-repo filing (target repo != current repo)
+
+Known target: claude-conductor is `C:\Users\tecno\Desktop\Projects\claude_usage_in_taskbar`
+(remote `SirBepy/claude_conductor`; the folder name predates the rename), so a report about the
+Conductor app goes to `<that path>\.claude\todos\` without searching for the repo. Never answer
+such a report with a Drafts-panel message (Step 0).
 
 Filing into another repo's backlog is still a WRITE into that backlog, so it takes the same
 three guards a same-repo write takes - all specified once in `ai-todos-format.md` and reused

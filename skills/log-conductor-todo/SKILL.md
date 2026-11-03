@@ -11,6 +11,9 @@ argument-hint: "[what to file - empty = the Conductor issue just discussed]"
 > something about the Conductor app itself (a bug, a missing feature, an MCP tool quirk) should
 > land in that app's backlog instead of the current repo's.
 
+"Report this as a bug to claude-conductor" means this skill, never a `write_draft`: the Drafts
+panel is for messages to other people, not for Joe's own repos.
+
 Target repo, always: `C:\Users\tecno\Desktop\Projects\claude_usage_in_taskbar` (origin
 `SirBepy/claude_conductor`; the folder name predates the rename). If that path is missing or its
 `origin` no longer points at `claude_conductor`, say so and stop - never fall back to the current
