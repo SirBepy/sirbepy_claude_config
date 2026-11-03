@@ -132,8 +132,10 @@ OUTBOUND-DRAFT>>>
    tracked branch is WRONG: if existing role guards or self-action blocks already make the state
    unreachable, say so with file:line.
 5. Verdict: PASS only if every factual claim is CONFIRMED and steps 3 and 4 found no FAIL. Any WRONG,
-   UNVERIFIABLE, step-3 FAIL, or step-4 FAIL is a FAIL. End your report with exactly one of these
-   lines, alone on its own line:
+   UNVERIFIABLE, step-3 FAIL, or step-4 FAIL is a FAIL. End the ENTIRE report with exactly one
+   line containing nothing but one of the two literal strings below: no leading number, bullet or
+   prefix, and no trailing punctuation or commentary on that line (the hook discards a numbered
+   line such as "5. OUTBOUND-VERDICT: PASS" as no verdict):
 OUTBOUND-VERDICT: PASS
 OUTBOUND-VERDICT: FAIL
 ```

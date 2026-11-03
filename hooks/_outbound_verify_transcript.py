@@ -19,6 +19,7 @@ REQUIRED_PASSES = 3
 MIN_PROSE_CHARS = 25
 
 DRAFT_RE = re.compile(r"^[ \t]*<<<OUTBOUND-DRAFT[^\n]*\n(.*?)\n[ \t]*OUTBOUND-DRAFT>>>", re.DOTALL | re.MULTILINE)
+# The match is deliberately exact: only a bare verdict line counts, so a numbered, bulleted or quoted line is never counted as a vote.
 VERDICT_RE = re.compile(r"^[ \t]*OUTBOUND-VERDICT:[ \t]*(PASS|FAIL)[ \t]*$", re.MULTILINE)
 AGENT_MESSAGE_RE = re.compile(r'<agent-message from="([^"]+)">(.*?)(?:</agent-message>|\Z)', re.DOTALL)
 TASK_NOTIFICATION_RE = re.compile(r"<tool-use-id>([^<]+)</tool-use-id>.*?<result>(.*?)</result>", re.DOTALL)
