@@ -65,19 +65,29 @@ def run_hook(payload: dict, state_dir: Path) -> subprocess.CompletedProcess:
     )
 
 
+def make_repo(path: Path) -> Path:
+    """Real git repo with a src/ dir: the hook only flags files whose own
+    parent resolves to a repo, and git_repo_root returns None for a parent
+    that does not exist yet."""
+    (path / "src").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(path)], check=True, capture_output=True)
+    return path
+
+
 def integration_checks() -> list:
     fails = []
     with tempfile.TemporaryDirectory(prefix="testing-floor-flag-test-") as tmp:
         tmp_path = Path(tmp)
+        proj = make_repo(tmp_path / "proj")
 
         # Case 1: source-file Write, real session -> flag file created, attempts=0.
         state_dir = tmp_path / "state1"
         session_id = "sess-source-write"
         payload = {
             "session_id": session_id,
-            "cwd": str(tmp_path),
+            "cwd": str(proj),
             "tool_name": "Write",
-            "tool_input": {"file_path": str(tmp_path / "src" / "app.py"), "content": "x"},
+            "tool_input": {"file_path": str(proj / "src" / "app.py"), "content": "x"},
         }
         proc = run_hook(payload, state_dir)
         flag_path = state_dir / session_id
@@ -94,7 +104,7 @@ def integration_checks() -> list:
         session_id2 = "sess-md-write"
         payload2 = {
             "session_id": session_id2,
-            "cwd": str(tmp_path),
+            "cwd": str(proj),
             "tool_name": "Write",
             "tool_input": {"file_path": str(tmp_path / "NOTES.md"), "content": "x"},
         }
@@ -110,11 +120,11 @@ def integration_checks() -> list:
         session_id3 = "sess-agent"
         payload3 = {
             "session_id": session_id3,
-            "cwd": str(tmp_path),
+            "cwd": str(proj),
             "agent_id": "aaaeae68dcacc2c9d",
             "agent_type": "general-purpose",
             "tool_name": "Write",
-            "tool_input": {"file_path": str(tmp_path / "src" / "app.py"), "content": "x"},
+            "tool_input": {"file_path": str(proj / "src" / "app.py"), "content": "x"},
         }
         proc3 = run_hook(payload3, state_dir3)
         flag_path3 = state_dir3 / session_id3
@@ -128,9 +138,9 @@ def integration_checks() -> list:
         session_id4 = "sess-read"
         payload4 = {
             "session_id": session_id4,
-            "cwd": str(tmp_path),
+            "cwd": str(proj),
             "tool_name": "Read",
-            "tool_input": {"file_path": str(tmp_path / "src" / "app.py")},
+            "tool_input": {"file_path": str(proj / "src" / "app.py")},
         }
         proc4 = run_hook(payload4, state_dir4)
         flag_path4 = state_dir4 / session_id4
@@ -142,9 +152,9 @@ def integration_checks() -> list:
         # Case 5: missing session_id -> no flag anywhere, no crash.
         state_dir5 = tmp_path / "state5"
         payload5 = {
-            "cwd": str(tmp_path),
+            "cwd": str(proj),
             "tool_name": "Write",
-            "tool_input": {"file_path": str(tmp_path / "src" / "app.py"), "content": "x"},
+            "tool_input": {"file_path": str(proj / "src" / "app.py"), "content": "x"},
         }
         proc5 = run_hook(payload5, state_dir5)
         ok5 = proc5.returncode == 0 and (not state_dir5.exists() or not any(state_dir5.iterdir()))
@@ -162,9 +172,9 @@ def integration_checks() -> list:
         flag_path6.write_text(json.dumps({"attempts": 5, "root": "stale"}), encoding="utf-8")
         payload6 = {
             "session_id": session_id6,
-            "cwd": str(tmp_path),
+            "cwd": str(proj),
             "tool_name": "Edit",
-            "tool_input": {"file_path": str(tmp_path / "src" / "app.py"), "new_string": "x"},
+            "tool_input": {"file_path": str(proj / "src" / "app.py"), "new_string": "x"},
         }
         proc6 = run_hook(payload6, state_dir6)
         ok6 = proc6.returncode == 0 and flag_path6.is_file()
@@ -181,15 +191,15 @@ def integration_checks() -> list:
         # target every file this turn touched, not just the latest one.
         state_dir8 = tmp_path / "state8"
         session_id8 = "sess-accumulate"
-        path_a = str(tmp_path / "src" / "a.py")
-        path_b = str(tmp_path / "src" / "b.py")
+        path_a = str(proj / "src" / "a.py")
+        path_b = str(proj / "src" / "b.py")
         proc8a = run_hook(
-            {"session_id": session_id8, "cwd": str(tmp_path), "tool_name": "Write",
+            {"session_id": session_id8, "cwd": str(proj), "tool_name": "Write",
              "tool_input": {"file_path": path_a, "content": "x"}},
             state_dir8,
         )
         proc8b = run_hook(
-            {"session_id": session_id8, "cwd": str(tmp_path), "tool_name": "Write",
+            {"session_id": session_id8, "cwd": str(proj), "tool_name": "Write",
              "tool_input": {"file_path": path_b, "content": "x"}},
             state_dir8,
         )
@@ -207,14 +217,14 @@ def integration_checks() -> list:
         # Case 9: editing the SAME path twice dedupes rather than growing.
         state_dir9 = tmp_path / "state9"
         session_id9 = "sess-dedupe"
-        path_c = str(tmp_path / "src" / "c.py")
+        path_c = str(proj / "src" / "c.py")
         run_hook(
-            {"session_id": session_id9, "cwd": str(tmp_path), "tool_name": "Edit",
+            {"session_id": session_id9, "cwd": str(proj), "tool_name": "Edit",
              "tool_input": {"file_path": path_c, "new_string": "x"}},
             state_dir9,
         )
         proc9b = run_hook(
-            {"session_id": session_id9, "cwd": str(tmp_path), "tool_name": "Edit",
+            {"session_id": session_id9, "cwd": str(proj), "tool_name": "Edit",
              "tool_input": {"file_path": path_c, "new_string": "y"}},
             state_dir9,
         )
@@ -233,8 +243,8 @@ def integration_checks() -> list:
         # gate checks one root and a foreign path would py_compile against it.
         state_dir10 = tmp_path / "state10"
         session_id10 = "sess-two-repos"
-        repo_one, repo_two = tmp_path / "repo-one", tmp_path / "repo-two"
-        path_one, path_two = str(repo_one / "a.py"), str(repo_two / "b.py")
+        repo_one, repo_two = make_repo(tmp_path / "repo-one"), make_repo(tmp_path / "repo-two")
+        path_one, path_two = str(repo_one / "src" / "a.py"), str(repo_two / "src" / "b.py")
         for cwd, path in ((repo_one, path_one), (repo_two, path_two)):
             run_hook(
                 {"session_id": session_id10, "cwd": str(cwd), "tool_name": "Write",
@@ -242,10 +252,28 @@ def integration_checks() -> list:
                 state_dir10,
             )
         state10 = json.loads((state_dir10 / session_id10).read_text(encoding="utf-8"))
-        ok10 = state10.get("paths") == [path_two] and Path(state10.get("root")) == repo_two
+        ok10 = state10.get("paths") == [path_two] and Path(state10.get("root")).resolve() == repo_two.resolve()
         print(f"[{'PASS' if ok10 else 'FAIL'}] integration: a second repo restarts the path list -> {state10!r}")
         if not ok10:
             fails.append("a second repo restarts the path list")
+
+        # Case 11: a source file whose own directory is in no git repo (a
+        # scratch helper under C:/tmp) sets no flag, even when the payload cwd
+        # IS a repo: the root comes from the edited file, never from cwd.
+        state_dir11 = tmp_path / "state11"
+        session_id11 = "sess-scratch-outside-repo"
+        scratch = tmp_path / "scratch"
+        scratch.mkdir()
+        proc11 = run_hook(
+            {"session_id": session_id11, "cwd": str(proj), "tool_name": "Write",
+             "tool_input": {"file_path": str(scratch / "sc_read.js"), "content": "x"}},
+            state_dir11,
+        )
+        flag_path11 = state_dir11 / session_id11
+        ok11 = proc11.returncode == 0 and not flag_path11.exists()
+        print(f"[{'PASS' if ok11 else 'FAIL'}] integration: source file outside any git repo sets no flag -> exit={proc11.returncode} exists={flag_path11.exists()}")
+        if not ok11:
+            fails.append("source file outside any repo sets no flag")
 
         # Case 7: malformed stdin -> exits 0, does not crash.
         proc7 = subprocess.run(
