@@ -1,7 +1,16 @@
 """PreToolUse hook: block piping cargo test/build/check/clippy output into
-tail/head/grep/Select-Object.
+tail/head/grep/Select-Object, and piping commit-pathspec.sh output into the
+same filters without pipefail.
 
-Three incidents, same shape:
+The second case is a different mechanism with the same fix (run unpiped):
+the filter's exit status replaces the script's, so a refused commit reads as
+success (2026-10-22, skills/commit/SKILL.md step 8). `set -o pipefail` (or
+`bash -o pipefail`) anywhere in the command lifts it. The script name only
+counts when it is run, not named: the segment before it may hold just a shell
+launcher and a path prefix, so `cat .../commit-pathspec.sh | head` and a name
+inside a quoted -m message pass. A filter after a quoted `|` is not a pipe.
+
+Cargo incidents, three, same shape:
 
 - 2026-08-19 (`claude_usage_in_taskbar` todo 692): `cargo test --test
   daemon_user_todos_e2e ... 2>&1 | tail -40` produced 0 bytes for 2h17m. A
@@ -147,6 +156,83 @@ def find_violation(command: str, cwd: str | None = None) -> tuple[str, str] | No
     return None
 
 
+def deny_commit_pathspec(filter_name: str) -> None:
+    _lib_deny(
+        f"[cargo-test-pipe-guard] Blocked: piping commit-pathspec.sh output through `{filter_name}` "
+        "swallows the script's own non-zero exit - the pipeline's status is the filter's, so a "
+        "refused commit reads as success (2026-10-22: `... 2>&1 | tail -6` right after reading the "
+        "rule against it). skills/commit/SKILL.md step 8: never pipe its output.",
+        suffix=(
+            " Run the script unpiped, or put `set -o pipefail;` before the pipeline so the "
+            "script's exit code survives the filter."
+        ),
+    )
+
+
+def _quote_mask(text: str) -> list[bool]:
+    """True for every character inside a single- or double-quoted span (the
+    quote characters themselves count as quoted). A backslash escapes the
+    next character outside single quotes.
+    """
+    mask = [False] * len(text)
+    quote = None
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if ch == "\\" and quote != "'":
+            mask[i] = quote is not None
+            if i + 1 < len(text):
+                mask[i + 1] = quote is not None
+            i += 2
+            continue
+        if quote is None and ch in "\"'":
+            quote = ch
+            mask[i] = True
+        elif quote is not None:
+            mask[i] = True
+            if ch == quote:
+                quote = None
+        i += 1
+    return mask
+
+
+# What may precede `commit-pathspec.sh` inside its own pipeline segment for the
+# script to be RUN rather than merely named: an optional shell launcher, then
+# the (possibly quoted) path prefix. `cat`/`grep`/`echo` before the name fall
+# outside this and are left alone.
+COMMIT_PATHSPEC_RE = re.compile(r"commit-pathspec\.sh\b")
+COMMIT_PATHSPEC_HEAD_RE = re.compile(
+    r"""(?:&\s+)?(?:(?:bash|sh|zsh|source|\.)(?:\.exe)?\s+(?:-\S+\s+)*)?["']?[^\s"']*""",
+    re.IGNORECASE,
+)
+PIPEFAIL_RE = re.compile(r"-o\s+pipefail\b")
+
+
+def find_commit_pathspec_violation(command: str) -> str | None:
+    """Returns the filter name when `command` runs commit-pathspec.sh into a
+    PIPE_FILTERS segment without pipefail anywhere in the command, else None.
+    """
+    if PIPEFAIL_RE.search(command):
+        return None
+    for statement in STATEMENT_SPLIT_RE.split(command):
+        if not COMMIT_PATHSPEC_RE.search(statement):
+            continue
+        mask = _quote_mask(statement)
+        pipes = [i for i, ch in enumerate(statement) if ch == "|" and not mask[i]]
+        bounds = [-1] + pipes + [len(statement)]
+        segments = [(bounds[i] + 1, bounds[i + 1]) for i in range(len(bounds) - 1)]
+        for idx, (start, end) in enumerate(segments):
+            seg = statement[start:end]
+            m = COMMIT_PATHSPEC_RE.search(seg)
+            if not m or not COMMIT_PATHSPEC_HEAD_RE.fullmatch(_strip_leading_prefix(seg[:m.start()])):
+                continue
+            for f_start, f_end in segments[idx + 1:]:
+                fm = PIPE_FILTER_RE.match(_strip_leading_prefix(statement[f_start:f_end]))
+                if fm:
+                    return fm.group(1)
+    return None
+
+
 def main() -> None:
     payload = read_payload()
     command = (payload.get("tool_input") or {}).get("command", "") or ""
@@ -156,6 +242,9 @@ def main() -> None:
     violation = find_violation(command, payload.get("cwd"))
     if violation:
         deny(*violation)
+    filter_name = find_commit_pathspec_violation(command)
+    if filter_name:
+        deny_commit_pathspec(filter_name)
     sys.exit(0)
 
 
