@@ -169,6 +169,17 @@ repo:
    ```
    Add `pubspec.lock` to the pathspec only when the bump itself changed it
    (SDK-pinned packages: meta, test_api, matcher).
+
+   When 2+ session markers are live (a peer chat is open in the same repo), the script refuses
+   with `[foreign-hunk-check] UNVERIFIED`, because it cannot auto-derive which hunks are this
+   session's. The bump files are whole-file changes, so declare them: add `--own-range
+   .fvmrc:1-3 --own-range .vscode/settings.json:1-9999 --own-range flutter.version:1-1` to the
+   command above.
+
+   If `[coverage-check]` refuses as a possible half-committed move because a peer staged
+   unrelated files in this repo (seen in zng-biller 2026-10-29: `CLAUDE.md`, `pubspec.yaml`,
+   `pubspec.lock`), `--force coverage` is the correct answer: those files are not part of the
+   bump. First confirm the staged files really are unrelated to the bump pathspec.
 2. **zng-app only: rebuild `build/web` with local defines, after the commit and before the push
    gate.** zng-app's `e2e/lib/server.js` (`assertBundleIsNotStale`, ~line 56) refuses to drive a
    bundle whose `build/web/main.dart.js` mtime predates `HEAD`'s commit time, so a build made in 2d
@@ -198,8 +209,9 @@ repo:
    cleared. Run `skills/commit/SKILL.md`'s "Push pipeline" section's **Pre-push gate** procedure
    against this bump commit before pushing - don't restate or improvise it here. Only the stack
    differs per repo: zng-app has a real suite (`e2e/run-all.js`, run both phases at
-   `--concurrency=5`); zng-admin and zng-biller have none, so `/e2e`'s "anything else" row applies
-   - drive a smoke check by hand until a committed helper exists for this repo (see Notes below).
+   `--concurrency=5`); zng-admin has its own `e2e/run-all.js`; zng-biller has none, so `/e2e`'s
+   "anything else" row applies - drive a smoke check by hand until a committed helper exists (see
+   the Biller smoke check section below).
 4. `git -C <repo> push`
 
 Message is always exactly `Bump Flutter to <version>` — the established
@@ -211,14 +223,16 @@ Leave its tree dirty, report the failure, and continue to the next repo.
 If the push gate (2e step 3) comes back red: do NOT push. Leave the commit in place (it already
 passed 2d), report which check failed, and continue to the next repo.
 
-### Admin/biller smoke check (no committed helper yet)
+### Biller smoke check (no committed helper yet)
 
-zng-admin and zng-biller have no e2e suite, so 2e step 3's gate currently means driving a
-throwaway Playwright smoke check by hand: serve a release build, log in through `auth/login` +
-`auth/verify` with code `000000`, seed localStorage, click through the left nav, assert the
-routes load and there are no page errors. Open todo 1065 tracks promoting this into a committed
-`skills/flutter-bump/scripts/smoke.cjs` so a cold session doesn't improvise it; until that lands,
-check this skill's own backlog for it before hand-writing the script again.
+zng-admin has its own e2e suite (`e2e/run-all.js`, 6 flows), so 2e step 3's gate runs that
+suite for admin like zng-app's; the hand-driven smoke check below is obsolete for admin.
+zng-biller has no e2e suite, so its gate currently means driving a throwaway Playwright smoke
+check by hand: serve a release build, log in through `auth/login` + `auth/verify` with code
+`000000`, seed localStorage, click through the left nav, assert the routes load and there are no
+page errors. If `.env.local` is not valid JSON, build with inline `--dart-define`s instead.
+No committed `skills/flutter-bump/scripts/smoke.cjs` exists yet; check this skill's own
+backlog for it before hand-writing the script again.
 
 ## 3. Multi-root workspace file - no longer touched by this skill
 
