@@ -213,6 +213,34 @@ class FeedPageCap(StateDirCase):
         self.assertNotIn('WARNING', out)
         self.assertEqual(kickoff.load('feed.json', {})['high_water'], newest)
 
+    def test_a_capped_walk_resumes_below_its_cursor_and_then_advances(self):
+        kickoff.save('feed.json', {'high_water': self.OLD_MARK, 'events': {}, 'handled': {}})
+        newest = kickoff.iso(kickoff.now_utc())
+        calls = []
+        env = {'SHORTCUT_SID': 'abc', 'SHORTCUT_TENANT_ORG': 'o', 'SHORTCUT_TENANT_WS': 'w'}
+
+        def descending(before, cookie, org, ws, full=False):
+            calls.append(before)
+            n = len(calls)
+            return {'data': [{'id': f'e{n}', 'changed_at': newest}], 'start': f'2026-09-{(n % 28) + 1:02d}T00:00:00.000Z'}
+
+        def finishing(before, cookie, org, ws, full=False):
+            calls.append(before)
+            return {'data': [{'id': 'last', 'changed_at': newest}], 'start': self.OLD_MARK}
+        with mock.patch.object(kickoff, 'env', lambda: env):
+            with mock.patch.object(kickoff, 'fetch_page', descending):
+                run(kickoff.cmd_feed, days=1)
+            cursor = kickoff.load('feed.json', {})['resume_before']
+            self.assertTrue(cursor)
+            calls.clear()
+            with mock.patch.object(kickoff, 'fetch_page', finishing):
+                out = run(kickoff.cmd_feed, days=1)
+        self.assertEqual(calls, [cursor])
+        self.assertNotIn('WARNING', out)
+        saved = kickoff.load('feed.json', {})
+        self.assertEqual(saved['high_water'], newest)
+        self.assertIsNone(saved['resume_before'])
+
 
 def feed_event(eid, story, member='someone', at='2026-11-02T10:00:00.000Z', reasons=(), actions=()):
     return {'id': eid, 'changed_at': at, 'member_id': member, 'actor_name': 'A',
@@ -511,7 +539,7 @@ class Drafts(unittest.TestCase):
 
         def collect(fetch, ev, stop_at, before):
             ev.update(events)
-            return len(events), True
+            return len(events), True, None
         with mock.patch.object(kickoff, 'env', lambda: {'SHORTCUT_SID': 'x'}), \
                 mock.patch.object(kickoff, 'collect_events', collect):
             return run(kickoff.cmd_feed, days=30, show_answered=True)
@@ -558,7 +586,7 @@ class Drafts(unittest.TestCase):
 
         def collect(fetch, events, stop_at, before):
             events.update({'a': event, 'b': other})
-            return 2, True
+            return 2, True, None
         with mock.patch.object(kickoff, 'STATE_DIR', os.path.join(root, 'state')),                 mock.patch.object(kickoff, 'env', lambda: {'SHORTCUT_SID': 'x'}),                 mock.patch.object(kickoff, 'collect_events', collect):
             out = run(kickoff.cmd_feed, days=3)
         flagged = out.split('#56344')[1].split('#77777')[0]
