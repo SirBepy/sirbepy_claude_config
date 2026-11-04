@@ -247,6 +247,8 @@ At END of scan, append any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCA
 - `C:\tmp\pw-*` (Playwright browser profiles from Claude verification runs) and `C:\tmp\*-target` / `LocalAppData\Temp\*-target` (Rust scratch CARGO_TARGET_DIRs from Claude sessions) - throwaway, rebuilt on the next run; confirm no cargo/node process holds them first. CLAUDE CANNOT DELETE THE `C:\tmp` ONES: the Claude Code harness's built-in system-path block (not `destructive-command-guard`) refuses any `Remove-Item` naming a drive-root child, even per-item `-LiteralPath` (2026-10-21, all three forms refused after the delete card was already approved). Never offer Claude to run it; the card says up front that Joe runs it and hands him the exact PowerShell command (e.g. `Get-ChildItem C:\tmp -Directory | Where-Object { $_.Name -like 'pw-*' -or $_.Name -like '*-target' } | Remove-Item -Recurse -Force`). `LocalAppData\Temp\*-target` is not a drive-root child, so Claude may still delete that one per the gate.
 - `C:\tmp` items older than N days (the age sweep): never compose an inline recursive one-liner - a per-item `Get-ChildItem -Recurse` over node_modules-heavy dirs ran past 30 minutes of CPU on 2026-10-30. Hand Joe the script instead, by absolute path, preview first: `powershell -NoProfile -File C:\Users\tecno\.claude\skills\disk-doctor\tmp-age-sweep.ps1 -Days 21` (default is a preview that lists items and GB, deletes nothing), and once he has read the list, the same command with `-Apply` added. `-Keep <names/globs>` adds extra keepers. The built-in keep-list matches the C:\tmp line in NEVER-TOUCH (salvage, memory-backup-*, *.java, *.java.bak, sftp-*, live-*.yml, n8n-db.sqlite, and cc-target under 21 days); re-sync the script's `$script:DefaultKeep` if that line changes. It refuses any root other than `C:\tmp`. Claude never runs `-Apply` itself (same harness block as above); Claude may run the preview.
 
+- `D:\cargo-target` Rust build output (D: is the HDD that holds every CARGO_TARGET_DIR and filled to 0 free on 2026-11-04): Claude cannot delete under D:\ (drive-root block), so hand Joe `powershell -NoProfile -File C:\Users\tecno\.claude\skills\disk-doctor\d-cargo-sweep.ps1` (preview; `-Apply` after he has read it, with every cargo/Claude build stopped). Claude may run the preview, never `-Apply`. Its tiers and their evidence are in the script header. Since 2026-11-04 a Windows Task Scheduler task `D-CargoSweep` (12:00 and 20:00 daily, catches up after sleep) runs `d-cargo-sweep-auto.ps1`, which applies tiers B, C and D only when D: is under 25% free and no build is running; log at `%LOCALAPPDATA%\d-cargo-sweep\log.txt`. So on a scan, read that log first: a D: that is still low means the sweep is not finding enough, not that it is not running. Remove it with `Unregister-ScheduledTask -TaskName D-CargoSweep -Confirm:$false`.
+
 ## KNOWN HARD (judgment call, not a routine safe-delete)
 
 - Docker Desktop's `docker_data.vhdx` (`LocalAppData\Docker\wsl\disk\`) does NOT shrink via `docker system prune` alone, nor via `wsl --shutdown` + `diskpart compact vdisk` alone (0 bytes reclaimed in practice - no TRIM occurred). The disk only mounts while `dockerd` itself is running, so `fstrim` from an external WSL distro can't reach it once Docker Desktop is stopped. The only operation that reliably reclaims the space is deleting the VHDX and letting Docker Desktop recreate it fresh - but this destroys any named Docker volumes not already checked for. Treat as a judgment call requiring an explicit volumes-check (`docker volume ls` + confirm none hold real data) before ever proposing the delete-and-recreate path, never bundled into a "just compact it" recommendation.
@@ -255,9 +257,6 @@ At END of scan, append any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCA
 
 Cap: 5 entries max. When at cap, drop the entry with the earliest date field before appending; if dates tie, drop the topmost entry. Never reorder remaining entries.
 
-- 2026-09-04: `C:\Users\tecno\.screenpipe` no longer exists - Joe deleted Screenpipe and its capture
-  database deliberately. Do not go looking for that 27G on a future scan, and do not treat its
-  absence as a mystery.
 - 2026-10-05: C: free 262.7/930.5G at start, 344.1G after. Deleted (each approved per item): revaire-mobile build + .dart_tool + 2 worktree builds 19.3G, C:\tmp Rust scratch targets 17.0G, LocalAppData\Temp items older than 2 days (incl. a 6G cueline-e2e-target), pip cache 9.85G, 20 C:\tmp\pw-* Playwright profiles 5.5G+, pnpm store prune, 499 stale .for_bepy screenshots. Root cause of Rust on C:: CARGO_TARGET_DIR overrides ~/.cargo/config.toml's D: target-dir, and cueline's e2e build defaulted to os.tmpdir() while builder-preamble told subagents to use $env:TEMP; both now point at D:\cargo-target\<name> (cueline 734fafb, ~/.claude 0adfa20). The Temp block here counts only top-level $env:TEMP files (0.4G) while LocalAppData\Temp was 14.5G recursively, so size it with Get-DirGB. Kept / judgment: Docker vhdx 27.5G, ~/.cache huggingface 19G + whisper 2.9G, Android AVDs 19.3G, idle venvs 10.9G, ollama 11G, games.
 - 2026-10-14: Quick pre-gaming scan. C: free 227.8/930.5G at start, 266.4G after. 2 sub-scans
   (stale-Temp-over-2-days breakdown, whole-profile build-artifact sweep) timed out past 5min and
@@ -322,3 +321,28 @@ Cap: 5 entries max. When at cap, drop the entry with the earliest date field bef
     not destructive-command-guard) also refuses a Remove-Item call whose command line contains `\Yarn\`, a
     robocopy `/E`, or a `C:\Program Files` Test-Path. Keep Remove-Item in its own call, with only literal
     user paths in it.
+- 2026-11-04: Joe asked for "both disks", so D: was scanned (scanning only; deletes still need the gate).
+  4 read-only sonnet scouts plus 2 verifiers. C: 293.8/930.5G free (31.6%, past the 30% target), so Joe
+  said to skip C: deletes (about 8G of candidates: Temp over 2 days 4G, sirbepy_tauri_kit target 2G, 3 idle
+  node_modules 2G). Ollama (112G) and Docker (40G) were in use. D: was 100% FULL (0.35G free): D:\cargo-target
+  is about 640G real (robocopy says 841G because it counts hardlinks in full), almost all in debug\deps
+  (650G apparent) and debug\incremental (117G, all under 9 days old). Verified safe, rebuild-cost only:
+  deps *.rcgu.o older than 7 days (about 125G really freed), superseded own test-binary variants (about
+  119G, 40G overlap with the first), 74G of dead cargo-target-* / scratch dirs, loop1025-target 21.7G (a
+  finished 2026-10-25 Conductor build, no references). Claude cannot delete under D:\, so it wrote
+  `skills/disk-doctor/d-cargo-sweep.ps1` (preview default, `-Apply` for Joe; refuses while cargo runs).
+  Facts worth reusing:
+  - Root cause of D: filling: every Rust project shares one target-dir (global ~/.cargo/config.toml), and
+    claude_conductor_lib builds a new incremental dir plus 5G of pdb per hash every 1-2 days.
+  - cargo-sweep is not installed; the script replaces it for this dir.
+  - A preview of all tiers takes about 5 min on the HDD while a build runs.
+  Result: Joe ran the sweep (tiers A to E), D: went from 0.35G to 341.1G free (36.6%), confirmed by Get-Volume
+  after. loop1025-target, the three cargo-target-* siblings and pomodoro are gone, claude_conductor_lib
+  incremental dirs 34 to 11. Lessons:
+  - The "-Apply refuses while cargo runs" check is a real blocker here: 7 claude_usage_in_taskbar chats keep
+    starting `cargo test --lib` (python from bash, a /test step), so asking them to pause did not hold, and one
+    started a test 2 minutes after the notice. Joe's wait-loop one-liner is what got the sweep to start.
+  - The auto-mode classifier denies Claude killing other chats' cargo/rustc ("interferes with workloads"),
+    so Claude cannot run -Apply when a build is live; it needs an allow rule or Joe running it.
+  - A Bash/PowerShell command whose text contains `rd /s` (even inside a -match string) trips the system-path
+    Remove-Item block; keep such strings out of read-only checks.
