@@ -1,4 +1,4 @@
-# d-cargo-sweep-auto.ps1 - scheduled wrapper around d-cargo-sweep.ps1 (tiers B, C, D only).
+# d-cargo-sweep-auto.ps1 - scheduled wrapper around d-cargo-sweep.ps1 (tiers B and D only).
 #
 # Registered in Windows Task Scheduler as "D-CargoSweep" (twice a day). Runs outside any Claude chat, so
 # the harness's drive-root delete block does not apply. It does nothing unless D: is under -ThresholdPct
@@ -6,6 +6,9 @@
 # runs, and this wrapper checks first so a skipped run costs one Get-Volume call.
 #
 # Tiers A and E stay manual: they name one-off dirs (dead projects, loop1025-target), not a recurring leak.
+# Tier C (old .rcgu.o) stays manual too: rustc can regenerate those objects when it rebuilds the crate,
+# so deleting them automatically trades disk space for rebuild time (Joe, 2026-11-04). B and D only
+# remove superseded variants, which a new build never rewrites.
 # The recurring leak is claude_conductor_lib: a new incremental dir plus about 5 GB of .pdb per build
 # variant every day or two, all in the shared D:\cargo-target.
 #
@@ -40,9 +43,9 @@ if (Get-Process cargo, rustc, rust-lld, link -ErrorAction SilentlyContinue) {
   exit 0
 }
 
-Write-Log ("sweep: D: {0} GB free ({1}%) is under {2}%, running tiers B,C,D" -f $freeGB, $freePct, $ThresholdPct)
-$out = & powershell -NoProfile -File $sweep -Apply -Tiers 'B,C,D' 2>&1 | Out-String
+Write-Log ("sweep: D: {0} GB free ({1}%) is under {2}%, running tiers B,D" -f $freeGB, $freePct, $ThresholdPct)
+$out = & powershell -NoProfile -File $sweep -Apply -Tiers 'B,D' 2>&1 | Out-String
 $vol2 = Get-Volume -DriveLetter D
 $after = [math]::Round($vol2.SizeRemaining / 1GB, 1)
-$tail = ($out -split "`r?`n" | Where-Object { $_ -match 'Tier [CD]:|removed|STILL PRESENT|REFUSING' } | Select-Object -First 12) -join ' | '
+$tail = ($out -split "`r?`n" | Where-Object { $_ -match 'Tier [CD]:|removed|STILL PRESENT|REFUSING|ABORT' } | Select-Object -First 12) -join ' | '
 Write-Log ("done: D: {0} GB -> {1} GB free (+{2} GB). {3}" -f $freeGB, $after, [math]::Round($after - $freeGB, 1), $tail)
