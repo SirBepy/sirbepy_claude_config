@@ -32,7 +32,13 @@ const check = (name, ok, detail = '') => {
 
   for (let i = 0; i < count; i += 1) {
     await f.locator('#nav button').nth(i).click();
-    await page.waitForTimeout(300);
+    // Mid-exit, the old slide is still up and moving the right way.
+    if (i > 0) {
+      await page.waitForTimeout(120);
+      const out = await f.locator('section.leaving > *').first().evaluate((el) => ({ name: getComputedStyle(el).animationName, x: new DOMMatrix(getComputedStyle(el).transform).m41 }));
+      check(`slide ${i}: the old slide leaves to the left going forward`, out.name === 'slide-out' && out.x < 0, JSON.stringify(out));
+    }
+    await page.waitForTimeout(900);
     const title = await f.locator('#nav button').nth(i).innerText();
     const box = await f.locator('#next').boundingBox().catch(() => null);
     if (i < count - 1) check(`${title}: Next at the bottom right`, !!box && box.x + box.width > 1100 * 0.85 && box.y + box.height > 800 * 0.88, JSON.stringify(box));
@@ -50,8 +56,17 @@ const check = (name, ok, detail = '') => {
       };
     });
     check(`${title}: page is centered`, Math.abs(layout.left - layout.right) <= 1 && (layout.tall ? layout.scrollTop === 0 : Math.abs(layout.top - layout.bottom) <= 1), JSON.stringify(layout));
-    check(`${title}: slide content animates in`, layout.animation === 'rise', layout.animation);
+    check(`${title}: slide content animates in`, layout.animation === (i === 0 ? 'none' : 'slide-in'), layout.animation);
     check(`${title}: tickets stay out of the heading`, layout.headingLinks === 0);
+    if (i > 0 && i === count - 1) {
+      await f.locator('#back').click();
+      await page.waitForTimeout(120);
+      const out = await f.locator('section.leaving > *').first().evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m41);
+      check('Back: the old slide leaves to the right', out > 0, String(out));
+      await page.waitForTimeout(900);
+      await f.locator('#nav button').nth(i).click();
+      await page.waitForTimeout(900);
+    }
 
     const video = f.locator('section.on video');
     if (await video.count()) {
