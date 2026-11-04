@@ -11,17 +11,20 @@ nav button{flex:none;font:inherit;font-size:13.5px;padding:5px 10px;border:0;bor
 nav button:hover{color:var(--ink)}
 nav button.on{background:var(--blue);color:var(--on-blue)}
 /* Auto margins centre the page both ways, and collapse to 0 on a tall slide so its top stays reachable. */
-main{flex:1;min-height:0;overflow-y:auto;display:flex;container-type:inline-size}
+main{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;container-type:inline-size}
 .page{width:100%;max-width:1120px;margin:auto;padding:20px 16px 24px}
 section{display:none}section.on{display:block}
+/* --dir is 1 going forward and -1 going back: the old slide leaves one way, the new one arrives from the other. */
+section.leaving>*{animation:slide-out .28s cubic-bezier(.4,0,1,1) forwards}
 /* Backwards fill only: a kept transform would trap the filled player inside this element. */
-section.on>*{animation:rise .32s cubic-bezier(.2,.7,.2,1) backwards}
-section.on>:nth-child(2){animation-delay:50ms}
-section.on>:nth-child(3){animation-delay:100ms}
-section.on>:nth-child(4){animation-delay:150ms}
-section.on>:nth-child(n+5){animation-delay:200ms}
-@keyframes rise{from{opacity:0;transform:translateY(10px)}}
-@media(prefers-reduced-motion:reduce){section.on>*{animation:none}}
+section.entering>*{animation:slide-in .42s cubic-bezier(0,0,.2,1) backwards}
+section.entering>:nth-child(2){animation-delay:60ms}
+section.entering>:nth-child(3){animation-delay:120ms}
+section.entering>:nth-child(4){animation-delay:180ms}
+section.entering>:nth-child(n+5){animation-delay:240ms}
+@keyframes slide-out{to{opacity:0;transform:translateX(calc(var(--dir,1)*-56px))}}
+@keyframes slide-in{from{opacity:0;transform:translateX(calc(var(--dir,1)*56px))}}
+@media(prefers-reduced-motion:reduce){section.leaving>*,section.entering>*{animation:none}}
 h1{font-size:24px;line-height:1.25;margin:0 0 10px}
 h2{font-size:16px;margin:20px 0 6px}
 p{margin:0 0 10px}
@@ -84,17 +87,37 @@ const next=document.getElementById('next');
 let current=0;
 const fmt=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
 
-function show(i){
+const LEAVE_MS=280;
+const calm=matchMedia('(prefers-reduced-motion:reduce)');
+let leaving=null;
+
+function place(i,dir){
   current=i;
-  sections.forEach((s,n)=>s.classList.toggle('on',n===i));
-  [...nav.children].forEach((b,n)=>{b.classList.toggle('on',n===i);if(n===i)b.scrollIntoView({block:'nearest',inline:'nearest'})});
-  document.querySelectorAll('video').forEach(v=>{if(!sections[i].contains(v))v.pause()});
+  sections.forEach((s,n)=>{
+    s.classList.remove('leaving','entering');
+    s.classList.toggle('on',n===i);
+  });
+  if(dir)sections[i].classList.add('entering');
   main.scrollTop=0;
   back.hidden=i===0;
   next.hidden=i===sections.length-1;
   if(i>0)back.textContent='Back';
   if(i<sections.length-1)next.textContent='Next: '+sections[i+1].dataset.title;
   sizeLists();
+}
+
+function show(i){
+  if(i===current&&!leaving)return;
+  const dir=i>current?1:-1;
+  [...nav.children].forEach((b,n)=>{b.classList.toggle('on',n===i);if(n===i)b.scrollIntoView({block:'nearest',inline:'nearest'})});
+  document.querySelectorAll('video').forEach(v=>{if(!sections[i].contains(v))v.pause()});
+  document.body.style.setProperty('--dir',dir);
+  // A click during the exit jumps straight to the newest target rather than queueing slides up.
+  if(leaving){clearTimeout(leaving);leaving=null;place(i,dir);return}
+  if(calm.matches){place(i,dir);return}
+  sections[current].classList.remove('entering');
+  sections[current].classList.add('leaving');
+  leaving=setTimeout(()=>{leaving=null;place(i,dir)},LEAVE_MS);
 }
 sections.forEach((s,i)=>{
   const b=document.createElement('button');
@@ -180,5 +203,6 @@ document.addEventListener('keydown',e=>{
   if(e.key==='ArrowLeft'&&current>0)show(current-1);
   if(e.key===' '){const v=sections[current].querySelector('video');if(v){e.preventDefault();v.paused?v.play():v.pause()}}
 });
-show(0);
+[...nav.children][0].classList.add('on');
+place(0,0);
 </script></body></html>
