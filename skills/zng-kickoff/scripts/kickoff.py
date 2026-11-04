@@ -308,8 +308,9 @@ def fetch_page_auth(before, cookie, org, ws, mode):
 
 
 def collect_events(fetch, events, stop_at, before, max_pages=FEED_MAX_PAGES):
-    """Pages backwards from `before` into `events`. Returns (fetched, reached): reached is False
-    when the page cap ended the walk before it got down to `stop_at`, so older events remain."""
+    """Pages backwards from `before` into `events`. Returns (fetched, reached, resume_before):
+    reached is False when the page cap ended the walk before it got down to `stop_at`, so older
+    events remain, and resume_before is the cursor the next run continues from (None once reached)."""
     fetched = 0
     for _ in range(max_pages):
         page = fetch(before)
@@ -319,9 +320,9 @@ def collect_events(fetch, events, stop_at, before, max_pages=FEED_MAX_PAGES):
         fetched += len(data)
         start = page.get('start')
         if not start or start <= stop_at:
-            return fetched, True
+            return fetched, True, None
         before = start
-    return fetched, False
+    return fetched, False, before
 
 
 def story_of(e):
@@ -373,9 +374,13 @@ def cmd_feed(args):
     stop_at = feed['high_water'] or iso(now_utc() - dt.timedelta(days=args.days))
     # The endpoint 400s on a future `before`, so seed a few minutes in the past.
     before = iso(now_utc() - dt.timedelta(minutes=5))
+    # A capped walk stores where it stopped; the next run continues below that point instead of
+    # re-walking the same newest pages and hitting the cap again. The events above the cursor are
+    # already cached, so the walk that finally reaches `stop_at` leaves nothing missing.
+    before = feed.get('resume_before') or before
     mode = {'full': False}
     try:
-        fetched, reached = collect_events(lambda b: fetch_page_auth(b, cookie, org, ws, mode), feed['events'], stop_at, before)
+        fetched, reached, resume_before = collect_events(lambda b: fetch_page_auth(b, cookie, org, ws, mode), feed['events'], stop_at, before)
     except urllib.error.HTTPError as e:
         body = e.read().decode(errors='replace')[:300]
         if e.code in (401, 403):
@@ -383,11 +388,12 @@ def cmd_feed(args):
         else:
             print(f'HTTP {e.code}: {body}')
         sys.exit(1)
+    feed['resume_before'] = resume_before
     if reached:
         feed['high_water'] = max((e.get('changed_at') or '' for e in feed['events'].values()), default=feed['high_water'])
     else:
         # Advancing the mark past the unfetched gap would hide those events for good.
-        print(f'WARNING: hit the {FEED_MAX_PAGES}-page cap before reaching {stop_at}; high water not advanced, run feed again for the rest.')
+        print(f'WARNING: hit the {FEED_MAX_PAGES}-page cap before reaching {stop_at}; high water not advanced, run feed again to continue from {resume_before}.')
     keep_after = iso(now_utc() - dt.timedelta(days=FEED_KEEP_DAYS))
     feed['events'] = {k: e for k, e in feed['events'].items() if (e.get('changed_at') or '') >= keep_after}
     save('feed.json', feed)
