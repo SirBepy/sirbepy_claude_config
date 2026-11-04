@@ -52,3 +52,8 @@ Still open: Joe's confirmation in the real panel of the voice and click to pause
 - All 4 requirements hold in the Conductor panel itself, not only in a headless browser. The Biller Groups playback check only ran headless.
 - No two narration lines overlap in a real output file.
 - The added cost of one real run is measured and reported to Joe.
+
+
+## Notes
+
+- Finished 2026-11-04: Joe confirmed the voice and click to pause in the panel, and accepted full screen filling the window for now (Conductor's pc-1606 stays in that repo's backlog). Skill commits f75775f and 70de46f. The CLAUDE.md rule line is active but uncommitted, because another chat's uncommitted line shares the file.
