@@ -1,0 +1,8 @@
+# Repos where a feature test in a browser always produces a /test-report. The dev's call, 2026-11-04.
+# One `owner/repo` origin slug per line, matched case-insensitively against `git remote get-url origin`.
+# A repo missing from this list is off: there a report is only made when the dev asks for one.
+
+zirtue-corp/zng-app
+zirtue-corp/zng-admin
+zirtue-corp/zng-biller
+zirtue-corp/zng-api

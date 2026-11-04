@@ -1,0 +1,170 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{{TITLE}}</title>
+<meta name="preview-template" content="bare">
+<style>
+:root{color-scheme:light dark;--bg:#f6f7f9;--card:#fff;--ink:#17202c;--soft:#566273;--line:#dde2e8;--blue:#0a63e0;--on-blue:#fff;--tint:#e6effd;--ok:#11734b;--bad:#b3261e;--warn:#fff4dc;--warnline:#e7b64a}
+@media(prefers-color-scheme:dark){:root{--bg:#10141a;--card:#191f27;--ink:#e8ecf1;--soft:#9aa6b4;--line:#2c3540;--blue:#6ea8ff;--on-blue:#10141a;--tint:#1d2c44;--ok:#54c795;--bad:#f28b82;--warn:#33290f;--warnline:#8a6d1f}}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+nav{flex:none;display:flex;gap:2px;overflow-x:auto;padding:7px 12px;background:var(--card);border-bottom:1px solid var(--line)}
+nav button{flex:none;font:inherit;font-size:13.5px;padding:5px 10px;border:0;border-radius:6px;background:none;color:var(--soft);cursor:pointer}
+nav button:hover{color:var(--ink)}
+nav button.on{background:var(--blue);color:var(--on-blue)}
+main{flex:1;min-height:0;overflow-y:auto;container-type:inline-size}
+.page{max-width:1120px;margin:0 auto;padding:20px 16px 24px}
+section{display:none}section.on{display:block}
+h1{font-size:24px;line-height:1.25;margin:0 0 10px}
+h2{font-size:16px;margin:20px 0 6px}
+p{margin:0 0 10px}
+ul,ol{margin:0 0 10px;padding-left:22px}li{margin:3px 0}
+a{color:var(--blue)}
+code{font:13px ui-monospace,Consolas,monospace;background:var(--line);padding:1px 5px;border-radius:4px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 15px;margin:0 0 12px}
+.box.warn{background:var(--warn);border-color:var(--warnline)}
+.box.bad{border-color:var(--bad)}
+.box h2{margin-top:0}.box>:last-child{margin-bottom:0}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:0 0 12px;font-size:14.5px}
+th,td{text-align:left;padding:8px 11px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--soft);font-weight:600}tr:last-child td{border-bottom:0}
+.note{font-size:13.5px;color:var(--soft)}
+
+.watch{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-bottom:10px}
+@container (min-width:900px){.watch{grid-template-columns:minmax(0,1fr) 290px;align-items:start}.watch .steps{max-height:none;height:var(--player-height,420px)}}
+
+.player{background:#000;border-radius:10px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.player video{display:block;width:100%;flex:1;min-height:0;object-fit:contain;cursor:pointer;background:#000}
+.bar{flex:none;display:flex;align-items:center;gap:8px;padding:6px 10px;background:#141a22;color:#e8ecf1;font-size:13px}
+.bar button{font:inherit;min-width:48px;min-height:32px;padding:3px 9px;border:1px solid #3a4552;border-radius:6px;background:#1f2732;color:inherit;cursor:pointer}
+.bar button:hover{background:#2a3442}
+.bar input[type=range]{flex:1;min-width:60px;accent-color:#6ea8ff;cursor:pointer}
+.bar .clock{font-variant-numeric:tabular-nums;white-space:nowrap;color:#b6c0cc}
+.player:fullscreen,.player.filled{border-radius:0}
+.player.filled{position:fixed;inset:0;z-index:20}
+.player:fullscreen video,.player.filled video{height:0}
+
+.steps{list-style:none;margin:0;padding:4px;max-height:172px;overflow-y:auto;font-size:13.5px;line-height:1.35;background:var(--card);border:1px solid var(--line);border-radius:10px;overscroll-behavior:contain}
+.steps li{margin:0}
+.jump{display:flex;gap:8px;width:100%;font:inherit;text-align:left;background:none;border:0;border-left:3px solid transparent;border-radius:5px;color:var(--ink);cursor:pointer;padding:5px 7px}
+.jump:hover{background:var(--line)}
+.jump .time{flex:none;color:var(--soft);font-variant-numeric:tabular-nums}
+.jump .res{display:block;font-size:12px;color:var(--ok)}
+.jump.failed .res{color:var(--bad);font-weight:600}
+.jump.now{background:var(--tint);border-left-color:var(--blue);font-weight:600}
+
+.pager{flex:none;display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:8px 14px;background:var(--card);border-top:1px solid var(--line)}
+.pager button{font:inherit;font-size:14.5px;padding:8px 14px;border-radius:7px;cursor:pointer}
+.pager button[hidden]{display:none}
+#back{background:none;border:1px solid var(--line);color:var(--ink)}
+#next{background:var(--blue);border:1px solid var(--blue);color:var(--on-blue)}
+</style></head><body>
+<nav id="nav"></nav>
+<main id="main"><div class="page">
+{{SECTIONS}}
+</div></main>
+<div class="pager"><button id="back" hidden></button><button id="next" hidden></button></div>
+<script>
+const sections=[...document.querySelectorAll('section')];
+const nav=document.getElementById('nav');
+const main=document.getElementById('main');
+const back=document.getElementById('back');
+const next=document.getElementById('next');
+let current=0;
+const fmt=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
+
+function show(i){
+  current=i;
+  sections.forEach((s,n)=>s.classList.toggle('on',n===i));
+  [...nav.children].forEach((b,n)=>{b.classList.toggle('on',n===i);if(n===i)b.scrollIntoView({block:'nearest',inline:'nearest'})});
+  document.querySelectorAll('video').forEach(v=>{if(!sections[i].contains(v))v.pause()});
+  main.scrollTop=0;
+  back.hidden=i===0;
+  next.hidden=i===sections.length-1;
+  if(i>0)back.textContent='Back';
+  if(i<sections.length-1)next.textContent='Next: '+sections[i+1].dataset.title;
+  sizeLists();
+}
+sections.forEach((s,i)=>{
+  const b=document.createElement('button');
+  b.textContent=(i+1)+'. '+s.dataset.title;
+  b.onclick=()=>show(i);
+  nav.append(b);
+});
+back.onclick=()=>show(current-1);
+next.onclick=()=>show(current+1);
+
+// Side by side, the step list matches the player's height, so it scrolls rather than growing the page.
+function sizeLists(){
+  document.querySelectorAll('section.on .watch').forEach(w=>{
+    const p=w.querySelector('.player');
+    if(p.offsetHeight)w.style.setProperty('--player-height',p.offsetHeight+'px');
+  });
+}
+addEventListener('resize',sizeLists);
+
+document.querySelectorAll('.watch').forEach(watch=>{
+  const player=watch.querySelector('.player');
+  const v=player.querySelector('video');
+  const play=player.querySelector('.play');
+  const seek=player.querySelector('.seek');
+  const clock=player.querySelector('.clock');
+  const speed=player.querySelector('.speed');
+  const sound=player.querySelector('.sound');
+  const full=player.querySelector('.full');
+  const list=watch.querySelector('.steps');
+  const jumps=[...list.querySelectorAll('.jump')];
+  const times=jumps.map(j=>Number(j.dataset.t));
+  const speeds=[1,1.25,1.5,2];
+  let touched=0;
+  let shown=-1;
+
+  const toggle=()=>{v.paused?v.play():v.pause()};
+  v.addEventListener('click',toggle);
+  play.onclick=toggle;
+  v.addEventListener('play',()=>{play.textContent='Pause'});
+  v.addEventListener('pause',()=>{play.textContent='Play'});
+  v.addEventListener('loadedmetadata',()=>{seek.max=v.duration;tick();sizeLists()});
+  seek.addEventListener('input',()=>{v.currentTime=Number(seek.value)});
+  speed.onclick=()=>{v.playbackRate=speeds[(speeds.indexOf(v.playbackRate)+1)%speeds.length];speed.textContent=v.playbackRate+'x'};
+  sound.onclick=()=>{v.muted=!v.muted;sound.textContent=v.muted?'Sound off':'Sound on'};
+
+  // The panel's frame can refuse real full screen. Filling the frame still gives the biggest picture it can.
+  const leave=()=>{player.classList.remove('filled');full.textContent='Full screen';sizeLists()};
+  full.onclick=()=>{
+    if(document.fullscreenElement===player){document.exitFullscreen();return}
+    if(player.classList.contains('filled')){leave();return}
+    const fill=()=>{player.classList.add('filled');full.textContent='Exit full screen'};
+    if(player.requestFullscreen&&document.fullscreenEnabled)player.requestFullscreen().catch(fill);else fill();
+  };
+  document.addEventListener('fullscreenchange',()=>{
+    full.textContent=document.fullscreenElement===player?'Exit full screen':'Full screen';
+    sizeLists();
+  });
+  addEventListener('keydown',e=>{if(e.key==='Escape'&&player.classList.contains('filled'))leave()});
+
+  function tick(){
+    seek.value=v.currentTime;
+    clock.textContent=fmt(v.currentTime)+' / '+fmt(v.duration||0);
+    let at=-1;
+    for(let i=0;i<times.length;i++)if(times[i]<=v.currentTime+0.05)at=i;
+    if(at===shown)return;
+    shown=at;
+    jumps.forEach((j,i)=>j.classList.toggle('now',i===at));
+    // Only the list scrolls, never the page, and not while someone is reading further down it.
+    if(at>=0&&Date.now()-touched>4000){
+      const row=jumps[at].parentElement;
+      list.scrollTo({top:row.offsetTop-list.offsetTop-list.clientHeight/2+row.offsetHeight/2,behavior:'smooth'});
+    }
+  }
+  v.addEventListener('timeupdate',tick);
+  v.addEventListener('seeked',tick);
+  ['wheel','pointerdown','touchmove'].forEach(n=>list.addEventListener(n,()=>{touched=Date.now()},{passive:true}));
+  jumps.forEach(j=>j.onclick=()=>{touched=0;v.currentTime=Number(j.dataset.t);v.play()});
+});
+
+document.addEventListener('keydown',e=>{
+  if(['INPUT','BUTTON'].includes(e.target.tagName)&&e.key===' ')return;
+  if(e.key==='ArrowRight'&&current<sections.length-1)show(current+1);
+  if(e.key==='ArrowLeft'&&current>0)show(current-1);
+  if(e.key===' '){const v=sections[current].querySelector('video');if(v){e.preventDefault();v.paused?v.play():v.pause()}}
+});
+show(0);
+</script></body></html>

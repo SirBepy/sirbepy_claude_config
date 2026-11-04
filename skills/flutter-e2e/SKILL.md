@@ -10,6 +10,8 @@ argument-hint: "<flow-description-or-script> | <path-to-test-plan.md> [free-form
 
 Native Android app via adb (not Flutter web)? Use `android-drive` instead - a different surface.
 
+Testing a whole feature or ticket in a repo where `/test-report`'s `enabled.cjs` prints `on`? Record it with `/test-report` from the start.
+
 ## Two modes - pick one
 
 - **Scripted mode**: no test-plan file given. Ad hoc or unattended runs from cold - overnight verification, CI-style smoke tests, "drive the app through X and tell me what happens." Builds and serves its own release bundle, writes a raw-Playwright driver script.
