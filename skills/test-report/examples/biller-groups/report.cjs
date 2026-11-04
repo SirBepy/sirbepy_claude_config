@@ -38,7 +38,8 @@ module.exports = {
       title: 'Admin Portal',
       clip: 'ap',
       takes: ['ap'],
-      html: `<h1>Admin Portal: <a href="https://app.shortcut.com/zirtue/story/56607">sc-56607</a></h1>
+      tickets: [{ label: 'sc-56607: Biller table, per-biller page and access levels', url: 'https://app.shortcut.com/zirtue/story/56607' }],
+      html: `<h1>Admin Portal</h1>
 <p>Attached billers became a table, each biller got its own page, and invites got an access level. Billers start off, so nothing reaches borrowers until an admin turns it on.</p>
 <p class="note">Click the video to pause. Click a step to jump to it.</p>`,
     },
@@ -46,14 +47,16 @@ module.exports = {
       title: 'Borrower app',
       clip: 'app',
       takes: ['app'],
-      html: `<h1>Borrower app: <a href="https://app.shortcut.com/zirtue/story/56595">sc-56595</a>, <a href="https://app.shortcut.com/zirtue/story/56605">sc-56605</a></h1>
+      tickets: [{ label: "sc-56595: Pick a group's biller on Find your bill", url: 'https://app.shortcut.com/zirtue/story/56595' }, { label: "sc-56605: Open a biller's own link straight to that biller", url: 'https://app.shortcut.com/zirtue/story/56605' }],
+      html: `<h1>Borrower app</h1>
 <p>A group's link now lets the borrower pick their biller. A biller's own link skips that step. Uses the billers set up in the previous recording.</p>`,
     },
     {
       title: 'Biller Portal',
       clip: 'bp',
       takes: ['bp-ava', 'bp-dana', 'bp-mia'],
-      html: `<h1>Biller Portal: <a href="https://app.shortcut.com/zirtue/story/56606">sc-56606</a>, <a href="https://app.shortcut.com/zirtue/story/56468">sc-56468</a></h1>
+      tickets: [{ label: 'sc-56606: Biller filter, biller-level access, per-biller Bank Details', url: 'https://app.shortcut.com/zirtue/story/56606' }, { label: 'sc-56468: Insights ACH reconciliation', url: 'https://app.shortcut.com/zirtue/story/56468' }],
+      html: `<h1>Biller Portal</h1>
 <p>Numbers can narrow to one biller, access can be limited to some billers, and Bank Details and the Insights ACH view are new. Dana is the person invited in the Admin Portal recording.</p>`,
     },
     {

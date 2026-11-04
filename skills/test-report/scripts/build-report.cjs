@@ -35,6 +35,12 @@ function stepList(steps) {
   return `<ol class="steps">${rows.join('')}</ol>`;
 }
 
+// Each ticket is { label, url }. Tickets get their own card instead of crowding the heading.
+function ticketCard(tickets) {
+  if (!tickets || !tickets.length) return '';
+  return `<div class="tickets"><h2>Tickets</h2>${tickets.map((t) => `<a href="${esc(t.url)}">${esc(t.label)}</a>`).join('')}</div>`;
+}
+
 function player(src) {
   return `<div class="player"><video preload="auto" playsinline src="${src}"></video><div class="bar"><button class="play" aria-label="Play or pause">Play</button><input class="seek" type="range" min="0" max="1" step="0.1" value="0" aria-label="Position in the video"><span class="clock">0:00</span><button class="speed" aria-label="Playback speed">1x</button><button class="sound" aria-label="Turn sound on or off">Sound on</button><button class="full" aria-label="Full screen">Full screen</button></div></div>`;
 }
@@ -54,10 +60,10 @@ function build(profile) {
     : '';
   const sections = report.slides.map((slide) => {
     const body = (slide.html || '').replace(/\{\{HEADLINE\}\}/g, esc(headline)).replace(/\{\{FAILED\}\}/g, failedBox);
-    if (!slide.takes) return `<section data-title="${esc(slide.title)}">${body}</section>`;
+    if (!slide.takes) return `<section data-title="${esc(slide.title)}">${body}${ticketCard(slide.tickets)}</section>`;
     const c = clips[slide.clip];
     const src = `data:video/webm;base64,${fs.readFileSync(c.file).toString('base64')}`;
-    return `<section data-title="${esc(slide.title)}">${body}<div class="watch">${player(src)}${stepList(c.steps)}</div></section>`;
+    return `<section data-title="${esc(slide.title)}">${body}<div class="watch">${player(src)}<div class="side">${stepList(c.steps)}${ticketCard(slide.tickets)}</div></div></section>`;
   }).join('\n');
   // A function replacement, so a $ in the words or the base64 is not read as a replacement pattern.
   const html = template.replace('{{TITLE}}', () => esc(report.title)).replace('{{SECTIONS}}', () => sections);

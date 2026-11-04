@@ -37,6 +37,22 @@ const check = (name, ok, detail = '') => {
     const box = await f.locator('#next').boundingBox().catch(() => null);
     if (i < count - 1) check(`${title}: Next at the bottom right`, !!box && box.x + box.width > 1100 * 0.85 && box.y + box.height > 800 * 0.88, JSON.stringify(box));
 
+    const layout = await f.locator('#main').evaluate((m) => {
+      const page = m.querySelector('.page').getBoundingClientRect();
+      const box = m.getBoundingClientRect();
+      return {
+        left: Math.round(page.left - box.left), right: Math.round(box.right - page.right),
+        top: Math.round(page.top - box.top), bottom: Math.round(box.bottom - page.bottom),
+        tall: m.scrollHeight > m.clientHeight,
+        scrollTop: m.scrollTop,
+        animation: getComputedStyle(m.querySelector('section.on > *')).animationName,
+        headingLinks: m.querySelectorAll('section.on h1 a').length,
+      };
+    });
+    check(`${title}: page is centered`, Math.abs(layout.left - layout.right) <= 1 && (layout.tall ? layout.scrollTop === 0 : Math.abs(layout.top - layout.bottom) <= 1), JSON.stringify(layout));
+    check(`${title}: slide content animates in`, layout.animation === 'rise', layout.animation);
+    check(`${title}: tickets stay out of the heading`, layout.headingLinks === 0);
+
     const video = f.locator('section.on video');
     if (await video.count()) {
       const r = await video.evaluate(async (v) => {

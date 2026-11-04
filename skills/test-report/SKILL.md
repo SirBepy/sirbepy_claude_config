@@ -78,7 +78,7 @@ Run a take with `$env:REPORT_WORK='<work folder>'; node rec-app.cjs`. `R.finish(
 node "$HOME\.claude\skills\test-report\scripts\build-report.cjs" <report.cjs> <work folder> <out.html>
 ```
 
-Each slide is `{ title, html }`, and a recording slide adds `{ clip, takes: [...] }`. Names in `takes` are the `take` passed to `R.open`, played in that order, and `clip` is any short name. `{{HEADLINE}}` gives the pass or fail line, `{{FAILED}}` a box listing failures. Available classes: `box`, `box warn`, `note`, plain `table`. The order is fixed:
+Each slide is `{ title, html }`, and a recording slide adds `{ clip, takes: [...] }`. Names in `takes` are the `take` passed to `R.open`, played in that order, and `clip` is any short name. `tickets: [{ label, url }]` puts ticket links in their own card, so keep them out of the heading. `{{HEADLINE}}` gives the pass or fail line, `{{FAILED}}` a box listing failures. Available classes: `box`, `box warn`, `note`, plain `table`. The order is fixed:
 
 1. **What you need to know.** What the dev must do or decide, first. If nothing, say that plainly.
 2. **How the surfaces connect.** Skip it with only one surface, and move the rest of this item to slide 1. Then what it was recorded on (and that it is not a deployed environment), what the script added or cut, and what was not shown.
