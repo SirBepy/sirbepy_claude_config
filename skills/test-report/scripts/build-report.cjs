@@ -4,9 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const { encodeClip } = require('./encode.cjs');
 
-// The panel refuses a page over 2MiB: MAX_HTML_BYTES in Conductor's daemon/preview.rs. This leaves it 17KB.
-const MAX_BYTES = 2080000;
+// The panel refuses a page over 8MiB (8388608): MAX_HTML_BYTES in Conductor's daemon/preview.rs. This leaves it ~388KB.
+const MAX_BYTES = 8000000;
 const LADDER = [
+  { width: 1280, fps: 10, crf: 40, audio: 24 },
   { width: 1000, fps: 8, crf: 46, audio: 16 },
   { width: 1000, fps: 8, crf: 50, audio: 14 },
   { width: 960, fps: 6, crf: 52, audio: 12 },

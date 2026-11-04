@@ -87,7 +87,7 @@ Each slide is `{ title, html }`, and a recording slide adds `{ clip, takes: [...
 
 Say each thing once. FE over BE: mention BE and teammates only where it changes what the dev must do.
 
-The build lowers quality until the page fits the panel's 2MB cap, and exits non-zero on overlap (3) or on still being too big (4). For 4, cut narration or split into two reports.
+The build lowers quality until the page fits the panel's 8MiB cap, and exits non-zero on overlap (3) or on still being too big (4). For 4, cut narration or split into two reports.
 
 ## Step 5 - Verify, then show it
 
