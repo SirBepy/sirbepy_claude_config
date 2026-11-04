@@ -71,10 +71,9 @@ const check = (name, ok, detail = '') => {
     const video = f.locator('section.on video');
     if (await video.count()) {
       const r = await video.evaluate(async (v) => {
-        const wait = (ms) => new Promise((res) => setTimeout(res, ms));
         await new Promise((res) => { if (v.readyState >= 1) res(); else v.addEventListener('loadedmetadata', res, { once: true }); });
         v.muted = false;
-        return { duration: v.duration, controls: v.controls, width: v.videoWidth, error: v.error && v.error.message, wait: !!wait };
+        return { duration: v.duration, controls: v.controls, width: v.videoWidth, error: v.error && v.error.message };
       });
       check(`${title}: video loads`, r.duration > 0 && !r.error && !r.controls, JSON.stringify(r));
 
