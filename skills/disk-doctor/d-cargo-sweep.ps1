@@ -73,8 +73,10 @@ function Get-NewestTime($p) {
   if ($m.Maximum) { $m.Maximum } else { (Get-Item $p -Force).LastWriteTime }
 }
 
+function Get-Builds { Get-Process cargo, rustc, rust-lld, link -ErrorAction SilentlyContinue }
+
 if ($Apply) {
-  $busy = Get-Process cargo, rustc, rust-lld, link -ErrorAction SilentlyContinue
+  $busy = Get-Builds
   if ($busy) {
     Write-Host 'REFUSING -Apply: a build is running. Stop these first:' -ForegroundColor Red
     $busy | Select-Object Name, Id | Format-Table | Out-String | Write-Host
@@ -194,8 +196,20 @@ if (-not $Apply) {
 
 $free0 = [math]::Round((Get-Volume D).SizeRemaining / 1GB, 2)
 
+# The busy check at the top only covers the start, and the listing phase takes minutes, so a build
+# can begin mid-sweep. Re-check before each dir and every 200 files and stop at once if one did.
+function Stop-IfBuilding {
+  if (Get-Builds) {
+    Write-Host 'ABORT: a build started during the sweep, stopping so it keeps its files.' -ForegroundColor Yellow
+    $f = [math]::Round((Get-Volume D).SizeRemaining / 1GB, 2)
+    Write-Host ("D: free {0} GB -> {1} GB (partial)" -f $free0, $f)
+    exit 4
+  }
+}
+
 foreach ($t in @('A', 'B', 'E')) {
   foreach ($item in ($dirPlan | Where-Object { $_.Tier -eq $t })) {
+    Stop-IfBuilding
     # Only paths under the cargo-target trees, never anything else on D:.
     if ($item.Path -notmatch '^D:\\cargo-target(-[A-Za-z0-9]+)?(\\|$)') {
       Write-Host "Skipping out-of-scope path: $($item.Path)" -ForegroundColor Red
@@ -211,7 +225,10 @@ foreach ($t in @('C', 'D')) {
   $set = $filePlan | Where-Object { $_.Tier -eq $t }
   if (-not $set) { continue }
   $ok = 0; $fail = 0
+  $n = 0
   foreach ($path in $set.Files) {
+    $n++
+    if ($n % 200 -eq 0) { Stop-IfBuilding }
     if (-not $path.StartsWith($deps + '\')) { $fail++; continue }   # never leave debug\deps
     try { [System.IO.File]::Delete($path); if (-not (Test-Path -LiteralPath $path)) { $ok++ } else { $fail++ } }
     catch { $fail++ }
