@@ -10,9 +10,18 @@ nav{flex:none;display:flex;gap:2px;overflow-x:auto;padding:7px 12px;background:v
 nav button{flex:none;font:inherit;font-size:13.5px;padding:5px 10px;border:0;border-radius:6px;background:none;color:var(--soft);cursor:pointer}
 nav button:hover{color:var(--ink)}
 nav button.on{background:var(--blue);color:var(--on-blue)}
-main{flex:1;min-height:0;overflow-y:auto;container-type:inline-size}
-.page{max-width:1120px;margin:0 auto;padding:20px 16px 24px}
+/* Auto margins centre the page both ways, and collapse to 0 on a tall slide so its top stays reachable. */
+main{flex:1;min-height:0;overflow-y:auto;display:flex;container-type:inline-size}
+.page{width:100%;max-width:1120px;margin:auto;padding:20px 16px 24px}
 section{display:none}section.on{display:block}
+/* Backwards fill only: a kept transform would trap the filled player inside this element. */
+section.on>*{animation:rise .32s cubic-bezier(.2,.7,.2,1) backwards}
+section.on>:nth-child(2){animation-delay:50ms}
+section.on>:nth-child(3){animation-delay:100ms}
+section.on>:nth-child(4){animation-delay:150ms}
+section.on>:nth-child(n+5){animation-delay:200ms}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+@media(prefers-reduced-motion:reduce){section.on>*{animation:none}}
 h1{font-size:24px;line-height:1.25;margin:0 0 10px}
 h2{font-size:16px;margin:20px 0 6px}
 p{margin:0 0 10px}
@@ -28,7 +37,8 @@ th,td{text-align:left;padding:8px 11px;border-bottom:1px solid var(--line);verti
 .note{font-size:13.5px;color:var(--soft)}
 
 .watch{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-bottom:10px}
-@container (min-width:900px){.watch{grid-template-columns:minmax(0,1fr) 290px;align-items:start}.watch .steps{max-height:none;height:var(--player-height,420px)}}
+.side{display:flex;flex-direction:column;gap:10px;min-width:0}
+@container (min-width:900px){.watch{grid-template-columns:minmax(0,1fr) 290px;align-items:start}.side{height:var(--player-height,420px)}.watch .steps{max-height:none;flex:1;min-height:0}}
 
 .player{background:#000;border-radius:10px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
 .player video{display:block;width:100%;flex:1;min-height:0;object-fit:contain;cursor:pointer;background:#000}
@@ -49,6 +59,10 @@ th,td{text-align:left;padding:8px 11px;border-bottom:1px solid var(--line);verti
 .jump .res{display:block;font-size:12px;color:var(--ok)}
 .jump.failed .res{color:var(--bad);font-weight:600}
 .jump.now{background:var(--tint);border-left-color:var(--blue);font-weight:600}
+
+.tickets{flex:none;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13.5px;line-height:1.35}
+.tickets h2{font-size:12px;font-weight:600;color:var(--soft);margin:0 0 5px}
+.tickets a{display:block;padding:2px 0}
 
 .pager{flex:none;display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:8px 14px;background:var(--card);border-top:1px solid var(--line)}
 .pager button{font:inherit;font-size:14.5px;padding:8px 14px;border-radius:7px;cursor:pointer}
