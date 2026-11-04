@@ -12,7 +12,8 @@ This chat is the hub for the day: the one chat the dev talks to. It does no work
 reading tickets or todos, no running scripts, no git, no code, no investigation. Everything,
 triage included, goes to a spawned chat with a self-contained brief. The hub only talks to the
 dev, asks questions (`ask_user_question`), shows its plan (`write_plan`), spawns chats
-(`spawn_chat`), and routes (`list_peers`, `read_messages`, `send_message`). If the dev asks a
+(`spawn_chat`), and routes (`list_peers`, `read_messages`, `send_message`). The one exception to
+"no other tools" is the foreground triage subagent in hub step 2. If the dev asks a
 question that needs looking something up, spawn a chat for it; don't look it up here.
 
 This rule holds for every request in this chat, not just the kickoff steps. If the dev says "go
@@ -30,22 +31,43 @@ already finished:
 
 | File | Remembers | Resurfaces when |
 | --- | --- | --- |
-| `feed.json` | Activity events (30 days), the newest event seen, handled marks per ticket | Someone other than the dev acts on the ticket after its handled mark |
+| `feed.json` | Activity events (30 days), the newest event seen, handled marks per ticket (`answered` marks also carry the channel) | Someone other than the dev acts on the ticket after its handled mark |
 | `todos.json` | Urgency verdict + content hash per todo file | The todo is new or its file changed |
 | `tickets.json` | Dismissed pickup tickets + their `updated_at` | The ticket is updated after dismissal |
 
-Never edit these files by hand. Use `handle`, `todo-verdict` and `ticket-dismiss`.
+Never edit these files by hand. Use `handle`, `answered`, `todo-verdict` and `ticket-dismiss`.
+
+### Answered outside Shortcut
+
+Claude cannot see Slack, so "answered" has two sources, and the report never lists answered items
+(the dev does not want to read what is already dealt with):
+
+- **Automatic:** `feed` hides a ticket when a copied draft (the Drafts panel sets state `copied`
+  when the dev presses Copy, or every variant was posted) names its id in the message text,
+  not only the topic, and the draft is newer than the last activity by someone else. It prints one
+  count line, and `feed --show-answered` lists them. A draft still `needs-you` never counts.
+- **Told to a chat:** when the dev says "I answered X on Y", any chat runs
+  `kickoff.py answered <id> --channel slack --note "<what was answered>"`. Work chats that relay or
+  draft an answer run it the moment the dev sends it. Draft topics should carry the `sc-` id.
+
+The 2026-11-04 miss: Lenar's two questions on sc-56468 were answered in a Slack message whose topic
+had no ticket id, so triage reported "no reply". Never write "no reply" without saying what was checked.
 
 ## Hub steps (what this chat does)
 
 1. Call `write_plan` with: spawn the triage chat, relay its picks, spawn the chosen work chats.
-2. Spawn ONE triage chat (cwd: the zng-app repo, name "ZNG triage"). Its prompt tells it to read
-   this SKILL.md, run the "Triage procedure" below in full (steps 2-5), then stop and report: the
-   top items, and a ranked list of workable picks with ticket links and verified state. It does no
-   building and no ticket posting. It marks non-actionable items with `handle` / `todo-verdict` /
-   `ticket-dismiss` as the procedure says.
-3. When the triage chat reports (or the dev pastes its result), put the workable items in one
-   `ask_user_question` card and spawn per the "Pick and spawn" rules below.
+2. Run triage as ONE foreground subagent (`Agent`, `model: 'sonnet'`, `run_in_background: false`),
+   not a separate chat: its report returns straight to the hub. A separate chat's report did not
+   reach the hub on 2026-11-04 and the chat then refused to close on a peer message. The prompt tells
+   it to read this SKILL.md, run the "Triage procedure" below in full (steps 2-5), and return: the
+   top items, a ranked list of workable picks with ticket links and verified state, and a separate
+   list of `UNANSWERED` tickets (step 3). It does no building and no ticket posting. It marks
+   non-actionable items with `handle` / `todo-verdict` / `ticket-dismiss` as the procedure says.
+   Include the `READ-ONLY DISPATCH` line plus the staging line from the global builder preamble.
+3. When triage returns, put the workable items in one `ask_user_question` card and spawn per the
+   "Pick and spawn" rules below. If it returned `UNANSWERED` tickets, add ONE batched question to the
+   same card: "did you already answer any of these outside Shortcut?" with the tickets as options;
+   run `answered` for each ticket the dev picks.
 4. If the dev already named the work ("we had something today", "do X"), still spawn a chat to find
    and brief it; never go find it here.
 5. When the dev asks what needs doing for one initiative or epic ("what else for zng-admin and
@@ -99,6 +121,10 @@ epic, links, description, every comment with author and date; GET only, never pr
 instead of hand-writing a fetch. Then drop off-plate states, cross-check git in the ZNG repos, and
 rank it. Then:
 
+- A ticket line tagged `UNANSWERED: ... checked: ...` has a question from someone else with no
+  dev comment, mark or copied draft after it. Report it separately as "no reply found" together
+  with the `checked` text, only when the last comment is more than 2 days old; the hub asks the dev
+  whether it was answered elsewhere. Anything answered elsewhere is already hidden, so never list it.
 - Nothing for the dev to do (FYI, someone else's thread, already answered, off-plate):
   `kickoff.py handle <id> --note "<why>"` right away, and don't report it.
 - Actionable: report it. Mark it handled only once it's resolved in this chat (the dev answered, a
@@ -164,12 +190,14 @@ Every spawn prompt stands alone, since the new chat can't see this one. It carri
   markdown links: the phone app's Copy pastes raw markdown into Slack (claude_usage_in_taskbar
   todo 1292).
 - Every work-chat prompt ends with: when this item is resolved, run `kickoff.py handle` /
-  `todo-verdict` / `ticket-dismiss` for it so tomorrow's run doesn't raise it again.
+  `todo-verdict` / `ticket-dismiss` for it so tomorrow's run doesn't raise it again. When the
+  dev sends an answer outside Shortcut, run `kickoff.py answered <id> --channel <where>`, and put
+  the `sc-` id in every draft topic.
 
 ## Never
 
-- Never does work in the hub chat: no tool calls beyond spawn/ask/plan/message/peers, no files, no
-  scripts, no git. Delegate instead.
+- Never does work in the hub chat: no tool calls beyond spawn/ask/plan/message/peers and the triage
+  subagent, no files, no scripts, no git. Delegate instead.
 - Never posts a Shortcut comment or changes ticket state without the dev's OK on the exact text.
 - Never archives or edits a todo in a ZNG repo. It only reports.
 - Never re-raises a handled notification or a dismissed ticket that hasn't changed.

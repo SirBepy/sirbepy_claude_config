@@ -436,6 +436,8 @@ class Drafts(unittest.TestCase):
         os.makedirs(self.store_dir)
         self.env = mock.patch.dict(os.environ, {'CC_DATA_DIR': self.data})
         self.env.start()
+        self.state = mock.patch.object(kickoff, 'STATE_DIR', os.path.join(self.tmp.name, 'state'))
+        self.state.start()
         self.zng = [draft('sc-56344 Johanna reply', origin='Oct 23 hub', updated='2026-10-23T09:15:00+00:00'),
                     draft('New FE ticket 1: Team roles'),
                     draft('sc-56160 how to test', state='copied'),
@@ -446,6 +448,7 @@ class Drafts(unittest.TestCase):
         self.write('other.json', {'drafts': [draft('Minecraft server invite')], 'handles': {}})
 
     def tearDown(self):
+        self.state.stop()
         self.env.stop()
         self.tmp.cleanup()
 
@@ -496,6 +499,54 @@ class Drafts(unittest.TestCase):
     def test_ticket_ids_are_found_in_topics(self):
         self.assertEqual(kickoff.draft_ticket_ids('SC-56344 reply, also 55507 and 2026'), {'56344', '55507'})
         self.assertEqual(kickoff.draft_ticket_ids('New FE ticket 1'), set())
+
+    def _feed(self, comment_by='someone-else', dev_reply=False):
+        now = kickoff.now_utc()
+        mk = lambda sid, who, at: {'changed_at': kickoff.iso(at), 'member_id': who, 'actor_name': 'Lenar',
+                                   'actions': [{'entity_type': 'story', 'id': sid, 'name': 'ACH'},
+                                               {'entity_type': 'story-comment', 'action': 'create', 'text': 'q?'}]}
+        events = {'a': mk(56468, comment_by, now - kickoff.dt.timedelta(days=7))}
+        if dev_reply:
+            events['b'] = mk(56468, kickoff.DEV_UUID, now - kickoff.dt.timedelta(days=6))
+
+        def collect(fetch, ev, stop_at, before):
+            ev.update(events)
+            return len(events), True
+        with mock.patch.object(kickoff, 'env', lambda: {'SHORTCUT_SID': 'x'}), \
+                mock.patch.object(kickoff, 'collect_events', collect):
+            return run(kickoff.cmd_feed, days=30, show_answered=True)
+
+    def test_a_copied_draft_naming_the_ticket_in_its_body_answers_it_silently(self):
+        d = draft('Biller Groups: how to test everything', state='copied', updated=kickoff.iso(kickoff.now_utc()))
+        d['variants'][0]['current'] = '1'
+        d['variants'][0]['versions'] = [{'n': 1, 'body': 'ACH is hidden, see https://app.shortcut.com/zirtue/story/56468'}]
+        self.write('zng.json', {'drafts': self.zng + [d], 'handles': {}})
+        out = self._feed()
+        self.assertNotIn('UNANSWERED', out)
+        self.assertIn('0 tickets with unhandled activity', out)
+        self.assertIn('#56468 ACH | draft copied', out)
+
+    def test_a_question_with_no_reply_anywhere_is_labelled_with_what_was_checked(self):
+        out = self._feed()
+        self.assertIn('#56468', out)
+        self.assertIn('UNANSWERED: last comment', out)
+        self.assertIn('no copied draft naming it', out)
+
+    def test_a_dev_comment_on_the_ticket_clears_the_unanswered_label(self):
+        self.assertNotIn('UNANSWERED', self._feed(dev_reply=True))
+
+    def test_a_draft_that_is_only_unsent_does_not_answer_the_ticket(self):
+        d = draft('how to test', updated=kickoff.iso(kickoff.now_utc()))
+        d['variants'][0]['current'] = '1'
+        d['variants'][0]['versions'] = [{'n': 1, 'body': 'story/56468'}]
+        self.write('zng.json', {'drafts': self.zng + [d], 'handles': {}})
+        self.assertIn('UNANSWERED', self._feed())
+
+    def test_answered_command_records_the_channel_and_hides_the_ticket_draft(self):
+        run(kickoff.cmd_handle, story_ids=['56344'], note='told her', channel='slack')
+        mark = kickoff.load('feed.json', {})['handled']['56344']
+        self.assertEqual(mark['answered_via'], 'slack')
+        self.assertNotIn('sc-56344 Johanna reply', run(kickoff.cmd_drafts))
 
     def test_feed_flags_a_ticket_that_already_has_an_open_draft(self):
         root = self.tmp.name

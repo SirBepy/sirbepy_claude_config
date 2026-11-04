@@ -4,9 +4,12 @@ Subcommands:
   leftovers                         unpushed commits, dirty files and todo claims per ZNG repo, then
                                     the unsent drafts every chat in the project left
   drafts                            just the unsent-drafts part of leftovers
-  feed [--days N]                   fetch Shortcut activity newer than the last run, print tickets
+  feed [--days N] [--show-answered] fetch Shortcut activity newer than the last run, print tickets
                                     with activity after their handled mark
   handle <story_id>... [--note T]   mark tickets handled; they resurface only on newer activity
+  answered <story_id>... --channel C [--note T]
+                                    handled, plus record that the dev answered outside Shortcut (C: slack,
+                                    call, in-person, ...). Copied drafts that name the ticket do this on their own.
   todos                             per-repo counts, plus todos that are new or changed since triage
   todo-verdict <repo> <file> <urgent|not-urgent> [--reason T]
   tickets                           pickable unstarted FE tickets, minus dismissed-and-unchanged ones
@@ -177,7 +180,7 @@ def is_open_draft(d):
     return not (variants and all(v.get('sent') for v in variants))
 
 
-def open_zng_drafts():
+def open_zng_drafts(handled=None):
     """(drafts, note). One store file per Conductor project and the file name is an opaque id, so a
     store counts as ZNG's when any of its drafts names an sc-id or zng. Never reads draft bodies."""
     path = drafts_dir()
@@ -197,6 +200,10 @@ def open_zng_drafts():
         if not any(ZNG_DRAFT.search(d['topic'] + str(d.get('brief', ''))) for d in raw):
             continue
         for d in raw:
+            ids = draft_ticket_ids(d['topic'])
+            # Handled/answered after the draft was last touched means its ticket was dealt with another way.
+            if handled and ids and all(handled.get(i, {}).get('at', '') >= str(d.get('updated_at', '')) for i in ids):
+                continue
             if is_open_draft(d):
                 found.append({'topic': d['topic'], 'origin': ' '.join(str(d.get('origin_label', '')).split())[:60],
                               'updated': str(d.get('updated_at', ''))})
@@ -204,12 +211,56 @@ def open_zng_drafts():
     return found, (f'{skipped} store file(s) unreadable or in an unknown format' if skipped else '')
 
 
+def draft_body_ids(d):
+    """Ticket ids named in the draft's message text (not its topic), for every variant's current version."""
+    ids = set()
+    for v in d.get('variants', []):
+        if not isinstance(v, dict):
+            continue
+        versions = [x for x in v.get('versions', []) if isinstance(x, dict)]
+        current = [x for x in versions if str(x.get('n')) == str(v.get('current'))] or versions
+        for x in current:
+            ids |= draft_ticket_ids(str(x.get('body', '')))
+    return ids
+
+
+def is_dealt_with_draft(d):
+    # `copied` is set when the dev presses Copy in the Drafts panel, i.e. the message left for Slack/Shortcut.
+    variants = [v for v in d.get('variants', []) if isinstance(v, dict)]
+    return d.get('state') == 'copied' or (bool(variants) and all(v.get('sent') for v in variants))
+
+
+def answered_by_drafts():
+    """{ticket_id: latest updated_at} over dealt-with ZNG drafts whose message text names the ticket.
+    A topic often lacks the id ('Biller Groups: how to test everything' answered sc-56468), so the body is read."""
+    path = drafts_dir()
+    out = {}
+    if not os.path.isdir(path):
+        return out
+    for name in os.listdir(path):
+        if not name.endswith('.json'):
+            continue
+        try:
+            with open(os.path.join(path, name), encoding='utf-8') as f:
+                raw = [d for d in json.load(f)['drafts'] if isinstance(d, dict) and isinstance(d.get('topic'), str)]
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+        if not any(ZNG_DRAFT.search(d['topic'] + str(d.get('brief', ''))) for d in raw):
+            continue
+        for d in raw:
+            if not is_dealt_with_draft(d):
+                continue
+            for tid in draft_body_ids(d) | draft_ticket_ids(d['topic']):
+                out[tid] = max(out.get(tid, ''), str(d.get('updated_at', '')))
+    return out
+
+
 def when(updated):
     return updated[:16].replace('T', ' ')
 
 
 def cmd_drafts(_):
-    found, note = open_zng_drafts()
+    found, note = open_zng_drafts(load('feed.json', {}).get('handled'))
     print(f'== unsent drafts (all chats in the project): {len(found)}')
     if note:
         print(f'   {note}')
@@ -292,12 +343,14 @@ def aggregate_tickets(events):
         sid_, name = story_of(e)
         if sid_ is None:
             continue
-        t = tickets.setdefault(str(sid_), {'name': name, 'reasons': set(), 'last': '', 'comments': [], 'states': []})
+        t = tickets.setdefault(str(sid_), {'name': name, 'reasons': set(), 'last': '', 'comments': [], 'states': [], 'dev_comment': ''})
         t['name'] = t['name'] or name
         t['reasons'].update(r.get('reason') for r in (e.get('reasons') or []))
         if e.get('member_id') != DEV_UUID:
             t['last'] = max(t['last'], e.get('changed_at') or '')
         for a in e.get('actions', []):
+            if a.get('entity_type') == 'story-comment' and a.get('action') == 'create' and e.get('member_id') == DEV_UUID:
+                t['dev_comment'] = max(t['dev_comment'], e.get('changed_at') or '')
             if a.get('entity_type') == 'story-comment' and a.get('action') == 'create' and e.get('member_id') != DEV_UUID:
                 t['comments'].append((e.get('changed_at'), e.get('actor_name'), DEV_UUID in (a.get('mention_ids') or []),
                                       (a.get('text') or '')[:200].replace('\n', ' ')))
@@ -342,10 +395,11 @@ def cmd_feed(args):
     tickets = aggregate_tickets(feed['events'].values())
     print(f'fetched {fetched} events, cache holds {len(feed["events"])}, high water {feed["high_water"]}')
     by_ticket = {}
-    for d in open_zng_drafts()[0]:
+    for d in open_zng_drafts(feed['handled'])[0]:
         for tid in draft_ticket_ids(d['topic']):
             by_ticket.setdefault(tid, []).append(d)
-    open_count = 0
+    open_count, answered_hidden = 0, []
+    by_draft = answered_by_drafts()
     for sid_, t in sorted(tickets.items(), key=lambda x: x[1]['last'], reverse=True):
         if not t['last']:
             continue
@@ -354,24 +408,41 @@ def cmd_feed(args):
             continue
         if is_noise_only(t):
             continue
+        # Answered outside Shortcut: a copied draft naming the ticket, written after the last activity by someone else.
+        if by_draft.get(sid_, '') > t['last']:
+            answered_hidden.append((sid_, t['name'], by_draft[sid_]))
+            continue
         open_count += 1
         since = f" (handled {mark['at'][:10]}, new activity since)" if mark else ''
         print(f"\n#{sid_} {t['name']} | reasons={sorted(r for r in t['reasons'] if r)} | last={t['last']}{since}")
         for d in by_ticket.get(sid_, []):
             print(f"   DRAFT EXISTS: post it, do not redraft | {when(d['updated'])} | {d['topic']} | from: {d['origin']}")
+        if t['comments'] and max(c[0] for c in t['comments']) > t['dev_comment']:
+            last = max(t['comments'])
+            print(f"   UNANSWERED: last comment {last[0][:10]} from {last[1]}; checked: no dev comment on the ticket since, "
+                  f"no handled/answered mark, no copied draft naming it")
         for c in sorted(t['comments'])[-4:]:
             print(f"   C {c[0][:16]} {c[1]}{' @dev' if c[2] else ''}: {c[3]}")
         for s in t['states'][-2:]:
             print(f'   S {s[0][:16]} {s[1]} -> state {s[2]}')
     print(f'\n{open_count} tickets with unhandled activity')
+    if answered_hidden:
+        print(f'({len(answered_hidden)} more hidden: answered via a copied draft; --show-answered lists them)')
+        if args.show_answered:
+            for sid_, name, at in answered_hidden:
+                print(f'   #{sid_} {name} | draft copied {when(at)}')
 
 
 def cmd_handle(args):
     feed = load('feed.json', {'high_water': None, 'events': {}, 'handled': {}})
+    channel = getattr(args, 'channel', None)
     for sid_ in args.story_ids:
-        feed['handled'][str(sid_)] = {'at': iso(now_utc()), 'note': args.note or ''}
+        mark = {'at': iso(now_utc()), 'note': args.note or ''}
+        if channel:
+            mark['answered_via'] = channel
+        feed['handled'][str(sid_)] = mark
     save('feed.json', feed)
-    print(f'handled: {", ".join(args.story_ids)}')
+    print(f'{"answered via " + channel if channel else "handled"}: {", ".join(args.story_ids)}')
 
 
 # ---------------------------------------------------------------- todos
@@ -580,11 +651,17 @@ def main():
     sub.add_parser('drafts').set_defaults(fn=cmd_drafts)
     f = sub.add_parser('feed')
     f.add_argument('--days', type=int, default=3, help='first-run lookback only')
+    f.add_argument('--show-answered', action='store_true')
     f.set_defaults(fn=cmd_feed)
     h = sub.add_parser('handle')
     h.add_argument('story_ids', nargs='+')
     h.add_argument('--note')
     h.set_defaults(fn=cmd_handle)
+    a = sub.add_parser('answered')
+    a.add_argument('story_ids', nargs='+')
+    a.add_argument('--channel', required=True)
+    a.add_argument('--note')
+    a.set_defaults(fn=cmd_handle)
     sub.add_parser('todos').set_defaults(fn=cmd_todos)
     v = sub.add_parser('todo-verdict')
     v.add_argument('repo', choices=REPOS)
