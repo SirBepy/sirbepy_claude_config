@@ -123,17 +123,36 @@ Then a blank line and a `**How to raise the score:**` block: up to 3 bullets, ea
 
 ## Post-rating prompt (main agent only)
 
-Do NOT call `AskUserQuestion` (or any other picker-style tool) in the same turn as the rating. Bundling a picker with the rating text makes the harness (and the global "no work alongside messages" rule) swallow the rating - the dev ends up with a bare picker and no score. The rating is the deliverable; it must always render.
+**Nested invocation.** If `/rate-it` was invoked by another skill rather than directly by the dev, the invoking skill owns the terminal question: return just the verdict + reasoning + How-to-raise block and skip the rest of this section (the tick card, the "Next move" line and its reply handling). Direct invocation by the dev keeps this section in full.
 
-So: deliver the full rating (verdict + reasoning + How-to-raise) as a complete text response and end the turn on it - nothing may follow the rating in that turn. In a host where the user-visible channel is itself a tool call (e.g. Claude Conductor's `send_message`), deliver the rating through that call and end the turn there; the constraint is that nothing FOLLOWS the rating, not that zero tool calls occur. In Conductor, send it as `kind: "rating"`: the score line is `verdict`, the reasoning is `text` (300-char cap), and each How-to-raise bullet goes in `points` (the card shows them open under "How to raise it"), never squeezed into `text` where the cap drops them. The "Next move" line below stays the last sentence of `text`.
+**Skip the prompt entirely** if the verdict is 1-2/10 with no lift (nothing to act on) or if `/rate-it` was the dev's last word in an obvious deliberation flow.
 
-**Nested invocation.** If `/rate-it` was invoked by another skill rather than directly by the dev, the invoking skill owns the terminal question: return just the verdict + reasoning + How-to-raise block and skip the rest of this section (the "Next move" line below and its reply handling). Direct invocation by the dev keeps this section in full.
+Which path applies depends on the host.
+
+### In Claude Conductor (the `mcp__cc_conductor__send_message` and `mcp__cc_conductor__ask_user_question` tools exist)
+
+The lifts become ticks, so the dev picks the ones he agrees with instead of typing "apply some, say which". Two calls, in this order, in the same turn:
+
+1. `send_message` with `kind: "rating"`: the score line is `verdict` (at most 40 chars), the reasoning is `text` (300-char cap), and each How-to-raise bullet goes in `points`, written `-> 8/10: <change>; costs <cost>` (the card draws them open as score, change and cost rows). Never squeeze the bullets into `text`, where the cap drops them. No "Next move" line: the card below replaces it.
+2. `ask_user_question` with ONE question, `multiSelect: true`, one option per lift (3 at most), and `domain` set to the kind of decision the lifts are (`arch`, `tooling`, `ux`, ...). Each option's `label` is the short change prefixed with its score (`8/10: add a retry`), its `description` is the cost, and `badges: ["recommended"]` goes on the one best value-for-cost lift. The question text names what is being rated and ends with the literal ask: "Which of these lifts should Claude apply? Nothing ticked means ignore."
+
+Then end the turn on the card (`report_turn_status` `question`). The rating is a transcript message, so the card does not replace it; the card only holds the choice. This is the one exception to the plain-text rule below: the old ban was about a picker REPLACING the rating text, and here the rating has already been sent as its own message before the card appears.
+
+When the answer comes back, act on it on the following turn:
+
+- Ticked lifts → for a 7+ verdict, implement each ticked lift now - that score means the bullets are refinements, not open questions. For a 3-6/10 verdict where a ticked lift reads as a design/architecture pivot rather than a mechanical swap, say so and switch to running `/iterate-it` on that lift instead of writing code directly. Mechanical lifts, any score, implement now. Do the ticked lifts in the order the card listed them.
+- Nothing ticked, or Skip → drop the rating thread and wait for the next instruction.
+- A typed "other" answer → follow what the dev wrote.
+
+### In any other host
+
+Do NOT call `AskUserQuestion` (or any other picker-style tool) in the same turn as the rating. In a host where a picker replaces the message, bundling one with the rating text makes the harness (and the global "no work alongside messages" rule) swallow the rating - the dev ends up with a bare picker and no score. The rating is the deliverable; it must always render.
+
+So: deliver the full rating (verdict + reasoning + How-to-raise) as a complete text response and end the turn on it - nothing may follow the rating in that turn.
 
 Close the rating message with a single plain-text follow-up line offering the next move (this is a menu appended to the deliverable, not a standalone question, so it stays inline text - do not promote it to an AskUserQuestion):
 
 > Next move: **apply all** the suggestions, **apply some** (say which), or **ignore** and carry on?
-
-Skip that line entirely if the verdict is 1-2/10 with no lift (nothing to act on) or if `/rate-it` was the dev's last word in an obvious deliberation flow.
 
 If the dev then replies choosing a path, act on it on the following turn:
 
