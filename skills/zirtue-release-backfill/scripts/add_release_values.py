@@ -10,7 +10,7 @@ every ticket using it). So this script always resends every existing value
 unchanged, appends the new ones last, and refuses to run if the payload would drop
 an id. After the PUT it re-reads the field and checks every old id survived.
 
-Labels must match ^(FE|Admin|API) \\d+\\.\\d+\\.\\d+(\\+\\d+)?$ so a typo can't
+Labels must match ^(FE|Admin|API|Biller) \\d+\\.\\d+\\.\\d+(\\+\\d+)?$ so a typo can't
 land in the shared workspace. Labels already present are skipped.
 """
 
@@ -22,7 +22,7 @@ from pathlib import Path
 
 API = "https://api.app.shortcut.com/api/v3"
 RELEASE_FIELD_ID = "68f8e559-4a18-4a6e-be1c-fa2f5aaa4fdb"
-LABEL_RE = re.compile(r"^(FE|Admin|API) \d+\.\d+\.\d+(\+\d+)?$")
+LABEL_RE = re.compile(r"^(FE|Admin|API|Biller) \d+\.\d+\.\d+(\+\d+)?$")
 ENV_FILE = Path.home() / ".claude" / ".env"
 
 
