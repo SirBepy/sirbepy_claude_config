@@ -32,7 +32,7 @@ curl -s "https://api.app.shortcut.com/api/v3/custom-fields/68f8e559-4a18-4a6e-be
 - **Cross-repo fix (zng-app + zng-admin).** Status `multi-repo`. Ask dev which release is primary; Shortcut only allows one Release value per ticket.
 - **No commit found.** Status `needs-human`. Don't guess from title alone unless dev opts in.
 - **Tag naming drift.** If you see tags that don't match `v<major>.<minor>.<patch>+N` (app/admin) or `v<major>.<minor>.<patch>` (api), flag and stop. Update this skill before proceeding. A repo with zero tags matching that shape at all (zng-biller as of 2026-09-30) is not drift - it's never-deployed; see the Repos section in SKILL.md.
-- **Enum value missing.** Do not create new enum values via API. Stop with a clear message: "Release enum lacks `<label>`. Add it in Shortcut UI, then re-run."
+- **Enum value missing.** Create it with `scripts/add_release_values.py` (SKILL.md step 10), only for a label taken from a real version tag. Never hand-roll the `PUT /custom-fields/{id}`: omitting an existing value from `values` deletes it.
 - **Repo working tree dirty.** `git fetch` still works but never `checkout` anything. This skill only reads tags / log.
 - **Estimate already set on ticket.** Never overwrite. Only fill if currently `None`.
 - **Existing field already set to wrong value.** Do not "correct" silently. Other-field fills are insert-only — only touch fields that are currently empty.
@@ -40,7 +40,7 @@ curl -s "https://api.app.shortcut.com/api/v3/custom-fields/68f8e559-4a18-4a6e-be
 ## What this skill never does
 
 - Never commits in any repo. (Sibling repo rule.)
-- Never invents a new Release enum value.
+- Never creates a Release enum value that isn't backed by a real version tag, and never edits or deletes an existing one.
 - Never applies field updates without explicit approval at gates A/B/C. (Gate D moves are default-on but always announced in the report first, and nothing is applied before the gates are answered.)
 - Never PUTs a partial `custom_fields` array (would wipe other fields).
 - Never overwrites already-set scope fields (Pri/Skill/Prod/Tech/Estimate). Insert-only.

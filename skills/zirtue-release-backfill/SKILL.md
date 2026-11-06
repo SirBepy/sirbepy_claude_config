@@ -240,11 +240,13 @@ For each ticket needing Release backfill, reuse the merge-SHA / tag lookup alrea
 **Enum-completeness check (run once, before step 8's report, not per ticket at apply time).**
 Fetch the Release custom field's enum once (`reference.md`'s REST quick reference). Collect the
 full set of distinct proposed Release labels across every ticket resolved so far (steps 4.4, 6,
-Step 4b). Diff that set against the enum's existing values. If any proposed label is missing,
-list every missing label in one `AskUserQuestion` ("Add these Release values in Shortcut UI before
-continuing: <list>. Skip the affected tickets for now, or wait while you add them?") instead of
-discovering it ticket-by-ticket during step 10's apply loop - that is what cost the dev a mid-run UI
-detour on 2026-09-30 (`Admin 1.0.0+11` was missing). Never invent a value via the API either way.
+Step 4b). Diff that set against the enum's existing values. List every missing label in step 8's
+report as "will be created", so the dev sees them before any gate, instead of discovering them
+ticket-by-ticket during step 10's apply loop (a mid-run UI detour on 2026-09-30, `Admin 1.0.0+11`).
+
+Claude creates missing labels itself, the dev no longer adds them in Shortcut UI (dev's call,
+2026-11-06). Only a label derived from a real version tag in step 4.4 qualifies: never create one
+from a title guess or a `needs-human` ticket. The create happens in step 10, not here.
 
 **Confidence:**
 - `high` - single repo, unambiguous SHA from `^<id>:` prefix, one matching version tag.
@@ -348,7 +350,20 @@ if sid in gate_d1_approved_ids or sid in gate_d2_approved_ids:
 
 **Never** PUT a partial `custom_fields` array. **Never** PUT without first having read the existing story.
 
-If the proposed Release label is missing from the enum (e.g. repo has new tag the Shortcut field doesn't list), stop and tell the dev to add the enum value in Shortcut UI first - never invent a new value. (See `reference.md`'s REST quick reference for fetching the enum.)
+**Missing Release labels: create them before the apply loop.** Take the labels step 6 flagged,
+keep only those an approved Gate A / Gate D update actually uses, and run:
+
+```bash
+python -I C:/Users/tecno/.claude/skills/zirtue-release-backfill/scripts/add_release_values.py "FE 1.1.0+3"        # dry run
+python -I C:/Users/tecno/.claude/skills/zirtue-release-backfill/scripts/add_release_values.py --apply "FE 1.1.0+3"
+```
+
+Use the script, never a hand-written `PUT /custom-fields/{id}`: that endpoint treats `values` as
+the complete enum and **deletes every value left out**, which strips it off every ticket that
+carries it. The script resends all existing values, refuses a label outside
+`^(FE|Admin|API) \d+\.\d+\.\d+(\+\d+)?$`, and re-reads the field after to confirm no old id was
+lost. It prints each new value's id; re-fetch the enum (`reference.md`) to get `value_id`s for
+the story PUTs. If it exits non-zero, stop the apply loop and show the dev its output.
 
 ### 11. Final summary
 
