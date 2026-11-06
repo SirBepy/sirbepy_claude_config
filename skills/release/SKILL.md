@@ -24,11 +24,18 @@ The sequence is `skills/commit/SKILL.md`'s "Push pipeline" list, the only place 
 
 ## Gate chat
 
-An attended `/release` from a chat that has used 30% or more of its context hands the rest of the pipeline (from the todo sweep on, including 4b) to a fresh gate chat that ends with `/close`: after 1b and the Mode step 5 check, invoke `/gate-chat` with mode `release` and the resolved `release` value. If `/gate-chat` finds the chat under 30% it returns and the pipeline continues here; otherwise this chat stops. Unattended runs keep the gate in place.
+An attended `/release` from a chat that has used 30% or more of its context hands the rest of the pipeline (from the todo sweep on, including 4b) to a fresh gate chat that ends with `/close`: after 1b, 1d and the Mode step 5 check, invoke `/gate-chat` with mode `release` and the resolved `release` value. If `/gate-chat` finds the chat under 30% it returns and the pipeline continues here; otherwise this chat stops. Unattended runs keep the gate in place.
 
 ## 1b. Kit sync
 
 `python C:/Users/tecno/.claude/skills/release/release.py kit-sync <repo>` prints `{"changed","old","new"}`. When `changed`, commit `CHORE: bump tauri_kit <old> -> <new>` (ASCII arrow) via `commit-pathspec.sh` with pathspec `vendor/tauri_kit`. It runs before the todo sweep and the gate so `/code-check` and `/e2e` cover the new kit code.
+
+## 1d. Repo reports
+
+Runs after 1b, before the Gate chat hand-off, so Joe reads it in this chat. When the repo has `.claude/release-reports.txt`, run each non-blank line that does not start with `#` as a shell command from the repo root (PowerShell on Windows) and show its output to Joe under the command as a heading. The file is the repo's own list of "look at this before it ships" reports, for example a log of failures the app recorded but never showed. No file: skip silently.
+
+- Advisory only: a non-zero exit or an alarming table never stops the release. Say what stood out in one sentence; when something looks like a real defect, offer to file a todo for it through the `ask_user_question` card.
+- Unattended: run the commands, put the output in the run's report, never ask.
 
 ## 4b. Version bump
 

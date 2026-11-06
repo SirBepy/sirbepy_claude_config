@@ -7,7 +7,7 @@ description: Hands a push's gate (code-check, e2e, push) to a fresh chat ending 
 
 > The gate is the heaviest part of a push. A fresh chat runs it on an empty context, with its one job being to ship and then close. Called from `/commit`'s Push pipeline step 1c, for an attended push or `/release` from a chat that has used 30% or more of its context.
 
-Runs after step 1 (and 1b under `/release`), once `git rev-list --count '@{u}..HEAD'` says there is something to push. If `@{u}` does not resolve (a branch with no upstream), say so, offer `git push -u origin <branch>` instead, and stop: there is no range to hand over. It does not apply to:
+Runs after step 1 (and 1b and 1d under `/release`), once `git rev-list --count '@{u}..HEAD'` says there is something to push. If `@{u}` does not resolve (a branch with no upstream), say so, offer `git push -u origin <branch>` instead, and stop: there is no range to hand over. It does not apply to:
 
 - **A chat under 30% context used**: run `node ~/.claude/skills/context-left/context-left.mjs`, which prints `context left: <n> / <window> (<pct>%)`. 70% or more left means stop here and return: the pipeline continues in this chat. Joe set this threshold on 2026-10-27 ("only when context is heavy, over 30% used"); a 2026-10-29 "Gate chat, always" answer was about `/release` as a runner, not a new threshold.
 - **Unattended runs** (`/autopilot`, `/auto-do-todos`, `/mega-todos`): nobody would answer the gate chat's cards, so the gate stays in place.
