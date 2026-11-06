@@ -125,6 +125,7 @@ The full ordered sequence for every push (`/commit push`, a plain push request, 
 
 1. **Commit** - steps 1-8 above, including step 6b's gate (`/test` plus the test-coverage check).
 1b. **Kit sync** (`/release only`) - `release.py kit-sync <repo>`, then a `CHORE: bump tauri_kit <old> -> <new>` commit when the submodule pointer moved. Before the sweep and gate so `/code-check` and `/e2e` cover the new kit code.
+1d. **Repo reports** (`/release only`) - advisory output a repo asks to see before it ships: each command line of its `.claude/release-reports.txt`, run from the repo root, output shown to Joe. Never blocks. Runs in this chat, before any gate hand-off, because the gate chat closes itself and Joe reads this one.
 1c. **Gate hand-off** - attended runs only, when this chat has used 30% or more of its context: run step 3 here, then hand steps 2 and 4 onward to a fresh gate chat that ends with `/close` (see "Gate hand-off" below). The gate is the heaviest part of a push, and a long chat runs it on a crowded context. Under 30% used, the gate runs in place: a spawned chat costs a cold start and buys nothing on a light context (Joe, 2026-10-27, and again 2026-10-30 after a 13%-context chat spawned one anyway).
 2. **Pre-push todo sweep** - fold small backlog todos sitting in the files the push already touches.
 3. **Pre-push transcript check** - stop on any dev message since the last push that was never addressed.
