@@ -20,7 +20,7 @@ curl -s "https://api.app.shortcut.com/api/v3/search/stories?query=<urlencoded>&d
 # Update story
 curl -s -X PUT "https://api.app.shortcut.com/api/v3/stories/<id>" \
   -H "Shortcut-Token: $TOKEN" -H "Content-Type: application/json" \
-  -d '{"custom_fields":[...full merged array...],"workflow_state_id":500018258}'
+  -d '{"custom_fields":[...full merged array...],"workflow_state_id":500018258}'   # 500018257 for a Gate E move to Testing
 
 # Get Release enum (uncached — use this if MCP returns stale data)
 curl -s "https://api.app.shortcut.com/api/v3/custom-fields/68f8e559-4a18-4a6e-be1c-fa2f5aaa4fdb" \
