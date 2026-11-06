@@ -12,7 +12,7 @@ disable-model-invocation: true
 
 - Tickets often sit in some pre-`Complete` state - `Ready for deploy`, but just as often `Testing`, `Backlog`, `PR Review` - without a concrete Release value set, even after the code already shipped. PM wants it populated so deploy notes / release summaries are accurate.
 - The dev frequently inherits or hands off tickets, so "currently owned by me" misses real work. Source of truth for "I shipped this" is the git author log.
-- The mapping is mechanical but spread across three repos and Shortcut's enum values. Easy to get wrong by hand.
+- The mapping is mechanical but spread across four repos and Shortcut's enum values. Easy to get wrong by hand.
 - Running it as a skill keeps the procedure consistent every time the dev wants to do a pass.
 - **Past incident (2026-07-14):** a run filtered to `Ready for deploy` only and missed tickets 54761/54776, which had already shipped in the same release but were sitting in `Testing`. The dev had to point them out manually. Root cause: the skill used literal Shortcut workflow state as the discovery filter instead of "has this ticket's commit actually landed in a shipped tag." Fixed by making shipped-detection state-independent (see step 4).
 - **Past incident (2026-08-03):** state-independent shipped detection made a run close 19 tickets in 11 seconds, 5 illegally - closing tickets QA had bounced backward (out of `Testing`/`Ready for deploy`) as if "commit is in a shipped tag" meant "done." sc-55002 was closed six hours after QA reviewed the fix, found it insufficient, and moved it back to `To Do`; the rejection sat hidden in `Complete` for 3 days before follow-up resumed. Fixed by a rejection/history check in discovery (step 4) and a Gate D split so only `Ready for deploy -> Complete` closes automatically (see Gate D).
@@ -29,7 +29,7 @@ disable-model-invocation: true
 
 ## Required tools
 
-- `Bash` - git tag / log / fetch in the three repos; curl against Shortcut REST API.
+- `Bash` - git tag / log / fetch in the four repos; curl against Shortcut REST API.
 - `Agent` (`general-purpose`) - only if the candidate set is large (>20) and parallelism actually helps. For typical batches (≤20), inline mechanical lookup is faster.
 
 **Shortcut API access:** the Shortcut MCP server is often unavailable. Always have the REST fallback ready (token in `~/.claude/.env`, header `Shortcut-Token`).
@@ -52,6 +52,7 @@ Never re-derive:
   - `Ready for deploy`: `500018659`
   - `Complete`: `500018258`
   - `Won't do`: `500019415`
+  - `Testing`: `500018257` (Gate E's target)
   - Terminal states excluded from scope entirely: `Complete`, `Won't do`. Every other state (`Backlog`, `To Do`, `In Progress`, `PR Review`, `Testing`, `Blocked`, `Ready for deploy`, `On hold`) is in scope for shipped-detection.
 - Sentinel Release values (treat as unset):
   - `Next release` - value_id `698b4bce-ecd7-44c3-b62a-2b49b2506c1d`
@@ -60,8 +61,8 @@ Never re-derive:
   - `V1.0`, `V1.1`, `V2.0` - legacy placeholders
 - Repos (sibling paths):
   - `C:/Users/tecno/Desktop/Projects/zng-app` - Flutter web consumer app. Tag format: `v<major>.<minor>.<patch>+N` (build, e.g. `v1.0.0+46`, `v1.1.0+1`) + `Release-M-D-YYYY` (deploy, unpadded, e.g. `Release-7-16-2026`). Shortcut label: `FE <major>.<minor>.<patch>+N`.
-  - `C:/Users/tecno/Desktop/Projects/zng-admin` - Flutter web admin. Tags `v<major>.<minor>.<patch>+N` + `Release-M-D-YYYY` (unpadded). Shortcut label: `Admin <major>.<minor>.<patch>+N`. Past incident (2026-09-30): this repo jumped from tag `v1.0.0+9` to `v1.0.0+11` with no `+10` tag, and the Release enum had `Admin 1.0.0+10` but not `+11` - the dev had to add the missing enum value by hand mid-run. The build number is never assumed contiguous; always use the tag that actually contains the SHA, and run the enum-completeness check in step 4c before proposing anything.
-  - `C:/Users/tecno/Desktop/Projects/zng-api` - NestJS backend. Tags `v<major>.<minor>.<patch>`. Shortcut label: `API <major>.<minor>.<patch>`. Dev does author API commits; not currently included in the discovery/shipped-detection loops below (steps 3-4 scan zng-app and zng-admin only).
+  - `C:/Users/tecno/Desktop/Projects/zng-admin` - Flutter web admin. Tags `v<major>.<minor>.<patch>+N` + `Release-M-D-YYYY` (unpadded). Shortcut label: `Admin <major>.<minor>.<patch>+N`. Past incident (2026-09-30): this repo jumped from tag `v1.0.0+9` to `v1.0.0+11` with no `+10` tag, and the Release enum had `Admin 1.0.0+10` but not `+11` - the dev had to add the missing enum value by hand mid-run. The build number is never assumed contiguous; always use the tag that actually contains the SHA, and run the enum-completeness check in step 6 before proposing anything.
+  - `C:/Users/tecno/Desktop/Projects/zng-api` - NestJS backend. Tags `v<major>.<minor>.<patch>`. Shortcut label: `API <major>.<minor>.<patch>`. Dev does author API commits; not currently included in the discovery/shipped-detection loops below (steps 3-4 scan zng-app, zng-admin and zng-biller only).
   - `C:/Users/tecno/Desktop/Projects/zng-biller` - Flutter web biller portal. Tags `v<major>.<minor>.<patch>+N` + `Release-M-D-YYYY`, first deployed 2026-11-05 as `v1.0.0+2`. Shortcut label: `Biller <major>.<minor>.<patch>+N` (dev's pick, 2026-11-06). Older milestone tags (`scaffold-complete` etc.) are not versions. A repo with zero tags matching `v\d+\.\d+\.\d+` is never-deployed: its tickets are reported in their own bucket (step 8) and never get a Release or a move. Re-check this per run.
 
 ## CRITICAL: Shortcut PUT semantics
@@ -90,6 +91,7 @@ This is a hard rule. Past incident: an early version of this skill silently wipe
 git -C C:/Users/tecno/Desktop/Projects/zng-app fetch --tags --quiet
 git -C C:/Users/tecno/Desktop/Projects/zng-admin fetch --tags --quiet
 git -C C:/Users/tecno/Desktop/Projects/zng-api fetch --tags --quiet
+git -C C:/Users/tecno/Desktop/Projects/zng-biller fetch --tags --quiet
 ```
 
 If any fetch fails (dirty tree, auth, etc.), stop and tell the dev. Do not reason against stale state.
@@ -102,7 +104,7 @@ git -C <repo> tag --sort=creatordate > C:/tmp/tags_<repo>.txt
 
 ### 3. Discover candidate ticket IDs (pure git author scan)
 
-The candidate set is **every ticket the dev has ever authored a commit for in zng-app or zng-admin** - not Shortcut owner, not assignee history. If the dev wrote code that landed, it counts.
+The candidate set is **every ticket the dev has ever authored a commit for in zng-app, zng-admin or zng-biller** - not Shortcut owner, not assignee history. If the dev wrote code that landed, it counts.
 
 Prefix pass (primary IDs):
 
@@ -153,7 +155,7 @@ For each ID in the discovery list:
    REJECTED tickets get no Release and no move this run, regardless of literal state or tag membership - see Gate D. Record the rejection's `changed_at` and actor for the report.
 4. For every remaining ticket, run the shipped-detection lookup (same mechanics as the old step 6, just run earlier and for every non-terminal ticket, not only ones with an unset Release). Collect **every** distinct SHA that matches, not just the first:
 
-   a. **Find merge SHA(s).** Inline mechanical lookup across both Flutter repos:
+   a. **Find merge SHA(s).** Inline mechanical lookup across the three Flutter repos:
 
       ```bash
       for repo in C:/Users/tecno/Desktop/Projects/zng-app C:/Users/tecno/Desktop/Projects/zng-admin C:/Users/tecno/Desktop/Projects/zng-biller; do
@@ -220,9 +222,7 @@ step 4, cross-reference separately:
    prompt missing its markers.
 4. A traced ticket in `Ready for deploy` follows Gate D like any other (the dev, 2026-11-06:
    only the state decides). Show its trace in the report so the dev can object before the
-   move; a ticket the scope rule drops (another dev's BE work) is never moved. Before 2026-11-06
-   this bucket always asked separately for every
-   non-routine close.
+   move; a ticket the scope rule drops (another dev's BE work) is never moved.
 5. If an agent finds no trace at all, the ticket stays `needs-human` (step 6) and
    is reported, never guessed.
 
@@ -230,10 +230,10 @@ step 4, cross-reference separately:
 
 For every ticket that passed step 4 eligibility (including the Step 4b bucket):
 
-- Concrete release (matches `^(FE|Admin|API|Biller) \d+\.\d+\.\d+(\+\d+)?$`) - **already set**, but still check other fields (step 7). If its literal state isn't `Complete`, it's also a **stale-but-shipped** candidate for Gate D (step 9).
+- Concrete release (matches `^(FE|Admin|API|Biller) \d+\.\d+\.\d+(\+\d+)?$`) - **already set**, but still check other fields (step 7). It moves to Complete only from `Ready for deploy` (Gate D), or to Testing from Backlog / To Do / In Progress (Gate E); in any other state only the step 7 fills apply.
 - Empty / `Next release` / `TBD` / `Oneday` / `V1.x` - **needs Release backfill** (steps 6 + 7).
 
-The REJECTED flag from step 4.3 carries through unchanged - it doesn't affect Release categorization, only Gate D eligibility.
+The REJECTED flag from step 4.3 carries through unchanged - a REJECTED ticket gets no Release and no move (Gates A, D and E all skip it).
 
 ### 6. Resolve Release for unset tickets
 
@@ -250,10 +250,10 @@ Claude creates missing labels itself, the dev no longer adds them in Shortcut UI
 2026-11-06). Only a label derived from a real version tag in step 4.4 qualifies: never create one
 from a title guess or a `needs-human` ticket. The create happens in step 10, not here.
 
-**Confidence:**
-- `high` - single repo, unambiguous SHA from `^<id>:` prefix, one matching version tag.
-- `medium` - bundled commit (e.g. `52627: foo (52630)` matched for ticket 52630), or title-keyword fallback.
-- `low` - multiple candidate matches across repos, or only weak signals.
+**Evidence, named in plain words in the report** (never as high/medium/low):
+- "commit names the ticket" - SHA from the `^<id>:` prefix.
+- "bundled in <sha>'s message" - the id appears only inside another ticket's commit (e.g. `52627: foo (52630)` for 52630); check the diff is about this ticket.
+- "traced to <sha>" - Step 4b's code trace, no commit names it.
 
 **Status:**
 - `resolved` - clear winning tag.
@@ -268,7 +268,7 @@ from a title guess or a `needs-human` ticket. The create happens in step 10, not
 For every candidate (whether Release was set or not), check the cached story JSON for missing values among:
 
 - **Skill Set** (default: `Frontend` - value_id `6216069e-e3ed-403b-804c-f678c58b61a7`). Dev is FE; near-universal default.
-- **Technical Area** (default by repo: zng-app → `Web App` value_id `6881029c-3921-4900-ad9a-197d3755d25f`; zng-admin → `Admin Portal` value_id `6216069e-e33b-44b0-a3d8-15a130a5a88b`).
+- **Technical Area** (default by repo: zng-app → `Web App` value_id `6881029c-3921-4900-ad9a-197d3755d25f`; zng-admin → `Admin Portal` value_id `6216069e-e33b-44b0-a3d8-15a130a5a88b`; zng-biller → `Biller Portal` value_id `6a0366ad-d4ea-407a-bec3-d1aa9c11e99f`). ZNG: Product Area has no Biller Portal option, so biller tickets leave it empty.
 - **ZNG: Product Area** (no safe default - infer from ticket name keywords; if unsure, leave blank rather than guess wrong).
 - **Priority** (default: `Medium` - value_id `6260361c-7ae3-4d8f-9594-fdff9c39fe4e`).
 - **Estimate** (top-level field, not custom): default `1` for trivial bug/sort/copy/event work, `2` for typical bug fix. **Never set >2 silently - always warn the dev with AskUserQuestion before applying any estimate >2.**
@@ -381,7 +381,7 @@ Report:
 - M other-field fills applied
 - K tickets moved to Complete (Gate D)
 - T tickets moved to Testing (Gate E)
-- R tickets REJECTED - Release backfilled if approved, state left alone
+- R tickets REJECTED - untouched, no Release and no move
 - P tickets partially-shipped - reported only, no state move
 - B tickets from the Step 4b no-commit discovery pass - traced and reported, closed with the rest when in Ready for deploy
 - V tickets in a never-deployed repo (zero version tags) - reported only, no Release proposal, no state move
