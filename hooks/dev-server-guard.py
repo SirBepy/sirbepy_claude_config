@@ -51,16 +51,47 @@ def invokes_supervisor(tokens) -> bool:
     return any(basename(t) == "sv.ps1" for t in tokens)
 
 
+# Commands whose arguments are text or paths, never a program to launch:
+# `grep -n "vite" f` tokenizes to a bare `vite` token that is only a search term.
+TEXT_COMMANDS = {
+    "grep", "egrep", "fgrep", "rg", "ag", "findstr", "select-string", "sls",
+    "echo", "write-output", "write-host", "printf", "cat", "type", "get-content",
+    "git", "ls", "dir", "get-childitem", "which", "where", "get-command",
+}
+
+_SEPARATOR_END = (";", "|", "&")
+
+
+def _norm(token: str) -> str:
+    # A PowerShell/shell statement separator glued to the last word (`build;`)
+    # is not part of the word: `vite build; cargo ...` must read as `vite build`.
+    return token.lower().rstrip("".join(_SEPARATOR_END))
+
+
+def _is_argument_of_text_command(tokens, i) -> bool:
+    """True when tokens[i] sits in the argument list of a TEXT_COMMANDS word
+    in the same statement (walking back until a separator token)."""
+    for j in range(i - 1, -1, -1):
+        t = tokens[j]
+        if t.endswith(_SEPARATOR_END) or t in ("&&", "||"):
+            return False
+        if basename(t) in TEXT_COMMANDS:
+            return True
+    return False
+
+
 def is_dev_server_command(tokens):
     """Return a short label naming the matched dev-server shape, or None."""
-    lc = [t.lower() for t in tokens]
-    bases = [basename(t) for t in tokens]
+    lc = [_norm(t) for t in tokens]
+    bases = [basename(t).rstrip("".join(_SEPARATOR_END)) for t in tokens]
     n = len(lc)
 
     for i in range(n):
         base = bases[i]
         nxt = lc[i + 1] if i + 1 < n else None
         if nxt in INFO_FLAGS:
+            continue
+        if _is_argument_of_text_command(tokens, i):
             continue
 
         if base in ("vite", "vite.cmd") and nxt != "build":

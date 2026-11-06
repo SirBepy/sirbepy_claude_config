@@ -111,6 +111,18 @@ MAIN_CASES = [
         0,
         "a real sv.ps1 ensure invocation passes even though its -Cmd mentions vite",
     ),
+    (
+        "pnpm exec vite build; cargo build --manifest-path src-tauri/Cargo.toml",
+        0,
+        "2026-11-06: a `;` glued to `build` must not turn a one-off vite build into a dev server",
+    ),
+    (
+        'grep -n "vite" tests/some.test.mjs',
+        0,
+        "2026-11-06: vite as a grep search term is not a launch",
+    ),
+    ("ls hooks; vite", 2, "a separator ends a text command's argument list, so a later raw vite is caught"),
+    ("vite;", 2, "raw vite with a glued separator is still caught"),
     ("vite", 2, "raw vite is caught"),
     ("vite --port 3000", 2, "raw vite with flags is caught"),
     ("npm run dev", 2, "raw npm run dev is caught"),
