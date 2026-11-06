@@ -46,6 +46,11 @@ class AddReleaseValuesTest(unittest.TestCase):
         self.assertEqual(sent[-1], {"value": "FE 1.1.0+3"})
         self.assertNotIn("color_key", sent[1])
 
+    def test_accepts_biller_label(self):
+        api = FakeApi()
+        run(["--apply", "Biller 1.0.0+2"], api)
+        self.assertEqual(api.put_body["values"][-1], {"value": "Biller 1.0.0+2"})
+
     def test_dry_run_never_puts(self):
         api = FakeApi()
         run(["FE 1.1.0+3"], api)
