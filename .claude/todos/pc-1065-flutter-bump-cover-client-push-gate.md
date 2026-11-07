@@ -72,6 +72,8 @@ In `skills/flutter-bump/SKILL.md`:
 
 - /loop-todos 2026-10-05: step 2e now runs the push gate via skills/commit/SKILL.md's Push pipeline, plus the backend precondition, flutterRoot re-check and full commit-pathspec invocation. Still open: the committed admin/biller smoke helper (skills/flutter-bump/scripts/smoke.cjs); its recipe and accounts live in zng-app's project memory (reference_admin_biller_local_smoke_e2e.md), so build it from a zng-app session against a live local backend.
 
+- 3.47.9 bump, 2026-11-03: a likely writer for the flutterRoot reversion in finding 3. zng-app's `package_config.json` went back to 3.47.8 between the local-defines rebuild and the final check, with no message from a peer. A `bash /c/Users/tecno/fvm/default/bin/flutter analyze --no-fatal-infos` run was live on 3.47.8, because `fvm\default` keeps the old version until the skill's final `fvm global` step. That command is allowlisted in zng-app's `.claude/settings.local.json`, so it is probably a peer chat; its cwd and the exact write were not confirmed. `fvm flutter pub get` repaired it after `fvm global`, and it held. Consider running `fvm global` right after `fvm install`, and re-reading flutterRoot in all three repos in the final report.
+
 ## Answers 2026-10-08
 
 - Joe, 2026-10-08 (todo-questions chat): build the smoke helper at the next Flutter bump, when zng-api is running anyway. Not before.
@@ -89,3 +91,19 @@ dedicated `~/.claude` session to: (1) generalize the two scripts above into
 in a references file, (3) wire 2e to call it instead of hand-writing one. The two 2026-10-13 scripts
 are a closer-to-final reference than the 2026-10-02 one (`c:\tmp\zng-smoke.cjs`, since deleted) -
 use them as the base.
+
+## Notes (2026-10-29 bump, 3.47.7 -> 3.47.8)
+
+Run from a zng-app session. Two more snags the skill's 2e does not cover, plus a status update:
+
+- `commit-pathspec.sh` refuses the bump commit with `[foreign-hunk-check] UNVERIFIED` whenever 2+
+  session markers are live (3 were), so 2e step 1 needs `--own-range .fvmrc:1-3 --own-range
+  .vscode/settings.json:1-9999 --own-range flutter.version:1-1` in its example command.
+- In zng-biller other files were staged by someone else (`CLAUDE.md`, `pubspec.yaml`,
+  `pubspec.lock`), so `[coverage-check]` refused as a possible half-committed move. `--force
+  coverage` was the correct answer (those files are not part of the bump). The skill should say so.
+- The throwaway `zng-biller/.for_bepy/flutterbump-smoke.cjs` still works unchanged on 3.47.8, so the
+  committed `scripts/smoke.cjs` is still unbuilt. zng-admin no longer needs it: it has its own
+  `e2e/run-all.js` (6 flows), so the admin half of this todo is obsolete.
+- zng-biller's `.env.local` was invalid JSON that run, so the smoke build used inline
+  `--dart-define`s; a committed helper should accept that fallback.
