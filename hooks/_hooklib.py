@@ -187,6 +187,38 @@ def split_shell_words(command: str) -> list[str]:
     return shlex.split("".join(out), posix=True)
 
 
+def _space_operators(command: str) -> str:
+    """Put spaces around every unquoted `;`, `&&`, `||`, `&`, `|`, `(` and `)`, so
+    `cd x&&git commit` and `echo a;git push` split into the words a shell runs
+    (shlex keeps them glued into `x&&git`). Quoted text is left alone."""
+    out: list[str] = []
+    quote = None
+    i = 0
+    while i < len(command):
+        ch = command[i]
+        if quote:
+            out.append(ch)
+            if quote == '"' and ch == "\\" and command[i + 1:i + 2] in ('"', "\\"):
+                out.append(command[i + 1])
+                i += 1
+            elif ch == quote:
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+            out.append(ch)
+        elif ch in ";&|()":
+            run = ch
+            if ch in "&|":
+                while command[i + 1:i + 2] == ch:
+                    run += ch
+                    i += 1
+            out.append(f" {run} ")
+        else:
+            out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 def shell_word_variants(command: str) -> list[list[str]]:
     """Every plausible word split of `command`: the backslash-keeping one
     (`C:\\Git\\git.exe`) and the bash one (`g\\it` is `git`, `\\commit` is
@@ -194,6 +226,7 @@ def shell_word_variants(command: str) -> list[list[str]]:
     cannot know whether the command runs in bash or PowerShell, so it checks
     both. Raises ValueError only when neither split parses."""
     variants: list[list[str]] = []
+    command = _space_operators(command)
     for split in (split_shell_words, lambda c: shlex.split(join_line_continuations(c), posix=True)):
         try:
             words = split(command)

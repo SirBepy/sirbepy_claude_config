@@ -56,6 +56,9 @@ OWNER_LOGINS = {"josipmuzic", "JosipMuzicZirtue", "JosipMuzicFibo", "SirBepy"}
 # `gh --repo owner/name pr create ...`.
 VALUE_FLAGS = {"-R", "--repo", "--hostname"}
 
+# Separate tokens shell_word_variants leaves between two statements.
+_STATEMENT_OPERATORS = {";", "&", "&&", "|", "||", ")"}
+
 
 def gh_pr_action(command: str) -> tuple[str, str | None] | None:
     """Return `(action, target)` if `command` invokes `gh pr <action>`, else None.
@@ -103,9 +106,10 @@ def _pr_actions(tokens: list[str]):
                 k += 2 if tokens[k] in VALUE_FLAGS and "=" not in tokens[k] else 1
             if k < len(tokens):
                 action = command_word(tokens[k])
-                # A terminator glued to the action ends the call: what follows is another command.
-                glued = action != tokens[k]
-                target = tokens[k + 1] if not glued and k + 1 < len(tokens) and not tokens[k + 1].startswith("-") else None
+                # A statement terminator after the action ends the call: what follows is another command.
+                after = tokens[k + 1] if k + 1 < len(tokens) else None
+                glued = action != tokens[k] or after in _STATEMENT_OPERATORS
+                target = after if not glued and after is not None and not after.startswith("-") else None
                 yield action, target
 
 
