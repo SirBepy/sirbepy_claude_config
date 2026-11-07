@@ -311,20 +311,8 @@ def build_manifest_html(items, title, budget_bytes, convert=convert_to_webp):
 
 def render_url(render_id, base=RENDER_CHECK_ENDPOINT):
     """/hooks/preview-render/<id> serves a posted page outside the panel; the one place that URL
-    is formed, shared by --check and the post-response iframe URL."""
+    is formed; only --check uses it (the daemon refuses a chat card that iframes it)."""
     return f"{base.rstrip('/')}/{render_id}"
-
-
-def render_url_from_response(status, body, base=RENDER_CHECK_ENDPOINT):
-    """The inline-card iframe URL for a successful POST, or None. The daemon answers 200
-    {"id": ...}; /hooks/preview-render/<id> serves that same page outside the panel."""
-    if status != 200:
-        return None
-    try:
-        render_id = json.loads(body).get("id")
-    except (json.JSONDecodeError, AttributeError):
-        return None
-    return render_url(render_id, base) if render_id else None
 
 
 def default_slug(paths):
@@ -552,9 +540,6 @@ def main():
     if args.post:
         status, resp_body = post_preview(html_text, title, slug)
         print(f"HTTP {status}: {resp_body}")
-        posted_url = render_url_from_response(status, resp_body)
-        if posted_url:
-            print(f"render-url: {posted_url}")
 
 
 if __name__ == "__main__":

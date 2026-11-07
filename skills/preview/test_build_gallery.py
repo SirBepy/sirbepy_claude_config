@@ -230,17 +230,14 @@ def test_relative_paths_and_escaping(root):
     check('id="item-a-b"' in html, "section anchors are slugified")
 
 
-def test_render_url():
+def test_no_render_url_for_inline_cards():
+    """The daemon refuses a chat card whose html iframes /hooks/preview-render/, so the script must
+    not hand out a post-response render-url that invites one."""
     mod = load_module()
-    base = "http://127.0.0.1:27182/hooks/preview-render"
     check(
-        mod.render_url_from_response(200, '{"id": "abc123"}', base) == f"{base}/abc123",
-        "a 200 response yields the preview-render URL",
+        not hasattr(mod, "render_url_from_response"),
+        "no post-response render-url helper (an iframe card pointing at it is refused by the daemon)",
     )
-    check(mod.render_url_from_response(413, "too big", base) is None, "a non-200 response yields no URL")
-    check(mod.render_url_from_response(200, "not json", base) is None, "an unparseable body yields no URL")
-    check(mod.render_url_from_response(200, "{}", base) is None, "a body without an id yields no URL")
-    check(mod.render_url_from_response(None, "refused", base) is None, "a refused connection yields no URL")
 
 
 def test_render_url_helper():
@@ -257,11 +254,10 @@ def test_render_url_helper():
     )
 
 
-def test_both_url_sites_go_through_render_url(root):
+def test_check_url_goes_through_render_url_and_post_prints_no_render_url(root):
     """Runs main() in-process with the daemon POST, the post-preview POST and the chromium load
-    stubbed, and with render_url replaced by a recorder. A call site that hand-builds its URL
-    instead of calling render_url would hand the HTTP/chromium layer a URL the recorder never
-    minted, so the assertions below fail for any spelling of the join."""
+    stubbed, and with render_url replaced by a recorder. --check must mint its URL through
+    render_url, and --post must print no render-url: line (the daemon refuses an iframe card of it)."""
     mod = load_module()
     page = root / "page.html"
     page.write_text("<!doctype html><title>t</title>", encoding="utf-8")
@@ -292,8 +288,8 @@ def test_both_url_sites_go_through_render_url(root):
     out = printed.getvalue()
     check(loaded == ["stub-url://chk1"], "--check loads the URL render_url minted for the check id", f"loaded={loaded}")
     check("check OK: stub-url://chk1" in out, "--check reports the URL render_url minted", out)
-    check("render-url: stub-url://post1" in out, "the post-response URL is the one render_url minted", out)
-    check(minted == ["stub-url://chk1", "stub-url://post1"], "render_url served exactly the two call sites", str(minted))
+    check("render-url" not in out, "--post prints no render-url line", out)
+    check(minted == ["stub-url://chk1"], "render_url served only the --check call site", str(minted))
 
 
 def test_duplicate_slug_ids_are_unique(root):
@@ -355,10 +351,10 @@ def main():
         test_duplicate_slug_ids_are_unique(root)
         test_single_oversize_item_is_an_error(root)
         test_flat_single_oversize_file_is_an_error(root)
-    test_render_url()
+    test_no_render_url_for_inline_cards()
     test_render_url_helper()
     with tempfile.TemporaryDirectory() as tmp:
-        test_both_url_sites_go_through_render_url(Path(tmp))
+        test_check_url_goes_through_render_url_and_post_prints_no_render_url(Path(tmp))
     if failures:
         print(f"\n{len(failures)} failure(s)")
         return 1
