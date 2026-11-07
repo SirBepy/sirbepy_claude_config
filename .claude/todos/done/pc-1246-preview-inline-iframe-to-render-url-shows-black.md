@@ -54,6 +54,10 @@ or the skill says when that step does not work and what to do instead.
 The SKILL.md step names when the inline iframe works and what to do when it does not, verified once by a real render
 of each kind.
 
+## Notes
+
+- Removed the render-url print and render_url_from_response from build_gallery.py, replaced the SKILL.md iframe step with 'pass the page as the card's own html'; test_build_gallery.py now asserts no render-url line.
+
 ## Update 2026-11-06: drop the iframe step instead
 
 Joe saw another blank card (`cv-top3-layouts-inline`, claude_usage_in_taskbar): html was only an iframe to a render id
