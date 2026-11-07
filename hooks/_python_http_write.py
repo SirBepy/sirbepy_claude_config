@@ -120,9 +120,24 @@ def _urllib_sends_data(command: str) -> bool:
     return False
 
 
+_BASH_DQ_ESCAPE_RE = re.compile(r"""\\([\\"$`])""")
+
+
 def python_write_verbs(command: str) -> set:
     """Upper-case HTTP write verbs (POST, PUT, PATCH, DELETE) the script calls with. A urllib
-    request given a body and no method is POST, which is urllib's own default."""
+    request given a body and no method is POST, which is urllib's own default.
+
+    A script inside a double-quoted `python -c "..."` reaches the hook with bash's escapes still
+    in it (`\\"` for a quote, `\\\\` for a backslash), which no single quote-aware reader handles
+    for every string the script can hold. So the command is read twice, as written and with
+    those bash escapes undone, and the verbs of both reads count."""
+    verbs = _verbs(command)
+    if "\\" in command:
+        verbs |= _verbs(_BASH_DQ_ESCAPE_RE.sub(r"\1", command))
+    return verbs
+
+
+def _verbs(command: str) -> set:
     verbs = {m.group(1).upper() for m in _METHOD_RE.finditer(command)}
     verbs |= {m.group(1).upper() for m in _CLIENT_CALL_RE.finditer(command)}
     verbs |= {m.group(1).upper() for m in _REQUEST_CALL_RE.finditer(command)}
