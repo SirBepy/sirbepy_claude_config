@@ -40,6 +40,19 @@ SCAN_CASES = [
     ({"questions": [{"question": "Q?", "header": "Q", "options": [{"label": "a", "description": "b"}]}]}, False, "no preview at all passes"),
     (card('<div STYLE="COLOR:red">x</div>'), True, "case-insensitive attribute and property"),
     ({"questions": "not-a-list"}, False, "malformed input does not crash or block"),
+    # pc-review item 13: border-collapse and border-spacing lay a table out, they paint nothing.
+    (card('<table style="border-collapse:collapse;width:100%"><tr><td>x</td></tr></table>'), False, "border-collapse is layout"),
+    (card('<table style="width: 100%; border-collapse: collapse">x</table>'), False, "border-collapse after another property"),
+    (card('<table style="BORDER-COLLAPSE:COLLAPSE;border-spacing:0">x</table>'), False, "border-collapse and border-spacing, any case"),
+    (card('<table style="border-collapse:collapse;border:1px solid #333">x</table>'), True, "border-collapse beside a painting border still blocks"),
+    (card('<td style="border-collapse:collapse;border-top:1px solid red">x</td>'), True, "border-collapse beside border-top still blocks"),
+    (card('<td style="border-radius:4px">x</td>'), True, "border-radius still blocks"),
+    (card('<td style="border-color:red">x</td>'), True, "border-color still blocks"),
+    (card('<td style="border-spacing:0;background:red">x</td>'), True, "border-spacing beside a background still blocks"),
+    # SVG paint properties are painting too.
+    (card('<svg style="fill:#fff"><path d="M0 0"/></svg>'), True, "fill paints"),
+    (card('<svg style="width:12px;stroke:red"><path d="M0 0"/></svg>'), True, "stroke paints"),
+    (card('<div style="flex:1 1 auto;width:50%">x</div>'), False, "flex shorthand is layout"),
 ]
 
 
