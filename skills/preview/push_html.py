@@ -41,7 +41,7 @@ def main(argv=None):
     try:
         with open(args.html_file, encoding="utf-8") as f:
             html = f.read()
-    except OSError as e:
+    except (OSError, UnicodeDecodeError) as e:  # a non-UTF-8 file is as unreadable as a missing one
         print(f"push_html: cannot read {args.html_file}: {e}", file=sys.stderr)
         return 2
 

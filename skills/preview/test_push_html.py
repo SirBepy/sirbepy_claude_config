@@ -88,6 +88,13 @@ def main():
                    {"CLAUDE_CODE_SESSION_ID": "sess-123"})
         check(proc.returncode != 0 and len(received) == 2, "a missing html file exits non-zero without posting")
 
+        latin = Path(tmp) / "latin.html"
+        latin.write_bytes("<p>café</p>".encode("latin-1"))
+        proc = run([str(latin), "--slug", "s", "--title", "t", "--endpoint", endpoint],
+                   {"CLAUDE_CODE_SESSION_ID": "sess-123"})
+        check(proc.returncode == 2 and "cannot read" in proc.stderr and "Traceback" not in proc.stderr and len(received) == 2,
+              "a non-UTF-8 html file exits 2 with one line and no traceback, without posting", proc.stderr)
+
     server.shutdown()
     if failures:
         print(f"\n{len(failures)} failure(s)")
