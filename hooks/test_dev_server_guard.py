@@ -169,6 +169,26 @@ MAIN_CASES = [
         2,
         "genuine next start still blocks even when a later unrelated quote is unbalanced",
     ),
+    # Heredoc and here-string bodies fed to an interpreter are scripts that run.
+    ("bash <<'EOF'\nnpm run dev\nEOF", 2, "pc-review item 8: quoted heredoc into bash"),
+    ("bash <<EOF\nvite\nEOF", 2, "pc-review item 8: bare heredoc into bash"),
+    ("cat <<'EOF' | bash\nvite\nEOF", 2, "pc-review item 8: heredoc piped into bash"),
+    ("cat <<'EOF' | sh\nnpm run dev\nEOF", 2, "pc-review item 8: heredoc piped into sh"),
+    ("powershell @'\nnpm run dev\n'@ | Out-Null", 2, "pc-review item 8: here-string handed to powershell"),
+    ("iex @'\nvite\n'@", 2, "pc-review item 8: here-string handed to iex"),
+    ("$s = @'\nvite\n'@\nInvoke-Expression $s", 2, "pc-review item 8: here-string kept in a variable then run"),
+    ("bash -c \"echo hi; vite\"", 2, "a dev server inside a bash -c body"),
+    ("echo \"$(npm run dev)\"", 2, "a dev server inside a command substitution"),
+    # A launch on the line after another statement (6dec572) must still deny.
+    ("git pull\nnpm run dev", 2, "newline after git pull then npm run dev"),
+    ("git status\nvite", 2, "newline after git status then vite"),
+    ("ls\npnpm dev", 2, "newline after ls then pnpm dev"),
+    ("echo hi\nvite", 2, "newline after echo then vite"),
+    ("git pull\r\nflutter run", 2, "CRLF after git pull then flutter run"),
+    ("grep foo x\nuvicorn app:app", 2, "newline after grep then uvicorn"),
+    ("echo vite", 0, "vite named as an echo argument is text"),
+    ("npm install vite\necho done", 0, "vite installed, not launched"),
+    ("git commit -m \"npm run dev\"", 0, "a quoted commit message is text"),
 ]
 
 

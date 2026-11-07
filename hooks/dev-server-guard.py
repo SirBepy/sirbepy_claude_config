@@ -40,7 +40,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny, tokenize_command as tokenize, basename, is_command_position, split_command_segments
+    from _hooklib import read_payload, deny, tokenize_command as tokenize, basename, is_command_position, split_command_segments, split_gate_segments_deep, HERESTRING_BODY_RE
 except Exception as e:
     sys.stderr.write(f"[dev-server-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -162,6 +162,19 @@ def _confirmed_at_command_position(command: str, label: str) -> bool:
     return any(is_command_position(command, m.start()) for m in pattern.finditer(command))
 
 
+def _statements(command: str) -> list[str]:
+    """Every statement to check. split_command_segments drops heredoc and
+    here-string bodies, but a body fed to `bash`, `sh`, `iex` or a variable that
+    is later `Invoke-Expression`d is a script that runs, so the gate split (which
+    keeps heredoc bodies) and the body of each here-string are scanned as well,
+    along with `bash -c "..."` arguments and command substitutions."""
+    statements = list(split_gate_segments_deep(command))
+    for m in HERESTRING_BODY_RE.finditer(command):
+        statements += split_gate_segments_deep(m.group(0).split("\n", 1)[1].rsplit("\n", 1)[0])
+    statements += split_command_segments(command)
+    return list(dict.fromkeys(statements)) or [command]
+
+
 def main() -> None:
     payload = read_payload()
     command = (payload.get("tool_input") or {}).get("command", "") or ""
@@ -187,7 +200,7 @@ def main() -> None:
     joined = re.sub(r"(?<=\s)[\\`]\r?\n", " ", command)
     glued = re.sub(r"[\\`]\r?\n", " ", command)
     for variant in dict.fromkeys((joined, glued)):
-        for segment in split_command_segments(variant) or [variant]:
+        for segment in _statements(variant):
             matched = is_dev_server_command(tokenize(segment))
             if matched:
                 break
