@@ -457,3 +457,87 @@ def split_gate_segments(command: str) -> list[str]:
         return [s for s in _GATE_CHAIN_SPLIT_RE.split(command) if s.strip()]
     segments.append("".join(buf))
     return [s for s in segments if s.strip()]
+
+
+# A real shell's `-c`/`-Command` argument is itself a command line.
+SHELL_WRAPPER_NAMES = {"bash", "sh", "zsh", "dash", "pwsh", "powershell"}
+INLINE_COMMAND_FLAGS = {"-c", "-lc", "-command"}
+
+
+def with_wrapper_bodies(segments: list[str], depth: int = 0) -> list[str]:
+    """`segments` plus, after each segment that runs a shell with `-c` or
+    `-Command`, the statements of that quoted argument (nested wrappers up to
+    three deep). The quote-aware splits keep such an argument as one token, so
+    without this a command inside `bash -c "..."` is invisible."""
+    out = []
+    for segment in segments:
+        out.append(segment)
+        if depth >= 3:
+            continue
+        tokens = tokenize_segment(segment)
+        for i in range(1, len(tokens) - 1):
+            if tokens[i].lower() in INLINE_COMMAND_FLAGS and any(
+                basename(t).removesuffix(".exe") in SHELL_WRAPPER_NAMES for t in tokens[:i]
+            ):
+                body = strip_quotes(tokens[i + 1])
+                out.extend(with_wrapper_bodies(split_command_segments(body), depth + 1))
+    return out
+
+
+# Programs that can send an HTTP request from a command line; a script runner is
+# included because `python post.py -X POST <url>` is how a wrapper script is fed.
+_HTTP_TOOLS = (
+    "curl|wget|invoke-restmethod|invoke-webrequest|irm|iwr|http|https|xh|python3?|py|node|deno|bun"
+)
+_HTTP_TOOL_RE = re.compile(
+    r"(?<![\w.$-])(?:[\w.:~\\/-]*[\\/])?(?:" + _HTTP_TOOLS + r")(?:\.exe)?(?![\w-])",
+    re.IGNORECASE,
+)
+# What may sit between a command boundary and the program name: assignments and
+# launcher words (`$r = Invoke-RestMethod`, `env X=1 curl`, `xargs -I{} curl`).
+_COMMAND_POSITION_RE = re.compile(
+    r"(?:^|[|;&(){\n=`]|\$\()\s*"
+    r"(?:(?:xargs(?:\s+-\S+)*|env|sudo|time|nohup|command|exec|call|start|&|[A-Za-z_]\w*=\S*|then|do|else|!)\s+)*\Z",
+    re.IGNORECASE,
+)
+_START_PROCESS_RE = re.compile(r"\bstart-process\b[^|;&\n]*?-file(?:path)?\s+[\"']?\Z", re.IGNORECASE)
+
+
+def _quoted_mask(text: str) -> tuple[list[bool], bool]:
+    """(mask, balanced): True for characters inside a single- or double-quoted
+    span. No escape handling (PowerShell reads "C:\\dir\\" as a closed string),
+    so a quote still open at the end means the mask cannot be trusted."""
+    mask, quote = [False] * len(text), None
+    for i, ch in enumerate(text):
+        if quote:
+            mask[i] = True
+            if ch == quote:
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+            mask[i] = True
+    return mask, quote is None
+
+
+def _segment_runs_http_tool(segment: str) -> bool:
+    mask, balanced = _quoted_mask(segment)
+    for m in _HTTP_TOOL_RE.finditer(segment):
+        before = segment[: m.start()]
+        if balanced and mask[m.start()]:
+            # Quoted text is prose, except a command substitution inside a string.
+            if not before.rstrip().endswith(("$(", "`")):
+                continue
+        if _COMMAND_POSITION_RE.search(before) or _START_PROCESS_RE.search(before):
+            return True
+        if not balanced:
+            return True
+    return False
+
+
+def runs_http_tool(command: str) -> bool:
+    """True when some statement of `command`, or of a `bash -c` / `-Command`
+    argument inside it, runs an HTTP-capable program in command position.
+    `echo "curl -X POST <url>"` names curl without running it. A statement
+    whose quotes do not pair up keeps every program mention (the read cannot
+    be trusted, so the hook gates rather than waves it through)."""
+    return any(_segment_runs_http_tool(s) for s in with_wrapper_bodies(split_command_segments(command)))

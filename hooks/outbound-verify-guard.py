@@ -48,7 +48,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, basename, strip_quotes, tokenize_command
+    from _hooklib import read_payload, deny, basename, strip_quotes, tokenize_command, runs_http_tool
     from _outbound_verify_transcript import (
         MIN_PROSE_CHARS,
         REQUIRED_PASSES,
@@ -489,6 +489,10 @@ def detect_rest(command: str, tokens: list, cwd: str | None, posix: bool = True)
     if not (shortcut or linear or github):
         return None
     if not is_http_write(command, posix):
+        return None
+    # `echo "curl -X POST <url> -d x"` or a commit message quoting one names a
+    # request without sending it; only an HTTP program in command position does.
+    if not runs_http_tool(command):
         return None
 
     if shortcut:

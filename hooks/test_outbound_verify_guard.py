@@ -94,6 +94,16 @@ DETECT_CASES = [
     ("mcp__github__get_pull_request", {"owner": "o", "repo": "r", "pullNumber": 1}, False, "GitHub MCP read"),
     ("Bash", {"command": "git commit -m 'FEAT: post a comment to shortcut'"}, False, "unrelated command"),
     ("Read", {"file_path": "x"}, False, "non-shell tool"),
+    # Quoted text that merely NAMES a request sends nothing; only a program in command position does.
+    ("Bash", {"command": f"echo \"curl -X POST {SC} -d '{{\\\"name\\\": \\\"{TITLE}\\\"}}'\""}, False, "echo of a curl create is prose"),
+    ("Bash", {"command": f"git commit -m \"DOCS: note that curl -X POST {SC} -d x creates a story\" -- f.md"}, False, "commit message quoting a curl create"),
+    ("Bash", {"command": f"grep -n \"curl -X PUT {SC}/123 -d\" notes.md"}, False, "grep pattern naming a curl rewrite"),
+    ("PowerShell", {"command": f"Write-Host \"Invoke-RestMethod -Method Post -Uri {SC} -Body x\""}, False, "Write-Host of an IRM create is prose"),
+    ("Bash", {"command": f"echo ok; curl -X POST {SC} -d \"$BODY\""}, True, "a real create after an echo statement stays gated"),
+    ("PowerShell", {"command": f"$r = Invoke-RestMethod -Method Post -Uri {SC} -Body $b"}, True, "an assigned IRM create stays gated"),
+    ("PowerShell", {"command": f"Start-Process -FilePath curl.exe -ArgumentList \"-X POST {SC} -d x\""}, True, "Start-Process -FilePath curl.exe stays gated"),
+    ("Bash", {"command": f"echo \"$(curl -X POST {SC} -d \\\"$BODY\\\")\""}, True, "a curl inside a command substitution in a string stays gated"),
+    ("Bash", {"command": f"echo 'it'\"'\"'s'; curl -X POST {SC} -d \"$BODY\""}, True, "odd quoting that desyncs the mask keeps the create gated"),
 ]
 
 
