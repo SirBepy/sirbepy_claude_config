@@ -508,7 +508,8 @@ def cmd_states(args):
         try:
             story = api_call("GET", f"/api/v3/stories/{sid}", token)
         except urllib.error.HTTPError as e:
-            print(f"sc-{sid} | HTTP {e.code}")
+            # stderr, so `--json` output stays parseable.
+            print(f"sc-{sid} | HTTP {e.code}", file=sys.stderr if args.json else sys.stdout)
             failed = True
             continue
         if args.json:

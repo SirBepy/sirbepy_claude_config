@@ -70,6 +70,8 @@ def window_denial(payload: dict, what: str) -> str | None:
             f"{wake} (Conductor schedule tool: action add, target this_chat, at {wake}; its prompt names "
             "the body file and the verified text). See skills/ticket/SKILL.md, section Night window."
         )
-    except Exception as e:
+    # SystemExit too: commit-window-guard.py exits 0 when its own imports fail, which inside this
+    # call would end the whole calling hook as an allow, verification skipped.
+    except (Exception, SystemExit) as e:
         sys.stderr.write(f"[outbound-window] hook error, failing open: {e}\n")
         return None
