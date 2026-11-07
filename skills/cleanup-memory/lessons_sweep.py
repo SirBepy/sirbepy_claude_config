@@ -256,12 +256,27 @@ def stamp_superseded(path: str, by: str) -> bool:
         return False
 
 
+def source_project(path: str) -> str | None:
+    """Project key of a memory file: the directory above the nearest enclosing
+    `memory` folder, so tier subfolders (memory/cold/x.md) resolve to the same
+    project as memory/x.md. None when the file is not under a memory folder."""
+    parts = os.path.abspath(path).replace("\\", "/").split("/")
+    for i in range(len(parts) - 2, 0, -1):
+        if parts[i] == "memory":
+            return project_key(parts[i - 1])
+    return None
+
+
 def promote(name: str, description: str, body: str, sources: list[str], paths: list[str], skills: list[str],
             supersede: bool, bases: list[str]) -> tuple[int, str]:
     if not SLUG_RE.match(name):
         return 2, f"refused: name '{name}' must be a lowercase slug (a-z, 0-9, - or _)"
+    if not bases:
+        return 2, "refused: the client repo list (refs/client-repos.txt) is missing or empty, so client sources cannot be told apart"
     for s in sources:
-        key = project_key(os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(s)))))
+        key = source_project(s)
+        if key is None:
+            return 2, f"refused: {s} is not inside a <project>/memory/ folder, so its project cannot be checked against the client list"
         if is_client_project(key, bases):
             return 2, f"refused: source {s} belongs to client project '{key}'; client facts are never promoted"
     ldir = lessons_dir()
@@ -347,6 +362,11 @@ def main(argv: list[str]) -> int:
     args = ap.parse_args(argv)
 
     bases = client_basenames()
+    if args.cmd in ("scan", "promote") and not bases:
+        # A leakage control fails closed: without the client list every client
+        # project would look personal.
+        print(f"refused: {CLIENT_REPOS_FILE} is missing or has no entries", file=sys.stderr)
+        return 2
     if args.cmd == "scan":
         items = gather_feedback(mt.memory_roots())
         cands, held = candidates(items, bases, args.min_projects)

@@ -142,6 +142,10 @@ def main() -> None:
     tool_name = payload.get("tool_name") or ""
     if not matches_tool(tool_name):
         sys.exit(0)
+    if payload.get("agent_id"):
+        # A dispatched subagent loads its own schemas in its own transcript,
+        # which this payload's transcript_path may not be.
+        sys.exit(0)
 
     cache_file = _cache_path(payload.get("session_id") or "")
     cached = _read_cache(cache_file)

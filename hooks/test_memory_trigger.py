@@ -165,6 +165,30 @@ def run_cases(w):
     r = w.call("Agent", {"prompt": "Summarise the README", "description": "x"}, "a2")
     case("an Agent prompt that mentions nothing triggered passes", r == (0, "", ""))
 
+    # --- a memory cut by the size cap has not been shown, so it is neither fired nor retired
+    bulk = [w.add(f"bulk{i}.md", memory(f"bulk{i}", "triggers:\n  paths: [\"bulk/**\"]\n", f"BULK{i} " + "x" * 1900, extra="once: true\n")) for i in range(3)]
+    r = w.call("Read", {"file_path": "C:/x/bulk/f.txt"}, "c1")
+    shown = [i for i in range(3) if f"BULK{i} " in context_of(r)]
+    stamped = [i for i, p in enumerate(bulk) if "fired:" in p.read_text(encoding="utf-8")]
+    case("size cap: only memories actually shown are retired", len(shown) == 2 and sorted(stamped) == sorted(shown))
+    r = w.call("Read", {"file_path": "C:/x/bulk/f.txt"}, "c2")
+    left = [i for i in range(3) if i not in shown][0]
+    case("size cap: the memory that was cut still reaches a later call", f"BULK{left} " in context_of(r))
+
+    # --- line endings survive the once-retirement stamp
+    crlf = w.mem / "crlf.md"
+    crlf.write_bytes(b"---\r\nname: crlf\r\ntriggers:\r\n  paths: [\"crlf/**\"]\r\nonce: true\r\n---\r\nCRLF body.\r\n")
+    t = time.time() + 500
+    os.utime(crlf, (t, t))
+    w.call("Read", {"file_path": "C:/x/crlf/f.txt"}, "e1")
+    raw = crlf.read_bytes()
+    case("retire_once keeps CRLF files CRLF with no doubled CR", b"fired: 2026-11-07\r\n" in raw and b"\r\r" not in raw)
+
+    # --- a hold needs a persisted fired set, or the retry would be held forever
+    w.add("nosession.md", memory("nosession", "triggers:\n  skills: [nosession-skill]\n", "No session id."))
+    r = w.call("Agent", {"prompt": "use nosession-skill here", "description": "x"}, "")
+    case("Agent hold is skipped when the fired set cannot be saved", r[0] == 0 and "No session id" in json.loads(r[1])["hookSpecificOutput"]["additionalContext"])
+
     # --- degenerate inputs
     case("non-dict tool_input is ignored", mt.run_hook({"tool_name": "Read", "tool_input": "oops"}, roots=w.roots) == (0, "", ""))
     bad = w.add("bad.md", "---\nname: [unterminated\n")

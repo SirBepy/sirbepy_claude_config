@@ -300,7 +300,9 @@ def build_table(files: list[tuple[str, int]], prev_entries: dict | None = None, 
 def _atomic_write(path: str, text: str) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = f"{path}.{os.getpid()}.tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
+    # newline="" so callers' own line endings survive: text-mode "w" would turn
+    # every "\n" into "\r\n" on Windows, doubling the CR of a CRLF memory file.
+    with open(tmp, "w", encoding="utf-8", newline="") as f:
         f.write(text)
     os.replace(tmp, path)
 
@@ -442,13 +444,17 @@ def load_fired(session_id: str) -> set[str]:
         return set()
 
 
-def save_fired(session_id: str, ids: set[str]) -> None:
+def save_fired(session_id: str, ids: set[str]) -> bool:
+    """True when the fired set was persisted. A caller that cannot persist it
+    must not hold anything back, or the same hold repeats forever."""
     p = fired_path(session_id)
-    if p:
-        try:
-            _atomic_write(p, json.dumps(sorted(ids)))
-        except OSError:
-            pass
+    if not p:
+        return False
+    try:
+        _atomic_write(p, json.dumps(sorted(ids)))
+        return True
+    except OSError:
+        return False
 
 
 def retire_once(path: str, today: str) -> None:
@@ -484,8 +490,11 @@ def memory_body(path: str) -> str:
     return body if len(body) <= BODY_CHAR_CAP else body[:BODY_CHAR_CAP].rstrip() + " [...truncated, read the file for the rest]"
 
 
-def render(entries: list[dict], tool_name: str) -> str:
-    blocks, total = [], 0
+def render(entries: list[dict], tool_name: str, hold: bool = True) -> tuple[str, list[dict]]:
+    """(text, entries actually shown). Only shown entries may be marked fired
+    or retired: one cut by the size cap or with an unreadable body has not
+    reached the model yet."""
+    blocks, shown, total = [], [], 0
     for e in entries:
         body = memory_body(e["path"])
         if not body:
@@ -494,16 +503,17 @@ def render(entries: list[dict], tool_name: str) -> str:
         if total + len(block) > TOTAL_CHAR_CAP:
             break
         blocks.append(block)
+        shown.append(e)
         total += len(block)
     if not blocks:
-        return ""
+        return "", []
     head = f"[memory-trigger] {len(blocks)} memory file(s) matched this {tool_name} call; loaded now because their triggers fired:"
-    if tool_name == "Agent":
+    if tool_name == "Agent" and hold:
         head += (
             "\nThis subagent dispatch was held once so you can pass the text below into the dispatch "
             "prompt (a subagent starts with none of this). Re-dispatch with it included."
         )
-    return head + "\n" + "\n\n".join(blocks)
+    return head + "\n" + "\n\n".join(blocks), shown
 
 
 # ------------------------------------------------------------------- hook
@@ -527,15 +537,19 @@ def run_hook(payload: dict, roots: list[str] | None = None, today: str | None = 
     fresh = [e for e in hits if e["id"] not in fired]
     if not fresh:
         return 0, "", ""
-    text = render(fresh, tool_name)
+    text, shown = render(fresh, tool_name)
     if not text:
         return 0, "", ""
-    save_fired(session_id, fired | {e["id"] for e in fresh})
+    saved = save_fired(session_id, fired | {e["id"] for e in shown})
+    if tool_name == "Agent" and not saved:
+        # Without a persisted fired set the retry would be held again forever:
+        # deliver as plain context instead of holding.
+        text, shown = render(shown, tool_name, hold=False)
     stamp = today or time.strftime("%Y-%m-%d")
-    for e in fresh:
+    for e in shown:
         if e["once"]:
             retire_once(e["path"], stamp)
-    if tool_name == "Agent":
+    if tool_name == "Agent" and saved:
         return 2, "", text + "\n"
     out = {"hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": text}}
     return 0, json.dumps(out), ""

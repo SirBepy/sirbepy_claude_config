@@ -103,11 +103,21 @@ def check_fail_open(_case) -> bool:
     return ok
 
 
+def check_subagent_exempt(_case) -> bool:
+    payload = json.loads(pre(WRITE_DRAFT, ""))
+    payload["agent_id"] = "a123"
+    proc = run_hook(json.dumps(payload))
+    ok = proc.returncode == 0
+    print(f"[{'PASS' if ok else 'FAIL'}] a dispatched subagent (agent_id set) is not gated -> exit={proc.returncode}")
+    return ok
+
+
 def run() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         fails = _testlib.run_cases(cases(tmp), check)
     fails += _testlib.run_cases([("cache",)], check_cache)
     fails += _testlib.run_cases([("garbage",)], check_fail_open)
+    fails += _testlib.run_cases([("subagent",)], check_subagent_exempt)
     return _testlib.summarize(fails)
 
 

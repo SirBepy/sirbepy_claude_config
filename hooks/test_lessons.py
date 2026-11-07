@@ -101,6 +101,16 @@ def run_sweep_cases(tmp):
          code == 2 and "client" in msg and not (Path(sweep.lessons_dir()) / "client-lesson.md").exists())
     code, msg = sweep.promote("Bad Name!", "x", "y", [a], [], [], False, bases)
     case("promote: refuses a non-slug name", code == 2)
+    tier = str(Path(roots) / "C--Users-tecno-Desktop-Projects-zng-app" / "memory" / "cold" / "feedback_deep.md")
+    code, msg = sweep.promote("deep-client", "x", "y", [tier], [], [], False, bases)
+    case("promote: a client memory in a tier subfolder is still refused as client",
+         code == 2 and "client" in msg and not (Path(sweep.lessons_dir()) / "deep-client.md").exists())
+    code, msg = sweep.promote("stray", "x", "y", [str(Path(tmp) / "elsewhere.md")], [], [], False, bases)
+    case("promote: a source outside any memory folder is refused", code == 2)
+    code, msg = sweep.promote("nobases", "x", "y", [a], [], [], False, [])
+    case("promote: fails closed when the client list is empty", code == 2 and "client repo list" in msg)
+    case("source_project resolves memory/cold/x.md to its project",
+         sweep.source_project(tier) == "C--Users-tecno-Desktop-Projects-zng-app")
 
     # --- the trigger hook sees the lessons folder
     os.environ[mt.STATE_ENV] = str(Path(tmp) / "state")
