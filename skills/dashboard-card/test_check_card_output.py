@@ -113,5 +113,11 @@ with tempfile.TemporaryDirectory() as tmp:
         code = cc.main([str(binary)])
     check(code == 2, "non-UTF-8 file exits 2 without a traceback")
 
+check(cc.resolve({"a": {"x": 1}}, "a[x]") == (False, None), "malformed [x] step is not read as a key")
+check(cc.resolve({"a": 1}, ".") == (False, None), "a lone dot is not the root")
+check(cc.resolve({"a": [[1, 2], [3]]}, "a[0][1]") == (True, 2), "chained [n][n] steps resolve")
+with contextlib.redirect_stderr(io.StringIO()):
+    check(cc.main(["--paths", "n", "--"]) == 2, "a trailing -- with no command exits 2 instead of reading stdin")
+
 print(f"\n{len(failures)} failure(s)" if failures else "\nall passed")
 sys.exit(1 if failures else 0)

@@ -77,7 +77,7 @@ pack with mixed per-file licenses (LPC, OpenGameArt) is checked per file actuall
 | GPL (on art) | yes, with the license text | avoid: copyleft may reach the game | yes | Rare; treat like CC-BY-SA but stricter |
 | CC-BY-NC | only while the repo stays non-commercial and nothing downstream is licensed for commercial reuse | no | yes | Fails any commercial or ad-supported release |
 | "No redistribution" (paid itch.io packs, e.g. LimeZu) | **no**: a public repo redistributes it | no | yes | Keep out of git entirely (gitignore it) |
-| Unlicensed rip (Spriters Resource, game rips) | no | no (Google Play's IP policy is reported to ban game artwork; checked against no policy page tonight) | yes, private use only | Never in a public repo or a store build |
+| Unlicensed rip (Spriters Resource, game rips) | no | no (Google Play's IP policy is reported to ban game artwork; the policy page itself was not read) | yes, private use only | Never in a public repo or a store build |
 | No license stated | no | no | yes, private use only | "Free to download" is not a license |
 
 ## Pitfalls

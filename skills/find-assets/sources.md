@@ -45,7 +45,7 @@ before 2026-11-07 carry only a code. The avoid table has no kinds or license col
 | Source | Why | Seen |
 |---|---|---|
 | itch.io LimeZu Modern Interiors / Office | Cheap, not free, and forbids redistribution: local use only, keep out of git | R1028 |
-| The Spriters Resource | Rips with no license; private local use only, never a public repo or a store build (Google Play's IP policy bans video-game artwork) | R1028 |
+| The Spriters Resource | Rips with no license; private local use only, never a public repo or a store build (Google Play's IP policy is reported to ban video-game artwork; the policy page itself was not read) | R1028 |
 | Myinstants, 101soundboards, Sounds Resource | Game and meme rips, no license; also reject scrapers (HTTP 403 seen in character-creator work) | mem (`reference_character_creator_sources`) |
 
 ## Leads, not sources

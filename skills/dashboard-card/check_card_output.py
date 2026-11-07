@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Checks the JSON a dashboard card's command prints, before the card is tested live.
 
-Usage: python check_card_output.py --paths days_since,items[].n,sum(items[].n) -- python my_card.py [args]
+Usage: python check_card_output.py --paths "days_since,items[].n,sum(items[].n)" -- python my_card.py [args]
        python check_card_output.py out.json --paths ...      (a saved copy of the output)
        python check_card_output.py - --paths ... < out.json  (stdin)
 
 Why: the dashboard tool answers a wrong path or non-JSON stdout with a "-" value and no error
 (observed 2026-11-07 with `test`), so a broken script looks like a working card with an empty
-reading. This prints exactly what is wrong. Exit 0 = fine, 1 = problems listed one per line,
+reading. This prints exactly what is wrong. Quote the --paths value in PowerShell: a bare `(`
+starts a subexpression there and the script never runs. Exit 0 = fine, 1 = problems listed one per line,
 2 = could not read or run the input.
 
 The `-- command` form runs the script itself and decodes its stdout as UTF-8: piping one native
@@ -31,6 +32,8 @@ TONES = ("warn", "good")
 CARD_KEYS = {"headline", "headline_tone", "progress", "segments"}
 TOKEN = re.compile(r"\[(\d*)\]|([^.\[\]]+)")
 SUM = re.compile(r"^sum\((.+)\)$")
+# Dotted names with [n] / [] steps only; anything else (`a[x]`, a lone `.`) the tool would not read.
+PATH_OK = re.compile(r"^[^.\[\]]+(?:\.[^.\[\]]+|\[\d*\])*$")
 
 
 def _walk(cur, tokens):
@@ -57,6 +60,8 @@ def resolve(data, path: str):
     """
     m = SUM.match(path)
     inner = m.group(1) if m else path
+    if not PATH_OK.match(inner):
+        return False, None
     tokens = TOKEN.findall(inner)
     values = [v for v in _walk(data, tokens) if v is not None]
     if m:
@@ -126,16 +131,21 @@ def check(text: str, paths: list) -> list:
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     command = []
-    if "--" in argv:
+    has_command = "--" in argv
+    if has_command:
         i = argv.index("--")
         argv, command = argv[:i], argv[i + 1:]
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("file", nargs="?", default=None, help="JSON file, or - for stdin; omit when using -- command")
     ap.add_argument("--paths", default="", help="comma-separated display paths that must resolve")
     args = ap.parse_args(argv)
+    if has_command and not command:
+        print("check_card_output: nothing after --; give the card's command, e.g. -- python my_card.py", file=sys.stderr)
+        return 2
     try:
         if command:
-            run = subprocess.run(command, capture_output=True, timeout=120)
+            # stdin closed so a script that reads it fails fast instead of hanging until the timeout.
+            run = subprocess.run(command, capture_output=True, timeout=120, stdin=subprocess.DEVNULL)
             if run.returncode != 0:
                 print(f"PROBLEM: command exited {run.returncode}: {run.stderr.decode('utf-8', 'replace').strip()}")
                 return 1
