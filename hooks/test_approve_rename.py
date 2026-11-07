@@ -53,6 +53,10 @@ ALLOW_CASES = [
     (f"& {R_WIN} -Foo {{Remove-Item C:/x}}", False, "a script block as an argument"),
     (f"powershell -Command Remove-Item C:/x -File {R_FWD}", False, "-Command swallows the rest, -File is just text"),
     (f"& {R_WIN} -Name x\nRemove-Item C:/x", False, "a second statement on the next line"),
+    (f"& {R_WIN} -Close\rRemove-Item C:/x", False, "a bare carriage return separates PowerShell statements"),
+    (f'powershell -com "Remove-Item C:/x" -File {R_FWD}', False, "-com is an unambiguous prefix of -Command"),
+    (f"powershell -enc abc -File {R_FWD}", False, "-enc is a prefix of -EncodedCommand"),
+    (f'pwsh -comm "Remove-Item C:/x" -File {R_FWD}', False, "pwsh -comm"),
 ]
 
 
