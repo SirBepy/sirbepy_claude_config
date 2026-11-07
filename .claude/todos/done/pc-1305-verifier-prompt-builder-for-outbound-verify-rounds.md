@@ -34,3 +34,4 @@ One file per ticket holds the prompt's variable parts (repo, branch, pointers, r
 ## Notes
 
 - Filed by `/close` of the zng-app chat on 2026-11-03. The hook reads the Agent prompt from the transcript, so generating the text changes nothing about how the hook matches it: the pasted prompt still carries the draft between the marker lines.
+- Built: skills/ticket/scripts/verify_prompt.py <spec.md> prints the filled verifier prompt (template read from refs/outbound-verify.md at run time, one-pass placeholder fill, draft inlined between the OUTBOUND-DRAFT lines the hook's DRAFT_RE matches, stops if the ref loses a placeholder). refs/outbound-verify.md 'Keeping the verify loop short' now names it. Tests: skills/ticket/scripts/test_verify_prompt.py (new file, no pre-fix version to red-check).

@@ -165,7 +165,12 @@ Converged practice (zng-biller, 2026-10-21/22, a batch of 3 long tickets took 4 
 - Date every absence claim: "no BE ticket found as of <date> (title search)".
 - Point verifiers at local Figma PNG renders, not the rate-limited Figma API.
 - Apply all of a round's findings in ONE edit before the next round; 2 rounds then sufficed.
-- Fill the template once into a file and reuse that text for all 3 dispatches and later rounds.
+- Generate the prompt, never retype it: put the variable parts in a spec file and the exact text
+  in the draft file (both under `C:\tmp\<topic>\`), then run
+  `python ~/.claude/skills/ticket/scripts/verify_prompt.py <spec.md>`. It fills the template above
+  (read from this file at run time) and prints the prompt to paste into all 3 `Agent` calls. After
+  a draft edit, rerun it and paste the new output; the pointers never drift between rounds.
+  The spec format is in the script's docstring.
 - A newly merged PR or ticket makes text stale: re-check claims about moving state before round 1.
 
 ## When the hook itself is broken
