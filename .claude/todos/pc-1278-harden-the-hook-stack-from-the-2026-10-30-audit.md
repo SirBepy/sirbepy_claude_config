@@ -72,3 +72,4 @@ Written by /auto-do-todos on 2026-11-07. The next run opens with these.
 - 95cfb58 em-dash-guard scans `write_draft`; test `hooks/test_em_dash_guard.py`.
 - 51aa933 testing-floor-guard "don't test" skip; test `hooks/test_testing_floor_guard.py`.
 - 7e79a47 `git.exe` / `gh.exe` in push-gate, push-read-gate, pr-guard; single `is_agent_call` in `_hooklib`; tests in `test_push_gate.py`, `test_push_read_gate.py`, `test_pr_guard.py`, `test_hookboot.py`.
+- Review follow-ups (a fresh reviewer found these in the first pass): ea62650 dev-server-guard per-statement check (newline-separated launch after an install), 5ee1b90 approve-rename anchored to the real home script and refusing `(){}` / `-Command`, 8555616 commit-guard `git.exe` / quoted `-C` / `VAR=1` fallback and AI trailer inside heredoc or here-string, 4280ceb testing-floor-guard dont-test phrase must end the sentence.
