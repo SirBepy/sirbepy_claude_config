@@ -70,7 +70,7 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 
 ## Execution Discipline
 
-- For any creative/feature work (new feature, component, behavior change, non-trivial design), use the local `/brainstorm` skill, never `superpowers:brainstorming`. Its SKILL.md holds the plan checkpoint and escape conditions. Exception: rodge planning talks use `superpowers:brainstorming`, enabled only in that repo's `.claude/settings.local.json` (Joe, 2026-10-20); its questions still go on the question card.
+- For any creative/feature work (new feature, component, behavior change, non-trivial design), use the local `/brainstorm` skill, never `superpowers:brainstorming`. Its SKILL.md holds the plan checkpoint and escape conditions. Exception: rodge planning talks use `superpowers:brainstorming`, enabled only in that repo's `.claude/settings.local.json` (Joe, 2026-10-20); rodge's questions still go on the question card.
 - State assumptions and interpretations before coding; present them instead of picking silently.
 - Every changed line must trace to the request. No drive-by refactors.
 - Before writing a new helper, util, or type: scan the codebase first. If something equivalent already exists a few files over, reuse it. Re-implementing what's nearby is the most common way code bloats.
@@ -149,7 +149,7 @@ Every subagent dispatch passes `model: 'sonnet'` explicitly. Never default-inher
   - a sonnet agent failed the exact task twice, or Joe explicitly asks; or
   - a sonnet report **smells wrong** - suspiciously clean, contradicts other evidence, zero findings on a big diff (silent misses never look like failures, so judgment is the trigger here); or
   - it's the FINAL verify/judge pass on a **high-stakes diff** (security-touching, data-loss-capable, DB migrations): one solo top-tier verifier is allowed by default.
-- Set the `Agent` tool's `effort` parameter only when Joe asks, so scope is the main knob: a builder given too much at once can spend its whole output budget thinking and return nothing. Split the dispatch instead. Model tier stays the expensive knob.
+- Scope is the main knob (set the `Agent` tool's `effort` parameter only when Joe asks): a builder given too much at once can spend its whole output budget thinking and return nothing. Split the dispatch instead. Model tier stays the expensive knob.
 
 ### Full-orchestrator mode
 
