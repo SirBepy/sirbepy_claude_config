@@ -38,3 +38,18 @@ That session's research (sonnet subagents, web) produced a starter source map wo
 
 - Invoking it for "cute pixel office characters with sit/typing animation" returns ranked, license-annotated candidates without Claude drawing anything.
 - The no-asset-making rule is stated in the skill so it applies in every project.
+
+## Notes
+
+- built: skills/find-assets (SKILL.md, sources.md); design calls in ## Decided
+
+## Decided
+
+Decided by /loop-todos sub on 2026-11-07 (Joe asleep).
+
+- [x] [ARCH] Invocation? - decided **model-invocable, not slash-only**, because the no-asset-making rule must apply in every project the moment a game needs art, and the description is 18 words / 95 chars so it fits the budget.
+- [x] [ARCH] Search runs where? - decided **always a read-only sonnet subagent that must quote each license verbatim from the asset page**, because multi-query web research stays out of the main context and "license, I think" is how a bad pack ships.
+- [x] [DATA] Shipping target? - decided **the brief fixes `public-repo` / `app-store` / `local-only` first (strictest likely when unstated) and a license-by-target table filters candidates**, because the same pack is fine local-only and illegal in a public repo.
+- [x] [DATA] Free only? - decided **sources.md lists only free sources; paid or no-redistribution packs are listed under "Avoid, or local-only"**, because 1265 recommends no paid signups.
+- [x] [DATA] Provenance? - decided **each sources.md row carries `R1028` (the 2026-10-28 research) or `bg` (background knowledge, unchecked)**, because only the first was researched; `bg` rows are leads and the license is re-read on the page every time.
+- [x] [TOOLING] Script? - decided **none**, because the work is judgement plus web research; the living list is a markdown file the skill edits in place.
