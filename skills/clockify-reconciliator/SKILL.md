@@ -324,7 +324,7 @@ normal step 9 approval.
 it from the dev's verbal description alone, check the Shortcut activity feed for that window
 (`POST https://app.shortcut.com/backend/api/private/permission/activity`, cookie auth per the
 `reference_shortcut_activity_feed_auth` memory - the same private-endpoint pattern
-`/shortcut-priorities` already uses) filtered to the dev's own `member_id`. Ticket updates/comments
+zng-app's `/shortcut-priorities` already uses) filtered to the dev's own `member_id`. Ticket updates/comments
 inside the window upgrade the description from a generic paraphrase of the dev's statement to
 something specific - name the actual tickets/epics touched ("Triage email-gate and impersonation
 tickets, reply to LLC epic comments") rather than "testing and reviewing code". No hits there: fall

@@ -273,7 +273,7 @@ def cmd_drafts(_):
 # ---------------------------------------------------------------- feed
 
 # The trimmed header set can get `401 profile_invalid` for a valid cookie; the full browser set
-# (same shape as /shortcut-priorities Step 1) is the fallback before the cookie is called dead.
+# (same shape as zng-app's /shortcut-priorities Step 0) is the fallback before the cookie is called dead.
 BROWSER_HEADERS = {
     'origin': 'https://app.shortcut.com',
     'referer': 'https://app.shortcut.com/zirtue/',
@@ -384,7 +384,7 @@ def cmd_feed(args):
     except urllib.error.HTTPError as e:
         body = e.read().decode(errors='replace')[:300]
         if e.code in (401, 403):
-            print('SHORTCUT_SID is dead. Refresh it per /shortcut-priorities "Auth" (DevTools > activity request > Copy as cURL > sid=).')
+            print('SHORTCUT_SID is dead. Refresh it per the zng-app /shortcut-priorities "Auth" (DevTools > activity request > Copy as cURL > sid=).')
         else:
             print(f'HTTP {e.code}: {body}')
         sys.exit(1)

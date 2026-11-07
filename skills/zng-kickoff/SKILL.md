@@ -131,7 +131,7 @@ A ticket line followed by `DRAFT EXISTS: post it, do not redraft` already has an
 topic and authoring chat, and never write a second draft for it. Only if the dev says the old draft
 is stale does a chat redraft it.
 
-For each listed ticket, follow `/shortcut-priorities` steps 4-7, but read the full ticket and
+For each listed ticket, follow steps 4-7 of zng-app's `/shortcut-priorities` (read `C:\Users\tecno\Desktop\Projects\zng-app\.claude\skills\shortcut-priorities\SKILL.md`; the skill is slash-only), but read the full ticket and
 comments with `kickoff.py story <id>...` (one call for all ids: named state, owners, requester,
 epic, links, description, every comment with author and date; GET only, never prints the token)
 instead of hand-writing a fetch. Then drop off-plate states, cross-check git in the ZNG repos, and

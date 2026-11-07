@@ -1,6 +1,6 @@
 # Shortcut API — shared core
 
-Canonical reference for every Shortcut caller (`ticket` and its `shortcut.md` quirks file, shortcut-done-audit, shortcut-priorities, work-recap, zirtue-release-backfill). Fix drift here, not per-skill. The create/update/pickup trio merged into `/ticket` on 2026-08-18.
+Canonical reference for every Shortcut caller (`ticket` and its `shortcut.md` quirks file, shortcut-done-audit, shortcut-priorities (zng-app's `.claude/skills/`), work-recap, zirtue-release-backfill). Fix drift here, not per-skill. The create/update/pickup trio merged into `/ticket` on 2026-08-18.
 
 ## Token extraction
 
