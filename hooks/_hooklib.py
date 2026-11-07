@@ -147,6 +147,46 @@ def tokenize_command(command: str) -> list[str]:
         return command.split()
 
 
+_LINE_CONTINUATION_RE = re.compile(r"[\\`]\r?\n[ \t]*")
+
+
+def join_line_continuations(command: str) -> str:
+    """Join bash `\\<newline>` and PowerShell `<backtick><newline>` continuations
+    into one space, so `git \\<newline>commit` reads as `git commit`. Joining can
+    only merge words, never hide one."""
+    return _LINE_CONTINUATION_RE.sub(" ", command)
+
+
+def split_shell_words(command: str) -> list[str]:
+    """shlex.split(posix=True) that keeps the backslashes of an unquoted Windows
+    path (`C:\\Git\\git.exe`, `.\\git.exe`), which plain posix mode eats, and
+    joins line continuations first. A backslash before whitespace or a quote
+    stays an escape, and quoted text is untouched. Raises ValueError on an
+    unbalanced quote, like shlex."""
+    command = join_line_continuations(command)
+    out: list[str] = []
+    quote = None
+    i = 0
+    while i < len(command):
+        ch = command[i]
+        if quote:
+            out.append(ch)
+            if quote == '"' and ch == "\\" and command[i + 1:i + 2] in ('"', "\\"):
+                out.append(command[i + 1])
+                i += 1
+            elif ch == quote:
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+            out.append(ch)
+        elif ch == "\\" and command[i + 1:i + 2] and not command[i + 1].isspace() and command[i + 1] not in "\"'":
+            out.append("\\\\")
+        else:
+            out.append(ch)
+        i += 1
+    return shlex.split("".join(out), posix=True)
+
+
 def flatten_tokens(tokens: list[str]) -> list[str]:
     """PowerShell `-ArgumentList "a","b","c"` collapses to one shlex token
     when there's no whitespace between the commas; split those back apart.
@@ -596,3 +636,10 @@ def without_display_segments(command: str) -> str:
             out.append(command[cursor:end])
         cursor = end
     return "".join(out) + command[cursor:] if stripped else command
+
+
+# Keep this the LAST statement. _hookboot treats a module without it as a file
+# another session is still writing (empty, or cut at a statement boundary, both
+# of which import cleanly) and retries instead of letting a hook's
+# `from _hooklib import ...` fail on a missing name.
+_HOOKLIB_COMPLETE = True

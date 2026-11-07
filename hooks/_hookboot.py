@@ -7,6 +7,12 @@ once after a short sleep on ANY failure: a half-written file (truncated, so a
 SyntaxError, or an ImportError for a symbol not yet defined) is back to normal
 well inside a second, while a genuinely broken module fails again on the retry.
 
+A write that has only just truncated the file, or one cut at a statement
+boundary, imports cleanly: the import succeeds but the module is missing
+whatever was not written yet, and the hook's own `from _hooklib import ...`
+would raise with no retry. So each shared module ends with a completion
+sentinel (see SENTINELS) and a module that imports without it counts as broken.
+
 It never decides the hook's policy. A module that is still broken after the
 retry is left unimported, so the hook's own `from _hooklib import ...` raises
 the real error and the hook's existing branch runs: fail-closed guards exit 2
@@ -33,6 +39,8 @@ import time
 DEFAULT_RETRY_DELAY_S = 0.4
 DELAY_ENV = "CLAUDE_HOOK_IMPORT_RETRY_DELAY_S"
 SHARED_MODULES = ("_hooklib",)
+# Module name -> a name its LAST statement defines. Absent means "still being written".
+SENTINELS = {"_hooklib": "_HOOKLIB_COMPLETE"}
 
 
 def _delay_s() -> float:
@@ -42,14 +50,22 @@ def _delay_s() -> float:
         return DEFAULT_RETRY_DELAY_S
 
 
-def preload(*names: str, retries: int = 1) -> list:
+def _import_complete(name: str, sentinels: dict) -> None:
+    module = importlib.import_module(name)
+    sentinel = sentinels.get(name)
+    if sentinel and not hasattr(module, sentinel):
+        raise ImportError(f"{name} imported but lacks its completion sentinel {sentinel}")
+
+
+def preload(*names: str, retries: int = 1, sentinels: dict | None = None) -> list:
     """Import each module, retrying `retries` times after a sleep. Returns the
     names still unimported; the caller's own import raises their real error."""
+    sentinels = SENTINELS if sentinels is None else sentinels
     still_broken = []
     for name in names:
         for attempt in range(retries + 1):
             try:
-                importlib.import_module(name)
+                _import_complete(name, sentinels)
                 break
             except Exception:
                 sys.modules.pop(name, None)
