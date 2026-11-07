@@ -34,3 +34,14 @@ Claim, then fix in small commits per skill. The loop-todos fix: let `claim-todo.
 - A double `claim-todo.ps1` call from one session in a scratch backlog succeeds the second time.
 - `/close --light` uses the same review scope rule as `/close`.
 - `python ci/run_all.py` passes.
+
+## Notes
+
+- Landed dc52ca2, a50cde6, 6d479bd, 6bf98cc, 0e109d2, c540a04; deferred template items in pc-1336.
+
+## Decided
+
+- 2026-11-07: loop-todos claim item covered by pc-1323 (c55090c); clockify glob item covered by pc-1269 (7b1db39).
+- 2026-11-07: `/close --light` now uses the main Phase 2 scope rule plus the Phase 3 peer sweep and cross-repo routing (dc52ca2).
+- 2026-11-07: deployed-site template changes (`/pwa` cache name, `react.yml` build dir, `workflow_dispatch`) deferred and filed as pc-1336; the docs now state the gaps (6d479bd).
+- 2026-11-07: `isolated-build/land.ps1` stale "helper skills never commit" wording was already swept by 36b57b4; nothing left to change.
