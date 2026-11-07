@@ -158,12 +158,43 @@ def run_cases(w):
 
     # --- Agent dispatch
     w.add("agentmem.md", memory("agentmem", "triggers:\n  skills: [playwright-wall]\n", "Playwright needs the profile flag."))
-    r = w.call("Agent", {"prompt": "Run playwright-wall checks on the site", "description": "x"}, "a1")
+    r = w.call("Agent", {"prompt": "Run /playwright-wall checks on the site", "description": "x"}, "a1")
     case("Agent dispatch is held once with the memory text", r[0] == 2 and "Playwright needs the profile flag" in r[2] and "Re-dispatch" in r[2])
-    r = w.call("Agent", {"prompt": "Run playwright-wall checks on the site", "description": "x"}, "a1")
+    r = w.call("Agent", {"prompt": "Run /playwright-wall checks on the site", "description": "x"}, "a1")
     case("the retried Agent dispatch is not held again", r == (0, "", ""))
     r = w.call("Agent", {"prompt": "Summarise the README", "description": "x"}, "a2")
     case("an Agent prompt that mentions nothing triggered passes", r == (0, "", ""))
+
+    # --- pc-review item 12: an Agent prompt matches a skill only as a /name token, never as a bare word
+    r = w.call("Agent", {"prompt": "Run playwright-wall checks on the site", "description": "x"}, "a3")
+    case("a bare skill word in an Agent prompt does not fire", r == (0, "", ""))
+    r = w.call("Agent", {"prompt": "Use the anthropic-skills:playwright-wall flow", "description": "x"}, "a3b")
+    case("a plugin-prefixed bare word in an Agent prompt does not fire", r == (0, "", ""))
+    r = w.call("Agent", {"prompt": "Run /anthropic-skills:playwright-wall on the site", "description": "x"}, "a4")
+    case("a plugin-prefixed /name token in an Agent prompt fires", r[0] == 2 and "Playwright needs the profile flag" in r[2])
+    for i, (label, prompt) in enumerate([
+        ("a path segment named like the skill", "Read skills/playwright-wall/SKILL.md and C:/x/playwright-wall/a.md"),
+        ("a Windows path segment named like the skill", "Open C:\\skills\\playwright-wall\\SKILL.md"),
+        ("a longer skill-like word after the slash", "Run /playwright-wall-extra now"),
+        ("a URL ending in the skill name", "Fetch http://host/x/playwright-wall"),
+    ]):
+        r = w.call("Agent", {"prompt": prompt, "description": "x"}, f"a5{i}")
+        case(f"Agent prompt with {label} does not fire", r == (0, "", ""))
+    w.add("commitmem.md", memory("commitmem", "triggers:\n  skills: [commit]\n", "Commit memory body.", extra="once: true\n"))
+    r = w.call("Agent", {"prompt": "Fix the parser, then commit your changes and git commit -m x.", "description": "commit work"}, "a6")
+    case("the plain word commit in an Agent prompt does not fire a commit-skill memory", "Commit memory body" not in r[2] and r[1] == "")
+    case("and does not retire its once-memory", "fired:" not in (w.mem / "commitmem.md").read_text(encoding="utf-8"))
+    r = w.call("Skill", {"skill": "commit"}, "a7")
+    case("the Skill tool still fires the commit-skill memory", "Commit memory body" in context_of(r))
+
+    # --- pc-review item 12: a comma inside braces or quotes is part of the glob, not a list separator
+    fm = mt.parse_frontmatter(["triggers:", "  paths: [\"src/{a,b}/*.ts\", c/{d,e}.md, 'x,y.txt']"])
+    case("parser: commas inside braces and quotes stay in one glob",
+         fm["triggers"]["paths"] == ["src/{a,b}/*.ts", "c/{d,e}.md", "x,y.txt"])
+    rx = mt.glob_to_regex("src/{a,b}/*.ts")
+    case("glob: braces match each alternative", bool(re.match(rx, "c:/p/src/a/z.ts")) and bool(re.match(rx, "c:/p/src/b/z.ts")))
+    case("glob: braces reject a non-alternative", not re.match(rx, "c:/p/src/c/z.ts"))
+    case("glob: the literal brace text no longer matches", not re.match(rx, "c:/p/src/{a,b}/z.ts"))
 
     # --- a memory cut by the size cap has not been shown, so it is neither fired nor retired
     bulk = [w.add(f"bulk{i}.md", memory(f"bulk{i}", "triggers:\n  paths: [\"bulk/**\"]\n", f"BULK{i} " + "x" * 1900, extra="once: true\n")) for i in range(3)]
@@ -186,7 +217,7 @@ def run_cases(w):
 
     # --- a hold needs a persisted fired set, or the retry would be held forever
     w.add("nosession.md", memory("nosession", "triggers:\n  skills: [nosession-skill]\n", "No session id."))
-    r = w.call("Agent", {"prompt": "use nosession-skill here", "description": "x"}, "")
+    r = w.call("Agent", {"prompt": "use /nosession-skill here", "description": "x"}, "")
     case("Agent hold is skipped when the fired set cannot be saved", r[0] == 0 and "No session id" in json.loads(r[1])["hookSpecificOutput"]["additionalContext"])
 
     # --- degenerate inputs
@@ -206,7 +237,7 @@ def run_subprocess_cases(w):
     case("process: Read hit prints additionalContext JSON, exit 0", ok)
     proc = subprocess.run([sys.executable, str(_HOOK_PATH)], input="not json", capture_output=True, text=True, env=env)
     case("process: garbage stdin fails open", proc.returncode == 0)
-    payload["tool_name"], payload["tool_input"] = "Agent", {"prompt": "playwright-wall", "description": "d"}
+    payload["tool_name"], payload["tool_input"] = "Agent", {"prompt": "/playwright-wall", "description": "d"}
     payload["session_id"] = "sub2"
     proc = subprocess.run([sys.executable, str(_HOOK_PATH)], input=json.dumps(payload), capture_output=True, text=True, env=env)
     case("process: Agent hold is exit 2 with the memory on stderr", proc.returncode == 2 and "Playwright needs the profile flag" in proc.stderr)
