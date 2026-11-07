@@ -610,6 +610,16 @@
         ]
       },
       {
+        "matcher": "^([A-Za-z0-9_]+__)?report_turn_status$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\chat-title-guard.py\"",
+            "statusMessage": "Checking this chat has a title"
+          }
+        ]
+      },
+      {
         "matcher": "^(AskUserQuestion|([A-Za-z0-9_]+__)?ask_user_question)$",
         "hooks": [
           {
