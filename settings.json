@@ -630,6 +630,15 @@
         ]
       },
       {
+        "matcher": "^(Edit|Write|Read|Skill|Agent|MultiEdit|NotebookEdit)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\memory-trigger.py\""
+          }
+        ]
+      },
+      {
         "matcher": "^(AskUserQuestion|([A-Za-z0-9_]+__)?ask_user_question)$",
         "hooks": [
           {

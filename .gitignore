@@ -102,6 +102,8 @@ hooks/.flagged-skill-capture.jsonl
 hooks/.ui-screenshot-reminder-session-*
 hooks/.testing-floor-pending/
 hooks/.testing-floor-skip
+# Trigger table, per-file mtime cache and per-session fired sets written by hooks/memory-trigger.py
+hooks/.memory-triggers/
 
 # Belt-and-suspenders: never commit secrets
 .env
