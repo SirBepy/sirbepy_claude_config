@@ -180,7 +180,7 @@ def all_pushes_delete_only(command: str) -> bool:
     A stray `push` word elsewhere only over-gates, which is the safe side."""
     pushes = []
     for segment in split_gate_segments(command):
-        is_push, _dash_c, args =_git_push_walk(_tokenize_segment(segment))
+        is_push, _dash_c, args = _git_push_walk(_tokenize_segment(segment))
         if is_push:
             pushes.append(args)
     if not pushes or len(pushes) != len(PUSH_WORD_RE.findall(command)):

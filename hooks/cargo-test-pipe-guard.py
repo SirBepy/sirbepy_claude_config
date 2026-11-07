@@ -155,18 +155,25 @@ def _spans_outside_quotes(text: str, pattern: re.Pattern) -> list[tuple[int, int
 # line, so `bash -c "cargo test | tail"` is scanned even though its pipe is
 # inside quotes.
 WRAPPER_ARG_RE = re.compile(
-    r"\b(?:bash|sh|zsh|dash|pwsh|powershell)(?:\.exe)?\b[^\"'|;&\n]*?\s-(?:c|lc|command)\s+(?P<q>[\"'])(?P<body>.*?)(?P=q)",
+    r"\b(?:bash|sh|zsh|dash|pwsh|powershell)(?:\.exe)?\b[^\"'|;&\n]*?\s-(?:c|lc|command)\s+"
+    r"(?:\"(?P<dq>(?:\\.|[^\"\\])*)\"|'(?P<sq>[^']*)')",
     re.IGNORECASE | re.DOTALL,
 )
 
 
 def _wrapper_arguments(command: str) -> list[str]:
+    """Bodies of `bash -c "..."` style arguments; a double-quoted body is
+    unescaped so `bash -c "cd \"a b\" && cargo test | tail"` reads whole."""
     mask, balanced = _scan_quotes(command)
-    return [
-        m.group("body")
-        for m in WRAPPER_ARG_RE.finditer(command)
-        if not (balanced and mask[m.start()])
-    ]
+    bodies = []
+    for m in WRAPPER_ARG_RE.finditer(command):
+        if balanced and mask[m.start()]:
+            continue
+        if m.group("dq") is not None:
+            bodies.append(re.sub(r"\\(.)", r"\1", m.group("dq")))
+        else:
+            bodies.append(m.group("sq"))
+    return bodies
 
 
 def find_violation(command: str, cwd: str | None = None, _depth: int = 0) -> tuple[str, str] | None:

@@ -26,7 +26,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS, OUTBOUND_MARKER_GLOB, runs_http_tool
+    from _hooklib import read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS, OUTBOUND_MARKER_GLOB, without_display_segments
 except Exception as e:
     sys.stderr.write(f"[shortcut-create-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -49,10 +49,9 @@ GET_FLAG_RE = re.compile(r"(?:^|\s)(?:-G\b|--get\b)", re.IGNORECASE)
 
 
 def posts_to_stories(command: str) -> bool:
+    # Text that an echo, a grep or a commit message merely names (`echo "curl -X POST <url>"`) sends nothing.
+    command = without_display_segments(command)
     if not STORIES_URL_RE.search(command):
-        return False
-    # Quoted text that merely names a curl POST (`echo "curl -X POST <url>"`) sends nothing.
-    if not runs_http_tool(command):
         return False
     if POST_VERB_RE.search(command):
         return True

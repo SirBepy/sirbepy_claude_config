@@ -484,23 +484,18 @@ def with_wrapper_bodies(segments: list[str], depth: int = 0) -> list[str]:
     return out
 
 
-# Programs that can send an HTTP request from a command line; a script runner is
-# included because `python post.py -X POST <url>` is how a wrapper script is fed.
-_HTTP_TOOLS = (
-    "curl|wget|invoke-restmethod|invoke-webrequest|irm|iwr|http|https|xh|python3?|py|node|deno|bun"
-)
-_HTTP_TOOL_RE = re.compile(
-    r"(?<![\w.$-])(?:[\w.:~\\/-]*[\\/])?(?:" + _HTTP_TOOLS + r")(?:\.exe)?(?![\w-])",
-    re.IGNORECASE,
-)
-# What may sit between a command boundary and the program name: assignments and
-# launcher words (`$r = Invoke-RestMethod`, `env X=1 curl`, `xargs -I{} curl`).
-_COMMAND_POSITION_RE = re.compile(
-    r"(?:^|[|;&(){\n=`]|\$\()\s*"
-    r"(?:(?:xargs(?:\s+-\S+)*|env|sudo|time|nohup|command|exec|call|start|&|[A-Za-z_]\w*=\S*|then|do|else|!)\s+)*\Z",
-    re.IGNORECASE,
-)
-_START_PROCESS_RE = re.compile(r"\bstart-process\b[^|;&\n]*?-file(?:path)?\s+[\"']?\Z", re.IGNORECASE)
+# Commands that only print or search the text they are given. A request spelled
+# out in their quoted arguments is prose, not a request: `echo "curl -X POST <url>"`.
+# This is a deny-list on purpose: anything not named here keeps being read as a
+# command that may send a request (a launcher, a script, a quoted exe path).
+_DISPLAY_COMMANDS = {
+    "echo", "printf", "write-host", "write-output", "write-warning", "write-verbose",
+    "write-information", "write-error", "grep", "egrep", "fgrep", "rg", "select-string", "sls", "findstr",
+}
+_DISPLAY_GIT_SUBCOMMANDS = {"commit", "log", "tag", "notes", "grep", "show", "diff", "blame"}
+# Display text piped into one of these gets executed, so nothing is stripped then.
+_EXECUTING_COMMANDS = SHELL_WRAPPER_NAMES | {"cmd", "iex", "invoke-expression", "eval", "source", ".", "xargs", "python", "python3", "py", "node", "perl", "ruby"}
+_ASSIGNMENT_RE = re.compile(r"^[A-Za-z_]\w*=")
 
 
 def _quoted_mask(text: str) -> tuple[list[bool], bool]:
@@ -519,25 +514,45 @@ def _quoted_mask(text: str) -> tuple[list[bool], bool]:
     return mask, quote is None
 
 
-def _segment_runs_http_tool(segment: str) -> bool:
-    mask, balanced = _quoted_mask(segment)
-    for m in _HTTP_TOOL_RE.finditer(segment):
-        before = segment[: m.start()]
-        if balanced and mask[m.start()]:
-            # Quoted text is prose, except a command substitution inside a string.
-            if not before.rstrip().endswith(("$(", "`")):
-                continue
-        if _COMMAND_POSITION_RE.search(before) or _START_PROCESS_RE.search(before):
-            return True
-        if not balanced:
-            return True
-    return False
+def _command_words(segment: str) -> list[str]:
+    """Whitespace words of a statement without a leading call operator or
+    `VAR=value` assignments, i.e. starting at the command itself."""
+    words = segment.split()
+    while words and (words[0] == "&" or _ASSIGNMENT_RE.match(words[0])):
+        words.pop(0)
+    return words
 
 
-def runs_http_tool(command: str) -> bool:
-    """True when some statement of `command`, or of a `bash -c` / `-Command`
-    argument inside it, runs an HTTP-capable program in command position.
-    `echo "curl -X POST <url>"` names curl without running it. A statement
-    whose quotes do not pair up keeps every program mention (the read cannot
-    be trusted, so the hook gates rather than waves it through)."""
-    return any(_segment_runs_http_tool(s) for s in with_wrapper_bodies(split_command_segments(command)))
+def _is_display_segment(segment: str) -> bool:
+    _mask, balanced = _quoted_mask(segment)
+    # Unpaired quotes mean the read cannot be trusted; a command substitution runs.
+    if not balanced or "$(" in segment or "`" in segment:
+        return False
+    words = _command_words(segment)
+    if not words:
+        return False
+    first = basename(words[0]).removesuffix(".exe")
+    if first in _DISPLAY_COMMANDS:
+        return True
+    if first != "git":
+        return False
+    rest, i = words[1:], 0
+    while i < len(rest) and rest[i].startswith("-"):
+        i += 2 if rest[i] in ("-C", "-c") else 1
+    return i < len(rest) and rest[i] in _DISPLAY_GIT_SUBCOMMANDS
+
+
+def without_display_segments(command: str) -> str:
+    """`command` with the statements that only print or search text removed, so
+    a request named in `echo "curl -X POST <url> -d x"` or a commit message is
+    not mistaken for one. Anything else stays, and so does everything when a
+    statement hands text to a shell (`echo "..." | bash`) or has unpaired quotes."""
+    segments = split_gate_segments(command)
+    kept = [s for s in segments if not _is_display_segment(s)]
+    if len(kept) == len(segments):
+        return command
+    for s in kept:
+        words = _command_words(s)
+        if words and basename(words[0]).removesuffix(".exe") in _EXECUTING_COMMANDS:
+            return command
+    return " ; ".join(kept)
