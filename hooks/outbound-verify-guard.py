@@ -56,6 +56,7 @@ try:
         normalize,
         uncovered,
     )
+    from _python_http_write import SHORTCUT_HINT_RE, python_write_verbs
 except Exception as e:
     sys.stderr.write(f"[outbound-verify-guard] FATAL: cannot import a sibling hook module ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -64,7 +65,11 @@ OVERRIDE_ENV = "CLAUDE_OUTBOUND_VERIFY_BYPASS"
 PROSE_KEYS = ("name", "description", "text", "title", "body")
 
 # Cheap gate so the ~every-shell-call matcher costs a regex, not a tokenize.
-SHELL_PREFILTER_RE = re.compile(r"shortcut\.com|linear\.app|github\.com|\bgh(?:\.exe)?\b", re.IGNORECASE)
+# The Shortcut token names are there for python scripts that build their URL from a base.
+SHELL_PREFILTER_RE = re.compile(
+    r"shortcut\.com|linear\.app|github\.com|\bgh(?:\.exe)?\b|SHORTCUT_API_TOKEN|kickoff\.env|Shortcut-Token",
+    re.IGNORECASE,
+)
 
 SHORTCUT_TOOL_RE = re.compile(r"^mcp__shortcut__stories-(create|update|create-comment|create-subtask|add-task|update-task)$")
 LINEAR_TOOL_RE = re.compile(r"^mcp__.*linear.*__.*(create_issue|issue.?create|update_issue|issue.?update|create_comment|comment.?create|save_issue|save_comment).*$", re.IGNORECASE)
@@ -403,6 +408,9 @@ def has_http_data_flag(command: str, posix: bool) -> bool:
 def is_http_write(command: str, posix: bool = True) -> bool:
     if WRITE_VERB_RE.search(command):
         return True
+    # An inline python script names its verb in the call (`method='POST'`, `requests.post(`).
+    if python_write_verbs(command) & {"POST", "PUT", "PATCH"}:
+        return True
     return has_http_data_flag(command, posix) and not GET_FLAG_RE.search(command)
 
 
@@ -422,6 +430,9 @@ def rest_prose(command: str, tokens: list, cwd: str | None) -> tuple:
     # A PowerShell hashtable piped through ConvertTo-Json never surfaces as a -Body literal.
     if not found:
         found = regex_prose(command, values)
+    # `python -c "...{\"text\": \"...\"}..."`: the quotes of the script's own strings arrive escaped.
+    if not found and '\\"' in command:
+        found = regex_prose(command.replace('\\"', '"'), values)
     return values, found
 
 
@@ -482,6 +493,21 @@ def shortcut_requires_prose(command: str, match: re.Match) -> bool:
     return bool(tail) and tail[0].lower() == "comments" and not any(tail[1:])
 
 
+# A python script often builds the URL from a base (`API + "/stories"`), so SHORTCUT_URL_RE misses
+# it. Only a bare `/stories` or anything under `/comments` is known to carry prose; an id-only
+# write (`/stories/<id>` with a state id) stays ungated unless its text is found.
+PY_SHORTCUT_PROSE_PATH_RE = re.compile(r"(?<!search)/stories(?![\w/-])|/comments", re.IGNORECASE)
+PY_SHORTCUT_STORIES_RE = re.compile(r"(?<!search)/stories\b", re.IGNORECASE)
+
+
+def python_shortcut_write(command: str) -> bool:
+    return bool(
+        python_write_verbs(command) & {"POST", "PUT", "PATCH"}
+        and SHORTCUT_HINT_RE.search(command)
+        and PY_SHORTCUT_STORIES_RE.search(command)
+    )
+
+
 def detect_rest(command: str, tokens: list, cwd: str | None, posix: bool = True) -> Outbound | None:
     # `echo "curl -X POST <url> -d x"` or a commit message quoting one names a
     # request without sending it, so those statements are left out of the read.
@@ -489,11 +515,15 @@ def detect_rest(command: str, tokens: list, cwd: str | None, posix: bool = True)
     shortcut = SHORTCUT_URL_RE.search(command)
     linear = LINEAR_URL_RE.search(command)
     github = GITHUB_URL_RE.search(command)
-    if not (shortcut or linear or github):
+    py_shortcut = not (shortcut or linear or github) and python_shortcut_write(command)
+    if not (shortcut or linear or github or py_shortcut):
         return None
     if not is_http_write(command, posix):
         return None
-    if shortcut:
+    if py_shortcut:
+        requires = bool(PY_SHORTCUT_PROSE_PATH_RE.search(command))
+        label = "Shortcut REST write (python)"
+    elif shortcut:
         requires = shortcut_requires_prose(command, shortcut)
         label = "Shortcut REST write"
     elif linear:

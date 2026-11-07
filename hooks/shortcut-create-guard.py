@@ -27,6 +27,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     from _hooklib import read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS, OUTBOUND_MARKER_GLOB, without_display_segments
+    from _python_http_write import SHORTCUT_HINT_RE, python_write_verbs
 except Exception as e:
     sys.stderr.write(f"[shortcut-create-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -48,9 +49,24 @@ DATA_FLAG_RE = re.compile(r"(?:^|\s)(?:-d\b|--data(?:-raw|-binary|-urlencode)?\b
 GET_FLAG_RE = re.compile(r"(?:^|\s)(?:-G\b|--get\b)", re.IGNORECASE)
 
 
+# A python script often builds the URL from a base (`API + "/stories"`), so the full-URL regex
+# above misses it. Bare `/stories` (not `/stories/<id>`, not `search/stories`) is the create path.
+BARE_STORIES_PATH_RE = re.compile(r"(?<!search)/stories(?![\w/-])", re.IGNORECASE)
+
+
+def python_posts_to_stories(command: str) -> bool:
+    return (
+        "POST" in python_write_verbs(command)
+        and bool(SHORTCUT_HINT_RE.search(command))
+        and bool(BARE_STORIES_PATH_RE.search(command))
+    )
+
+
 def posts_to_stories(command: str) -> bool:
     # Text that an echo, a grep or a commit message merely names (`echo "curl -X POST <url>"`) sends nothing.
     command = without_display_segments(command)
+    if python_posts_to_stories(command):
+        return True
     if not STORIES_URL_RE.search(command):
         return False
     if POST_VERB_RE.search(command):

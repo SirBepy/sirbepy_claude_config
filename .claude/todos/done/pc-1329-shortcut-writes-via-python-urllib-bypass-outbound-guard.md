@@ -24,3 +24,7 @@ Read pc-1095 and pc-0382 (done) first to see what the guard matches today. Then 
 
 - A Bash `python -c` that PUTs to `api.app.shortcut.com` with the kickoff token is blocked or routed through outbound-verify.
 - GET-only reads stay unblocked (pc-1302 has the read-only false-positive history).
+
+## Notes
+
+- Fixed: hooks/_python_http_write.py reads the verb of an inline python/node HTTP call (method='POST', requests.post, urllib data=); shortcut-create-guard.py and outbound-verify-guard.py both use it, including URLs built from a base. GETs and id-only state PUTs stay open. Tests added to test_shortcut_create_guard.py and test_outbound_verify_guard.py, red-checked against HEAD. Script-file bodies remain the stated limit.
