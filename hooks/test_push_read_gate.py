@@ -34,6 +34,13 @@ INVOCATION_CASES = [
     ('"C:\\Program Files\\Git\\cmd\\git.exe" push', True, "a quoted full path to git.exe"),
     ("git.exe status", False, "git.exe with another subcommand"),
     ("git --grep=\"push\" log", False, "push only inside a flag value"),
+    # Review finding 2026-11-07: posix shlex ate the backslashes of an unquoted Windows path.
+    ("C:\\Git\\cmd\\git.exe push", True, "an unquoted Windows path to git.exe"),
+    ("& C:\\Git\\cmd\\git.exe push origin main", True, "the call operator before an unquoted Windows path"),
+    (".\\git.exe push", True, "a relative .\\git.exe"),
+    ("git \\\npush", True, "a bash continuation between git and push"),
+    ("git `\r\npush", True, "a PowerShell backtick continuation (CRLF)"),
+    ("C:\\Git\\cmd\\git.exe status", False, "an unquoted Windows git path with another subcommand"),
 ]
 
 

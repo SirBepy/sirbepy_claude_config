@@ -37,6 +37,13 @@ ACTION_CASES = [
     ("gh.exe pr create --title x", ("create", None), "gh.exe spelling is the same gh"),
     ('"C:\\Program Files\\GitHub CLI\\gh.exe" pr edit 7', ("edit", "7"), "a quoted full path to gh.exe"),
     ("gh pr comment 123 -b hi", ("comment", "123"), "comment is parsed, code-review's own path"),
+    # Review finding 2026-11-07: posix shlex ate the backslashes of an unquoted Windows path.
+    ("C:\\gh\\gh.exe pr create", ("create", None), "an unquoted Windows path to gh.exe"),
+    ("& C:\\gh\\gh.exe pr edit 7", ("edit", "7"), "the call operator before an unquoted Windows gh path"),
+    (".\\gh.exe pr create", ("create", None), "a relative .\\gh.exe"),
+    ("gh \\\npr create", ("create", None), "a bash continuation between gh and pr"),
+    ("gh `\r\npr edit 9", ("edit", "9"), "a PowerShell backtick continuation (CRLF)"),
+    ("C:\\gh\\gh.exe issue list", None, "an unquoted Windows gh path with another command"),
 ]
 
 
@@ -55,6 +62,7 @@ fails = _testlib.run_cases(ACTION_CASES, check_action)
 CD_CASES = [
     ("cd /some/path && gh pr create", "/some/path", "leading cd is picked up"),
     ("gh pr create", None, "no cd at all"),
+    ("cd C:\\repo\\sub && gh pr create", "C:\\repo\\sub", "a Windows cd target keeps its backslashes"),
 ]
 
 

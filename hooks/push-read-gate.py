@@ -39,7 +39,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny, tokenize_command, basename, split_gate_segments, is_program
+    from _hooklib import read_payload, deny, tokenize_command, basename, split_gate_segments, is_program, split_shell_words
 except Exception as e:
     sys.stderr.write(f"[push-read-gate] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -59,8 +59,10 @@ SHELL_READ_COMMANDS = {"cat", "head", "tail", "sed", "less", "more", "get-conten
 
 
 def _tokenize(command: str) -> list | None:
+    # Keeps the backslashes of `C:\Git\cmd\git.exe` (posix shlex ate them, so the
+    # program no longer read as git) and joins `git \<newline>push`.
     try:
-        return shlex.split(command, posix=True)
+        return split_shell_words(command)
     except ValueError:
         return None
 
