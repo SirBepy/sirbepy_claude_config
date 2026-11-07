@@ -137,6 +137,9 @@ for label, cmd in (
     ("a code span in a quoted heredoc commit message", "git commit -F - <<'EOF'\nBlocks `git stash` now\nEOF"),
     ("a code span in a heredoc written to node.md", "cat > node.md <<'EOF'\nRun `git stash pop` carefully\nEOF"),
     ("a substitution in a heredoc written to a .sh file", "cat <<'EOF' > s.sh\n$(git stash pop)\nEOF"),
+    ("a substitution after git -C into an interpreter-named directory", "git -C ~/repos/php commit -F - <<'EOF'\nfix $(git stash pop)\nEOF"),
+    ("a substitution after cd into an interpreter-named directory", "cd /srv/node && git commit -F - <<'EOF'\n$(git stash pop)\nEOF"),
+    ("a code span after a dot argument before &&", "git add . && cat > f <<'EOF'\n$(git stash pop)\nEOF"),
     ("a code span in a quoted heredoc inside a substitution", "git commit -m \"$(cat <<'EOF'\nBlocks `git stash` now\nEOF\n)\""),
 ):
     expect(f"agent-shared-tree-guard: {label} is allowed", run_hook("agent-shared-tree-guard.py", {**AGENT, "tool_input": {"command": cmd}}), 0)
