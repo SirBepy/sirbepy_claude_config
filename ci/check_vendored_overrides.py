@@ -39,6 +39,21 @@ def find_key_line(lines: list, close_index: int, key: str):
     return None
 
 
+def key_span_end(lines: list, idx: int, close_index: int) -> int:
+    """Index one past the last line that belongs to the key at `idx`.
+
+    A block scalar (`description: >`) or a folded plain scalar keeps its text on following
+    indented lines, which must be replaced together with the `key:` line or they are left behind
+    as orphaned, invalid YAML. Blank lines count only when an indented line follows them.
+    """
+    end = idx + 1
+    while end < close_index and (lines[end].strip() == "" or lines[end][0] in (" ", "\t")):
+        end += 1
+    while end > idx + 1 and lines[end - 1].strip() == "":
+        end -= 1
+    return end
+
+
 def current_value(lines: list, close_index: int, key: str):
     idx = find_key_line(lines, close_index, key)
     if idx is None:
@@ -50,7 +65,8 @@ def drift_for(path: Path, wanted: dict) -> list:
     """One message per key whose frontmatter line is missing or differs."""
     if not path.is_file():
         return [f"{path.as_posix()}: file is missing"]
-    parsed = split_frontmatter(path.read_text(encoding="utf-8"))
+    # utf-8-sig: PowerShell 5.1 writes a BOM, which would otherwise hide the opening fence.
+    parsed = split_frontmatter(path.read_text(encoding="utf-8-sig"))
     if parsed is None:
         return [f"{path.as_posix()}: no frontmatter block"]
     lines, close = parsed
@@ -67,6 +83,8 @@ def drift_for(path: Path, wanted: dict) -> list:
 def apply_to(path: Path, wanted: dict) -> bool:
     """Rewrites or inserts the wanted lines. Returns True when the file changed."""
     raw = path.read_bytes().decode("utf-8")
+    bom = "﻿" if raw.startswith("﻿") else ""
+    raw = raw[len(bom):]
     parsed = split_frontmatter(raw)
     if parsed is None:
         raise ValueError(f"{path.as_posix()}: no frontmatter block to patch")
@@ -81,11 +99,14 @@ def apply_to(path: Path, wanted: dict) -> bool:
             lines.insert(close, new_line)
             close += 1
             changed = True
-        elif lines[idx] != new_line:
-            lines[idx] = new_line
-            changed = True
+        else:
+            end = key_span_end(lines, idx, close)
+            if lines[idx:end] != [new_line]:
+                lines[idx:end] = [new_line]
+                close -= end - idx - 1
+                changed = True
     if changed:
-        path.write_bytes("\n".join(lines).encode("utf-8"))
+        path.write_bytes((bom + "\n".join(lines)).encode("utf-8"))
     return changed
 
 
