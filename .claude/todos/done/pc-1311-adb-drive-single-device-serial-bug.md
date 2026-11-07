@@ -23,3 +23,7 @@ Wrap in an array: `$ids = @($lines | ForEach-Object { ($_ -split "`t")[0] })`.
 
 - With one attached device, `adb-drive.ps1 devices` and `screenshot` with no `-Serial` target that device.
 - With two devices and no `-Serial`, it still throws its "Multiple devices" error.
+
+## Notes
+
+- fixed: Resolve-Serial wraps the id list in @(); test skills/android-drive/test_adb_drive.ps1 (stubbed adb, fails on the old script). Live-device check: verify only, no device attached tonight.

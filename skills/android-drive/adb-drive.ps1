@@ -26,7 +26,8 @@ function Resolve-Serial {
     param([string]$Serial)
     if ($Serial) { return $Serial }
     $lines = & adb devices | Select-String "`tdevice$"
-    $ids = $lines | ForEach-Object { ($_ -split "`t")[0] }
+    # @() because a single device would otherwise unwrap to a bare string, and $ids[0] would be its first character.
+    $ids = @($lines | ForEach-Object { ($_ -split "`t")[0] })
     if ($ids.Count -eq 0) { throw "No adb devices attached. Run 'adb devices' to check." }
     if ($ids.Count -gt 1) { throw "Multiple devices attached ($($ids -join ', ')). Pass -Serial explicitly - never let adb pick." }
     return $ids[0]
