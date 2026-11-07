@@ -152,18 +152,23 @@ def _unparsed_commit_landing(command: str) -> bool:
     position, so it stays ungated."""
     for m in _UNPARSED_LANDING_RE.finditer(command):
         start = m.start()
+        starts = [start]
         if start and command[start - 1] in "\\/":
-            # Tail of a path to git.exe: the token began at the quote still open
-            # at this point (the path may hold spaces), else at the preceding space.
+            # Tail of a path to git.exe. Two candidates for where the token began,
+            # either one at command position gates: the preceding whitespace, and
+            # a quote opening a path that holds spaces (nothing but path text
+            # between that quote and git). An unbalanced quote earlier in the
+            # command (what made shlex fail) must not hide the first candidate.
             before = command[:start]
-            open_quote = [q for q in ('"', "'") if before.count(q) % 2 == 1]
-            if open_quote:
-                start = before.rfind(open_quote[0])
-            else:
-                start = max(before.rfind(" "), before.rfind("\t"), before.rfind("\n")) + 1
-        env = _ENV_PREFIX_RE.search(command[:start])
-        if is_command_position(command, env.start() if env else start):
-            return True
+            starts = [max(before.rfind(" "), before.rfind("\t"), before.rfind("\n")) + 1]
+            for q in ('"', "'"):
+                i = before.rfind(q)
+                if i != -1 and q not in before[i + 1:]:
+                    starts.append(i)
+        for token_start in starts:
+            env = _ENV_PREFIX_RE.search(command[:token_start])
+            if is_command_position(command, env.start() if env else token_start):
+                return True
     return False
 
 
