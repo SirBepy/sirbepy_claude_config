@@ -84,6 +84,31 @@ with tempfile.TemporaryDirectory() as d:
     problems = drift_of(tmp)
     check(len(problems) == 1 and "missing" in problems[0], "an override for a deleted skill is reported, not skipped")
 
+# A block-scalar value: the continuation lines go with the key line, nothing else moves.
+BLOCK = "---\nname: demo\ndescription: >\n  Long folded upstream\n\n  second paragraph\nversion: 1.0.0\n---\n\nBody\n"
+DESC = {"skills/demo/SKILL.md": {"description": "Short local text"}}
+with tempfile.TemporaryDirectory() as d:
+    tmp = Path(d)
+    skill = make_tree(tmp, BLOCK, DESC)
+    check(len(drift_of(tmp)) == 1, "a block-scalar description differs from a one-line override")
+    check(cvo.apply_to(skill, DESC["skills/demo/SKILL.md"]) is True, "apply rewrites the block scalar")
+    check(skill.read_text(encoding="utf-8") == "---\nname: demo\ndescription: Short local text\nversion: 1.0.0\n---\n\nBody\n",
+          "apply drops the block scalar's continuation lines, leaving valid frontmatter")
+    check(drift_of(tmp) == [] and cvo.apply_to(skill, DESC["skills/demo/SKILL.md"]) is False, "no drift and idempotent after the rewrite")
+
+# A BOM'd SKILL.md is patched and keeps its BOM instead of raising; the check reads it too.
+with tempfile.TemporaryDirectory() as d:
+    tmp = Path(d)
+    skill = make_tree(tmp, "﻿" + UPSTREAM, FLAG)
+    first = drift_of(tmp)
+    check(len(first) == 1 and "no frontmatter" not in first[0], "a BOM'd file is read as drift, not as having no frontmatter")
+    try:
+        changed = cvo.apply_to(skill, FLAG["skills/demo/SKILL.md"])
+    except ValueError:
+        changed = None
+    check(changed is True, "apply patches a BOM'd file without raising")
+    check(skill.read_bytes().startswith(b"\xef\xbb\xbf---") and drift_of(tmp) == [], "the BOM is kept and the file passes after apply")
+
 # Simulated vendor update on the real description budget: a long upstream description fails for an
 # ordinary skill and passes for impeccable, while the committed overrides file matches the tree.
 long_desc = " ".join(["word"] * 118)
