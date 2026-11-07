@@ -24,3 +24,8 @@ Pick one:
 ## Done when
 
 A sub that finishes with a decision shows up in `/recall` for that decision's words, and finishing it a second time updates the digest instead of failing.
+
+
+## Notes
+
+- Took approach 1: recall.py ingest_subchat_digests() runs on every index-backed command (not digest-save), reads %APPDATA%\claude-conductor\subchats\<uuid>.digest.md read-only (verified path: 19 real files, all ingest into a scratch archive), saves with replace when the source is newer than the digest. test_recall.py::test_subchat_digests failed before the change (no ingest_subchat_digests).

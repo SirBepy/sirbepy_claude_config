@@ -100,6 +100,65 @@ DIGEST_NEW = """## Done
 """
 
 
+SUB_DIGEST = """## Done
+- Sub "Gate": pushed the zorbflange release
+## Decided
+- Ship the zorbflange behind a switch
+## Rejected
+- Gating the push on informational findings
+## Open
+- none
+"""
+SUB_DIGEST_V2 = SUB_DIGEST.replace("behind a switch", "always on")
+
+
+def test_subchat_digests():
+    """Conductor subs never run /close; the daemon drops <sub id>.digest.md files that recall ingests."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        projects, archive, subs = root / "projects", root / "memory-archive", root / "subchats"
+        subs.mkdir()
+        write_session(projects, SID, transcript_lines(), sidecar=False)
+        index = recall.Index(projects, archive, scope_of=lambda cwd: "personal")
+        index.update()
+        dest = archive / "digests" / f"{SID}.md"
+
+        check(recall.ingest_subchat_digests(index, root / "no-such-dir") == (0, []),
+              "a missing subchats dir ingests nothing and warns nothing")
+        src = subs / f"{SID}.digest.md"
+        src.write_text(SUB_DIGEST, encoding="utf-8")
+        (subs / "not-a-uuid.digest.md").write_text(SUB_DIGEST, encoding="utf-8")
+        (subs / f"{SID_NEW}.decisions.md").write_text("not a digest", encoding="utf-8")
+        saved, warns = recall.ingest_subchat_digests(index, subs)
+        check(saved == 1 and warns == [] and dest.exists() and "zorbflange" in dest.read_text(encoding="utf-8"),
+              "a sub's digest is saved under its session id")
+        check(not (archive / "digests" / "not-a-uuid.md").exists() and len(list((archive / "digests").iterdir())) == 1,
+              "files that are not <uuid>.digest.md are ignored")
+        out = recall.cmd_decisions(index, ["zorbflange"], None, 10)
+        check("Ship the zorbflange behind a switch" in out, "decisions finds what the sub decided")
+
+        stamp = dest.stat().st_mtime_ns
+        saved, _ = recall.ingest_subchat_digests(index, subs)
+        check(saved == 0 and dest.stat().st_mtime_ns == stamp, "an unchanged digest is not rewritten")
+
+        aged = dest.stat().st_mtime - 100
+        os.utime(dest, (aged, aged))
+        src.write_text(SUB_DIGEST_V2, encoding="utf-8")
+        saved, warns = recall.ingest_subchat_digests(index, subs)
+        check(saved == 1 and warns == [] and "always on" in dest.read_text(encoding="utf-8"),
+              "a sub that finishes again replaces its digest instead of failing")
+
+        bad = subs / f"{SID_NEW}.digest.md"
+        bad.write_text("## Done\n- only one section\n", encoding="utf-8")
+        saved, warns = recall.ingest_subchat_digests(index, subs)
+        check(saved == 0 and len(warns) == 1 and SID_NEW in warns[0], "a malformed digest is reported, not fatal")
+
+        bad.unlink()
+        shutil.rmtree(archive / "digests")
+        rc = recall.main(["--projects", str(projects), "--archive", str(archive), "--subchats", str(subs), "update"])
+        check(rc == 0 and dest.exists(), "the CLI ingests subchat digests when it refreshes the index")
+
+
 def test_digests():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -494,6 +553,7 @@ def main():
         check(any("format may have changed" in w for w in index4.warnings), "a format change is flagged")
 
     test_digests()
+    test_subchat_digests()
     test_memory()
 
     if failures:

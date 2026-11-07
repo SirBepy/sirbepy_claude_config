@@ -18,6 +18,8 @@ Usage:
     python recall.py compress [--dry-run]
 
 DATE is YYYY-MM-DD, local time. --projects and --archive override the two roots, for tests.
+Every index-backed command also ingests Conductor sub digests (<sub id>.digest.md under
+%APPDATA%/claude-conductor/subchats, or --subchats DIR) into digests/ so `decisions` sees them.
 """
 
 import argparse
@@ -541,6 +543,36 @@ def cmd_digest_save(index: Index, session, body: str, replace: bool) -> tuple:
     return 0, f"Saved digest {dest}"
 
 
+def default_subchats_dir():
+    """Where Claude Conductor's daemon leaves <sub id>.digest.md on every sub finish, or None when
+    APPDATA is unset (non-Windows). Subs never run /close, so nothing else feeds recall their digest."""
+    appdata = os.environ.get("APPDATA")
+    return Path(appdata) / "claude-conductor" / "subchats" if appdata else None
+
+
+def ingest_subchat_digests(index: Index, subchats) -> tuple:
+    """Saves each <session id>.digest.md in `subchats` as that session's digest, replacing an older
+    one when the source is newer (a continued sub finishes again). Returns (saved, warnings).
+    The source files are read, never changed. Destination mtime is the freshness stamp: an unchanged
+    source is skipped so a plain search never rewrites every digest."""
+    if not subchats or not Path(subchats).is_dir():
+        return 0, []
+    saved, warnings = 0, []
+    for src in sorted(Path(subchats).glob("*.digest.md")):
+        session_id = src.name[: -len(".digest.md")]
+        if not SESSION_RE.match(session_id):
+            continue
+        dest = _digest_path(index.archive, session_id)
+        if dest.exists() and dest.stat().st_mtime >= src.stat().st_mtime:
+            continue
+        code, msg = cmd_digest_save(index, session_id, src.read_text(encoding="utf-8", errors="replace"), True)
+        if code == 0:
+            saved += 1
+        else:
+            warnings.append(f"subchat digest {src.name} not ingested: {msg}")
+    return saved, warnings
+
+
 def _decision_items(text: str) -> list:
     """(section, item) pairs for the Decided and Rejected sections only. An item is one
     bullet plus its continuation lines and deeper-indented sub-bullets, so a Rejected option
@@ -960,6 +992,8 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="recall.py", description=__doc__.split("\n\n")[0])
     p.add_argument("--projects", type=Path, default=DEFAULT_PROJECTS)
     p.add_argument("--archive", type=Path, default=DEFAULT_ARCHIVE)
+    p.add_argument("--subchats", type=Path, default=None,
+                   help="Conductor subchats dir to ingest <sub id>.digest.md from (default %%APPDATA%%/claude-conductor/subchats)")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("update")
     s = sub.add_parser("search")
@@ -1023,10 +1057,12 @@ def main(argv=None) -> int:
         return 1 if result.startswith("FAILED") else 0
     index = Index(args.projects, args.archive)
     changed = index.update()
-    for w in index.warnings + health_warnings(args.archive):
+    ingested, ingest_warnings = (0, []) if args.cmd == "digest-save" else ingest_subchat_digests(
+        index, args.subchats or default_subchats_dir())
+    for w in index.warnings + health_warnings(args.archive) + ingest_warnings:
         print(f"WARNING: {w}")
     if args.cmd == "update":
-        print(f"Index up to date ({changed} session(s) re-extracted).")
+        print(f"Index up to date ({changed} session(s) re-extracted, {ingested} subchat digest(s) ingested).")
     elif args.cmd == "search":
         print(cmd_search(index, args.terms, args.repo, args.since, args.until, args.limit))
     elif args.cmd == "show":
