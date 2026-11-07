@@ -7,6 +7,9 @@ The point of this guard is what it lets THROUGH: state moves and self-assign mus
 frictionless, or the gate gets bypassed and stops meaning anything.
 """
 
+import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -22,6 +25,7 @@ URL = "https://api.linear.app/graphql"
 UPDATE = "issue" + "Update"
 COMMENT = "comment" + "Create"
 CREATE = "issue" + "Create"
+DELETE = "issue" + "Delete"
 
 # (tool_name, command, expect_gated, label)
 CASES = [
@@ -90,4 +94,48 @@ def check(case) -> bool:
 
 
 fails = _testlib.run_cases(CASES, check)
+
+# Deleting a ticket is irreversible to the team and only legal on tickets the dev created,
+# which a command string cannot prove, so it always asks regardless of the ground check.
+DELETE_CASES = [
+    ("Bash", f'curl -X POST "{URL}" -d \'{{"query":"mutation {{ {DELETE}(id:$i) {{ success }} }}"}}\'', True, "issueDelete over the GraphQL endpoint"),
+    ("PowerShell", f'Invoke-RestMethod -Uri "{URL}" -Method Post -Body \'{{"query":"mutation {{ {DELETE}(id: 1) {{ success }} }}"}}\'', True, "issueDelete from PowerShell"),
+    ("mcp__claude_ai_Linear__delete_issue", None, True, "MCP delete_issue tool"),
+    ("Bash", f'curl -X POST "{URL}" -d \'{{"query":"mutation {{ {UPDATE}(id:$i, input:{{stateId:$s}}) {{ success }} }}"}}\'', False, "a state move is not a delete"),
+    ("Bash", f'curl -X POST "https://example.com/api" -d \'{{"query":"mutation {{ {DELETE}(id:$i) {{ success }} }}"}}\'', False, "mutation name without the Linear endpoint"),
+    ("Bash", "git commit -m 'FEAT: linear'", False, "unrelated command"),
+    ("Read", None, False, "non-shell tool"),
+]
+
+
+def check_delete(case) -> bool:
+    tool_name, command, expected, label = case
+    tool_input = {"command": command} if command is not None else {}
+    got = guard.is_issue_delete(tool_name, tool_input)
+    ok = got == expected
+    print(f"{'PASS' if ok else 'FAIL'}: {label} (expected delete={expected}, got {got})")
+    return ok
+
+
+fails += _testlib.run_cases(DELETE_CASES, check_delete)
+
+
+def check_delete_asks_end_to_end() -> bool:
+    """Through the real script: an issueDelete emits permissionDecision=ask and exits 0, even with
+    the ground-check bypass set, since the bypass is for the ground check, not for deletes."""
+    payload = json.dumps({"tool_name": "Bash", "tool_input": {"command": f'curl -X POST "{URL}" -d \'{{"query":"mutation {{ {DELETE}(id:$i) {{ success }} }}"}}\''}})
+    env = dict(os.environ, CLAUDE_LINEAR_UPDATE_HOOK_BYPASS="1")
+    proc = subprocess.run(
+        [sys.executable, str(Path(__file__).resolve().parent / "linear-update-guard.py")],
+        input=payload, capture_output=True, text=True, env=env,
+    )
+    try:
+        decision = json.loads(proc.stdout)["hookSpecificOutput"]["permissionDecision"]
+    except (ValueError, KeyError):
+        decision = None
+    return _testlib.report(proc.returncode == 0 and decision == "ask", f"issueDelete asks end to end (rc={proc.returncode}, decision={decision})")
+
+
+if not check_delete_asks_end_to_end():
+    fails.append("issueDelete asks end to end")
 sys.exit(_testlib.summarize(fails, style="count"))
