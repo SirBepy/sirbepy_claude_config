@@ -1,4 +1,4 @@
-"""Self-test for the /commit "Push pipeline" step order and /release's non-restatement of it.
+"""Self-test for the /commit "Push pipeline" step order (skills/commit/push.md) and /release's non-restatement of it.
 
 Run: python skills/release/test_pipeline_order.py   (exit 0 = all pass)
 
@@ -11,7 +11,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-COMMIT = ROOT / "skills" / "commit" / "SKILL.md"
+COMMIT_SKILL = ROOT / "skills" / "commit" / "SKILL.md"
+COMMIT = ROOT / "skills" / "commit" / "push.md"
 RELEASE = ROOT / "skills" / "release" / "SKILL.md"
 
 failures = []
@@ -31,6 +32,14 @@ def pipeline_labels(text: str) -> list:
 
 
 commit_text = COMMIT.read_text(encoding="utf-8").replace("\r\n", "\n")
+# SKILL.md keeps only a pointer; the push-gate hook message and other skills still say
+# "Push pipeline in skills/commit/SKILL.md", so that heading must keep leading to push.md.
+skill_text = COMMIT_SKILL.read_text(encoding="utf-8").replace("\r\n", "\n")
+pointer = skill_text.split("\n## Push pipeline", 1)
+check(
+    len(pointer) == 2 and "skills/commit/push.md" in re.split(r"\n## ", pointer[1], maxsplit=1)[0],
+    "commit SKILL.md Push pipeline section points at push.md",
+)
 labels = pipeline_labels(commit_text)
 check(bool(labels), "Push pipeline list is found")
 

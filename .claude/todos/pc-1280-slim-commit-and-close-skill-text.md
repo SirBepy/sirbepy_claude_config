@@ -32,3 +32,14 @@ Joe accepted this bundle from the 2026-10-30 `/global-claude-folder-audit` run. 
 - `skills/commit/SKILL.md` core under ~3,500 words; `skills/close/SKILL.md` under ~3,000.
 - `python ci/run_all.py` passes (pipeline-order test updated).
 - A fresh session committing and closing in a scratch repo follows the slim versions without missing a step.
+
+## Decided (2026-11-07, structure-only pass)
+
+- Rare paths moved verbatim into sidecars with named pointers: `skills/commit/{push,fold,by-hand,baseline}.md` plus two new sections in `edge-cases.md`; `skills/close/{phase0-checks,grounding,persist,finish,review-scope}.md`. `skills/commit/SKILL.md` 9,560 -> 3,819 words; `skills/close/SKILL.md` 5,437 -> 4,010. `test_pipeline_order.py` now reads `push.md`; `ci/check_removed_names.py` needed no change (the tombstone stays in `SKILL.md`).
+- Cross-skill citations (`create-pr`, `flutter-bump`, `gate-chat`, `zng-kickoff`, `hooks/push-gate.py`) still name `skills/commit/SKILL.md` / `close/SKILL.md`; they resolve through the pointer sections. Repointing them straight at `push.md` / `grounding.md` is out of this lane's write set.
+
+## Remaining (why this stays open)
+
+- Behavior fixes the brief excluded: Phase 2's `git diff --shortstat` is 0 after commit; Phase 2 trusts `list_peers` = 0 while Phase 3 calls it weak; the session-marker preamble may be unnecessary on the `commit-pathspec.sh` route (verify against the commit-guard hook first); `commit-pathspec.sh` lines ~644/650 still quote the old "On exit 1, evaluate in this order" heading (kept verbatim in SKILL.md, so it still resolves).
+- `close/SKILL.md` is ~4,000 words, not the ~3,000 goal; further cuts need a rule-by-rule judgement (Trigger, Phase 0 branches).
+- The `/rate-it` old-vs-new comparison was replaced by a fresh-reviewer rule walk; no scratch-repo commit/close dry run was done.
