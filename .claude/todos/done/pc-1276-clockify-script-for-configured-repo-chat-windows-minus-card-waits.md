@@ -24,3 +24,8 @@ The 2026-10-29 Zirtue nightly run (Thu) had to improvise this twice:
 ## Done when
 
 On the 2026-10-29 zng data, the script prints the zng windows with 13:06-13:41 and 14:57-15:27 marked as idle on a card, and with the shorter 15:58-16:07 and 16:09-16:16 waits marked too.
+
+
+## Notes
+
+- Script (--only-configured, IDLE-ON-CARD, mtime filter, test) shipped in cb4a880; SKILL.md step 6 now calls it. Verified: node scripts/test_other_folders.cjs passes.

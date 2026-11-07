@@ -309,6 +309,17 @@ said he had no break, and the folder scan showed two personal projects active 17
 2h of personal-project time to Zirtue.) The scan is a script because the grouping is mechanical, for
 the same reason Audit mode scripts its overlap checks.
 
+**Configured repos' own chat windows, every run: positive evidence.** Run
+`node ~/.claude/skills/clockify-reconciliator/scripts/other_folders.cjs --only-configured --range <from>..<to>`
+with the same `--repo <cwd>` flags. It lists the configured repos' chat windows per local day (subagent
+transcripts included, they are agent runtime) and prints `IDLE-ON-CARD HH:MM-HH:MM` for each stretch
+longer than 2 minutes where a chat sat on an unanswered question card; the windows already exclude
+those stretches. Idle-on-card time is not worked time (memory
+`feedback_clockify_dev_no_break_recall_vs_other_project_chats`), so never count it toward a block.
+Do not hand-roll a transcript scan or pass a fake `--repo` to the default mode for this. (2026-10-29,
+Zirtue Thu: the hand-rolled version read every jsonl unfiltered and timed out, and the less-time
+verifier then found about 29 minutes of 3-9 minute card waits the 10-minute gap split had missed.)
+
 ### 6a. Gap detection (mandatory in every mode, including plain Reconciliation)
 
 Diff the commits just read (whole window, not just around existing targets) against the entries that
