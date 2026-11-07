@@ -43,6 +43,10 @@ ACTION_CASES = [
     (".\\gh.exe pr create", ("create", None), "a relative .\\gh.exe"),
     ("gh \\\npr create", ("create", None), "a bash continuation between gh and pr"),
     ("gh `\r\npr edit 9", ("edit", "9"), "a PowerShell backtick continuation (CRLF)"),
+    ("gh pr cre\\ate", ("create", None), "a backslash-escaped letter inside the action"),
+    ("gh pr \\create", ("create", None), "a backslash before the action"),
+    ("g\\h pr create", ("create", None), "a backslash-escaped letter inside the program name"),
+    ("gh pr view 1; gh pr create", ("create", None), "a mutating call after a read-only gh pr call is the one reported"),
     ("C:\\gh\\gh.exe issue list", None, "an unquoted Windows gh path with another command"),
 ]
 

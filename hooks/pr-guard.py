@@ -35,7 +35,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS, is_program, split_shell_words
+    from _hooklib import read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS, is_program, shell_word_variants
 except Exception as e:
     sys.stderr.write(f"[pr-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -66,13 +66,25 @@ def gh_pr_action(command: str) -> tuple[str, str | None] | None:
     the positional after the action (PR number/URL/branch), None if absent.
     """
     try:
-        # Keeps the backslashes of `C:\gh\gh.exe` (posix shlex ate them, so the
-        # program no longer read as gh) and joins `gh \<newline>pr create`.
-        tokens = split_shell_words(command)
+        # Both readings of an unquoted backslash: `C:\gh\gh.exe` keeps it (posix
+        # shlex ate it, so the program no longer read as gh), bash's `cre\ate`
+        # drops it. Also joins `gh \<newline>pr create`.
+        variants = shell_word_variants(command)
     except ValueError:
         # Unbalanced quotes etc. - can't safely tokenize; don't block on a guess.
         return None
 
+    found = None
+    for tokens in variants:
+        for action in _pr_actions(tokens):
+            if action[0] in MUTATING_ACTIONS:
+                return action
+            found = found or action
+    return found
+
+
+def _pr_actions(tokens: list[str]):
+    """Every `(action, target)` of a `gh pr` call in `tokens`, in order."""
     for i, tok in enumerate(tokens):
         if not is_program(tok, "gh"):
             continue
@@ -88,14 +100,13 @@ def gh_pr_action(command: str) -> tuple[str, str | None] | None:
                 k += 1
             if k < len(tokens):
                 target = tokens[k + 1] if k + 1 < len(tokens) and not tokens[k + 1].startswith("-") else None
-                return tokens[k], target
-    return None
+                yield tokens[k], target
 
 
 def cd_target(command: str) -> str | None:
     """Return the path from a leading `cd <path>` in `command`, if any."""
     try:
-        tokens = split_shell_words(command)
+        tokens = shell_word_variants(command)[0]
     except ValueError:
         return None
     for i, tok in enumerate(tokens):

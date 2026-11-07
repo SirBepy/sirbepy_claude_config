@@ -187,6 +187,25 @@ def split_shell_words(command: str) -> list[str]:
     return shlex.split("".join(out), posix=True)
 
 
+def shell_word_variants(command: str) -> list[list[str]]:
+    """Every plausible word split of `command`: the backslash-keeping one
+    (`C:\\Git\\git.exe`) and the bash one (`g\\it` is `git`, `\\commit` is
+    `commit`). The two disagree only on an unquoted backslash, and a guard
+    cannot know whether the command runs in bash or PowerShell, so it checks
+    both. Raises ValueError only when neither split parses."""
+    variants: list[list[str]] = []
+    for split in (split_shell_words, lambda c: shlex.split(join_line_continuations(c), posix=True)):
+        try:
+            words = split(command)
+        except ValueError:
+            continue
+        if words not in variants:
+            variants.append(words)
+    if not variants:
+        raise ValueError("unbalanced quotes")
+    return variants
+
+
 def flatten_tokens(tokens: list[str]) -> list[str]:
     """PowerShell `-ArgumentList "a","b","c"` collapses to one shlex token
     when there's no whitespace between the commas; split those back apart.
