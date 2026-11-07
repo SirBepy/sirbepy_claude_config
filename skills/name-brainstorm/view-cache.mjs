@@ -13,7 +13,9 @@ if (!cachePath || !mode) {
 }
 const cache = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
 const names = new Set(Object.keys(cache).map((k) => k.split(':')[1]));
-const status = (kind, name) => (cache[`${kind}:${name}`]?.status ?? '?')[0];
+// Only FREE and TAKEN get a letter of their own; UNKNOWN (an npm 404, a timeout) and anything else read '?'.
+const LETTER = { FREE: 'F', TAKEN: 'T' };
+const status = (kind, name) => LETTER[cache[`${kind}:${name}`]?.status] ?? '?';
 const kinds = ['com', 'ai', 'io', 'app', 'dev', 'eu', 'hr', 'co', 'npm', 'github'];
 const row = (name) => `${name.padEnd(12)} ${kinds.map((k) => `${k}=${status(k, name)}`).join(' ')}`;
 
