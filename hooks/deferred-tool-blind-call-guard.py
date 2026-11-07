@@ -147,6 +147,11 @@ def main() -> None:
         # A dispatched subagent loads its own schemas in its own transcript,
         # which this payload's transcript_path may not be.
         sys.exit(0)
+    # With no readable transcript nothing can be proven loaded, and a denial could never be
+    # cleared (no ToolSearch would ever show up), so the gate would lock the tool for good.
+    transcript = payload.get("transcript_path")
+    if not isinstance(transcript, str) or not transcript or not Path(transcript).is_file():
+        sys.exit(0)
 
     cache_file = _cache_path(payload.get("session_id") or "")
     cached = _read_cache(cache_file)
