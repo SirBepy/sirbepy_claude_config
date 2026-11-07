@@ -35,7 +35,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS, is_program
+    from _hooklib import read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS, is_program, split_shell_words
 except Exception as e:
     sys.stderr.write(f"[pr-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -66,7 +66,9 @@ def gh_pr_action(command: str) -> tuple[str, str | None] | None:
     the positional after the action (PR number/URL/branch), None if absent.
     """
     try:
-        tokens = shlex.split(command, posix=True)
+        # Keeps the backslashes of `C:\gh\gh.exe` (posix shlex ate them, so the
+        # program no longer read as gh) and joins `gh \<newline>pr create`.
+        tokens = split_shell_words(command)
     except ValueError:
         # Unbalanced quotes etc. - can't safely tokenize; don't block on a guess.
         return None
@@ -93,7 +95,7 @@ def gh_pr_action(command: str) -> tuple[str, str | None] | None:
 def cd_target(command: str) -> str | None:
     """Return the path from a leading `cd <path>` in `command`, if any."""
     try:
-        tokens = shlex.split(command, posix=True)
+        tokens = split_shell_words(command)
     except ValueError:
         return None
     for i, tok in enumerate(tokens):
