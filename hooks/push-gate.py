@@ -45,7 +45,7 @@ MARKER_DIR = _HOOKS_DIR / ".push-ok"
 GIT_TIMEOUT_SECONDS = 10
 
 try:
-    from _hooklib import read_payload, deny, git_repo_root, strip_quotes
+    from _hooklib import read_payload, deny, git_repo_root, strip_quotes, split_gate_segments
 except Exception as e:
     sys.stderr.write(f"[push-gate] hook error, failing open: cannot import helpers ({e})\n")
     sys.exit(0)
@@ -53,7 +53,6 @@ except Exception as e:
 VALUE_FLAGS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
 CD_WORDS = {"cd", "cd.", "chdir", "pushd", "sl", "set-location", "push-location"}
 ABS_PATH_RE = re.compile(r"^(?:[A-Za-z]:[\\/]|\\\\|/[^/\s])")
-CHAIN_SPLIT_RE = re.compile(r"&&|\|\||;|\n|\|")
 
 
 def _load_push_detector():
@@ -180,8 +179,8 @@ def all_pushes_delete_only(command: str) -> bool:
     (a `$(...)` subshell, a quoted nested command) keeps the command gated.
     A stray `push` word elsewhere only over-gates, which is the safe side."""
     pushes = []
-    for segment in CHAIN_SPLIT_RE.split(command):
-        is_push, _dash_c, args = _git_push_walk(_tokenize_segment(segment))
+    for segment in split_gate_segments(command):
+        is_push, _dash_c, args =_git_push_walk(_tokenize_segment(segment))
         if is_push:
             pushes.append(args)
     if not pushes or len(pushes) != len(PUSH_WORD_RE.findall(command)):
@@ -193,7 +192,7 @@ def git_dash_c_path(command: str) -> str | None:
     """The `-C <path>` attached to the specific `git ... push` invocation in
     `command`, if any - never an earlier, unrelated `git -C` call in the same
     chained command. posix=False keeps Windows backslashes intact."""
-    for segment in CHAIN_SPLIT_RE.split(command):
+    for segment in split_gate_segments(command):
         tokens = _tokenize_segment(segment)
         is_push, dash_c = _git_push_dash_c(tokens)
         if is_push:
@@ -206,7 +205,7 @@ def resolve_push_target(command: str, payload_cwd: str) -> str:
     invocation's own `-C`, else the path pinned by a `cd`/Set-Location
     segment earlier in the same command, else the shell's live cwd."""
     effective_cwd = payload_cwd or "."
-    for segment in CHAIN_SPLIT_RE.split(command):
+    for segment in split_gate_segments(command):
         tokens = _tokenize_segment(segment)
         if not tokens:
             continue

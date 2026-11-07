@@ -51,13 +51,12 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, basename, strip_quotes
+    from _hooklib import read_payload, deny, basename, strip_quotes, split_gate_segments
 except Exception as e:
     sys.stderr.write(f"[agent-shared-tree-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
 
 GIT_BASENAMES = {"git", "git.exe"}
-CHAIN_SPLIT_RE = re.compile(r"&&|\|\||;|\n|\|")
 # Global git flags that consume a following value token, so the subcommand
 # scan never mistakes a flag's value for the subcommand itself - same table
 # git-workdir-guard.py uses for the same reason.
@@ -111,7 +110,7 @@ def is_checkout_path_form(rest: list[str]) -> bool:
 
 
 def match_hit(command: str) -> str | None:
-    for segment in CHAIN_SPLIT_RE.split(command):
+    for segment in split_gate_segments(command):
         tokens = tokenize(segment)
         if not tokens:
             continue
