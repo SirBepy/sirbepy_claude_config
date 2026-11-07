@@ -126,5 +126,11 @@ with tempfile.TemporaryDirectory() as tmp:
         code = br.main([str(Path(tmp) / "nope.json")])
     check(code == 1 and "cannot read" in err.getvalue(), "missing spec file exits 1")
 
+    bom = Path(tmp) / "bom.json"
+    bom.write_bytes(b"\xef\xbb\xbf" + json.dumps(FULL).encode("utf-8"))
+    with contextlib.redirect_stdout(io.StringIO()):
+        code = br.main([str(bom)])
+    check(code == 0 and (Path(tmp) / "bom.html").is_file(), "a spec saved with a BOM (PowerShell 5.1) builds")
+
 print(f"\n{len(failures)} failure(s)" if failures else "\nall passed")
 sys.exit(1 if failures else 0)

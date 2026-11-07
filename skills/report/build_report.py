@@ -273,7 +273,8 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     try:
-        spec = json.loads(Path(args.spec).read_text(encoding="utf-8"))
+        # utf-8-sig: PowerShell 5.1 writes a BOM, which json.loads rejects.
+        spec = json.loads(Path(args.spec).read_text(encoding="utf-8-sig"))
     except (OSError, ValueError) as e:  # ValueError: bad JSON or a non-UTF-8 file
         print(f"build_report: cannot read spec {args.spec}: {e}", file=sys.stderr)
         return 1
