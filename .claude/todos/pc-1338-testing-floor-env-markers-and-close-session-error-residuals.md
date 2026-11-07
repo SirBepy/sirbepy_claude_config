@@ -21,6 +21,8 @@ Each payload below behaves as listed, with a regression test that is red before 
 
 - Lane F2 residuals found by the 2026-11-07 fresh reviews, not fixed: (a) `hooks/dev-server-guard.py` `_INTERPRETER_RE` is an allow-list of words that run a heredoc or here-string body, so an unlisted interpreter (`lua <<EOF\nnpm run dev\nEOF`) reads the body as data; a deny-list of known data sinks (cat/tee/git/Set-Content) would fail closed instead. (b) A 3000-fold repeated `echo $(` takes about 19 s through dev-server-guard (8.5 s before the nesting-limit raise), so a hook timeout shorter than that fails open; the cost is the quadratic tokenizing of one huge segment, not the substitution scan.
 
+- `hooks/_hooklib.py` `build_executor_regex` (decides whether a heredoc body is run by an interpreter) skips only short flags, durations and VAR=value after a wrapper. Not recognised, so their bodies read as data: long wrapper flags with a separate argument (`sudo --user root bash <<EOF`, `sudo --chdir /x bash`), `su root -c 'bash'`, `exec -a x bash`, `command bash`, `flock f bash`, `chroot /x bash`, `timeout 1.5 bash`. Opposite direction: prose on the opener line (`git commit -m 'fix: do node thing' <<EOF`) matches. Skipping a bare flag argument would make `sudo -n git -C /x/node commit` read as running node, so a parse of the wrapper's own flag table is the real fix.
+
 ## Approach
 
 Add the payloads to `hooks/test_testing_floor_guard.py` (the `environment_failure_checks` and `close_session_checks` groups), prove red with `skills/close/red-check.ps1`, then fix.
