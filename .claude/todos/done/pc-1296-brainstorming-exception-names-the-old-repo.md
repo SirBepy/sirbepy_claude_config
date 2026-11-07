@@ -24,3 +24,7 @@ Change the exception to "rodge (formerly dashboard-a) planning talks ...", in ev
 ## Acceptance
 
 `grep -n "planning talks" C:\Users\tecno\.claude\CLAUDE.md` names rodge.
+
+## Notes
+
+- 2026-11-07: CLAUDE.md Execution Discipline exception now names rodge (was dashboard-a), no words added net.

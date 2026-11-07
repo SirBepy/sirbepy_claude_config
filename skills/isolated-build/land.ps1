@@ -16,7 +16,7 @@
        files", which cascades into point 4 below.
     2. Fast-forward TargetBranch onto the worktree's own branch, if it has commits TargetBranch
        lacks. Fast-forward only - this script creates no commit and no merge commit, so it never
-       violates the "helper skills never commit" rule.
+       makes a commit of its own.
     3. Stop the supervised dev-server entry, if one is given - an open handle on the worktree
        directory is the most likely cause of the removal step's Permission Denied.
     4. Remove the worktree via safe-remove-worktree.ps1 (never reimplemented here - see that
