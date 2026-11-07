@@ -198,6 +198,16 @@ CASES = [
         False,
         "commit-pathspec: grep over the script file is not running it",
     ),
+    # Command substitution runs even inside double quotes; eval and bash -ec bodies are command lines.
+    ('out="$(cargo test 2>&1 | tail -5)"', True, "pc-review item 6: assignment of a double-quoted substitution"),
+    ('echo "$(cargo build | tail -3)"', True, "pc-review item 6: substitution inside a double-quoted echo"),
+    ('x=`cargo check | tail -2`', True, "backtick substitution"),
+    ('bash -ec "cargo test | tail"', True, "bash -ec body is rescanned"),
+    ('eval "cargo test 2>&1 | tail -5"', True, "eval body is rescanned"),
+    ("eval 'cargo clippy | head'", True, "single-quoted eval body is rescanned"),
+    ("echo '$(cargo test | tail)'", False, "single-quoted substitution is text, not a run"),
+    ('echo "cargo test | tail"', False, "a quoted pipeline that is only printed stays allowed"),
+    ('out="$(cargo test --lib 2>&1)"', False, "a substitution with no filter stays allowed"),
 ]
 
 
