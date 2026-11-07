@@ -63,7 +63,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny as _lib_deny, is_command_position
+    from _hooklib import read_payload, deny as _lib_deny, is_command_position, substitution_bodies
 except Exception as e:
     sys.stderr.write(f"[cargo-test-pipe-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -155,26 +155,32 @@ def _spans_outside_quotes(text: str, pattern: re.Pattern) -> list[tuple[int, int
 # A shell wrapper whose quoted `-c`/`-Command` argument is itself a command
 # line, so `bash -c "cargo test | tail"` is scanned even though its pipe is
 # inside quotes.
+_QUOTED_ARG = r"(?:\"(?P<dq>(?:\\.|[^\"\\])*)\"|'(?P<sq>[^']*)')"
 WRAPPER_ARG_RE = re.compile(
-    r"\b(?:bash|sh|zsh|dash|pwsh|powershell)(?:\.exe)?\b[^\"'|;&\n]*?\s-(?:c|lc|command)\s+"
-    r"(?:\"(?P<dq>(?:\\.|[^\"\\])*)\"|'(?P<sq>[^']*)')",
+    r"\b(?:bash|sh|zsh|dash|ksh|pwsh|powershell)(?:\.exe)?\b[^\"'|;&\n]*?"
+    r"\s-(?:[a-z]*c|co(?:m(?:m(?:a(?:n(?:d)?)?)?)?)?)\s+" + _QUOTED_ARG,
     re.IGNORECASE | re.DOTALL,
 )
+# `eval "cargo test | tail"` runs its text as a command line too.
+EVAL_ARG_RE = re.compile(r"(?:^|[;&|({\n])\s*(?:eval|iex|invoke-expression)\s+" + _QUOTED_ARG, re.IGNORECASE | re.DOTALL)
 
 
 def _wrapper_arguments(command: str) -> list[str]:
-    """Bodies of `bash -c "..."` style arguments; a double-quoted body is
+    """Bodies of `bash -c "..."`, `eval "..."` style arguments, plus every
+    `$(...)` or backtick substitution (which runs even inside double quotes,
+    where the quote-aware scan cannot see it). A double-quoted body is
     unescaped so `bash -c "cd \"a b\" && cargo test | tail"` reads whole."""
     mask, balanced = _scan_quotes(command)
     bodies = []
-    for m in WRAPPER_ARG_RE.finditer(command):
-        if balanced and mask[m.start()]:
-            continue
-        if m.group("dq") is not None:
-            bodies.append(re.sub(r"\\(.)", r"\1", m.group("dq")))
-        else:
-            bodies.append(m.group("sq"))
-    return bodies
+    for pattern in (WRAPPER_ARG_RE, EVAL_ARG_RE):
+        for m in pattern.finditer(command):
+            if balanced and mask[m.start()]:
+                continue
+            if m.group("dq") is not None:
+                bodies.append(re.sub(r"\\(.)", r"\1", m.group("dq")))
+            else:
+                bodies.append(m.group("sq"))
+    return bodies + substitution_bodies(command)
 
 
 def find_violation(command: str, cwd: str | None = None, _depth: int = 0) -> tuple[str, str] | None:
