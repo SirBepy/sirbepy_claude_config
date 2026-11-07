@@ -30,3 +30,7 @@ UNVERIFIED: which mechanism sets a title. Candidates to check: `~/.claude/skills
 
 - A fresh chat is titled after its first task without Joe asking.
 - The title is set once, not rewritten every turn.
+
+## Notes
+
+- Mechanism found: report_turn_status takes a title param (first one becomes the chat title, never changes after). Built hooks/chat-title-guard.py: denies a report_turn_status call with no non-empty title until the transcript holds an earlier titled call. Wired in settings.json; wiring proven 2026-11-07 by a nested claude -p run against a stub cc_conductor MCP: untitled call exit 2, retry with a title exit 0. Test hooks/test_chat_title_guard.py (new file, red by construction without the hook). rename-session.ps1 not touched: it renames only the on-disk transcript, not the Conductor title.
