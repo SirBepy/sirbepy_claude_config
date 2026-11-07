@@ -42,4 +42,6 @@ flag recorded `root: revaire-mobile`, and the guard blocked with the identical
 
 ## Notes
 
+- Closed 2026-11-07: defect 1 shipped earlier in 3bb91d1 (out-of-repo edits no longer set the flag). Defect 2 fixed here: the flutter row now fails only on a non-zero exit or a real failure marker ("Some tests failed", a `+N -M` counter), and an exit-0 run with no verdict line reads as "not verified" instead of "failed (exit 0)". The exact output of the 2026-10-13 false fail was never captured (the summary was truncated), so the cause is inferred, not reproduced; the new tests pin the rule.
+
 - Deferred question (needs an attended session for its `hooks/`/`settings.json` writes) answered 2026-11-07: Joe said run it now, in the attended 2026-11-07 session; he approves each permission prompt as it appears.

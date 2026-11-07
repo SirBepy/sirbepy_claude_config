@@ -1287,6 +1287,37 @@ def environment_failure_checks() -> list:
     return fails
 
 
+def flutter_verdict_checks() -> list:
+    """`fvm flutter test` exits 0 even on a failing run (2026-08-13), so the
+    verdict comes from stdout. A green run whose output lacks the exact
+    'All tests passed!' line was reported as 'flutter check failed (exit 0)'
+    (seen 2026-10-13); only a real failure marker may fail the row."""
+    fails = []
+    lib = _testlib.load_module("testing_floor_lib_for_flutter_test", _HOOKS_DIR / "_testing_floor_lib.py")
+
+    class FakeProc:
+        def __init__(self, returncode, stdout="", stderr=""):
+            self.returncode, self.stdout, self.stderr = returncode, stdout, stderr
+
+    cases = (
+        ("green run", FakeProc(0, stdout="00:02 +93: All tests passed!\n"), True),
+        ("green run with skips", FakeProc(0, stdout="00:02 +93 ~2: All tests passed!\n"), True),
+        ("exit 0 with a failure summary", FakeProc(0, stdout="00:03 +90 -3: Some tests failed.\n"), False),
+        ("exit 0 with a failing counter and no summary", FakeProc(0, stdout="00:03 +90 -3: test/a_test.dart: x [E]\n"), False),
+        ("exit 1", FakeProc(1, stdout="00:03 +90 -3: Some tests failed.\n"), False),
+        ("exit 0, no verdict line, no failure marker", FakeProc(0, stdout="Resolving dependencies...\nRunning \"flutter pub get\"\n"), True),
+        ("exit 0, ansi-wrapped pass", FakeProc(0, stdout="\x1b[32m00:02 +93: All tests passed!\x1b[0m\n"), True),
+    )
+    with tempfile.TemporaryDirectory(prefix="testing-floor-flutter-") as tmp:
+        for label, proc, expect_ok in cases:
+            ok, summary = lib.run_stack_check("flutter", ["fvm", "flutter", "test"], Path(tmp), 300, lambda argv, _p=proc, **kw: _p)
+            good = ok == expect_ok
+            print(f"[{'PASS' if good else 'FAIL'}] flutter verdict: {label} -> ok={ok} {summary[:100]!r}")
+            if not good:
+                fails.append(f"flutter verdict: {label}")
+    return fails
+
+
 def _guarded(fn):
     def _run():
         try:
@@ -1313,6 +1344,7 @@ def run() -> int:
         + _guarded(infra_failure_checks)()
         + _guarded(close_session_checks)()
         + _guarded(environment_failure_checks)()
+        + _guarded(flutter_verdict_checks)()
         + _guarded(node_sweep_ownership_checks)()
     )
     return _testlib.summarize(fails)
