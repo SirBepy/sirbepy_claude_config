@@ -22,12 +22,12 @@ False allows (all return "not a create" today):
 - `curl -X POST U/bulk -H "X-Note: -X PUT" -d @b` and `curl -X POST U/bulk -d '{"description":"run curl -X GET"}'`: a verb inside a quoted header or payload (a real story description can name `-X GET`).
 - `curl -X PUT U/bulk -d @a --next -X POST U/bulk -d @b`: `--next` starts a second request inside one statement.
 - `curl -X PUT U/bulk -X POST U/bulk -d @b`: a later `-X POST` on the same line.
-- `curl -X PUT U/bulk -d "$(curl -X POST U/bulk -d @b)"`, the unquoted `$(...)`, the backtick form, and a `( ... )` subshell: the POST nests inside the PUT's statement.
+- `curl -X PUT U/bulk -d "$(curl -X POST U/bulk -d @b)"`, the unquoted `$(...)`, the backtick form, and a substitution inside the URL itself (`curl -X PUT U/bulk?x=$(curl -X POST U/bulk -d @b)`): the POST nests inside the PUT's statement. A `( ... )` or `{ ...; }` group is NOT a false allow today (its separators split the statement), so it needs no test here.
 - `curl -X PUT U/bulk -d @a&curl -X POST U/bulk -d @b`: a `&` with no whitespace around it is not a statement break (`_statement_bounds` needs whitespace on both sides so `2>&1` and URL query strings stay whole); a bare `\r` separator likewise.
 
 False deny (low, fails toward gated): `curl -s -X PUT "U/bulk?a=1;b=2" -d @a`, where a `;` inside the URL's own quote reads as a nested command line.
 
-Fix idea: judge each bulk URL by the verb flag nearest before it (the last `-X`/`--request` ahead of the URL, bounded by `--next`), ignore verb text inside quotes and after a `#` comment, and treat `$(`, a backtick and a subshell `(` inside the statement as untrusted like the nested-quote case already is. Alternatively drop the PUT/DELETE exemption: gate every `/stories/bulk` call and accept a deny on a bulk update (rare in practice).
+Fix idea: assign each verb flag to the request it belongs to, i.e. the `--next`-delimited segment, with the flag before or after the URL (`curl U/bulk -X PUT -d @a` is a bulk PUT today and must stay one), the last verb flag in a segment winning as curl does; ignore verb text inside quotes and after a `#` comment; and treat `$(` and a backtick inside the statement as untrusted like the nested-quote case already is. Alternatively drop the PUT/DELETE exemption: gate every `/stories/bulk` call and accept a deny on a bulk update (rare in practice).
 
 ## Approach
 
