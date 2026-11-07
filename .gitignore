@@ -16,6 +16,13 @@
 !output-styles/
 !output-styles/**
 !aiusage-hook.sh
+!aiusage-hook.ps1
+# scripts/ mostly holds symlinks into revaire-claude-tools, so allow only the two files
+# skills/sentry/SKILL.md calls by path, not the whole directory
+!scripts/
+scripts/*
+!scripts/Get-SentryIssue.ps1
+!scripts/Invoke-SentryTriage.ps1
 !commands/
 !commands/**
 !agents/
