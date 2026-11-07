@@ -24,6 +24,8 @@ _REQUEST_CALL_RE = re.compile(r"""\.request\s*\(\s*\\?["']\s*(POST|PUT|PATCH)\b"
 _URLLIB_CALL_RE = re.compile(r"\b(?:Request|urlopen)\s*\(")
 _DATA_ARG_RE = re.compile(r"\s*data\s*=(?!=)(?!\s*None\b)")
 _KWARG_RE = re.compile(r"\s*\w+\s*=(?!=)")
+MAX_CALL_CHARS = 5000
+MAX_CALLS_SCANNED = 200
 
 # Evidence that the script talks to Shortcut even when the URL is assembled from pieces: the
 # host, or the token plumbing (`kickoff.env()`, the env var, the header name).
@@ -35,7 +37,7 @@ SHORTCUT_HINT_RE = re.compile(
 # The create path `/stories`: after a quote (`API + '/stories'`), `v3` (the literal URL), `}`
 # (`f"{API}/stories"`) or `%s` (`'%s/stories' % API`). A story LIST under another resource
 # (`/epics/5/stories`, `{API}/epics/{eid}/stories`) and `search/stories` are reads.
-BARE_STORIES_PATH_RE = re.compile(r"""(?:(?<=["'])|(?<=v3)|(?<=\})|(?<=%s))/stories(?![\w/-])""", re.IGNORECASE)
+BARE_STORIES_PATH_RE = re.compile(r"""(?:(?<=["'])|(?<=v3)|(?<=\})|(?<=%s)|(?<=\)s))/stories(?![\w/-])""", re.IGNORECASE)
 _LIST_PARENT_RE = re.compile(
     r"""/(?:epics|iterations|groups|labels|milestones|objectives|projects|members|workflows)/[^/\s"']*$""",
     re.IGNORECASE,
@@ -53,10 +55,18 @@ def _call_args(command: str, open_idx: int) -> list:
     string inside a double-quoted `python -c "..."` arrives as backslash-quote pairs; that pair
     is the quote, so apostrophes and commas inside it are plain text."""
     args, cur, depth, quote = [], [], 0, ""
-    i, n = open_idx, len(command)
+    # Bounded window: a one-liner's call fits in it, and an unclosed `Request(` repeated 40k
+    # times would otherwise rescan the whole string once per match.
+    i, n = open_idx, min(len(command), open_idx + MAX_CALL_CHARS)
     while i < n:
         c = command[i]
         if quote:
+            # Three backslashes then a quote is the script's own escaped quote (`a\"b`) as bash
+            # double quotes carry it; it must not read as this string's closing pair.
+            if quote.startswith("\\") and command.startswith("\\\\\\\"", i):
+                cur.append(command[i:i + 4])
+                i += 4
+                continue
             if command.startswith(quote, i):
                 cur.append(quote)
                 i += len(quote)
@@ -98,7 +108,9 @@ def _call_args(command: str, open_idx: int) -> list:
 def _urllib_sends_data(command: str) -> bool:
     """Whether some `Request(...)` / `urlopen(...)` call is given a body, which makes urllib
     POST: `data=...` anywhere after the url, or a second positional argument."""
-    for m in _URLLIB_CALL_RE.finditer(command):
+    for k, m in enumerate(_URLLIB_CALL_RE.finditer(command)):
+        if k >= MAX_CALLS_SCANNED:
+            break
         args = _call_args(command, m.end() - 1)
         for pos, arg in enumerate(args[1:], start=1):
             if _DATA_ARG_RE.match(arg):
