@@ -34,7 +34,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny, allow_with_warning, strip_quotes, basename, git_repo_root, git_common_dir, split_gate_segments
+    from _hooklib import read_payload, deny, allow_with_warning, strip_quotes, basename, git_repo_root, git_common_dir, split_gate_segments, nested_command_bodies
 except Exception as e:
     sys.stderr.write(f"[git-workdir-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -110,6 +110,34 @@ def norm(path: str) -> str:
     return os.path.normcase(os.path.normpath(path))
 
 
+def scan_segments(segments: list[str], cwd: str, depth: int = 0) -> tuple[bool, str]:
+    """(an unpinned git write was found, the cwd it runs in). A `bash -c "..."`
+    body or `$(...)` substitution is scanned from the cwd its segment runs in,
+    and a `cd` inside it never moves the cwd of the segments after it, because
+    it runs in a subshell."""
+    for segment in segments:
+        tokens = tokenize(segment)
+        if not tokens:
+            continue
+
+        pinned, sub = git_write_subcommand(tokens)
+        if sub and not pinned:
+            return True, cwd
+        if sub and pinned:
+            return False, cwd
+
+        if depth < 3:
+            for body in nested_command_bodies(segment):
+                hit, inner_cwd = scan_segments(split_gate_segments(body), cwd, depth + 1)
+                if hit:
+                    return True, inner_cwd
+
+        cd_pin = pinned_cd(tokens)
+        if cd_pin:
+            cwd = cd_pin
+    return False, cwd
+
+
 def main() -> None:
     payload = read_payload()
     command = (payload.get("tool_input") or {}).get("command", "") or ""
@@ -118,24 +146,7 @@ def main() -> None:
     if os.environ.get(OVERRIDE_ENV):
         sys.exit(0)
 
-    effective_cwd = payload.get("cwd") or ""
-    write_hit = False
-    for segment in split_gate_segments(command):
-        tokens = tokenize(segment)
-        if not tokens:
-            continue
-
-        pinned, sub = git_write_subcommand(tokens)
-        if sub and not pinned:
-            write_hit = True
-            break
-        if sub and pinned:
-            break
-
-        cd_pin = pinned_cd(tokens)
-        if cd_pin:
-            effective_cwd = cd_pin
-
+    write_hit, effective_cwd = scan_segments(split_gate_segments(command), payload.get("cwd") or "")
     if not write_hit:
         sys.exit(0)
 

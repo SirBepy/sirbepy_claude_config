@@ -52,7 +52,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny, basename, strip_quotes, split_gate_segments
+    from _hooklib import read_payload, deny, basename, strip_quotes, split_gate_segments_deep
 except Exception as e:
     sys.stderr.write(f"[agent-shared-tree-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -111,7 +111,8 @@ def is_checkout_path_form(rest: list[str]) -> bool:
 
 
 def match_hit(command: str) -> str | None:
-    for segment in split_gate_segments(command):
+    # Deep: `bash -c "echo a; git stash pop"` and `"$(git stash pop)"` keep the stash inside one quoted token.
+    for segment in split_gate_segments_deep(command):
         tokens = tokenize(segment)
         if not tokens:
             continue

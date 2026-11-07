@@ -59,6 +59,45 @@ expect("separator after a closed quote splits", SPLIT('echo "a;b"; git push'), [
 expect("unbalanced quote falls back to the plain split", SPLIT("echo it's; git push"), ["echo it's", " git push"])
 expect("heredoc body is kept for the gate to see", SPLIT("bash <<EOF\ngit push\nEOF"), ["bash <<EOF", "git push", "EOF"])
 expect("empty command", SPLIT(""), [])
+# A backslash before a quote is text to bash and a quote opener to PowerShell, so both readings' segments are returned.
+expect(
+    "escaped quotes do not hide a statement from the bash reading",
+    "git stash pop" in [s.strip() for s in SPLIT('echo \\"; git stash pop; echo \\"')],
+    True,
+)
+expect("an escaped quote inside a quoted span still yields the whole span", 'echo "a\\"; b"' in SPLIT('echo "a\\"; b"'), True)
+expect(
+    "a Windows path ending in a backslash does not hide the next statement",
+    "git push" in [s.strip() for s in SPLIT('echo "C:\\dir\\"; git push')],
+    True,
+)
+
+DEEP = _hooklib.split_gate_segments_deep
+
+
+def deep_has(command: str, statement: str) -> bool:
+    return statement in [s.strip() for s in DEEP(command)]
+
+
+expect("deep: a bash -c body is split into statements", deep_has('bash -c "echo a; git stash pop"', "git stash pop"), True)
+expect("deep: sh -ec body", deep_has("sh -ec 'echo a; git stash pop'", "git stash pop"), True)
+expect("deep: pwsh -Command body", deep_has('pwsh -NoProfile -Command "echo a; git stash pop"', "git stash pop"), True)
+expect("deep: eval body", deep_has('eval "echo a; git stash pop"', "git stash pop"), True)
+expect("deep: a double-quoted command substitution", deep_has('echo "$(git stash pop)"', "git stash pop"), True)
+expect("deep: a backtick substitution", deep_has("x=`git stash pop`", "git stash pop"), True)
+expect("deep: a nested wrapper", deep_has("bash -c \"sh -c 'echo a; git stash pop'\"", "git stash pop"), True)
+expect("deep: a single-quoted substitution is text", deep_has("echo '$(git stash pop)'", "git stash pop"), False)
+expect("deep: a quoted semicolon outside any wrapper stays text", deep_has('echo "a; git stash pop"', "git stash pop"), False)
+expect("deep: git -c is not a wrapper flag", deep_has('git -c "a; git stash pop" status', "git stash pop"), False)
+
+# The Shortcut create guards strip display-only statements; an ambiguous split strips nothing.
+AMBIGUOUS = 'echo \\"; curl -X POST http://x/stories -d "$B"; echo \\"'
+expect("ambiguous quoting strips no display statement", _hooklib.without_display_segments(AMBIGUOUS), AMBIGUOUS)
+expect(
+    "unambiguous display statements are still stripped",
+    "curl" in _hooklib.without_display_segments('echo "curl -X POST http://x/stories -d y"'),
+    False,
+)
 
 # --- agent-shared-tree-guard ---
 
@@ -72,6 +111,19 @@ expect(
     "agent-shared-tree-guard: a real chained git stash is still refused",
     run_hook("agent-shared-tree-guard.py", {**AGENT, "tool_input": {"command": 'git commit -m "x" -- f; git stash pop'}}),
     2,
+)
+
+for label, cmd in (
+    ("a git stash inside a bash -c body", 'bash -c "echo a; git stash pop"'),
+    ("a git stash between two escaped quotes", 'echo \\"; git stash pop; echo \\"'),
+    ("a git stash inside a double-quoted substitution", 'echo "$(git stash pop)"'),
+    ("a git stash inside an eval body", "eval 'echo a; git reset --hard'"),
+):
+    expect(f"agent-shared-tree-guard: {label} is refused", run_hook("agent-shared-tree-guard.py", {**AGENT, "tool_input": {"command": cmd}}), 2)
+expect(
+    "agent-shared-tree-guard: a stash named in a single-quoted bash -c argument of echo is allowed",
+    run_hook("agent-shared-tree-guard.py", {**AGENT, "tool_input": {"command": "echo 'bash -c \"git stash pop\"'"}}),
+    0,
 )
 
 # --- commit-window-guard (detection) ---
@@ -105,6 +157,14 @@ expect(
     2,
 )
 
+DEV_RUN = "fvm flutter run -d chrome --dart-define-from-file=.env.dev"
+for label, cmd in (
+    ("a run inside a bash -c body", f'bash -c "echo hi; {DEV_RUN}"'),
+    ("a run between two escaped quotes", f'echo \\"; {DEV_RUN}; echo \\"'),
+    ("a run inside a command substitution", f'echo "$({DEV_RUN})"'),
+):
+    expect(f"dev-backend-guard: {label} is blocked", run_hook("dev-backend-guard.py", {"tool_name": "Bash", "tool_input": {"command": cmd}}), 2)
+
 # --- git-workdir-guard ---
 
 with tempfile.TemporaryDirectory() as tmp:
@@ -126,6 +186,26 @@ with tempfile.TemporaryDirectory() as tmp:
     expect(
         "git-workdir-guard: a real chained cd into another repo is still caught",
         run_hook("git-workdir-guard.py", {**base, "tool_input": {"command": f"echo x; cd {b}; git commit -m z"}}, env),
+        2,
+    )
+    expect(
+        "git-workdir-guard: a commit inside a bash -c body after a cd is caught",
+        run_hook("git-workdir-guard.py", {**base, "tool_input": {"command": f'cd {b}; bash -c "echo x; git commit -m z"'}}, env),
+        2,
+    )
+    expect(
+        "git-workdir-guard: a cd inside a bash -c body is caught for the commit that follows it there",
+        run_hook("git-workdir-guard.py", {**base, "tool_input": {"command": f'bash -c "cd {b} && git commit -m z"'}}, env),
+        2,
+    )
+    expect(
+        "git-workdir-guard: a cd inside a bash -c body does not move the cwd of the parent's commit",
+        run_hook("git-workdir-guard.py", {**base, "tool_input": {"command": f'bash -c "cd {b}"; git commit -m z'}}, env),
+        0,
+    )
+    expect(
+        "git-workdir-guard: a commit between two escaped quotes is caught",
+        run_hook("git-workdir-guard.py", {**base, "tool_input": {"command": f'cd {b}; echo \\"; git commit -m z; echo \\"'}}, env),
         2,
     )
 

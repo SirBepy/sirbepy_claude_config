@@ -548,23 +548,19 @@ def split_command_segments(command: str) -> list[str]:
 _GATE_CHAIN_SPLIT_RE = re.compile(r"&&|\|\||;|\n|\|")
 
 
-def split_gate_segments(command: str) -> list[str]:
-    """Statements and pipeline segments for the fail-closed gate guards: split
-    on `&&`, `||`, `;`, newline and `|` that sit outside single or double
-    quotes, so a pattern like grep "a|b" or a commit message holding "x; y"
-    stays one segment.
-
-    Unlike split_command_segments, heredoc bodies are kept (a body piped into
-    `bash` is executed, so a gate must still see it), and a lone `&` is not a
-    separator. There is no backslash or backtick escape handling, because
-    PowerShell reads "C:\\dir\\" as a closed string; instead, quotes still open
-    at the end mean the scan desynced (an escaped quote, a stray apostrophe in
-    a heredoc body), so the whole command falls back to the plain split, which
-    over-splits and therefore over-gates rather than hiding a later command."""
-    command = command or ""
+def _split_gate_reading(command: str, honor_escapes: bool) -> list[str]:
+    """One reading of split_gate_segments. With `honor_escapes` a backslash
+    makes the next character a literal (bash: `\\"` and `\\;` are text, inside
+    double quotes too); without it a backslash is plain text (PowerShell reads
+    "C:\\dir\\" as a closed string). Quotes still open at the end mean the scan
+    desynced, so that reading falls back to the plain split."""
     segments, buf, quote, i = [], [], None, 0
     while i < len(command):
         ch = command[i]
+        if honor_escapes and ch == "\\" and quote != "'" and i + 1 < len(command):
+            buf.append(ch + command[i + 1])
+            i += 2
+            continue
         if quote:
             buf.append(ch)
             if ch == quote:
@@ -588,28 +584,164 @@ def split_gate_segments(command: str) -> list[str]:
     return [s for s in segments if s.strip()]
 
 
+def _gate_readings(command: str) -> list[list[str]]:
+    """The statement splits of both escape readings, one entry when they agree."""
+    command = command or ""
+    plain = _split_gate_reading(command, False)
+    escaped = _split_gate_reading(command, True)
+    return [plain] if plain == escaped else [plain, escaped]
+
+
+def split_gate_segments(command: str) -> list[str]:
+    """Statements and pipeline segments for the fail-closed gate guards: split
+    on `&&`, `||`, `;`, newline and `|` that sit outside single or double
+    quotes, so a pattern like grep "a|b" or a commit message holding "x; y"
+    stays one segment.
+
+    Unlike split_command_segments, heredoc bodies are kept (a body piped into
+    `bash` is executed, so a gate must still see it), and a lone `&` is not a
+    separator. A guard cannot know whether the command runs in bash or
+    PowerShell, and the two disagree about a backslash before a quote
+    (`echo \\"; git stash pop; echo \\"` is three bash statements and one
+    PowerShell string), so the command is split under both readings and the
+    result is every segment either reading produced. Quotes still open at the
+    end of a reading mean its scan desynced (a stray apostrophe in a heredoc
+    body), so that reading falls back to the plain split, which over-splits
+    and therefore over-gates rather than hiding a later command."""
+    readings = _gate_readings(command)
+    out = list(readings[0])
+    for segment in readings[1] if len(readings) > 1 else ():
+        if segment not in out:
+            out.append(segment)
+    return out
+
+
 # A real shell's `-c`/`-Command` argument is itself a command line.
-SHELL_WRAPPER_NAMES = {"bash", "sh", "zsh", "dash", "pwsh", "powershell"}
+SHELL_WRAPPER_NAMES = {"bash", "sh", "zsh", "dash", "ksh", "pwsh", "powershell", "cmd"}
+# Shells that are not Bash: a command line they run is not read by Bash's PATH.
+NON_BASH_SHELL_NAMES = {"pwsh", "powershell", "cmd"}
 INLINE_COMMAND_FLAGS = {"-c", "-lc", "-command"}
+# `-c`, a combined short flag ending in c (`-lc`, `-ec`), every PowerShell
+# abbreviation of -Command, and cmd's /c and /k.
+_INLINE_FLAG_RE = re.compile(r"(?:-(?:[a-z]*c|co(?:m(?:m(?:a(?:n(?:d)?)?)?)?)?)|/[ck])", re.IGNORECASE)
+_EVAL_NAMES = {"eval", "iex", "invoke-expression"}
+_EVAL_PREFIX_NAMES = {"&", "sudo", "command", "builtin", "exec"}
 
 
-def with_wrapper_bodies(segments: list[str], depth: int = 0) -> list[str]:
+def _unquote_body(tok: str) -> str:
+    """The text a quoted shell argument holds; a double-quoted one has its
+    `\\"` escapes undone so a nested quote does not end the body early."""
+    if len(tok) >= 2 and tok[0] == tok[-1] and tok[0] in "\"'":
+        inner = tok[1:-1]
+        return inner.replace('\\"', '"') if tok[0] == '"' else inner
+    return tok
+
+
+def wrapper_command_bodies(segment: str) -> list[tuple[str, bool]]:
+    """(body, runs_outside_bash) for each command line `segment` hands to
+    another interpreter: the argument of `bash -c`, `sh -lc`, `bash -ec`,
+    `pwsh -Command`, `cmd /c`, and the text `eval`, `iex` or `Invoke-Expression`
+    runs at command position. A PowerShell or cmd body is every word after the
+    flag, a Bash body is the one word after it."""
+    try:
+        words = shlex.split(segment, posix=False)
+    except ValueError:
+        words = segment.split()
+    out: list[tuple[str, bool]] = []
+    for i, word in enumerate(words):
+        name = basename(word).removesuffix(".exe")
+        if name in _EVAL_NAMES and i + 1 < len(words) and all(
+            basename(w).removesuffix(".exe") in _EVAL_PREFIX_NAMES or _ASSIGNMENT_RE.match(w) for w in words[:i]
+        ):
+            out.append((" ".join(_unquote_body(w) for w in words[i + 1:]), False))
+            continue
+        if i == 0 or i + 1 >= len(words) or not _INLINE_FLAG_RE.fullmatch(word):
+            continue
+        shells = [n for n in (basename(w).removesuffix(".exe") for w in words[:i]) if n in SHELL_WRAPPER_NAMES]
+        if not shells:
+            continue
+        foreign = shells[-1] in NON_BASH_SHELL_NAMES
+        rest = words[i + 1:]
+        out.append((" ".join(_unquote_body(w) for w in rest) if foreign else _unquote_body(rest[0]), foreign))
+    return out
+
+
+def substitution_bodies(text: str) -> list[str]:
+    """The text inside each `$( ... )` and backtick pair that sits outside
+    single quotes. Both shells run it even inside double quotes, where the
+    quote-aware splits keep it hidden in one token. An unclosed `$(` runs to the
+    end of the text; nested ones are found when the caller rescans a body."""
+    bodies: list[str] = []
+    quote = None
+    i, n = 0, len(text)
+    while i < n:
+        ch = text[i]
+        if quote == "'":
+            if ch == "'":
+                quote = None
+        elif ch == "'" and quote is None:
+            quote = ch
+        elif ch == '"':
+            quote = None if quote == '"' else '"'
+        elif ch == "$" and text[i + 1:i + 2] == "(":
+            depth, j = 1, i + 2
+            while j < n and depth:
+                depth += (text[j] == "(") - (text[j] == ")")
+                j += 1
+            bodies.append(text[i + 2:j - 1 if depth == 0 else j])
+            i = j
+            continue
+        elif ch == "`":
+            end = text.find("`", i + 1)
+            end = n if end < 0 else end
+            bodies.append(text[i + 1:end])
+            i = end
+        i += 1
+    return [b for b in bodies if b.strip()]
+
+
+def nested_command_bodies(segment: str) -> list[str]:
+    """Every command line `segment` runs inside itself: wrapper bodies
+    (`bash -c "..."`, `eval "..."`) and command substitutions."""
+    return [b for b, _foreign in wrapper_command_bodies(segment)] + substitution_bodies(segment)
+
+
+def split_gate_segments_deep(command: str, depth: int = 0) -> list[str]:
+    """split_gate_segments plus, after each segment, the statements of every
+    command line nested in it (up to three levels). For gates that must see
+    `bash -c "echo a; git stash pop"` and `echo "$(git stash pop)"`, which the
+    quote-aware split keeps as one opaque segment. Nested statements run in
+    their own subshell, so callers that track a working directory across
+    segments should walk nested_command_bodies themselves."""
+    out: list[str] = []
+    for segment in split_gate_segments(command):
+        out.append(segment)
+        if depth < 3:
+            for body in nested_command_bodies(segment):
+                out.extend(split_gate_segments_deep(body, depth + 1))
+    return out
+
+
+def with_wrapper_bodies(
+    segments: list[str], depth: int = 0, skip_non_bash: bool = False, splitter=None
+) -> list[str]:
     """`segments` plus, after each segment that runs a shell with `-c` or
     `-Command`, the statements of that quoted argument (nested wrappers up to
     three deep). The quote-aware splits keep such an argument as one token, so
-    without this a command inside `bash -c "..."` is invisible."""
+    without this a command inside `bash -c "..."` is invisible. `skip_non_bash`
+    leaves out the bodies of PowerShell and cmd wrappers, for a check that is
+    only about what Bash itself will run. `splitter` splits a body into
+    statements (default: split_command_segments)."""
+    splitter = splitter or split_command_segments
     out = []
     for segment in segments:
         out.append(segment)
         if depth >= 3:
             continue
-        tokens = tokenize_segment(segment)
-        for i in range(1, len(tokens) - 1):
-            if tokens[i].lower() in INLINE_COMMAND_FLAGS and any(
-                basename(t).removesuffix(".exe") in SHELL_WRAPPER_NAMES for t in tokens[:i]
-            ):
-                body = strip_quotes(tokens[i + 1])
-                out.extend(with_wrapper_bodies(split_command_segments(body), depth + 1))
+        for body, foreign in wrapper_command_bodies(segment):
+            if foreign and skip_non_bash:
+                continue
+            out.extend(with_wrapper_bodies(splitter(body), depth + 1, skip_non_bash, splitter))
     return out
 
 
@@ -686,8 +818,13 @@ def without_display_segments(command: str) -> str:
     not mistaken for one. Anything else stays. A display statement whose output
     is piped onward (`echo "..." | bash`, `| sudo bash`, `| % { iex $_ }`) stays
     too: the next stage may execute it, and no list of executors is complete."""
+    # Under the two backslash readings the statements differ (`echo \"; curl ...; echo \"` is
+    # one PowerShell string and three bash statements), so nothing can be called display-only.
+    readings = _gate_readings(command)
+    if len(readings) > 1:
+        return command
     out, cursor, stripped = [], 0, False
-    for segment in split_gate_segments(command):
+    for segment in readings[0]:
         start = command.find(segment, cursor)
         if start < 0:
             return command  # cannot place the statement, so strip nothing
