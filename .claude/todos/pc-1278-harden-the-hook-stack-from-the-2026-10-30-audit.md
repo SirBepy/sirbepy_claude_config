@@ -43,3 +43,32 @@ Write each shared hook file in a single Write call, never partial Edits (a half-
 - A deliberately broken `_hooklib` import in a scratch copy is recoverable as documented.
 - `python ci/run_all.py` passes, including new hook tests.
 - Measured per-call hook time recorded in the commit body before and after.
+
+## Decided
+
+Decided by the 2026-11-07 overnight run (loop-todos lane h5-hook-stack).
+
+- [x] [ARCH] Retry mechanism - decided **one tiny `hooks/_hookboot.py`, imported first inside each guard's existing try block**, because it keeps every guard's own fail-closed or fail-open branch untouched (a module still broken after the retry is left unimported, so the guard's own `from _hooklib import ...` raises the real error) and avoids 41 copies of retry boilerplate. Retries any exception once after 0.4 s (env `CLAUDE_HOOK_IMPORT_RETRY_DELAY_S`), not only ImportError, because a half-written file is a SyntaxError.
+- [x] [ARCH] The `_hooklib` docstring's "Edit/Write bypass" - decided **remove the claim**, because the Write/Edit guards fail closed on the same import. Recovery is documented as a terminal outside Claude Code or one atomic Write.
+- [x] [ARCH] dev-server-guard - decided **skip a server name that follows `<package manager> <install/inspect verb>` in the same statement** (npm, pnpm, yarn, bun, pip, pipx, uv, poetry, cargo, gem), keeping the existing first-program scan, because a full command-position rewrite risked new false negatives.
+- [x] [ARCH] commit-guard unparseable commands - decided **mask heredoc and here-string bodies, then fall back to a command-position regex**, so a shlex failure fails toward gating instead of "not a commit".
+- [x] [ARCH] approve-rename - decided **Python hook that approves only when every statement is an invocation of `skills/close/rename-session.ps1`** (direct, `&`, `$x = ...`, or `-File`), with `$(`, backtick and `>` disqualifying.
+- [x] [ARCH] status-marker-guard - decided **remove** (settings entry first, same commit as the file), because Conductor replaced the markers with `report_turn_status`. `skills/autopilot/SKILL.md:17` still names it in prose (outside this lane's write set).
+- [x] [TOOLING] `"if"` filters (approach step 6) - decided **not applied tonight**, because a filter string like `Bash(*git*)` only matches the Bash tool, so each hook serving `Bash|PowerShell` would split into two entries, and a wrong pattern silently disables a guard, the failure this bundle exists to remove. Facts gathered: `"if"` exists in the hook schema of claude 2.1.316 ("Permission rule syntax to filter when this hook runs", read from the binary); 22 hooks run for a Bash call (mean 89 ms each, 1.97 s if run back to back; the harness may run them concurrently, so the saving is unmeasured).
+
+## Open questions
+
+Written by /auto-do-todos on 2026-11-07. The next run opens with these.
+
+- [ ] [TOOLING] Measure real wall-clock per Bash call (only the harness can: time a nested `claude -p` run with and without an `"if"` filter on the git/gh guards), then decide whether the saving justifies splitting those entries per tool. Needs a measurement run, not code.
+- [ ] [TOOLING] `CLAUDE.md:60` still says "Fall back to a plain shell run only if the supervisor is unreachable", which `dev-server-guard.py` denies. CLAUDE.md is over budget and off limits tonight, so Joe reviews it with the trim; suggested replacement: "If the supervisor is unreachable, stop and tell Joe (dev-server-guard denies a raw run)."
+
+## Landed
+
+- c060638 dev-server-guard false denies + stale fallback texts (`refs/process-hygiene.md`, `restart-and-wait.ps1`); test `hooks/test_dev_server_guard.py`.
+- 7ebd4be `_hookboot` retry in every `_hooklib` importer + docstring; test `hooks/test_hookboot.py`.
+- 6959527 commit-guard heredoc / here-string / lone-apostrophe; test `hooks/test_commit_guard.py`.
+- 14e6bab approve-rename Python port + anchored match, status-marker-guard removed; test `hooks/test_approve_rename.py`.
+- 95cfb58 em-dash-guard scans `write_draft`; test `hooks/test_em_dash_guard.py`.
+- 51aa933 testing-floor-guard "don't test" skip; test `hooks/test_testing_floor_guard.py`.
+- 7e79a47 `git.exe` / `gh.exe` in push-gate, push-read-gate, pr-guard; single `is_agent_call` in `_hooklib`; tests in `test_push_gate.py`, `test_push_read_gate.py`, `test_pr_guard.py`, `test_hookboot.py`.
