@@ -40,7 +40,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny, tokenize_command as tokenize, basename, is_command_position
+    from _hooklib import read_payload, deny, tokenize_command as tokenize, basename, is_command_position, split_command_segments
 except Exception as e:
     sys.stderr.write(f"[dev-server-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -175,7 +175,13 @@ def main() -> None:
     if invokes_supervisor(tokens):
         sys.exit(0)
 
-    matched = is_dev_server_command(tokens)
+    # Per statement: a newline is not a token separator, so `npm install\nvite`
+    # would otherwise read as one install statement with `vite` as its argument.
+    matched = None
+    for segment in split_command_segments(command) or [command]:
+        matched = is_dev_server_command(tokenize(segment))
+        if matched:
+            break
     if matched and not _shlex_clean(command) and not _confirmed_at_command_position(command, matched):
         matched = None
     if matched:
