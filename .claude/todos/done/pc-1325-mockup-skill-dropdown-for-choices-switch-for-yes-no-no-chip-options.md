@@ -28,3 +28,7 @@ Joe, 2026-11-05, claude_usage_in_taskbar brainstorm chat, after approving the sh
 ## Acceptance
 
 - The bullet states the rule; `python ci/check_skill_frontmatter.py` and `python ci/check_instruction_budget.py` still pass.
+
+## Notes
+
+- Rewrote the Live simulator controls bullet in skills/mockup/SKILL.md (dropdown for a choice, switch for yes/no, no chip rows). Rule kept to mockups; shipped UI untouched. Prose-only, no script test.
