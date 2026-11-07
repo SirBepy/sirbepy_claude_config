@@ -38,6 +38,22 @@ INVOCATION_CASES = [
     ("npm run build && git commit -m 'x'", True, "chained after an unrelated command"),
     ("git status", False, "unrelated git subcommand"),
     ("git --grep=\"commit\" log", False, "commit only inside a flag value"),
+    # Review findings 2026-11-07: posix shlex ate the backslashes of an unquoted Windows
+    # path, so the program no longer read as git, and a continuation split the call.
+    ("C:\\Git\\git.exe commit -m x", True, "an unquoted Windows path to git.exe"),
+    ("& C:\\Git\\git.exe commit -m x", True, "the call operator before an unquoted Windows path"),
+    ("C:\\Git\\cmd\\git commit -m x", True, "an unquoted Windows path to git with no extension"),
+    (".\\git.exe commit -m x", True, "a relative .\\git.exe"),
+    ("git \\\ncommit -m x", True, "a bash continuation between git and commit (LF)"),
+    ("git \\\r\ncommit -m x", True, "a bash continuation between git and commit (CRLF)"),
+    ("git -C . \\\n  commit -m x", True, "a continuation after -C <path> before commit"),
+    ("git -c a=b \\\ncommit -m x", True, "a continuation after -c <kv> before commit"),
+    ("git `\ncommit -m x", True, "a PowerShell backtick continuation between git and commit"),
+    ("git --config-env a=b commit -m x", True, "--config-env takes a separate value"),
+    ("git --super-prefix x commit -m x", True, "--super-prefix takes a separate value"),
+    ("git --attr-source HEAD commit -m x", True, "--attr-source takes a separate value"),
+    ("C:\\Git\\git.exe status", False, "an unquoted Windows git path with a read-only subcommand"),
+    ("echo 'C:\\Git\\git.exe commit'", False, "a quoted path with commit inside one token is not a call"),
 ]
 
 
@@ -107,6 +123,24 @@ LANDING_CASES = [
         False,
         "two chained non-branch update-refs stay ungated",
     ),
+    # Review findings 2026-11-07: the regex fallback (an unbalanced quote earlier in the
+    # command makes shlex fail) missed wrappers, keywords and a few git spellings.
+    ("echo it's; env -i git commit -m x", True, "env -i wrapper in the regex fallback"),
+    ("echo it's; env -u X git commit -m x", True, "env -u X wrapper in the regex fallback"),
+    ("echo it's; xargs git commit -m x", True, "xargs wrapper in the regex fallback"),
+    ("echo it's; if true; then git commit -m x; fi", True, "then-keyword in the regex fallback"),
+    ("echo it's; ! git commit -m x", True, "negation in the regex fallback"),
+    ("echo it's; `git commit -m x`", True, "backtick substitution in the regex fallback"),
+    ("echo it's; x=a\\ b git commit -m x", True, "an assignment whose value holds an escaped space"),
+    ("echo it's; git update-ref -m r HEAD abc", True, "update-ref -m <reason> before HEAD in the regex fallback"),
+    ("echo it's; git --config-env a=b commit -m x", True, "--config-env value in the regex fallback"),
+    ("echo it's; git --super-prefix x commit -m x", True, "--super-prefix value in the regex fallback"),
+    ("echo it's; git \\\ncommit -m x", True, "a continuation in the regex fallback"),
+    ("echo it's; C:\\Git\\git.exe commit -m x", True, "a Windows path after an apostrophe"),
+    ("echo it's about env git commit", False, "prose that mentions env git commit stays ungated"),
+    ("echo it's; echo then git commit", False, "prose after echo that mentions then git commit stays ungated"),
+    ("echo it's; git update-ref -m r refs/notes/x abc", False, "update-ref -m <reason> to a notes ref stays ungated"),
+    ("C:\\Git\\git.exe commit-tree deadbeef -p HEAD -m x", True, "an unquoted Windows git.exe path with commit-tree"),
 ]
 
 
@@ -440,6 +474,21 @@ with tempfile.TemporaryDirectory() as tmp:
          "git commit -F - <<'EOF'\nsubject\n\nCo-Authored-By: \"Claude\" <noreply@anthropic.com>\nEOF", 2),
         ("a rule being discussed in a subject is allowed",
          "git commit -m \"FIX: reject Co-Authored-By: Claude trailers\"", 0),
+        # Review findings 2026-11-07: git accepts `=` in a trailer and --trailer carries one.
+        ("a --trailer with = between token and value is refused",
+         'git commit -m x --trailer "Co-Authored-By=Claude <a@b>"', 2),
+        ("a --trailer=Token:Value attached form is refused",
+         "git commit -m x --trailer=Co-Authored-By:Claude", 2),
+        ("a --trailer with a human co-author is allowed",
+         'git commit -m x --trailer "Co-Authored-By: Jane Doe <jane@example.com>"', 0),
+        ("a subject that only discusses the Generated-with footer is allowed",
+         'git commit -m "FIX: drop the Generated with Claude Code footer"', 0),
+        ("a subject that quotes the footer without its link is allowed",
+         'git commit -m "FIX: strip the Generated with [Claude Code] line from PR bodies"', 0),
+        ("a footer line opening a body paragraph is refused",
+         "git commit -m 'X' -m 'Generated with Claude Code'", 2),
+        ("the emoji footer with its link is refused",
+         "git commit -m 'X' -m '\U0001F916 Generated with [Claude Code](https://claude.com/claude-code)'", 2),
     ):
         got = run_main(command, session_id="sess-attr")
         if not _testlib.report(got == expect, f"{label} (got exit={got}, want {expect})"):
