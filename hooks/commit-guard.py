@@ -71,7 +71,10 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS
+    from _hooklib import (
+        read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS,
+        HEREDOC_BODY_RE, HERESTRING_BODY_RE, is_command_position,
+    )
 except Exception as e:
     sys.stderr.write(f"[commit-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -104,12 +107,40 @@ _CHAIN_OPERATORS = {";", "&&", "||"}
 PREFILTER_GATE_SCRIPT = _HOOKS_DIR.parent / "skills" / "commit" / "prefilter-gate.sh"
 
 
+def _mask_bodies(command: str) -> str:
+    """Replace heredoc and PowerShell here-string bodies with a placeholder.
+    An apostrophe in a commit message body is data, but shlex reads it as an
+    unbalanced quote and raises."""
+    masked = HEREDOC_BODY_RE.sub("<<HEREDOC", command)
+    return HERESTRING_BODY_RE.sub("HERESTRING", masked)
+
+
 def _tokenize(command: str) -> list[str] | None:
     try:
         return shlex.split(command, posix=True)
     except ValueError:
-        # Unbalanced quotes etc. - can't safely tokenize; don't block on a guess.
+        pass
+    try:
+        return shlex.split(_mask_bodies(command), posix=True)
+    except ValueError:
+        # Still unbalanced after masking: the caller falls back to
+        # `_unparsed_commit_landing` instead of reading None as "not a commit".
         return None
+
+
+# `git [global flags] commit|commit-tree`, or a branch-moving update-ref, found by
+# regex when shlex cannot tokenize the command (a lone apostrophe in `-m it's`).
+_UNPARSED_LANDING_RE = re.compile(
+    r"(?<![\w./-])git(?:[ \t]+(?:-[Cc][ \t]+\S+|-\S+))*[ \t]+"
+    r"(?:commit(?![\w-])|commit-tree(?![\w-])|update-ref(?:[ \t]+-\S+)*[ \t]+(?:HEAD(?![\w/-])|refs/heads/))"
+)
+
+
+def _unparsed_commit_landing(command: str) -> bool:
+    """Fail closed for a command shlex cannot read: gate it when a landing
+    `git` call sits at command position. A mention in prose (`echo it's about
+    git commit`) is not at command position, so it stays ungated."""
+    return any(is_command_position(command, m.start()) for m in _UNPARSED_LANDING_RE.finditer(command))
 
 
 def _subcommand_index(tokens: list[str], name: str, start: int = 0) -> int | None:
@@ -203,7 +234,7 @@ def is_commit_landing_invocation(command: str) -> bool:
     """
     tokens = _tokenize(command)
     if tokens is None:
-        return False
+        return _unparsed_commit_landing(command)
     return (
         _commit_subcommand_index(tokens) is not None
         or _is_commit_tree_invocation(tokens)

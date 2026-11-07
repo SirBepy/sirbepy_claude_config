@@ -61,6 +61,14 @@ LANDING_CASES = [
         True,
         "commit-tree + update-ref to a branch ref lands a commit, must gate",
     ),
+    # An unbalanced quote inside a heredoc / here-string body or a lone message used to make
+    # shlex raise, which this guard read as "not a commit" and let through.
+    ("git commit -F - <<'EOF'\nit's done\nEOF", True, "quoted heredoc whose body holds an apostrophe"),
+    ("git commit -F - <<EOF\ndon't\nEOF", True, "bare heredoc whose body holds an apostrophe"),
+    ("git commit -m @'\ndon't do it\n'@ -- a.py", True, "PowerShell here-string whose body holds an apostrophe"),
+    ("git commit -m it's", True, "a message with a lone apostrophe still gates"),
+    ("cd repo && git commit -m \"it's", True, "an unterminated quote after git commit still gates"),
+    ("echo it's about git commit", False, "an unparseable command that only mentions git commit stays ungated"),
     ("git commit-tree deadbeef -p HEAD -m 'x'", True, "commit-tree alone still creates a commit object"),
     ("git update-ref refs/heads/feature new old", True, "update-ref straight to a branch ref"),
     ("git update-ref HEAD new old", True, "update-ref straight to HEAD"),
@@ -112,6 +120,11 @@ PATHSPEC_CASES = [
         ["a.py"],
         "a chain operator after the pathspec stops the scan, not swallowed as a path",
     ),
+    (
+        "git commit -m @'\ndon't\n'@ -- a.py b.py",
+        ["a.py", "b.py"],
+        "the pathspec still resolves when a here-string body had to be masked to tokenize",
+    ),
 ]
 
 
@@ -151,6 +164,15 @@ with tempfile.TemporaryDirectory() as tmp:
     got = run_main("git commit -m 'x'", session_id="sess-1")
     if not _testlib.report(got == 2, f"{label} (got exit={got})"):
         fails.append(label)
+
+    for shape, command in (
+        ("a bare heredoc message with an apostrophe", "git commit -F - <<'EOF'\nit's done\nEOF"),
+        ("a PowerShell here-string message with an apostrophe", "git commit -m @'\ndon't\n'@ -- a.py"),
+    ):
+        label = f"raw git commit with {shape} and no marker is blocked"
+        got = run_main(command, session_id="sess-1")
+        if not _testlib.report(got == 2, f"{label} (got exit={got})"):
+            fails.append(label)
 
     label = "a non-commit command needs no marker"
     got = run_main("git status", session_id="sess-1")
