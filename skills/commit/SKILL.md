@@ -132,6 +132,7 @@ The full ordered sequence for every push (`/commit push`, a plain push request, 
 2. **Pre-push todo sweep** - fold small backlog todos sitting in the files the push already touches.
 3. **Pre-push transcript check** - stop on any dev message since the last push that was never addressed.
 4. **Pre-push gate** - `/code-check` over `@{u}..HEAD`, the unit tests CI runs, and `/e2e` (or its no-suite note), started together where they do not share a lock, then mark HEAD cleared.
+4a. **Pre-bump checks** (`/release only`) - `release.py pre-bump`, the commands a repo lists in `.claude/pre-bump.txt`; a failure stops the release before step 4b.
 4b. **Version bump** (`/release only`) - `release.py version-diff`, then `release.py bump` and a `VERSION: <label>` commit. After the gate so sweep folds and `/code-check` fix folds never land in the VERSION commit and a red gate never leaves a bump behind; the `mark` follows the bump.
 5. **`git push`**.
 6. **Post-push ticket move** - every ticket the push shipped goes to Testing.

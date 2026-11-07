@@ -8,7 +8,7 @@ effort: medium
 
 # /release
 
-> Push pipeline plus two extra steps: 1b kit sync and 4b version bump. A plain push ("push it", `/commit push`) never bumps a version.
+> Push pipeline plus three extra steps: 1b kit sync, 4a pre-bump checks and 4b version bump. A plain push ("push it", `/commit push`) never bumps a version.
 
 The sequence is `skills/commit/SKILL.md`'s "Push pipeline" list, the only place it is enumerated. This skill adds the mode decision and the two release-only steps, both defined below. "Unattended" means the same as in `/commit`: `/autopilot`, `/auto-do-todos`, `/mega-todos`, or any caller that cannot block on a question.
 
@@ -36,6 +36,16 @@ Runs after 1b, before the Gate chat hand-off, so Joe reads it in this chat. When
 
 - Advisory only: a non-zero exit or an alarming table never stops the release. Say what stood out in one sentence; when something looks like a real defect, offer to file a todo for it through the `ask_user_question` card.
 - Unattended: run the commands, put the output in the run's report, never ask.
+
+## 4a. Pre-bump checks
+
+Runs after the gate is green, before 4b, so a build the repo's own check rejects never gets a VERSION commit (a CI-only smoke failure once cost a version number, todo 1319).
+
+`python C:/Users/tecno/.claude/skills/release/release.py pre-bump <repo>` runs each non-blank line of the repo's `.claude/pre-bump.txt` that does not start with `#` as a shell command from the repo root, in order, and prints `{"ran": [...]}`. No file: it runs nothing, skip silently. Output of the commands goes to stderr; allow the call an explicit `timeout` of 600000ms or run it in the background, since a smoke check can build an image (the script itself allows each command 30 minutes).
+
+- Exit 0: continue to 4b.
+- Exit 1: a command failed or timed out. Stop without bumping or pushing, show the `error` line and the command's output, and fix or ask. Attended: ask through `ask_user_question` whether to release anyway, naming the failing command; yes means continue to 4b and put "pre-bump check failed, approved by Joe" in the `mark --reason`. Unattended: stop and report, never override.
+- The file is the repo declaring "this must pass before a version ships", so a failure blocks, unlike 1d's advisory reports. The repo owns the commands; this skill names none. It runs only when 4b does (`release: patch`).
 
 ## 4b. Version bump
 
