@@ -27,3 +27,8 @@ Change the preamble's paragraph: a parallel lane's scratch target goes under `C:
 ## Done when
 
 The preamble and any sibling doc give one measured recommendation, and `/disk-doctor` reports leftover scratch targets.
+
+
+## Notes
+
+- Decided (triage 2026-11-07): default CARGO_PROFILE_DEV_DEBUG=line-tables-only; C: cargo-scratch only for 2 or fewer lanes (D:\cargo-target for 3+), orchestrator cleans up; the 30-minute disk-vs-debug-info measurement skipped. refs/builder-preamble.md paragraph rewritten; windows.md line on scratch targets now names C:\Users\tecno\cargo-scratch so /disk-doctor lists leftovers. refs/delegation-doctrine.md and skills/mega-todos carry no cargo-target advice (grep), and are outside this lane anyway. Doc-only, no test applies (hooks/test_dispatch_preamble_guard.py still passes).

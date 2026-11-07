@@ -27,16 +27,24 @@ entries) and delete that target too, even though it lives in the main checkout. 
 baseline is taken before you edit, never recovered by rewinding a shared tree.
 
 If getting an uncontended build means pointing a scratch output dir outside the repo (e.g.
-`CARGO_TARGET_DIR`), put it under `D:\cargo-target\<name>`, the HDD the global
-`~/.cargo/config.toml` already builds into. Not `$env:TEMP` or an in-repo path: both sit on the C:
-SSD, and a 2026-10-05 disk scan found 23 GB of these scratch targets there. Never a bare drive-root
-child like `C:\tmp\<name>` or `D:\<name>` - the removal guard refuses to delete any drive-root child
-as a protected system path, so that location can never be reclaimed by you OR the orchestrator later
-(observed twice: a 7.4 GB and a 14 GB leak, both stuck). Remove the scratch dir yourself before
-reporting and paste the command output proving it's gone, the same evidence standard the orphan
-check below demands for processes - kept as its own sentence rather than folded into that check,
-since a directory isn't a process and you're deciding this here, while picking a build location, not
-there.
+`CARGO_TARGET_DIR`), also set `$env:CARGO_PROFILE_DEV_DEBUG='line-tables-only'`, and pick the
+location by lane count. With 2 or fewer parallel lanes use `C:\Users\tecno\cargo-scratch\<name>`
+(a child of that folder, never a bare drive-root child): measured 2026-11-05 on a Rust build in
+`claude_usage_in_taskbar`, a fresh target there compiled `cargo test --lib` in 2m 24s with other
+lanes running, where a target on the D: HDD with full debug info took about 44 minutes to link with
+3-4 lanes linking and two runs died at the 30 minute cap. The disk and the debug info changed
+together, so which one matters more is unmeasured. Each target runs about 25 GB, so the orchestrator
+removes the `cargo-scratch` dirs when the run ends and pastes the output proving they are gone; a
+builder leaves them in place. With 3 or more lanes the C: SSD would fill, so use
+`D:\cargo-target\<name>`, the HDD the global `~/.cargo/config.toml` already builds into, and remove
+that scratch dir yourself before reporting, pasting the command output proving it's gone, the same
+evidence standard the orphan check below demands for processes - kept as its own sentence rather
+than folded into that check, since a directory isn't a process and you're deciding this here, while
+picking a build location, not there. Not `$env:TEMP` or an in-repo path: both sit on the C: SSD, and
+a 2026-10-05 disk scan found 23 GB of these scratch targets there. Never a bare drive-root child like
+`C:\tmp\<name>` or `D:\<name>` - the removal guard refuses to delete any drive-root child as a
+protected system path, so that location can never be reclaimed by you OR the orchestrator later
+(observed twice: a 7.4 GB and a 14 GB leak, both stuck).
 
 A scratch install for a package safety check (installing a package for real, then auditing the
 resolved tree) first creates the scratch directory with `New-Item -ItemType Directory`, then passes
