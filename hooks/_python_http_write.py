@@ -37,7 +37,12 @@ SHORTCUT_HINT_RE = re.compile(
 # The create path `/stories`: after a quote (`API + '/stories'`), `v3` (the literal URL), `}`
 # (`f"{API}/stories"`) or `%s` (`'%s/stories' % API`). A story LIST under another resource
 # (`/epics/5/stories`, `{API}/epics/{eid}/stories`) and `search/stories` are reads.
-BARE_STORIES_PATH_RE = re.compile(r"""(?:(?<=["'])|(?<=v3)|(?<=\})|(?<=%s)|(?<=\)s))/stories(?![\w/-])""", re.IGNORECASE)
+# `/stories/bulk` is Shortcut's bulk create, so it counts too; `/stories/bulkhead` and
+# `/stories/bulk/x` do not.
+BARE_STORIES_PATH_RE = re.compile(
+    r"""(?:(?<=["'])|(?<=v3)|(?<=\})|(?<=%s)|(?<=\)s))/stories(?:(?![\w/-])|/bulk(?![\w/-]))""",
+    re.IGNORECASE,
+)
 _LIST_PARENT_RE = re.compile(
     r"""/(?:epics|iterations|groups|labels|milestones|objectives|projects|members|workflows)/[^/\s"']*$""",
     re.IGNORECASE,
@@ -106,12 +111,16 @@ def _call_args(command: str, open_idx: int) -> list:
 
 
 def _urllib_sends_data(command: str) -> bool:
-    """Whether some `Request(...)` / `urlopen(...)` call is given a body, which makes urllib
-    POST: `data=...` anywhere after the url, or a second positional argument."""
+    """Whether some `Request(...)` / `urlopen(...)` call is given a body and no literal method
+    of its own, which makes urllib POST: `data=...` anywhere after the url, or a second
+    positional argument. Decided call by call: a `method='GET'` on one request says nothing
+    about the body-carrying request next to it."""
     for k, m in enumerate(_URLLIB_CALL_RE.finditer(command)):
         if k >= MAX_CALLS_SCANNED:
             break
         args = _call_args(command, m.end() - 1)
+        if _METHOD_RE.search(",".join(args[1:])):
+            continue
         for pos, arg in enumerate(args[1:], start=1):
             if _DATA_ARG_RE.match(arg):
                 return True
@@ -141,7 +150,7 @@ def _verbs(command: str) -> set:
     verbs = {m.group(1).upper() for m in _METHOD_RE.finditer(command)}
     verbs |= {m.group(1).upper() for m in _CLIENT_CALL_RE.finditer(command)}
     verbs |= {m.group(1).upper() for m in _REQUEST_CALL_RE.finditer(command)}
-    if not _METHOD_RE.search(command) and _urllib_sends_data(command):
+    if _urllib_sends_data(command):
         verbs.add("POST")
     verbs.discard("GET")
     return verbs
