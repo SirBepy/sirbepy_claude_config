@@ -42,9 +42,11 @@ except Exception as e:
 ESCAPE_MARKER = "<!-- hand-styled-ok -->"
 
 STYLE_ATTR_RE = re.compile(r"""\bstyle\s*=\s*(?:"([^"]*)"|'([^']*)')""", re.IGNORECASE)
+# `border-collapse` and `border-spacing` lay a table out and paint nothing, so the `border*`
+# family skips them; `fill`/`stroke` paint inline SVG.
 PAINT_PROP_RE = re.compile(
-    r"(?:^|[;\s])(?:background|border|box-shadow|color|font|text-shadow|outline|"
-    r"filter|opacity)[a-z-]*\s*:|radius|gradient|var\(\s*--color",
+    r"(?:^|[;\s])(?:background|border(?!-collapse\b|-spacing\b)|box-shadow|color|font|text-shadow|outline|"
+    r"filter|opacity|fill|stroke)[a-z-]*\s*:|radius|gradient|var\(\s*--color",
     re.IGNORECASE,
 )
 
