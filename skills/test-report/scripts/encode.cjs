@@ -108,6 +108,21 @@ function checkNoOverlap(clip, captions) {
   return { lines: captions.length, boundaries: Math.max(0, captions.length - 1), silences: silences.length, problems };
 }
 
+// ffmpeg writes to a sibling temp name and the finished file is renamed into place, so an
+// interrupted encode can never leave a truncated clip at `out` that is newer than its takes and
+// that the freshness check would then reuse.
+function writeAtomically(out, produce) {
+  const tmp = `${out}.part.webm`;
+  fs.rmSync(tmp, { force: true });
+  try {
+    produce(tmp);
+    fs.renameSync(tmp, out);
+  } catch (e) {
+    fs.rmSync(tmp, { force: true });
+    throw e;
+  }
+}
+
 function encodeClip({ name, takes, workDir, profile }) {
   const dir = path.join(workDir, 'clips');
   fs.mkdirSync(dir, { recursive: true });
@@ -125,13 +140,14 @@ function encodeClip({ name, takes, workDir, profile }) {
   filters.push(`${parts}concat=n=${tl.pieces.length}:v=1:a=0[v]`);
   // Re-encoding is the slow part, so a clip newer than every take it came from is kept.
   const fresh = fs.existsSync(out) && takes.every((t) => fs.statSync(t.jsonPath).mtimeMs < fs.statSync(out).mtimeMs);
-  if (!fresh) execFileSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', ...inputs, '-i', wav,
+  if (!fresh) writeAtomically(out, (tmp) => execFileSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', ...inputs, '-i', wav,
     '-filter_complex', filters.join(';'), '-map', '[v]', '-map', `${tl.pieces.length}:a`,
     '-c:v', 'libvpx-vp9', '-crf', String(profile.crf), '-b:v', '0', '-row-mt', '1', '-cpu-used', '2', '-g', String(profile.fps * 8), '-tune-content', 'screen',
     '-c:a', 'libopus', '-b:a', `${profile.audio}k`, '-application', 'voip', '-ac', '1',
-    out], { stdio: 'inherit' });
+    // The container is chosen from the extension, so the temp name keeps .webm.
+    tmp], { stdio: 'inherit' }));
   const speech = checkNoOverlap(out, tl.captions);
   return { file: out, bytes: fs.statSync(out).size, seconds: tl.total / 1000, steps: tl.steps, captions: tl.captions, speech };
 }
 
-module.exports = { encodeClip, timeline };
+module.exports = { encodeClip, timeline, writeAtomically };
