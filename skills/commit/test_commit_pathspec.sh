@@ -1953,6 +1953,57 @@ else
   echo "SKIP: todo 1309 - cannot create a native symlink here"
 fi
 
+# --- a mode change only the index holds: with core.fileMode=false, `git commit -- <path>`
+# rebuilds the entry from HEAD's mode, so `update-index --chmod=+x` was dropped and the file
+# shipped as 100644. The fixture uses a .txt so the test-coverage check stays out of the way.
+r91=$(new_repo); tmp_dirs+=("$r91")
+git -C "$r91" config core.fileMode false
+printf 'run\n' > "$r91/tool.txt"
+printf 'keep\n' > "$r91/plain.txt"
+git -C "$r91" add tool.txt plain.txt
+git -C "$r91" commit -q -m "add tool"
+printf 'run v2\n' > "$r91/tool.txt"
+git -C "$r91" update-index --chmod=+x -- tool.txt
+branch=$(git -C "$r91" rev-parse --abbrev-ref HEAD)
+sha=$(git -C "$r91" rev-parse HEAD)
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r91" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "tool.txt content plus exec bit" -- tool.txt 2>&1); rc=$?
+check "a pathspec commit keeps a staged chmod +x under core.fileMode=false (todo 1324)" \
+  0 'staged mode change.*tool\.txt' 'ERROR|REFUSED' "$out" "$rc"
+mode=$(git -C "$r91" ls-tree HEAD -- tool.txt | cut -d' ' -f1)
+if [ "$mode" = 100755 ]; then
+  echo "PASS: todo 1324 - HEAD holds tool.txt at 100755"
+else
+  echo "FAIL: todo 1324 - HEAD holds tool.txt at $mode, want 100755"
+  fail=1
+fi
+if [ "$(git -C "$r91" show HEAD:tool.txt)" = "run v2" ]; then
+  echo "PASS: todo 1324 - the content change rode along with the mode"
+else
+  echo "FAIL: todo 1324 - tool.txt content in HEAD is not the working-tree content"
+  fail=1
+fi
+if [ -z "$(git -C "$r91" status --porcelain --untracked-files=no)" ] && [ "$(git -C "$r91" ls-files -s -- plain.txt | cut -d' ' -f1)" = 100644 ]; then
+  echo "PASS: todo 1324 - real index matches HEAD afterwards and an unrelated file kept 100644"
+else
+  echo "FAIL: todo 1324 - leftover status: $(git -C "$r91" status --porcelain)"
+  fail=1
+fi
+# Removing the bit works the same way: a path HEAD holds as 100755 and the index restages as 100644.
+git -C "$r91" update-index --chmod=-x -- tool.txt
+printf 'run v3\n' > "$r91/tool.txt"
+sha=$(git -C "$r91" rev-parse HEAD)
+out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$r91" --expect-branch "$branch" --expect-sha "$sha" \
+  -m "tool.txt drops the exec bit" -- tool.txt 2>&1); rc=$?
+mode=$(git -C "$r91" ls-tree HEAD -- tool.txt | cut -d' ' -f1)
+check "a staged chmod -x is kept too (todo 1324)" 0 'staged mode change' 'ERROR|REFUSED' "$out" "$rc"
+if [ "$mode" = 100644 ]; then
+  echo "PASS: todo 1324 - HEAD holds tool.txt back at 100644"
+else
+  echo "FAIL: todo 1324 - HEAD holds tool.txt at $mode, want 100644"
+  fail=1
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else
