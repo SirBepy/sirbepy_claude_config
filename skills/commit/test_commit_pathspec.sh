@@ -2004,6 +2004,29 @@ else
   fail=1
 fi
 
+# git reads core.fileMode as a bool, so `False`, `0`, `no` and `off` all mean false; a raw
+# string compare against "false" skipped the fix for every spelling but the lowercase one.
+for spelling in False 0 no off; do
+  rs=$(new_repo); tmp_dirs+=("$rs")
+  git -C "$rs" config core.fileMode "$spelling"
+  printf 'run\n' > "$rs/tool.txt"
+  git -C "$rs" add tool.txt
+  git -C "$rs" commit -q -m "add tool"
+  printf 'run v2\n' > "$rs/tool.txt"
+  git -C "$rs" update-index --chmod=+x -- tool.txt
+  branch=$(git -C "$rs" rev-parse --abbrev-ref HEAD)
+  sha=$(git -C "$rs" rev-parse HEAD)
+  out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" "$cp" -C "$rs" --expect-branch "$branch" --expect-sha "$sha" \
+    -m "tool.txt content plus exec bit" -- tool.txt 2>&1); rc=$?
+  mode=$(git -C "$rs" ls-tree HEAD -- tool.txt | cut -d' ' -f1)
+  if [ "$rc" -eq 0 ] && [ "$mode" = 100755 ]; then
+    echo "PASS: core.fileMode=$spelling keeps a staged chmod +x"
+  else
+    echo "FAIL: core.fileMode=$spelling left tool.txt at $mode (rc=$rc), want 100755"
+    fail=1
+  fi
+done
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else
