@@ -73,7 +73,7 @@ try:
     import _hookboot  # retries a shared module another session is mid-way through writing
     from _hooklib import (
         read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS,
-        HEREDOC_BODY_RE, HERESTRING_BODY_RE, is_command_position,
+        HEREDOC_BODY_RE, HERESTRING_BODY_RE, is_agent_call, is_command_position,
     )
 except Exception as e:
     sys.stderr.write(f"[commit-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
@@ -310,30 +310,6 @@ def run_prefilter_gate(paths: list[str], cwd: str) -> int | None:
     except (OSError, subprocess.TimeoutExpired):
         return None
     return result.returncode
-
-
-_is_agent_call_fn = None
-
-
-def is_agent_call(payload: dict) -> bool:
-    """Reuses `agent-todo-write-guard.py`'s own `is_agent_call` (`agent_id`
-    present in the payload if, and only if, the call came from a dispatched
-    agent rather than the top-level orchestrator session) rather than
-    re-deriving the same check - the same by-path-import technique
-    `_testing_floor_lib.py` already uses for the same function.
-    Loaded lazily and cached so importing this module never has a side
-    effect at import time.
-    """
-    global _is_agent_call_fn
-    if _is_agent_call_fn is None:
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            "agent_todo_write_guard", _HOOKS_DIR / "agent-todo-write-guard.py"
-        )
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        _is_agent_call_fn = module.is_agent_call
-    return _is_agent_call_fn(payload)
 
 
 def session_marker_path(session_id: str) -> Path:

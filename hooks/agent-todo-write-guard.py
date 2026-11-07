@@ -46,7 +46,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny
+    from _hooklib import read_payload, deny, is_agent_call
 except Exception as e:
     sys.stderr.write(f"[agent-todo-write-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -71,15 +71,6 @@ try:
 except Exception as e:
     sys.stderr.write(f"[agent-todo-write-guard] FATAL: cannot load todos_target_dir from todo-duplicate-guard.py ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
-
-
-def is_agent_call(payload: dict) -> bool:
-    """True when this PreToolUse call came from a dispatched agent, not the
-    top-level orchestrator session. `agent_id` is present if, and only if,
-    the call comes from a dispatched agent (probed 2026-09-10, re-verified
-    2026-09-11 - see module docstring).
-    """
-    return bool(payload.get("agent_id"))
 
 
 def main() -> None:

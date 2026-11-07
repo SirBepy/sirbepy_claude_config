@@ -39,7 +39,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny, tokenize_command, basename, split_gate_segments
+    from _hooklib import read_payload, deny, tokenize_command, basename, split_gate_segments, is_program
 except Exception as e:
     sys.stderr.write(f"[push-read-gate] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -72,7 +72,7 @@ def is_git_push_invocation(command: str) -> bool:
     if tokens is None:
         return False
     for i, tok in enumerate(tokens):
-        if tok != "git":
+        if not is_program(tok, "git"):
             continue
         j = i + 1
         while j < len(tokens) and tokens[j].startswith("-"):

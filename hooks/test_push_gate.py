@@ -31,6 +31,7 @@ DASH_C_CASES = [
     (r'git -C "C:\Users\tecno\Desktop\Projects\zng-app" push', r"C:\Users\tecno\Desktop\Projects\zng-app", "quoted backslash path"),
     ("git -C C:/repo push origin main", "C:/repo", "bare forward-slash path"),
     ("git push", None, "no -C"),
+    ("git.exe -C C:/repo push origin main", "C:/repo", "git.exe spelling still reads the push's own -C"),
     # todo 1044: a chained, unrelated `git -C` before the push must never be
     # attributed to the push itself.
     ('git -C "C:/cleared" status && git push', None, "earlier unrelated git -C is not the push's own"),
