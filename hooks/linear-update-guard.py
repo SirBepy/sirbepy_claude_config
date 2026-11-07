@@ -48,7 +48,7 @@ DELETE_MUTATION_RE = re.compile(r"\bissueDelete\b")
 CLAIM_FIELD_RE = re.compile(r"\b(" + "|".join(CLAIM_FIELDS["linear"]) + r")\b", re.IGNORECASE)
 
 CLAIM_TOOL_RE = re.compile(r"^mcp__.*linear.*__.*(update_issue|issue.?update|create_comment|comment.?create).*$", re.IGNORECASE)
-DELETE_TOOL_RE = re.compile(r"^mcp__.*linear.*__.*(delete_issue|issue.?delete).*$", re.IGNORECASE)
+DELETE_TOOL_RE = re.compile(r"^mcp__.*linear.*__.*(delete_issue|issue.?delete)(?![a-z_]).*$", re.IGNORECASE)
 
 
 def is_issue_delete(tool_name: str, tool_input: dict) -> bool:

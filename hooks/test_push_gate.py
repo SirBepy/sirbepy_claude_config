@@ -281,6 +281,12 @@ with tempfile.TemporaryDirectory() as tmp:
     no_flutter = [user_prompt("x")] + skill("t1", "test") + skill("t2", "e2e")
     code, err, marked = run_mark(flutter, reason, no_flutter)
     expect("a Flutter repo also needs /flutter-e2e", (code, marked, "/flutter-e2e" in err), (2, False, True))
+    scripted = make_stack_repo(tmpdir, "flutter-scripted", {"pubspec.yaml": "name: b\nflutter:\n  uses-material-design: true\n"})
+    (scripted / "e2e").mkdir()
+    (scripted / "e2e" / "run-all.js").write_text("// suite", encoding="utf-8")
+    git(scripted, "add", ".")
+    git(scripted, "commit", "-q", "-m", "e2e suite")
+    expect("a Flutter repo with e2e/run-all.js runs it via /e2e and needs no /flutter-e2e", run_mark(scripted, reason, no_flutter)[::2], (0, True))
     expect("a Flutter repo with /flutter-e2e loaded is accepted", run_mark(flutter, reason, no_flutter + skill("t3", "flutter-e2e"))[::2], (0, True))
 
     expect("a repo with no fast-check stack needs no skills", run_mark(docs, "notes repo: no code", [user_prompt("x")])[::2], (0, True))

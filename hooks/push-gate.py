@@ -387,7 +387,12 @@ def required_skills(root, reason: str, is_gate_chat: bool) -> list[str]:
         required.append("e2e")
         try:
             pubspec = Path(root) / "pubspec.yaml"
-            if pubspec.is_file() and "flutter:" in pubspec.read_text(encoding="utf-8", errors="replace"):
+            # /e2e runs a committed e2e/run-all.js suite itself and does not load /flutter-e2e.
+            if (
+                pubspec.is_file()
+                and "flutter:" in pubspec.read_text(encoding="utf-8", errors="replace")
+                and not (Path(root) / "e2e" / "run-all.js").is_file()
+            ):
                 required.append("flutter-e2e")
         except OSError:
             pass
