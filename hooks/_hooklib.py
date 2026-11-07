@@ -737,7 +737,13 @@ def build_executor_regex(names: str = _EXECUTOR_NAMES) -> re.Pattern:
     name (`git -C ~/repos/php commit`, `docs/perl.md`, `s.sh`) is an argument, not
     the program. Also matches the dot-source command (`. /dev/stdin <<EOF`) at
     a statement start."""
-    start = r"(?:^|[|;&({\[`]|\b(?:then|do|else)\b|\b(?:sudo|env|exec|time|nohup|command|xargs)\s+(?:\S+\s+){0,3}?)"
+    # After a wrapper only flags (`-u root`, `-n 5`), durations and VAR=value are skipped, never a bare
+    # word, so `sudo git -C /x/node commit` leaves `git` unskipped and `node` is not at command position.
+    start = (
+        r"(?:^|[|;&({\[`!]|\b(?:then|do|else)\b"
+        r"|\b(?:sudo|doas|su|env|exec|time|nohup|nice|ionice|timeout|setsid|stdbuf|busybox|wsl|xargs)\s+"
+        r"(?:(?:-[ugCUDRTphniec]\s+\S+|-\S+|\d+[smhd]?|\w+=\S*)\s+){0,6})"
+    )
     return re.compile(
         start + r"[ \t]*(?:\w+=\S*[ \t]+)*[\"']?(?:[^\s|;&()`\"']*[/\\])?(?:" + names + r")(?:\.exe)?[\"']?(?![\w.:/\\-])"
         r"|(?:^|[|;&({`]|\b(?:then|do|else)\b)[ \t]*\.[ \t]",
