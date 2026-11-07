@@ -149,6 +149,14 @@ if ($Release) {
         }
     }
 
+    # Two spellings of one id ("pc-0001,1") resolve to the same claim file. Releasing it for
+    # the first spelling would leave the second to find it gone and report a foreign claim.
+    $seenTargets = @{}
+    $targets = @($targets | Where-Object {
+        $key = $_.FullName.ToLowerInvariant()
+        if ($seenTargets.ContainsKey($key)) { $false } else { $seenTargets[$key] = $true; $true }
+    })
+
     $foreign = 0
     foreach ($claim in $targets) {
         $owner = Get-ClaimSession -ClaimFile $claim.FullName

@@ -100,6 +100,16 @@ with tempfile.TemporaryDirectory() as tmp:
     p = run("-Id", "pc-0001", "-AllMine", "-RepoRoot", str(repo), env=ENV_A)
     check(f"-AllMine without -Release is rejected and claims nothing new (rc={p.returncode})", p.returncode == 2)
 
+with tempfile.TemporaryDirectory() as tmp:
+    # Two spellings of one id resolve to the same claim file; the second must not find it
+    # already gone and call it a peer's claim.
+    repo, c = make_backlog(tmp, "pc-0001-a.md")
+    run("-Id", "pc-0001", "-RepoRoot", str(repo), env=ENV_A)
+    p = run("-Release", "-Id", "pc-0001,1", "-RepoRoot", str(repo), env=ENV_A)
+    check(f"-Release of one claim named twice (pc-0001,1) releases it once and exits 0 (rc={p.returncode}, out={p.stdout!r})",
+          p.returncode == 0 and not (c / "pc-0001.claim").exists()
+          and "another session" not in p.stdout and p.stdout.count("Released claim") == 1)
+
 _LABEL_DIR.cleanup()
 if fails:
     print(f"\n{len(fails)} FAILURE(S)")
