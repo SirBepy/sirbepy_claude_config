@@ -25,20 +25,34 @@ guard = _testlib.load_module("guard", HOOKS / "approve-rename.py")
 
 fails = []
 
+HOME_WIN = str(Path.home())
+HOME_FWD = Path.home().as_posix()
+R_WIN = HOME_WIN + "\\.claude\\skills\\close\\rename-session.ps1"
+R_FWD = HOME_FWD + "/.claude/skills/close/rename-session.ps1"
+
 ALLOW_CASES = [
-    ('& "C:\\Users\\tecno\\.claude\\skills\\close\\rename-session.ps1" -Close', True, "the /close -Close call"),
+    (f'& "{R_WIN}" -Close', True, "the /close -Close call"),
     ("~/.claude/skills/close/rename-session.ps1 -GetId", True, "the -GetId call by tilde path"),
-    ('$id = & "C:\\Users\\tecno\\.claude\\skills\\close\\rename-session.ps1" -GetId', True, "a -GetId result assigned to a variable"),
-    ('powershell -NoProfile -File "C:/Users/tecno/.claude/skills/close/rename-session.ps1" -Name "my chat"', True, "-File form with a quoted -Name"),
-    ('& "C:\\Users\\tecno\\.claude\\skills\\close\\rename-session.ps1" -GetId; & "C:\\Users\\tecno\\.claude\\skills\\close\\rename-session.ps1" -Close', True, "two rename calls in one command"),
-    ("Write-Output 1 # rename-session.ps1", False, "1278: a trailing comment naming the script is not an invocation"),
+    (f'$id = & "{R_WIN}" -GetId', True, "a -GetId result assigned to a variable"),
+    (f'powershell -NoProfile -File "{R_FWD}" -Name "my chat"', True, "-File form with a quoted -Name"),
+    (f'& "{R_WIN}" -GetId; & "{R_WIN}" -Close', True, "two rename calls in one command"),
+    ("Write-Output 1 # rename-session.ps1", False, "a trailing comment naming the script is not an invocation"),
     ("echo rename-session.ps1", False, "the file name as an argument of another command"),
-    ("Remove-Item -Recurse C:\\x; & C:\\Users\\tecno\\.claude\\skills\\close\\rename-session.ps1 -Close", False, "1278: a destructive statement chained before a rename call"),
-    ("& C:\\Users\\tecno\\.claude\\skills\\close\\rename-session.ps1 -Close; Remove-Item -Recurse C:\\x", False, "1278: a destructive statement chained after a rename call"),
+    (f"Remove-Item -Recurse C:\\x; & {R_WIN} -Close", False, "a destructive statement chained before a rename call"),
+    (f"& {R_WIN} -Close; Remove-Item -Recurse C:\\x", False, "a destructive statement chained after a rename call"),
     ('& "C:\\somewhere\\else\\rename-session.ps1" -Close', False, "a same-named script outside skills/close"),
-    ('& "C:\\Users\\tecno\\.claude\\skills\\close\\rename-session.ps1" -Name "$(Remove-Item x)"', False, "a subexpression inside an argument"),
-    ('& "C:\\Users\\tecno\\.claude\\skills\\close\\rename-session.ps1" -Close > out.txt', False, "a redirect"),
+    (f'& "{R_WIN}" -Name "$(Remove-Item x)"', False, "a subexpression inside an argument"),
+    (f'& "{R_WIN}" -Close > out.txt', False, "a redirect"),
     ("", False, "an empty command"),
+    # Review findings: an unanchored tail, argument expressions, and -Command.
+    ("C:/evil/skills/close/rename-session.ps1 -Close", False, "an attacker-chosen directory ending in skills/close"),
+    ("cmd/skills/close/rename-session.ps1 -Close", False, "a relative path ending in the right tail"),
+    (f"powershell -File C:/evil/skills/close/rename-session.ps1", False, "-File pointing outside the home skills dir"),
+    (f"& {R_WIN} -Title x -Foo (Remove-Item C:/x)", False, "a parenthesised expression evaluated as an argument"),
+    (f"& {R_WIN} -Foo @(Remove-Item C:/x)", False, "an array expression as an argument"),
+    (f"& {R_WIN} -Foo {{Remove-Item C:/x}}", False, "a script block as an argument"),
+    (f"powershell -Command Remove-Item C:/x -File {R_FWD}", False, "-Command swallows the rest, -File is just text"),
+    (f"& {R_WIN} -Name x\nRemove-Item C:/x", False, "a second statement on the next line"),
 ]
 
 
