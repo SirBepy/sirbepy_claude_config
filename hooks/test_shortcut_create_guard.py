@@ -104,6 +104,12 @@ CASES = [
     ("PowerShell", f'Invoke-RestMethod -Method Post -Uri "{URL}/bulk" -Body $json', True, "IRM Post to /stories/bulk"),
     ("Bash", py(f"u.urlopen(u.Request('{URL}/bulk', data=b'{{}}', method='POST'))"), True, "python POST to /stories/bulk"),
     ("Bash", py("import kickoff; kickoff.env(); u.urlopen(u.Request(API + '/stories/bulk', data=b'{}', method='POST'))"), True, "python POST to /stories/bulk from a base URL"),
+    # A verb on another statement says nothing about this call.
+    ("Bash", f'curl -X POST {URL}/bulk -d @a.json; curl -X PUT {URL}/123 -d @b.json', True, "a bulk POST followed by an id PUT"),
+    ("Bash", f'curl -X GET {URL}/123; curl -X POST {URL}/bulk -d @a.json', True, "a GET before a bulk POST"),
+    ("Bash", f'curl -X PUT {URL}/bulk -d @a.json && curl -X POST {URL} -d @b.json', True, "a real create after a bulk PUT"),
+    ("Bash", f'curl -X POST {URL} -d @b.json; curl -X PUT {URL}/bulk -d @a.json', True, "a real create before a bulk PUT"),
+    ("Bash", f'curl -X PUT {URL}/bulk -d @a.json; curl -X DELETE {URL}/bulk -d @b.json', False, "two bulk non-POST calls"),
     ("Bash", f'curl -s -X PUT "{URL}/bulk" -d @payload.json', False, "PUT to /stories/bulk is a bulk update"),
     ("Bash", f'curl -s -X DELETE "{URL}/bulk" -d @payload.json', False, "DELETE to /stories/bulk is a bulk delete"),
     ("Bash", f'curl -s "{URL}/bulkhead" -d @payload.json', False, "a longer word starting with bulk is not the create"),

@@ -144,6 +144,11 @@ DETECT_CASES = [
     ("Bash", {"command": f"curl -X POST {SC}/bulk -d '{{\"stories\": [{{\"workflow_state_id\": 5}}]}}'"}, True, "curl POST to /stories/bulk with no visible prose is gated"),
     ("Bash", {"command": f"curl -s {SC}/123 -o /c/tmp/s.json; curl -X POST {SC} -d '{{\"project_id\": 5}}'"}, True, "a read of one story ahead of a bare create does not hide it"),
     ("Bash", {"command": py("import kickoff; kickoff.env(); u.urlopen(u.Request(API + '/stories/bulk', data=body, method='POST'))")}, True, "python POST to /stories/bulk from a base URL is gated"),
+    ("Bash", {"command": py("import kickoff; kickoff.env(); u.urlopen(u.Request(API + '/stories/bulk', data=b'{\"story_ids\": [1]}', method='PUT'))")}, False, "python bulk PUT with no prose stays ungated"),
+    ("Bash", {"command": f"curl -X PUT {SC}/bulk -H 'Content-Type: application/json' -d '{{\"story_ids\": [1, 2], \"workflow_state_id\": 500}}'"}, False, "a bulk state move stays ungated"),
+    ("Bash", {"command": f"curl -X DELETE {SC}/bulk -d '{{\"story_ids\": [1, 2]}}'"}, False, "a bulk delete stays ungated"),
+    ("Bash", {"command": f"curl -X PUT {SC}/12 -d '{{\"workflow_state_id\": 500}}' && curl -s {SC}/12/comments"}, False, "a state move followed by a comment read stays ungated"),
+    ("Bash", {"command": f"curl -X PUT {SC}/bulk -d '{{\"story_ids\": [1]}}'; curl -X POST {SC} -d '{{\"project_id\": 5}}'"}, True, "a bare create after a bulk PUT is gated"),
 ]
 
 
