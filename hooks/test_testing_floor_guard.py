@@ -1329,6 +1329,67 @@ def _guarded(fn):
     return _run
 
 
+def dont_test_checks() -> list:
+    """CLAUDE.md: an explicit "don't test" from the dev stands for the rest of
+    the session. The gate reads the session transcript for one and lets the turn
+    end without running checks; a tool_result or an assistant line quoting the
+    phrase never counts."""
+    fails = []
+
+    def check(label, ok, detail):
+        print(f"[{'PASS' if ok else 'FAIL'}] dont-test: {label} -> {detail}")
+        if not ok:
+            fails.append(f"dont-test: {label}")
+
+    with tempfile.TemporaryDirectory(prefix="testing-floor-dont-test-") as tmp:
+        tmp_path = Path(tmp)
+
+        def transcript(name, entries):
+            path = tmp_path / (name + ".jsonl")
+            _write_transcript(path, entries)
+            return str(path)
+
+        def user(text):
+            return {"type": "user", "message": {"content": text}}
+
+        for name, entries, expected in (
+            ("dont test", [user("fix the typo, don't test it")], True),
+            ("dont no apostrophe", [user("dont test this please")], True),
+            ("skip tests", [user("skip tests for now")], True),
+            ("no need to test", [user("no need to test, it is a doc tweak")], True),
+            ("persists across later turns", [user("don't run tests"), user("now edit the other file")], True),
+            ("block-list user content", [{"type": "user", "message": {"content": [{"type": "text", "text": "skip the tests"}]}}], True),
+            ("plain request", [user("please add tests for the parser")], False),
+            ("assistant quoting the phrase", [user("go"), {"type": "assistant", "message": {"content": [{"type": "text", "text": "you said don't test"}]}}], False),
+            ("tool result quoting the phrase", [user("go"), {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t", "content": "skip tests"}]}}], False),
+        ):
+            got = guard.dev_said_dont_test(transcript(name.replace(" ", "_"), entries))
+            check(name, got is expected, got)
+
+        check("missing transcript reads False", guard.dev_said_dont_test(str(tmp_path / "nope.jsonl")) is False, "")
+        check("empty path reads False", guard.dev_said_dont_test("") is False, "")
+
+        state_dir = tmp_path / "state"
+        state_dir.mkdir()
+        flag = state_dir / "s1"
+        flag.write_text(json.dumps({"attempts": 0, "root": str(tmp_path), "paths": []}), encoding="utf-8")
+        ran = []
+
+        def failing(root, **kwargs):
+            ran.append(root)
+            return (False, "red")
+
+        payload = {"session_id": "s1", "transcript_path": transcript("said", [user("don't test")])}
+        got = guard.evaluate(payload, state_dir=state_dir, skip_flag_path=tmp_path / "no-skip", cap=3, run_checks_fn=failing, env={})
+        check("a session with a dont-test lets the turn end without running checks", got is None and ran == [], (got, ran))
+        check("the flag is kept", flag.is_file(), flag.is_file())
+
+        payload = {"session_id": "s1", "transcript_path": transcript("not_said", [user("go ahead")])}
+        got = guard.evaluate(payload, state_dir=state_dir, skip_flag_path=tmp_path / "no-skip", cap=3, run_checks_fn=failing, env={})
+        check("without one the failing checks still block", got is not None and ran != [], got)
+    return fails
+
+
 def run() -> int:
     fails = (
         unit_checks()
@@ -1347,6 +1408,7 @@ def run() -> int:
         + _guarded(environment_failure_checks)()
         + _guarded(flutter_verdict_checks)()
         + _guarded(node_sweep_ownership_checks)()
+        + _guarded(dont_test_checks)()
     )
     return _testlib.summarize(fails)
 
