@@ -19,6 +19,7 @@ import contextlib
 import io
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 import _testlib
@@ -195,7 +196,33 @@ CASES = [
         2,
         "the PowerShell call operator before fvm still reaches the destructive-flag block",
     ),
+    # An escaped quote desyncs the quote scan; the split falls back to plain separators.
+    ("Bash", 'echo "a\\" b"; fvm flutter build', 2, "fvm after a backslash-escaped quote via Bash stays denied"),
+    # A shell -c argument is a command line, not prose.
+    (
+        "PowerShell",
+        'bash -c "cd x; dart run build_runner build --delete-conflicting-outputs"',
+        2,
+        "an unpinned destructive build_runner inside bash -c is still blocked",
+    ),
+    ("Bash", 'bash -c "fvm flutter test"', 2, "fvm leading a bash -c body via Bash is denied"),
+    (
+        "PowerShell",
+        'echo "bash -c \'dart run build_runner build --delete-conflicting-outputs\'"',
+        0,
+        "a bash -c named only inside an echo is prose, not a wrapper",
+    ),
 ]
+
+# A Git Bash `cd /c/...` pin must reach the same pubspec.yaml check as `cd C:/...`
+# (Windows only: elsewhere `/c/...` is a real path, not a drive alias).
+_msys_project = tempfile.TemporaryDirectory()
+if os.name == "nt":
+    (Path(_msys_project.name) / "pubspec.yaml").write_text("name: x\n", encoding="utf-8")
+    _posix = Path(_msys_project.name).as_posix()
+    _msys = f"/{_posix[0].lower()}{_posix[2:]}"
+    _cmd = f"cd {_msys}; dart run build_runner build --delete-conflicting-outputs"
+    CASES.append(("PowerShell", _cmd, 0, "a Git Bash /c/ cd pin onto a real Flutter project counts as pinned"))
 
 
 def check(case) -> bool:
@@ -210,6 +237,7 @@ saved_bypass = os.environ.pop(guard.OVERRIDE_ENV, None)
 try:
     fails = alias_fails + has_runner_fails + warning_fails + _testlib.run_cases(CASES, check)
 finally:
+    _msys_project.cleanup()
     if saved_bypass is not None:
         os.environ[guard.OVERRIDE_ENV] = saved_bypass
 

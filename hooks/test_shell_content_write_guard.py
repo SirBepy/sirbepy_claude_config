@@ -217,8 +217,9 @@ def run_git_blob_redirect_cases(fails: list) -> None:
 
 
 def run_tool_name_cases(fails: list) -> None:
-    """End to end: the guard is tool-name agnostic, so the escaped-quote
-    commit message exits 0 under both tool names and a real redirect exits 2."""
+    """End to end: the escaped-quote commit message exits 0 under both tool
+    names and a real redirect exits 2; only a write cmdlet smuggled after the
+    escaped quote differs by tool (see below)."""
     import json
 
     script = str(Path(__file__).resolve().parent / "shell-content-write-guard.py")
@@ -236,6 +237,19 @@ def run_tool_name_cases(fails: list) -> None:
             print(f"[{'PASS' if ok else 'FAIL'}] {label}: rc={rc}")
             if not ok:
                 fails.append(label)
+
+    # Under the PowerShell tool the whole line parses by PowerShell rules, so the
+    # `\"` closes the string and the Set-Content after it really runs; under the
+    # Bash tool the same text is one commit-message string.
+    smuggled = 'git commit -m "a \\" ; Set-Content f x ; echo \\""'
+    for tool, want_rc in (("PowerShell", 2), ("Bash", 0)):
+        label = f"a write cmdlet after an escaped quote in a git command is rc {want_rc} under {tool}"
+        payload = json.dumps({"tool_name": tool, "tool_input": {"command": smuggled}, "cwd": ""})
+        rc = subprocess.run([sys.executable, script], input=payload, text=True, capture_output=True).returncode
+        ok = rc == want_rc
+        print(f"[{'PASS' if ok else 'FAIL'}] {label}: rc={rc}")
+        if not ok:
+            fails.append(label)
 
 
 def run() -> int:

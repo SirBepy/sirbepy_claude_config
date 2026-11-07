@@ -96,8 +96,26 @@ CASES = [
     ('bash -c "bash -c \'cargo check | head\'"', True, "a nested -c wrapper is still scanned"),
     ('echo "bash -c \'cargo test | tail\'"', False, "a bash -c named inside an echo is prose, not a wrapper"),
     ("echo it's; cargo test | tail", True, "an unbalanced quote falls back to the plain split and still sees the pipe"),
+    ("cargo test |& tail", True, "|& (stderr too) into tail is still a pipe"),
     # commit-pathspec.sh: a piped filter swallows the script's own non-zero
     # exit, so a refused commit reads as success.
+    (
+        'bash ~/.claude/skills/commit/commit-pathspec.sh -m "FIX: a; b" f.txt 2>&1 | tail -6',
+        True,
+        "commit-pathspec: a semicolon inside the -m text does not hide the piped tail (2026-11-03)",
+    ),
+    ("bash commit-pathspec.sh -m x -- f |& tail -3", True, "commit-pathspec: |& into tail is blocked"),
+    ("(bash commit-pathspec.sh -m x -- f) | tail -3", True, "commit-pathspec: a subshell-wrapped call piped into tail is blocked"),
+    ("bash commit-pathspec.sh -m x -- f | tee commit.log", True, "commit-pathspec: tee swallows the exit code too"),
+    ("bash commit-pathspec.sh -m x -- f | cat", True, "commit-pathspec: cat swallows the exit code too"),
+    ("bash commit-pathspec.sh -m x -- f | sed -n 1,5p", True, "commit-pathspec: sed swallows the exit code too"),
+    ("bash -c 'bash commit-pathspec.sh -m x -- f | tail -3'", True, "commit-pathspec: a piped call inside bash -c is blocked"),
+    ('bash commit-pathspec.sh -m "a | tail" -- f', False, "commit-pathspec: a pipe inside the -m text is not a pipe"),
+    (
+        'echo "bash commit-pathspec.sh -m x -- f | tail"',
+        False,
+        "commit-pathspec: the whole piped call named inside an echo is prose",
+    ),
     (
         "bash ~/.claude/skills/commit/commit-pathspec.sh -m x -- f | tail -3",
         True,
