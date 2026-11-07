@@ -153,6 +153,8 @@ def _unparsed_commit_landing(command: str) -> bool:
     for m in _UNPARSED_LANDING_RE.finditer(command):
         start = m.start()
         starts = [start]
+        if start and command[start - 1] in "\"'":
+            starts.append(start - 1)  # a quoted bare program name: "git" commit
         if start and command[start - 1] in "\\/":
             # Tail of a path to git.exe. Two candidates for where the token began,
             # either one at command position gates: the preceding whitespace, and
