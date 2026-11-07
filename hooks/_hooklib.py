@@ -557,20 +557,23 @@ def without_display_segments(command: str) -> str:
     not mistaken for one. Anything else stays. A display statement whose output
     is piped onward (`echo "..." | bash`, `| sudo bash`, `| % { iex $_ }`) stays
     too: the next stage may execute it, and no list of executors is complete."""
-    segments = split_gate_segments(command)
-    kept, cursor = [], 0
-    for segment in segments:
+    out, cursor, stripped = [], 0, False
+    for segment in split_gate_segments(command):
         start = command.find(segment, cursor)
         if start < 0:
             return command  # cannot place the statement, so strip nothing
-        cursor = start + len(segment)
+        end = start + len(segment)
         # The pipe may sit after a line break or a continuation backslash.
-        after = command[cursor:].lstrip(" \t\r\n\\")
+        after = command[end:].lstrip(" \t\r\n\\")
         piped = after.startswith("|") and not after.startswith("||")
         # A line that continues the previous one (`curl ... \` then `echo -d x`) is an argument, not a statement.
         continued = command[:start].rstrip(" \t\r\n").endswith(("\\", "`"))
-        if piped or continued or not _is_display_segment(segment):
-            kept.append(segment)
-    if len(kept) == len(segments):
-        return command
-    return " ; ".join(kept)
+        if not (piped or continued) and _is_display_segment(segment):
+            # Blank the statement in place so every other statement keeps its
+            # separators and line continuations (`curl <url> \` then `-d x`).
+            out.append(command[cursor:start] + " " * len(segment))
+            stripped = True
+        else:
+            out.append(command[cursor:end])
+        cursor = end
+    return "".join(out) + command[cursor:] if stripped else command

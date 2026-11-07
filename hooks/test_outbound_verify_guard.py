@@ -101,6 +101,8 @@ DETECT_CASES = [
     ("PowerShell", {"command": f"Write-Host \"Invoke-RestMethod -Method Post -Uri {SC} -Body x\""}, False, "Write-Host of an IRM create is prose"),
     ("Bash", {"command": f"echo ok; curl -X POST {SC} -d \"$BODY\""}, True, "a real create after an echo statement stays gated"),
     ("PowerShell", {"command": f"$r = Invoke-RestMethod -Method Post -Uri {SC} -Body $b"}, True, "an assigned IRM create stays gated"),
+    ("Bash", {"command": f"echo go\ncurl -H \"A: b\" {SC} \\\n  -d '{{\"name\": \"{TITLE}\", \"description\": \"{CLAIM}\"}}'"}, True, "a continued curl -d create next to an echo stays gated"),
+    ("Bash", {"command": f"curl {SC} \\\n  -d \"$BODY\"\necho done"}, True, "a continued curl -d create before an echo stays gated"),
     ("PowerShell", {"command": f"& \"C:\\Windows\\System32\\curl.exe\" -X POST {SC} -d \"$BODY\""}, True, "a create through a quoted exe path stays gated"),
     ("Bash", {"command": f"timeout 30 curl -X POST {SC} -d \"$BODY\""}, True, "a create behind timeout stays gated"),
     ("Bash", {"command": f"echo \"curl -X POST {SC} -d x\" | bash"}, True, "display text piped into bash is executed"),
