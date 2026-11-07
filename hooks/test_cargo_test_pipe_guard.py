@@ -94,6 +94,8 @@ CASES = [
     ("bash -c 'cargo test 2>&1 | tail -5'", True, "single-quoted bash -c argument is still scanned"),
     ('pwsh -NoProfile -Command "cargo build | Select-Object -First 3"', True, "pwsh -Command argument is still scanned"),
     ('bash -c "bash -c \'cargo check | head\'"', True, "a nested -c wrapper is still scanned"),
+    ('bash -c "cd \\"C:/a b\\" && cargo test | tail"', True, "escaped quotes inside a bash -c body do not cut the scan short"),
+    ('bash -c "echo \\"x\\"; cargo test | tail"', True, "an escaped-quote statement before the pipe in a bash -c body"),
     ('echo "bash -c \'cargo test | tail\'"', False, "a bash -c named inside an echo is prose, not a wrapper"),
     ("echo it's; cargo test | tail", True, "an unbalanced quote falls back to the plain split and still sees the pipe"),
     ("cargo test |& tail", True, "|& (stderr too) into tail is still a pipe"),
