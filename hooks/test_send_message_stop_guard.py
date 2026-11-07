@@ -427,13 +427,13 @@ with tempfile.TemporaryDirectory() as tmp:
     ok = code == 0 and '"decision": "block"' in out and "question" in out
     fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
 
-    label = "review hand-off: write_draft then status done is blocked"
+    label = "review hand-off: write_draft then status done passes (a draft needs no card, pc-1327)"
     t = write_transcript_with_inputs(
         tmpdir, "r2.jsonl", "draft the reply",
         [(WRITE_DRAFT, {"text": "hi"}), (REPORT, {"status": "done"})],
     )
     code, out = run_stop(t, "sess-rh2")
-    ok = code == 0 and '"decision": "block"' in out
+    ok = code == 0 and '"decision"' not in out
     fails += [] if _testlib.report(ok, f"{label} -> exit={code} out={out!r}") else [label]
 
     label = "review hand-off: show_preview plus send_message plus done is still blocked (send_message does not hide it)"
