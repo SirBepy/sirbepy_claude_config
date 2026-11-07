@@ -1,7 +1,8 @@
 # Installs the local narration voice once, outside every repo: Python venv plus Kokoro model files.
 # The packages are the hashed closure in requirements-voice.txt (the 16 wheels that passed the packages
 # safety check on 2026-11-04, transitive ones included) and the two model files are checked by SHA-256, so
-# a re-run on any machine gets exactly what was audited. Re-run that check before raising a version, then
+# a re-run on any machine gets exactly what was audited (pip itself is upgraded unpinned first, as it
+# is the installer and not a runtime package). Re-run that check before raising a version, then
 # regenerate the requirements file; never edit a hash by hand.
 # The model hashes are those of the files installed on 2026-11-04; the upstream release publishes sizes
 # only, so they are pinned to that copy rather than to an upstream digest.
