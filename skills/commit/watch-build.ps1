@@ -144,10 +144,12 @@ function Get-RunJobs {
   param([Parameter(Mandatory = $true)]$RunId)
   try {
     $json = gh run view $RunId -R $RepoSlug --json jobs
-    if (-not $json) { return @() }
-    return @(($json | ConvertFrom-Json).jobs)
+    # $null (not an empty list) means "could not read the jobs", which -ExpectPublish must not
+    # read as "nothing was skipped". The comma keeps an empty array from unrolling to $null.
+    if (-not $json) { return $null }
+    return , @(($json | ConvertFrom-Json).jobs)
   } catch {
-    return @()
+    return $null
   }
 }
 
@@ -186,10 +188,13 @@ function Wait-ForRunCompletion {
         return @{ Outcome = 'failure'; Conclusion = $info.conclusion }
       }
       $jobs = Get-RunJobs -RunId $Run.databaseId
+      if ($null -eq $jobs -and $ExpectPublish -and $info.conclusion -ne 'cancelled') {
+        return @{ Outcome = 'watch_error' }
+      }
       $cancelledJobs = @($jobs | Where-Object { $_.conclusion -eq 'cancelled' } | ForEach-Object { $_.name })
       $skippedPublish = @()
       if ($ExpectPublish) {
-        $skippedPublish = @($jobs | Where-Object { $_.conclusion -eq 'skipped' -and $_.name -match '(?i)publish|release' } | ForEach-Object { $_.name })
+        $skippedPublish = @($jobs | Where-Object { $_.conclusion -eq 'skipped' -and $_.name -match '(?i)^(publish|release)(\s|\(|$)' } | ForEach-Object { $_.name })
       }
       if ($info.conclusion -eq 'cancelled' -or $cancelledJobs.Count -gt 0) {
         return @{ Outcome = 'cancelled'; Conclusion = $info.conclusion; Jobs = $cancelledJobs; SkippedPublish = $skippedPublish }

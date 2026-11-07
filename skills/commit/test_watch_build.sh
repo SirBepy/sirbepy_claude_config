@@ -115,6 +115,22 @@ out=$(run_watcher "$fx"); rc=$?
 check "without -ExpectPublish the same skipped publish job stays success (a plain push publishes nothing)" \
   0 'BUILD_RESULT=success' 'publish_skipped' "$out" "$rc"
 
+# Under -ExpectPublish an unreadable job list is not "nothing was skipped": no jobs fixture here,
+# so the fake gh prints nothing for `--json jobs`.
+fx=$(new_fixture "[$(run_entry 107 'Tauri Release')]")
+printf '{"status":"completed","conclusion":"success"}' > "$fx/view-107.json"
+out=$(run_watcher "$fx" -ExpectPublish); rc=$?
+check "-ExpectPublish with an unreadable job list reports watch_error, never success" \
+  3 'BUILD_RESULT=watch_error' 'BUILD_RESULT=success' "$out" "$rc"
+
+# Only a job named publish/release counts; release-notes or build-release skipping is routine.
+fx=$(new_fixture "[$(run_entry 108 'Tauri Release')]")
+printf '{"status":"completed","conclusion":"success"}' > "$fx/view-108.json"
+printf '{"jobs":[{"name":"build","conclusion":"success"},{"name":"release-notes","conclusion":"skipped"},{"name":"build-release","conclusion":"skipped"}]}' > "$fx/jobs-108.json"
+out=$(run_watcher "$fx" -ExpectPublish); rc=$?
+check "-ExpectPublish ignores skipped jobs that only contain the word release" \
+  0 'BUILD_RESULT=success' 'publish_skipped' "$out" "$rc"
+
 # A real failure outranks a cancellation in a sibling run.
 fx=$(new_fixture "[$(run_entry 105 CI),$(run_entry 106 'Tauri Release')]")
 printf '{"status":"completed","conclusion":"failure"}' > "$fx/view-105.json"
