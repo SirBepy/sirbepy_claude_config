@@ -53,6 +53,9 @@ CASES = [
     ("PowerShell", f'& "C:\\Windows\\System32\\curl.exe" -X POST "{URL}" -d @p.json', True, "a create through a quoted exe path"),
     ("Bash", f'timeout 30 curl -X POST "{URL}" -d @p.json', True, "a create behind timeout"),
     ("Bash", f'cmd /c curl -X POST "{URL}" -d @p.json', True, "a create behind cmd /c"),
+    # Bash reads \" as text, PowerShell as an opening quote; neither reading may hide the create.
+    ("Bash", f'echo \\"; curl -X POST "{URL}" -d "$B"; echo \\"', True, "pc-review item 5: a create between two escaped quotes"),
+    ("Bash", f'echo "say \\"hi\\""; curl -X POST "{URL}" -d @p.json', True, "a create after an echo that holds escaped quotes"),
     ("Bash", f'./post.sh -X POST "{URL}" -d @p.json', True, "a create through a wrapper script"),
     ("Bash", f'eval "curl -X POST {URL} -d x"', True, "a create inside eval"),
     ("Bash", f'echo "curl -X POST {URL} -d x" | bash', True, "display text piped into bash is executed"),

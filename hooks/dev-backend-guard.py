@@ -48,7 +48,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny, tokenize_segment as tokenize, basename, split_gate_segments
+    from _hooklib import read_payload, deny, tokenize_segment as tokenize, basename, split_gate_segments_deep
 except Exception as e:
     sys.stderr.write(
         f"[dev-backend-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n"
@@ -172,7 +172,8 @@ def main() -> None:
     if os.environ.get(OVERRIDE_ENV):
         allow()
 
-    for segment in split_gate_segments(command):
+    # Deep: the app run inside `bash -c "echo hi; fvm flutter run ..."` is one quoted token otherwise.
+    for segment in split_gate_segments_deep(command):
         tokens = tokenize(segment)
         if not tokens:
             continue
