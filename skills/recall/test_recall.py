@@ -4,6 +4,7 @@ dir, so it never reads the real transcripts and runs on CI's bare Windows runner
 Run: python skills/recall/test_recall.py   (exit 0 = all pass)
 """
 
+import contextlib
 import io
 import json
 import os
@@ -152,6 +153,14 @@ def test_subchat_digests():
         bad.write_text("## Done\n- only one section\n", encoding="utf-8")
         saved, warns = recall.ingest_subchat_digests(index, subs)
         check(saved == 0 and len(warns) == 1 and SID_NEW in warns[0], "a malformed digest is reported, not fatal")
+
+        out_buf, err_buf = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out_buf), contextlib.redirect_stderr(err_buf):
+            rc = recall.main(["--projects", str(projects), "--archive", str(archive), "--subchats", str(subs),
+                              "activity", "--since", "2000-01-01", "--json"])
+        check(rc == 0 and "WARNING" not in out_buf.getvalue() and f"WARNING: subchat digest {SID_NEW}" in err_buf.getvalue(),
+              "ingest warnings go to stderr so the command's stdout stays parseable")
+        json.loads(out_buf.getvalue())
 
         bad.unlink()
         shutil.rmtree(archive / "digests")

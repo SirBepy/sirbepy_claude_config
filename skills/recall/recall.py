@@ -1060,7 +1060,8 @@ def main(argv=None) -> int:
     ingested, ingest_warnings = (0, []) if args.cmd == "digest-save" else ingest_subchat_digests(
         index, args.subchats or default_subchats_dir())
     for w in index.warnings + health_warnings(args.archive) + ingest_warnings:
-        print(f"WARNING: {w}")
+        # stderr: stdout is the command's answer, and `activity --json` consumers parse all of it.
+        print(f"WARNING: {w}", file=sys.stderr)
     if args.cmd == "update":
         print(f"Index up to date ({changed} session(s) re-extracted, {ingested} subchat digest(s) ingested).")
     elif args.cmd == "search":
