@@ -48,6 +48,7 @@ function adb {
     if ($line -match 'shell screencap -p (\S+)') { $null = $global:DeviceFiles.Add($Matches[1]); return }
     if ($line -match 'shell rm (\S+)') { $null = $global:DeviceFiles.Remove($Matches[1]); return }
     if ($line -match ' pull (\S+) (.+)$') {
+        if ($null -eq $global:PullBytes) { return }   # pull failed: no file written
         [System.IO.File]::WriteAllBytes($Matches[2], [byte[]]$global:PullBytes)
         return "$($Matches[1]): 1 file pulled"
     }
@@ -100,6 +101,14 @@ try {
         Assert (-not (Test-Path $out2)) "$($case.Name): bad local file deleted"
         Assert ($global:DeviceFiles.Count -eq 0) "$($case.Name): device temp file removed after the failure"
     }
+
+    # A failed pull must not let an earlier valid PNG at the same path pass as the new screenshot.
+    $out3 = Join-Path $work 'stale.png'
+    [System.IO.File]::WriteAllBytes($out3, $goodBytes)
+    $global:PullBytes = $null
+    $r = Invoke-Drive 'screenshot' @{ Out = $out3 }
+    Assert ($r.Error -match 'screencap returned no image') "failed pull over a stale PNG: error, not the old image (got: $($r.Error))"
+    Assert ($global:DeviceFiles.Count -eq 0) 'failed pull: device temp file removed'
     $global:PullBytes = $goodBytes
 } finally {
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
