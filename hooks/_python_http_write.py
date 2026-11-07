@@ -49,22 +49,63 @@ _LIST_PARENT_RE = re.compile(
 )
 
 
-# Where one shell statement ends: `;`, `&&`, `||`, `|` or a newline that is not a backslash
-# continuation. A quoted `;` inside a body also splits, which only narrows the segment.
-_STATEMENT_BREAK_RE = re.compile(r"(?<!\\)\r?\n|;|&&|\|\|?")
 # `-X PUT`, `--request DELETE`, `-Method Put`: a verb other than POST on a REST call.
 NON_POST_VERB_RE = re.compile(r"(?:-X\s*|--request\s+|-Method\s+[\"']?)(?:PUT|PATCH|DELETE|GET)\b", re.IGNORECASE)
+
+
+def _statement_bounds(command: str) -> list | None:
+    """(start, end) of each shell statement: split on `;`, `&&`, `||`, `|`, a newline and a
+    whitespace-delimited `&`, outside quotes. A backslash or backtick (outside quotes, or inside
+    double quotes) escapes the next character, which is how a line continuation stays one
+    statement. None when a quote is still open at the end: the scan desynced (a Windows path
+    ending in a backslash), so the caller reads the whole command as one statement."""
+    spans, start, i, n, quote = [], 0, 0, len(command), ""
+    while i < n:
+        c = command[i]
+        if quote:
+            if quote == '"' and c in "\\`":
+                i += 2
+                continue
+            if c == quote:
+                quote = ""
+        elif c in "\"'":
+            quote = c
+        elif c in "\\`":
+            i += 3 if command.startswith("\r\n", i + 1) else 2
+            continue
+        else:
+            width = 0
+            if command.startswith(("&&", "||"), i):
+                width = 2
+            elif c in ";|\n" or (c == "&" and i > 0 and command[i - 1].isspace() and command[i + 1:i + 2].isspace()):
+                width = 1
+            if width:
+                spans.append((start, i))
+                start = i = i + width
+                continue
+        i += 1
+    if quote:
+        return None
+    spans.append((start, n))
+    return spans
+
+
+def statement_span(command: str, pos: int) -> str:
+    """The text of the shell statement holding `pos`; the whole command when it cannot be split."""
+    bounds = _statement_bounds(command)
+    if bounds is None:
+        return command
+    for start, end in bounds:
+        if start <= pos <= end:
+            return command[start:end]
+    return command
 
 
 def bulk_is_not_a_post(command: str, pos: int) -> bool:
     """Whether the `/stories/bulk` URL at `pos` sits in a statement that names a non-POST verb,
     which makes it a bulk update or delete. Only that statement counts: a PUT elsewhere in the
     command says nothing about this call."""
-    start = 0
-    for m in _STATEMENT_BREAK_RE.finditer(command, 0, pos):
-        start = m.end()
-    nxt = _STATEMENT_BREAK_RE.search(command, pos)
-    return bool(NON_POST_VERB_RE.search(command[start:nxt.start() if nxt else len(command)]))
+    return bool(NON_POST_VERB_RE.search(statement_span(command, pos)))
 
 
 def has_bare_stories_path(command: str, bulk: bool = True) -> bool:
