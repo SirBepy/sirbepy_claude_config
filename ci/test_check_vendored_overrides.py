@@ -105,6 +105,22 @@ with tempfile.TemporaryDirectory() as d:
     check(skill.read_text(encoding="utf-8") == "---\nname: demo\nallowed-tools: Read\nversion: 1\n---\n\nBody\n",
           "apply drops an unindented sequence under the rewritten key")
 
+with tempfile.TemporaryDirectory() as d:
+    tmp = Path(d)
+    skill = make_tree(tmp, "---\nname: demo\nallowed-tools:\n-\n  foo\n-\tbar\nversion: 1\n---\n\nBody\n",
+                      {"skills/demo/SKILL.md": {"allowed-tools": "A"}})
+    cvo.apply_to(skill, {"allowed-tools": "A"})
+    check(skill.read_text(encoding="utf-8") == "---\nname: demo\nallowed-tools: A\nversion: 1\n---\n\nBody\n",
+          "apply drops bare and tab-separated sequence items too")
+
+# The check and --apply agree: a matching first line with continuation lines is drift.
+with tempfile.TemporaryDirectory() as d:
+    tmp = Path(d)
+    skill = make_tree(tmp, "---\nname: demo\ndescription: Short\n  extra words\n---\n\nBody\n", DESC_SHORT := {"skills/demo/SKILL.md": {"description": "Short"}})
+    check(len(drift_of(tmp)) == 1, "a matching first line with continuation lines is reported as drift")
+    cvo.apply_to(skill, DESC_SHORT["skills/demo/SKILL.md"])
+    check(drift_of(tmp) == [], "no drift once apply has dropped the continuation lines")
+
 # A BOM'd SKILL.md is patched and keeps its BOM instead of raising; the check reads it too.
 with tempfile.TemporaryDirectory() as d:
     tmp = Path(d)
