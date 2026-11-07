@@ -19,6 +19,8 @@ Steps:
 
    `& "C:\Users\tecno\.claude\skills\commit\watch-build.ps1" -Branch <branch> -RepoPath <path> -Sha <sha>`
 
+   Add `-ExpectPublish` when the push was meant to release (a `/release` or a version bump), so a skipped `publish` job is reported instead of read as success.
+
    Use a literal path (never `$env:`-built) so it doesn't trigger a permission prompt.
 
    **"In the background" means the PowerShell tool's own `run_in_background: true` parameter, and
@@ -33,6 +35,8 @@ Steps:
 When the watcher finishes you are re-invoked with its stdout. Parse the `BUILD_RESULT` marker:
 
 - `BUILD_RESULT=success` -> all runs passed (the marker lists how many + their workflow names). Tell the user the build passed. Delete the `commit-buildwatch-autofixed` marker if present. Done.
+- `BUILD_RESULT=cancelled` -> a run's conclusion, or one of its jobs, was `cancelled` (the marker names the run and the cancelled job). A cancelled build job leaves the `tag` and `publish` jobs skipped, so when the push was meant to release, **nothing was published** - never report this as a pass (2026-11-06, claude_usage_in_taskbar: the macOS runner label was unsupported, the watcher said success, no release existed). Check `gh run list` for a newer run of the same workflow first: a newer push can cancel an older run through a `concurrency` group, and then the newer run is the one that matters. Otherwise tell the user the build was cancelled and diagnose with `gh run view <id> --json jobs`.
+- `BUILD_RESULT=publish_skipped` -> only with `-ExpectPublish`: the run concluded success but a `publish`/`release` job was skipped, so the release did not ship. Pass `-ExpectPublish` whenever the push was meant to release (a `/release`, a version bump); a plain push legitimately skips publish. Report it as not published and say why the job skipped (usually a pre-existing tag, see Reporting discipline).
 - `BUILD_RESULT=no_run` -> no run registered for the pushed sha within ~3 min. Tell the user you couldn't find a CI run (it may not have triggered) and stop. Do not relaunch the watcher.
 - `BUILD_RESULT=api_error` -> every poll in the detection loop errored (`LAST_ERROR` holds the last message) - this is NOT "no run exists", the watcher just couldn't reach/authenticate to the API (e.g. `gh`'s active account flipped mid-poll). Tell the user the watcher hit an auth/API problem, not a missing run, and offer `gh run list` as a direct fallback to check manually.
 - `BUILD_RESULT=failure` -> the build is red. Run the **gated auto-fix** below.
