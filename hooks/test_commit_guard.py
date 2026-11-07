@@ -70,6 +70,11 @@ INVOCATION_CASES = [
     ("ls;(git commit -m x)", True, "a subshell after a glued semicolon"),
     ("git status;git log", False, "two read-only git calls with a glued semicolon"),
     ("git log --grep='a;b'", False, "a semicolon inside quotes is not a statement end"),
+    ("echo \\'&&git commit -m x", True, "an escaped quote does not open a quote that hides a glued &&"),
+    ("echo \\\";git commit -m x", True, "an escaped double quote does not hide a glued semicolon"),
+    ("echo a\\;git commit -m x", False, "an escaped semicolon is a literal, not a statement end"),
+    ("`git commit`", True, "a backtick substitution closed right after the subcommand"),
+    ("x=`git commit -m x`", True, "an assignment from a backtick substitution"),
     # Bash drops a backslash before an ordinary letter, so these are still `git commit`.
     ("g\\it commit -m x", True, "a backslash-escaped letter inside the program name"),
     ("git comm\\it -m x", True, "a backslash-escaped letter inside the subcommand"),

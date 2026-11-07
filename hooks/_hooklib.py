@@ -206,6 +206,10 @@ def _space_operators(command: str) -> str:
         elif ch in "\"'":
             quote = ch
             out.append(ch)
+        elif ch == "\\" and i + 1 < len(command):
+            # An escaped character (`\;`, `\'`) is a literal, not an operator or a quote.
+            out.append(ch + command[i + 1])
+            i += 1
         elif ch in ";&|()":
             run = ch
             if ch in "&|":
@@ -241,10 +245,11 @@ def shell_word_variants(command: str) -> list[list[str]]:
 
 def command_word(tok: str) -> str:
     """`tok` without a leading subshell or substitution opener (`(git`, `$(git`,
-    a backtick) and without a statement terminator glued to its end (`commit;`,
-    `push&&echo`, `commit|cat`), which shlex keeps inside the word. Use it where a
+    a backtick, `x=` before a backtick) and without a statement terminator or
+    closing backtick glued to its end (`commit;`, `push&&echo`, `commit|cat`,
+    `` push` ``), which shlex keeps inside the word. Use it where a
     token is compared with a program or subcommand name."""
-    return re.split(r"[;&|)]", tok.lstrip("(`$"))[0]
+    return re.split(r"[;&|)`]", re.sub(r"^\w+=(?=`)", "", tok).lstrip("(`$"))[0]
 
 
 def flatten_tokens(tokens: list[str]) -> list[str]:
