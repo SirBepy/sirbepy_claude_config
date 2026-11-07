@@ -1360,6 +1360,9 @@ def dont_test_checks() -> list:
             ("persists across later turns", [user("don't run tests"), user("now edit the other file")], True),
             ("block-list user content", [{"type": "user", "message": {"content": [{"type": "text", "text": "skip the tests"}]}}], True),
             ("plain request", [user("please add tests for the parser")], False),
+            ("scoped to a thing", [user("don't test the CSS, but test the parser")], False),
+            ("scoped skip", [user("skip the tests that need network")], False),
+            ("scoped no need", [user("no need to test X separately, cover it in Y")], False),
             ("assistant quoting the phrase", [user("go"), {"type": "assistant", "message": {"content": [{"type": "text", "text": "you said don't test"}]}}], False),
             ("tool result quoting the phrase", [user("go"), {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t", "content": "skip tests"}]}}], False),
         ):
