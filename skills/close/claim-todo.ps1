@@ -44,6 +44,19 @@
   Optional disambiguator when a single id matches more than one backlog file. Not valid
   together with a multi-id batch - use the full stem form per id instead.
 
+.PARAMETER Release
+  Release mode (todo 1323). Instead of claiming, deletes the claim files for -Id (or, with
+  -AllMine, every claim in .claims/) whose recorded `session:` line equals this session's
+  CLAUDE_CODE_SESSION_ID. A peer's claim is never touched: an id whose claim belongs to another
+  session is reported and the call exits 1. An id with no claim is a no-op (exit 0), so a caller
+  can pass every id it ever claimed. Refuses (exit 2) when CLAUDE_CODE_SESSION_ID is unset,
+  because the fallback session label is the throwaway claim script's own pid and could match
+  nothing the caller wrote. Needed because only complete-todo.ps1 removed claims, so a
+  /loop-todos run left a claim on every todo it did not finish.
+
+.PARAMETER AllMine
+  With -Release: release every claim in .claims/ written by this session, no -Id needed.
+
 .PARAMETER RepoRoot
   Project root containing .claude/todos/. Defaults to the current directory.
 
@@ -54,10 +67,15 @@
   ~/.claude/skills/close/claim-todo.ps1 -Id "pc-0003,pc-0004,pc-0005"
 #>
 param(
-    [Parameter(Mandatory = $true)]
+    # Mandatory in claim mode, and in -Release mode unless -AllMine is given; checked below
+    # rather than by the binder so one param block serves both modes.
     [string[]]$Id,
 
     [string]$Slug,
+
+    [switch]$Release,
+
+    [switch]$AllMine,
 
     [string]$RepoRoot = (Get-Location).Path
 )
@@ -73,6 +91,84 @@ $claimsDir = Join-Path $todosDir '.claims'
 
 if (-not (Test-Path $todosDir)) {
     Write-Host "ERROR: No .claude\todos found under '$RepoRoot' (looked for '$todosDir')." -ForegroundColor Red
+    exit 2
+}
+
+if ($AllMine -and -not $Release) {
+    Write-Host "ERROR: -AllMine only applies with -Release." -ForegroundColor Red
+    exit 2
+}
+
+if ($Release) {
+    # Only a claim whose recorded session is this session's goes. Without a real session id
+    # the claim script's fallback label is its own throwaway pid, which could never match a
+    # claim a different invocation wrote, so refuse instead of silently releasing nothing.
+    if (-not $env:CLAUDE_CODE_SESSION_ID) {
+        Write-Host "ERROR: -Release needs CLAUDE_CODE_SESSION_ID to tell this session's claims from a peer's; it is not set, so nothing was released." -ForegroundColor Red
+        exit 2
+    }
+    $mySession = $env:CLAUDE_CODE_SESSION_ID
+
+    function Get-ClaimSession {
+        param([string]$ClaimFile)
+        $text = Get-Content -Path $ClaimFile -Raw -ErrorAction SilentlyContinue
+        if ($text -match '(?m)^session:\s*(\S+)') { return $matches[1] }
+        return $null
+    }
+
+    $targets = @()
+    $releaseErrors = 0
+    if ($AllMine) {
+        if (Test-Path $claimsDir) {
+            $targets = @(Get-ChildItem -Path $claimsDir -Filter '*.claim' -File -ErrorAction SilentlyContinue)
+        }
+    }
+    else {
+        $releaseIds = ($Id -join ',') -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
+        if (-not $releaseIds) {
+            Write-Host "ERROR: -Release needs -Id <ids> or -AllMine." -ForegroundColor Red
+            exit 2
+        }
+        foreach ($rawId in $releaseIds) {
+            $resolved = Resolve-TodoFile -Dir $todosDir -RawId $rawId -Slug $Slug
+            if ($resolved.Error) {
+                Write-Host "ERROR: $($resolved.Error)" -ForegroundColor Red
+                $releaseErrors++
+                continue
+            }
+            $found = @()
+            if ($resolved.Label) {
+                $found = @(Find-TodoClaims -ClaimsDir $claimsDir -Label $resolved.Label -Number $resolved.Number -Slug $resolved.Slug)
+            }
+            elseif (Test-Path $claimsDir) {
+                $found = @(Get-ChildItem -Path $claimsDir -Filter '*.claim' -File -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Name -ieq "$($resolved.Id).claim" })
+            }
+            if ($found.Count -eq 0) { Write-Info "No claim on $($resolved.Id), nothing to release." }
+            $targets += $found
+        }
+    }
+
+    $foreign = 0
+    foreach ($claim in $targets) {
+        $owner = Get-ClaimSession -ClaimFile $claim.FullName
+        if ($owner -eq $mySession) {
+            Remove-Item -Path $claim.FullName -Force
+            Write-Info "Released claim $($claim.Name)"
+        }
+        elseif (-not $AllMine) {
+            # -AllMine sweeps every claim, so a peer's is expected there and not worth a line.
+            Write-Info "Claim $($claim.Name) belongs to another session ($owner), left in place."
+            $foreign++
+        }
+    }
+    if ($releaseErrors -gt 0) { exit 2 }
+    if ($foreign -gt 0) { exit 1 }
+    exit 0
+}
+
+if (-not $Id) {
+    Write-Host "ERROR: -Id is required (or use -Release -AllMine)." -ForegroundColor Red
     exit 2
 }
 

@@ -171,6 +171,12 @@ carries the loop on: a cycle started past that line takes
 no todos, so Phase 3's zero-progress stop would end the loop instead. The boundary lives in Step 6;
 read it there rather than copying the number here.
 
+**Release this session's claims before the handoff spawns.** Phase 1 step 2 claims the whole
+backlog, and a todo this cycle left open still carries that claim; the successor is a new session
+whose own Phase 1 step 2 would read it as a live peer's and drop the todo. Run
+`~/.claude/skills/close/claim-todo.ps1 -Release -AllMine` first. It deletes only claims this
+session wrote (todo 1323), and the successor re-claims what it takes.
+
 **The handoff prompt's FIRST characters must be the literal re-invocation**, because a slash
 command only expands at the very start of a turn. Everything `/respawn`'s Step 2 New-work prompt
 composes goes underneath it:
@@ -198,6 +204,11 @@ phase is the loop's own answer to the hand-built per-commit review rounds todo 1
 over.
 
 ## Phase 5 - Final report
+
+Before writing it, run `~/.claude/skills/close/claim-todo.ps1 -Release -AllMine`: only
+`complete-todo.ps1` removes a claim, so every todo the loop left open (skipped, parked, still
+waiting on the dev) would otherwise keep a claim that blocks a peer chat until it goes stale. It
+releases this session's claims only (todo 1323).
 
 One summary at the end covering: cycles used of the cap, todos completed per cycle with commit
 shas, the stop condition that fired, questions asked and what was applied (Phase 0 and Phase
