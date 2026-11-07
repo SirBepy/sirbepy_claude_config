@@ -383,6 +383,9 @@ def test_memory_all_projects():
 
 
 def main():
+    # recall.main() reads the real Conductor subchats dir by default; point it at an empty one so these
+    # cases never ingest (or warn about) the dev machine's actual digests.
+    os.environ["APPDATA"] = tempfile.mkdtemp()
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         projects, archive = root / "projects", root / "memory-archive"
