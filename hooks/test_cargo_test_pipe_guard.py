@@ -83,6 +83,19 @@ CASES = [
     ("cargo test 2>&1 | nohup tail -f", True, "todo 934: filter behind nohup is now blocked"),
     ("cargo test | env FOO=BAR nohup tail -40", True, "todo 934: stacked env + nohup wrappers still caught"),
     ("cargo test | xargs echo tail", False, "todo 908 regression guard: tail as an xargs argument, not the filter itself, still passes"),
+    # A separator inside quotes is data, not a pipeline; a shell -c argument is a command line.
+    ('grep -E "cache|cargo build|tauri build" file', False, "quoted grep pattern holding |cargo build is not a piped build"),
+    ('grep -E "a|cargo test|tail" file', False, "quoted grep pattern holding cargo test and tail is not a pipeline"),
+    ("grep -E 'a|cargo check|head' file", False, "single-quoted grep pattern is not a pipeline either"),
+    ('git commit -m "wip; cargo test | tail" -- f', False, "cargo test | tail named inside a commit message"),
+    ('echo "run cargo build | tail"', False, "piped cargo build named inside an echo"),
+    ('cargo test -- "a|b" | tail', True, "a quoted pipe in cargo's own args does not hide the real pipe"),
+    ('bash -c "cargo test | tail"', True, "bash -c with a piped cargo test is still blocked"),
+    ("bash -c 'cargo test 2>&1 | tail -5'", True, "single-quoted bash -c argument is still scanned"),
+    ('pwsh -NoProfile -Command "cargo build | Select-Object -First 3"', True, "pwsh -Command argument is still scanned"),
+    ('bash -c "bash -c \'cargo check | head\'"', True, "a nested -c wrapper is still scanned"),
+    ('echo "bash -c \'cargo test | tail\'"', False, "a bash -c named inside an echo is prose, not a wrapper"),
+    ("echo it's; cargo test | tail", True, "an unbalanced quote falls back to the plain split and still sees the pipe"),
     # commit-pathspec.sh: a piped filter swallows the script's own non-zero
     # exit, so a refused commit reads as success.
     (

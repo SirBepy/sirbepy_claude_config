@@ -33,17 +33,24 @@ Two patterns must stay allowed or this guard gets switched off:
 - `grep --line-buffered` flushes per line, so it never has the swallowing
   problem and is carved out even when it follows a matched cargo command.
 
-Detection is regex-based on the raw command string, split on top-level
+Detection is regex-based on the raw command string, split on
 `&&`/`||`/`;`/newline into statements, then each statement on `|` into
 pipeline segments in order - only a filter segment that comes AFTER a
 matched cargo segment in the same pipeline counts. Fails open on error.
+
+Separators inside quotes never split: a grep pattern like "a|cargo build|b"
+or a commit message holding "x; cargo test | tail" is data, not a pipeline
+(2026-11-06, claude_usage_in_taskbar). The one quoted span that is scanned
+anyway is the argument of a shell `-c`/`-Command` wrapper (`bash -c "cargo
+test | tail"`), which is a command line. Quotes still open at the end of the
+command mean the scan desynced, so it falls back to splitting on every
+separator, which over-blocks rather than hides.
 
 A `cargo test` match only counts when it sits in command position (start
 of statement, or right after `|`/`;`/`&`/`(`/`{`/newline, mod whitespace) -
 2026-09-02, the guard's own JSON-payload probe command quoted a piped
 `cargo test | tail` inside a string literal and got blocked by its own
-naive `|` split, same day 780 shipped (todo 881). No quote masking needed:
-text living inside a JSON/shell string is never preceded by a delimiter.
+naive `|` split, same day 780 shipped (todo 881).
 """
 
 import re
@@ -89,6 +96,7 @@ LINE_BUFFERED_RE = re.compile(r"--line-buffered\b", re.IGNORECASE)
 # Splits top-level statements; "||" is matched before a lone "|" would be, so
 # a pipeline's own "|" segments never get cut here.
 STATEMENT_SPLIT_RE = re.compile(r"&&|\|\||;|\n")
+PIPE_RE = re.compile(r"\|")
 
 # Same leading-prefix shapes destructive-command-guard.py's own
 # verb_segments() strips: a filter still anchors on `sudo tail` /
@@ -126,12 +134,59 @@ def deny(filter_name: str, subcommand: str) -> None:
     )
 
 
-def find_violation(command: str, cwd: str | None = None) -> tuple[str, str] | None:
+def _spans_outside_quotes(text: str, pattern: re.Pattern) -> list[tuple[int, int]]:
+    """(start, end) spans of `text` between matches of `pattern` that sit
+    outside quotes, so a `|` or `;` inside a quoted grep pattern or commit
+    message never cuts a statement. Quotes left open at the end mean the scan
+    desynced (an escaped quote, a stray apostrophe): then every match counts,
+    the plain split, which over-blocks rather than hiding a command."""
+    mask, balanced = _scan_quotes(text)
+    spans, start = [], 0
+    for m in pattern.finditer(text):
+        if balanced and mask[m.start()]:
+            continue
+        spans.append((start, m.start()))
+        start = m.end()
+    spans.append((start, len(text)))
+    return spans
+
+
+# A shell wrapper whose quoted `-c`/`-Command` argument is itself a command
+# line, so `bash -c "cargo test | tail"` is scanned even though its pipe is
+# inside quotes.
+WRAPPER_ARG_RE = re.compile(
+    r"\b(?:bash|sh|zsh|dash|pwsh|powershell)(?:\.exe)?\b[^\"'|;&\n]*?\s-(?:c|lc|command)\s+(?P<q>[\"'])(?P<body>.*?)(?P=q)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _wrapper_arguments(command: str) -> list[str]:
+    mask, balanced = _scan_quotes(command)
+    return [
+        m.group("body")
+        for m in WRAPPER_ARG_RE.finditer(command)
+        if not (balanced and mask[m.start()])
+    ]
+
+
+def find_violation(command: str, cwd: str | None = None, _depth: int = 0) -> tuple[str, str] | None:
     # `cwd` is accepted but unused: this guard is deliberately global (todo 780
     # step 4's own lean), kept as a parameter so a future repo-scoped check
     # only needs to read it here, not re-plumb the call site.
-    for statement in STATEMENT_SPLIT_RE.split(command):
-        segments = statement.split("|")
+    found = _find_unquoted_violation(command)
+    if found or _depth >= 3:
+        return found
+    for inner in _wrapper_arguments(command):
+        found = find_violation(inner, cwd, _depth + 1)
+        if found:
+            return found
+    return None
+
+
+def _find_unquoted_violation(command: str) -> tuple[str, str] | None:
+    for st_start, st_end in _spans_outside_quotes(command, STATEMENT_SPLIT_RE):
+        statement = command[st_start:st_end]
+        segments = [statement[s:e] for s, e in _spans_outside_quotes(statement, PIPE_RE)]
         cargo_idx = None
         subcommand = None
         offset = 0
@@ -170,9 +225,15 @@ def deny_commit_pathspec(filter_name: str) -> None:
 
 
 def _quote_mask(text: str) -> list[bool]:
-    """True for every character inside a single- or double-quoted span (the
-    quote characters themselves count as quoted). A backslash escapes the
-    next character outside single quotes.
+    return _scan_quotes(text)[0]
+
+
+def _scan_quotes(text: str) -> tuple[list[bool], bool]:
+    """(mask, balanced). mask is True for every character inside a single- or
+    double-quoted span (the quote characters themselves count as quoted); a
+    backslash escapes the next character outside single quotes. balanced is
+    False when a quote is still open at the end, which means the scan cannot
+    be trusted.
     """
     mask = [False] * len(text)
     quote = None
@@ -193,7 +254,7 @@ def _quote_mask(text: str) -> list[bool]:
             if ch == quote:
                 quote = None
         i += 1
-    return mask
+    return mask, quote is None
 
 
 # What may precede `commit-pathspec.sh` inside its own pipeline segment for the
