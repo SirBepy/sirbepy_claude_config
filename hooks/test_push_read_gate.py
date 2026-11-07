@@ -30,6 +30,9 @@ INVOCATION_CASES = [
     ("echo \"git push\"", False, "git push only inside a quoted string, one token"),
     ("npm run build && git push", True, "chained after an unrelated command"),
     ("git pushnbump", False, "pushnbump is not push"),
+    ("git.exe push origin main", True, "git.exe spelling is the same git"),
+    ('"C:\\Program Files\\Git\\cmd\\git.exe" push', True, "a quoted full path to git.exe"),
+    ("git.exe status", False, "git.exe with another subcommand"),
     ("git --grep=\"push\" log", False, "push only inside a flag value"),
 ]
 

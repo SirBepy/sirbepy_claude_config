@@ -35,7 +35,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS
+    from _hooklib import read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS, is_program
 except Exception as e:
     sys.stderr.write(f"[pr-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -72,7 +72,7 @@ def gh_pr_action(command: str) -> tuple[str, str | None] | None:
         return None
 
     for i, tok in enumerate(tokens):
-        if tok != "gh":
+        if not is_program(tok, "gh"):
             continue
         j = i + 1
         while j < len(tokens) and tokens[j].startswith("-"):

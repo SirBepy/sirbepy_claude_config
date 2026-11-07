@@ -29,6 +29,8 @@ _HOOKS_DIR = Path(__file__).resolve().parent
 if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
+from _hooklib import is_agent_call  # noqa: E402,F401  (re-exported for testing-floor-guard/flag)
+
 # --- env-var injection points (test-only overrides; real hooks use the defaults) ---
 STATE_DIR_ENV = "TESTING_FLOOR_STATE_DIR"
 SKIP_FLAG_ENV = "TESTING_FLOOR_SKIP_FLAG"
@@ -135,29 +137,6 @@ def is_source_file(path: str) -> bool:
     if suffix in EXCLUDED_SUFFIXES:
         return False
     return suffix in SOURCE_SUFFIXES
-
-
-_is_agent_call_fn = None
-
-
-def is_agent_call(payload: dict) -> bool:
-    """Reuses `agent-todo-write-guard.py`'s own `is_agent_call` (the
-    mechanical test the dispatch names: `agent_id` present means the call
-    came from a dispatched agent) rather than re-deriving the same check, the
-    same by-path-import technique that hook's own module docstring uses for
-    `todos_target_dir`. Loaded lazily and cached so importing this module
-    never has a side effect at import time.
-    """
-    global _is_agent_call_fn
-    if _is_agent_call_fn is None:
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            "agent_todo_write_guard", _HOOKS_DIR / "agent-todo-write-guard.py"
-        )
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        _is_agent_call_fn = module.is_agent_call
-    return _is_agent_call_fn(payload)
 
 
 _LAUNCHED_AGENT_RE = re.compile(r"Async agent launched.*?agentId: (a[0-9a-f]+)", re.DOTALL)

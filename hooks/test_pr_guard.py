@@ -34,6 +34,8 @@ ACTION_CASES = [
     ("gh --repo owner/name pr create", ("create", None), "global --repo flag skipped"),
     ('echo "gh pr create"', None, "gh pr create only inside one quoted token"),
     ("gh issue create", None, "gh issue, not gh pr"),
+    ("gh.exe pr create --title x", ("create", None), "gh.exe spelling is the same gh"),
+    ('"C:\\Program Files\\GitHub CLI\\gh.exe" pr edit 7', ("edit", "7"), "a quoted full path to gh.exe"),
     ("gh pr comment 123 -b hi", ("comment", "123"), "comment is parsed, code-review's own path"),
 ]
 

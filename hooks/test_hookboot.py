@@ -103,4 +103,22 @@ fails += [] if _testlib.report(
     "preload reports only the modules that stay unimportable",
 ) else ["preload contract"]
 
+# --- one is_agent_call, in _hooklib: no guard execs another guard's whole file for a predicate ---
+
+hooklib = _testlib.load_module("hooklib_under_test", HOOKS / "_hooklib.py")
+for stem, filename in (
+    ("commit_guard_under_test", "commit-guard.py"),
+    ("agent_todo_guard_under_test", "agent-todo-write-guard.py"),
+    ("testing_floor_lib_under_test", "_testing_floor_lib.py"),
+):
+    module = _testlib.load_module(stem, HOOKS / filename)
+    label = f"{filename} uses _hooklib.is_agent_call"
+    # Same code object, not identity: each load_module call re-executes _hooklib.
+    same = module.is_agent_call.__code__.co_filename == hooklib.is_agent_call.__code__.co_filename
+    if not _testlib.report(same, label):
+        fails.append(label)
+label = "is_agent_call keys on agent_id"
+if not _testlib.report(hooklib.is_agent_call({"agent_id": "a1"}) and not hooklib.is_agent_call({"session_id": "s"}), label):
+    fails.append(label)
+
 sys.exit(_testlib.summarize(fails))

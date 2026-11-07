@@ -53,7 +53,7 @@ GIT_TIMEOUT_SECONDS = 10
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny, git_repo_root, strip_quotes, split_gate_segments
+    from _hooklib import read_payload, deny, git_repo_root, strip_quotes, split_gate_segments, is_program
 except Exception as e:
     sys.stderr.write(f"[push-gate] hook error, failing open: cannot import helpers ({e})\n")
     sys.exit(0)
@@ -105,7 +105,7 @@ def _git_push_walk(tokens: list[str]) -> tuple[bool, str | None, list[str]]:
     `git -C X status` in the same chained command is never mistaken for the
     push's own `-C`. push_args are the tokens after `push`."""
     for i, tok in enumerate(tokens):
-        if tok != "git":
+        if not is_program(tok, "git"):
             continue
         j = i + 1
         dash_c = None

@@ -102,6 +102,20 @@ def basename(tok: str) -> str:
     return re.split(r"[\\/]", tok.rstrip("\\/"))[-1].lower()
 
 
+def is_agent_call(payload: dict) -> bool:
+    """True when this hook call came from a dispatched agent, not the
+    top-level orchestrator session. `agent_id` is present in the payload if,
+    and only if, the call comes from a dispatched agent (probed 2026-09-10,
+    re-verified 2026-09-11)."""
+    return bool(payload.get("agent_id"))
+
+
+def is_program(tok: str, name: str) -> bool:
+    """True when `tok` launches the program `name`, however it is spelled:
+    `git`, `git.exe`, or a full path to either. `name` is lowercase."""
+    return basename(tok).removesuffix(".exe") == name
+
+
 # Chars that legitimately precede a new command/statement. A regex match is
 # only treated as a real invocation when it sits right after one of these
 # (or at the very start), so a keyword inside a quoted string or prose never
