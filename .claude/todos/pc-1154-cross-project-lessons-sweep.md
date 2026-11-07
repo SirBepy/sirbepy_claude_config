@@ -40,6 +40,22 @@ always-on index.
 - Promoted lessons load in a project that never had them (prove with a nested `claude -p` run).
 - No client-repo content lands in the tracked global folder.
 
+## Decided
+
+Written by /loop-todos sub on 2026-11-07.
+
+- The mechanism is built and committed; only the first real promotion is left (see Open questions). Pieces: `skills/cleanup-memory/lessons_sweep.py` (`scan`, `promote`, `index`; documented as `/cleanup-memory --global` in that SKILL.md), `hooks/lessons-index.py` (SessionStart, injects the 4 KB `lessons/INDEX.md`), the trigger hook scanning `~/.claude/lessons/`, a `.gitignore` allowlist for `lessons/`. Tests: `hooks/test_lessons.py`.
+- Clustering is mechanical, no model call: same normalized name, or name+description token overlap of 0.35 or more, across 2+ distinct projects (a repo and its worktrees count once). 0.5 found 6 clusters and missed `feedback-auto-commit`; 0.35 finds 7 and still has no obvious false join.
+- Client protection is two-layered: a cluster with any member from a project whose dir name contains a `refs/client-repos.txt` repo name is held back and never listed (5 held back at dry run), and `promote` refuses a client-project source outright.
+- Proof that a promoted lesson loads where it was never learned: a nested `claude -p` run from a directory with no copy of it received the `INDEX.md` text at SessionStart and the lesson body (via its path trigger) on a Read of a matching path.
+
+## Open questions
+
+Written by /loop-todos sub on 2026-11-07. The next run opens with these.
+
+- [ ] [DATA] First real promotion: the dry run over 831 feedback memories found 7 cross-project clusters, all from only two project pairs, so there is little to promote today. Which, if any, should become global lessons? `feedback-auto-commit` (server-supervisor + claude_usage_in_taskbar; CLAUDE.md already covers auto-commit, so likely a no). `local-gpu-runs-gentle-limits` and `reveal-minimum-in-outreach-emails` (dashboard-a + rodge; plausibly general). `design-review-in-demo`, `push-always-allowed`, `tell-dane-means-write-the-for-dane-doc`, `web-build-check-against-demo-per-task` name dashboard-a files or people, so they look repo-specific, not lessons. Promote with `python ~/.claude/skills/cleanup-memory/lessons_sweep.py promote ...` after Joe picks; re-run `scan` first, the corpus moves.
+- [ ] [DATA] The corpus is 96 project dirs with only 7 text-level duplicates: most cross-project lessons were probably phrased differently each time and need a semantic pass, not token overlap. Wanted: a one-off panel read of the 831 feedback memory descriptions (a model call, so a spend decision for Joe) to find paraphrased duplicates, or accept the cheap scan as it is.
+
 ## Notes
 
 - Deferred question (needs an attended session for its `hooks/`/`settings.json` writes) answered 2026-11-07: Joe said run it now, in the attended 2026-11-07 session; he approves each permission prompt as it appears.

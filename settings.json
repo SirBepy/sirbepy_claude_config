@@ -679,6 +679,15 @@
         ]
       },
       {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\lessons-index.py\"",
+            "statusMessage": "Loading global lessons index"
+          }
+        ]
+      },
+      {
         "matcher": "startup",
         "hooks": [
           {

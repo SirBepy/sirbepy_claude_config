@@ -131,6 +131,14 @@ It reads one precompiled trigger table (rebuilt only when a memory file's mtime 
 table), and stays under 50 ms per tool call measured against today's 1,637-file corpus before it
 is wired.
 
+Built (todo 1153): `hooks/_memory_triggers.py` holds the frontmatter parser, glob matcher and the
+fingerprinted table (`hooks/.memory-triggers/`, gitignored); `hooks/memory-trigger.py` is the
+PreToolUse hook. Edit, Write, Read and Skill calls inject the memory as `additionalContext`; an
+Agent dispatch is held once (exit 2) with the text, because a subagent has launched before
+`additionalContext` could reach the orchestrator. The corpus walk that validates the table runs at
+most once per 20 s, and a rebuild reparses only files whose mtime moved. Measured against the
+1,819-file corpus: about 40 ms wall per call including a 24 ms bare interpreter start.
+
 **Cross-project lessons.** A periodic consolidation sweep reads feedback memories across every
 project, finds the same lesson in two or more, and proposes promoting it to a global lessons
 store. That store cannot be `CLAUDE.md` (0 headroom), so it is a tracked folder whose small,
@@ -138,6 +146,14 @@ byte-capped index a SessionStart hook injects, and whose individual lessons most
 triggers. The sweep is an explicit command run by one session, never a hook, so concurrent
 sessions never race on it; it proposes promotions and applies them through the same
 ADD/UPDATE/DELETE/NONE gate as any memory write, re-reading each file right before editing it.
+
+Built (todo 1154): `skills/cleanup-memory/lessons_sweep.py` (`scan`, `promote`, `index`; wired as
+`/cleanup-memory --global`) and `hooks/lessons-index.py` (SessionStart, injects the 4 KB
+`~/.claude/lessons/INDEX.md`). The trigger hook scans `~/.claude/lessons/` beside the per-project
+memory dirs, so a lesson with `triggers:` loads when its path or skill is touched. A cluster is two
+or more distinct projects (a repo and its worktrees count once) whose memories share a name or
+reach a token-overlap of 0.35; any cluster with a client-repo project in it is held back, and
+`promote` refuses a client-project source outright.
 
 **Retrieval quality.** Each `MEMORY.md` splits into an always-loaded core (rules that apply every
 turn) and the rest, which stays on disk and is found through `recall.py memory <terms>` across
