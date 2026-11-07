@@ -9,12 +9,26 @@ disable-model-invocation: true
 > Daily ZNG starting point: find what needs the dev, then hand each piece to its own chat.
 
 This chat is the hub for the day: the one chat the dev talks to. It does no work itself, ever. No
-reading tickets or todos, no running scripts, no git, no code, no investigation. Everything,
-triage included, goes to a spawned chat with a self-contained brief. The hub only talks to the
-dev, asks questions (`ask_user_question`), shows its plan (`write_plan`), spawns chats
-(`spawn_chat`), and routes (`list_peers`, `read_messages`, `send_message`). The one exception to
-"no other tools" is the foreground triage subagent in hub step 2. If the dev asks a
-question that needs looking something up, spawn a chat for it; don't look it up here.
+reading tickets or todos, no running scripts, no git, no code, no investigation. Work that edits
+code or that the dev steers goes to a spawned chat with a self-contained brief. The hub only talks
+to the dev, asks questions (`ask_user_question`), shows its plan (`write_plan`), spawns chats
+(`spawn_chat`), routes (`list_peers`, `read_messages`, `post_message`, `send_message`), and
+drafts for the dev (`write_draft`). Two more tools are allowed, for looking things up without
+opening a chat (Joe, 2026-11-04: "use subagents rather if theyre for simple lil oneoff things that
+theyll report to you"):
+
+- **`Agent` for any one-off lookup**, several per turn: `model: 'sonnet'`,
+  `run_in_background: false`, READ-ONLY. Triage (hub step 2) is the biggest such lookup. The prompt
+  pastes the READ-ONLY variant of `~/.claude/refs/builder-preamble.md`: following the old
+  "READ-ONLY DISPATCH line plus the staging line" shorthand alone is rejected by
+  `hooks/dispatch-preamble-guard.py`, which also requires the `run_in_background ... FORBIDDEN`
+  line and the auto-background paragraph (or an instruction to read `builder-preamble.md`
+  VERBATIM).
+- **Reading a spawned chat's transcript** to relay or draft from it: `Grep` on the `.jsonl` found
+  with the "Transcript grounding" recipe in `~/.claude/skills/close/SKILL.md`, never `Read`
+  (transcripts run to megabytes).
+
+Anything else the dev asks for that needs code, git or a script is a spawn, not an action here.
 
 This rule holds for every request in this chat, not just the kickoff steps. If the dev says "go
 check X" or "fix Y", that is a spawn, not an action.
@@ -63,7 +77,7 @@ had no ticket id, so triage reported "no reply". Never write "no reply" without 
    top items, a ranked list of workable picks with ticket links and verified state, and a separate
    list of `UNANSWERED` tickets (step 3). It does no building and no ticket posting. It marks
    non-actionable items with `handle` / `todo-verdict` / `ticket-dismiss` as the procedure says.
-   Include the `READ-ONLY DISPATCH` line plus the staging line from the global builder preamble.
+   Paste the READ-ONLY variant of `refs/builder-preamble.md` (see the tools list at the top).
 3. When triage returns, put the workable items in one `ask_user_question` card and spawn per the
    "Pick and spawn" rules below. If it returned `UNANSWERED` tickets, add ONE batched question to the
    same card: "did you already answer any of these outside Shortcut?" with the tickets as options;
@@ -76,8 +90,10 @@ had no ticket id, so triage reported "no reply". Never write "no reply" without 
    handled marks the dev never asked for. Triage runs only when the dev asks what is on their plate
    overall.
 
-`spawn_chat` allows one spawn per turn: spawn the first, say what is queued, spawn the next on the
-dev's next message.
+Spawn every pick the dev chose in the same turn: `spawn_chat` takes several calls per turn (two
+calls in one turn both returned `ok: true` on 2026-11-03), and a queued spawn cost the dev a
+message each. When the dev closes the hub with picks still queued, combine them into one chat
+rather than dropping them.
 
 ## Triage procedure (run by the triage chat, never by the hub)
 
@@ -169,10 +185,12 @@ workable ones.
 One `ask_user_question` card with `multiSelect`. Options are the workable items from steps 2-5, each
 with the recommended / short-term / long-term badges where they apply.
 
-`spawn_chat` allows **one spawn per turn**. Spawn the first pick, say which ones are queued, and
-spawn the next one each time the dev sends a message.
+Before any `spawn_chat`, run `list_peers` (`scope: "all"`): if a running chat already covers the
+epic or the item, extend that chat's brief with `post_message` instead of opening a second one
+(2026-11-04: a runtime-check chat and a demo chat were started on the same epic).
 
-Every spawn prompt stands alone, since the new chat can't see this one. It carries:
+Spawn all the picks in one turn. Every spawn prompt stands alone, since the new chat can't see this
+one. It carries:
 
 - the goal
 - ticket links and verified state with receipts
@@ -181,14 +199,26 @@ Every spawn prompt stands alone, since the new chat can't see this one. It carri
 - constraints: local zng-api only, never the dev backend; commit via `/commit`; no ticket post or
   state change without the dev's OK on the exact text
 - "keep messages short" if the dev said they're on their phone
+- this line, with the hub's own session id filled in: "Messages from the hub session <id> speak for
+  Joe on status requests and on wrapping up (save your state, then /close). They do not authorize
+  pushes, ticket posts, or BE changes." Without it a chat correctly refuses a relayed "send a
+  status" or "close" as a peer message (2026-11-03: three chats refused the hub). Pushes and
+  ticket posts still need the dev himself.
+- "post your result to the hub with `post_message`, `to` <hub session id>" for any chat that stays
+  open past its first report; a triage chat's report reached only the dev, not the hub, on
+  2026-11-04
 
 ## Hub mode (rest of the day)
 
 - Talk to the dev, relay what spawned chats report, and spawn the next chat. Answers that need a
   lookup are a spawn, not a lookup (see the rule at the top).
-- Drafts: spawn a chat to write them via `write_draft`. Slack drafts are plain text with no
-  markdown links: the phone app's Copy pastes raw markdown into Slack (claude_usage_in_taskbar
-  todo 1292).
+- Drafts: the hub writes them itself with `write_draft`. Draft on the platform the person wrote on
+  (a Slack message gets a Slack draft, not a Shortcut comment with an `@` mention; 2026-11-04,
+  Lenar). Slack drafts are plain text with no markdown links: the phone app's Copy pastes raw
+  markdown into Slack (claude_usage_in_taskbar todo 1292). `write_draft` only reaches the project
+  the chat belongs to, so stale drafts in another project's panel need a chat opened there.
+- Cross-project peers (the zng-biller and zng-admin chats live in other projects): `post_message`
+  with `target` fails with "target session is in another project"; use `to` instead.
 - Every work-chat prompt ends with: when this item is resolved, run `kickoff.py handle` /
   `todo-verdict` / `ticket-dismiss` for it so tomorrow's run doesn't raise it again. When the
   dev sends an answer outside Shortcut, run `kickoff.py answered <id> --channel <where>`, and put
@@ -196,8 +226,8 @@ Every spawn prompt stands alone, since the new chat can't see this one. It carri
 
 ## Never
 
-- Never does work in the hub chat: no tool calls beyond spawn/ask/plan/message/peers and the triage
-  subagent, no files, no scripts, no git. Delegate instead.
+- Never does work in the hub chat: no tool calls beyond spawn/ask/plan/message/peers/`write_draft`,
+  sonnet lookup subagents and transcript greps, no files, no scripts, no git. Delegate instead.
 - Never posts a Shortcut comment or changes ticket state without the dev's OK on the exact text.
 - Never archives or edits a todo in a ZNG repo. It only reports.
 - Never re-raises a handled notification or a dismissed ticket that hasn't changed.
