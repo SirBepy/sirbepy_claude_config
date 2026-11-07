@@ -69,6 +69,12 @@ LANDING_CASES = [
     ("git commit -m it's", True, "a message with a lone apostrophe still gates"),
     ("cd repo && git commit -m \"it's", True, "an unterminated quote after git commit still gates"),
     ("echo it's about git commit", False, "an unparseable command that only mentions git commit stays ungated"),
+    ("git.exe commit -m x", True, "git.exe spelling is the same git"),
+    ('"C:/Program Files/Git/cmd/git.exe" commit -m x', True, "a quoted full path to git.exe"),
+    ("git.exe commit -m it's", True, "git.exe with a lone apostrophe, found by the regex fallback"),
+    ('git -C "C:/a b" commit -m it\'s', True, "a quoted -C path with a space, found by the regex fallback"),
+    ('git -c "user.name=a b" commit -m it\'s', True, "a quoted -c value with a space, found by the regex fallback"),
+    ("FOO=1 git commit -m it's", True, "an env-var prefix before git, found by the regex fallback"),
     ("git commit-tree deadbeef -p HEAD -m 'x'", True, "commit-tree alone still creates a commit object"),
     ("git update-ref refs/heads/feature new old", True, "update-ref straight to a branch ref"),
     ("git update-ref HEAD new old", True, "update-ref straight to HEAD"),
@@ -406,6 +412,14 @@ with tempfile.TemporaryDirectory() as tmp:
          "git commit -m 'X' -m 'Co-Authored-By: Jane Doe <jane@example.com>'", 0),
         ("a subject that only mentions Claude in prose is allowed",
          "git commit -m 'FIX: Player Claude listener'", 0),
+        ("a trailer in a here-string whose body holds an apostrophe is refused",
+         "git commit -m @'\nfix it's thing\n\nCo-Authored-By: Claude Sonnet <noreply@anthropic.com>\n'@ -- a.py", 2),
+        ("a trailer in a heredoc whose body holds an apostrophe is refused",
+         "git commit -F - <<'EOF'\nfix it's thing\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF", 2),
+        ("a trailer in a command shlex cannot parse is refused",
+         "git commit -m it's -m 'Co-Authored-By: Claude <noreply@anthropic.com>'", 2),
+        ("a rule being discussed in a subject is allowed",
+         "git commit -m \"FIX: reject Co-Authored-By: Claude trailers\"", 0),
     ):
         got = run_main(command, session_id="sess-attr")
         if not _testlib.report(got == expect, f"{label} (got exit={got}, want {expect})"):
