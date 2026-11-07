@@ -165,11 +165,13 @@ def _confirmed_at_command_position(command: str, label: str) -> bool:
 # A body only runs when something hands it to an interpreter. Without one of these
 # words outside the bodies, a heredoc is data (`cat > README.md <<EOF`, `git commit -F - <<EOF`).
 _INTERPRETER_RE = re.compile(
-    r"(?<![\w-])(?:bash|sh|zsh|dash|ksh|fish|pwsh|powershell|cmd|iex|invoke-expression|invoke-command|start-process"
-    r"|scriptblock|eval|source|exec|xargs|ssh|python3?|node|ruby|perl|php|bun|deno)(?:\.exe)?(?![\w-])"
-    # `. /dev/stdin <<EOF` (source) and PowerShell's `& $script` call operator.
-    r"|(?:^|[\s;|(])[.&]\s+(?=[$(/\w\"'])",
-    re.IGNORECASE,
+    # The lookarounds keep a file name (`perl.md`, `docs/exec.md`) and a prefix (`ssh:`) from reading as the program.
+    r"(?<![\w./\\:-])(?:bash|sh|zsh|dash|ksh|fish|pwsh|powershell|cmd|iex|invoke-expression|invoke-command|start-process"
+    r"|scriptblock|eval|source|exec|xargs|ssh|python3?|node|ruby|perl|php|bun|deno)(?:\.exe)?(?![\w.:/\\-])"
+    # `. /dev/stdin <<EOF` (source) and PowerShell's `& $script` call operator, only as the
+    # first word of a statement: `git add .` or `cp -r src .` end in a dot that runs nothing.
+    r"|(?:^|[;|(])[ \t]*[.&][ \t]+(?=[$(/\w\"'])",
+    re.IGNORECASE | re.MULTILINE,
 )
 
 
