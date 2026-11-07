@@ -1,10 +1,14 @@
 """PreToolUse gate: block `git push` in any repo until HEAD carries a pushable
 marker from `push-gate.py mark`.
 
-The marker is self-attested: Claude writes it after /commit's Pre-push gate
-(/code-check, then /e2e or its "no suite" note), or after Joe says yes to
-pushing past a red or impossible check. The gate's job is making that step
-impossible to forget, not proving the checks ran.
+The marker is written after /commit's Pre-push gate (/code-check, then /e2e or
+its "no suite" note), or after Joe says yes to pushing past a red or impossible
+check. The reason text is self-attested, but `mark` also reads this session's
+own transcript and refuses unless /test and /e2e (plus /flutter-e2e in a
+Flutter repo) were loaded through the Skill tool since the last push that went
+through; "e2e: no suite" in the reason waives the e2e half, and
+`--skip-skill-check "<dev's approval>"` is the explicit escape. A transcript
+that cannot be found or read only warns.
 
 Keyed by HEAD sha, so any new commit needs a fresh pass. `git push` detection
 is push-read-gate.py's own, loaded by path so the two gates never disagree
@@ -25,11 +29,14 @@ is_git_push_invocation does, since a naive "first `-C` in the command" or
 Fails open on any hook error: a bug here must never block every push.
 
 CLI, for skills and scripts:
-  python push-gate.py mark [path] --reason "..."   records HEAD as pushable
+  python push-gate.py mark [path] --reason "..." [--skip-skill-check "..."]
+                                                   records HEAD as pushable
 """
 
 import argparse
 import importlib.util
+import json
+import os
 import re
 import shlex
 import subprocess
@@ -237,14 +244,170 @@ def is_pushable(sha: str) -> bool:
     return bool(sha) and (MARKER_DIR / sha).exists()
 
 
-def mark_pushable(path, reason: str) -> str:
+def mark_pushable(path, reason: str, note: str = "") -> str:
     sha = head_sha(path)
     if not sha:
         raise SystemExit(f"ERROR: {path} has no HEAD commit to mark")
     MARKER_DIR.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
-    (MARKER_DIR / sha).write_text(f"{stamp} {reason}\n", encoding="utf-8")
+    suffix = f" [{note}]" if note else ""
+    (MARKER_DIR / sha).write_text(f"{stamp} {reason}{suffix}\n", encoding="utf-8")
     return sha
+
+
+# --- skill-load evidence for `mark` ------------------------------------------
+# `--reason` is free text Claude writes itself, so on 2026-10-13 a session ran
+# the checks by hand, never loaded /test or /e2e, wrote "code-check passed ..."
+# and pushed. `mark` therefore also reads this session's own transcript and
+# refuses unless the skills the Pre-push gate names were loaded after the last
+# push that actually went through.
+
+NO_SUITE_RE = re.compile(r"e2e\W{0,3}no suite|no e2e suite", re.IGNORECASE)
+COMMAND_NAME_RE = re.compile(r"<command-name>\s*/?([^<\s]+)\s*</command-name>")
+PUSH_REFUSAL_MARKERS = ("[push-gate]", "[push-read-gate]", "[commit-window-guard]")
+# A gate chat (skills/gate-chat/SKILL.md) is spawned after /commit's step 1,
+# so the commit-time /test ran in the parent chat; the gate itself runs the CI
+# unit tests, not /test. Its first prompt carries this instruction.
+GATE_CHAT_PROMPT_RE = re.compile(r"Push pipeline.{0,200}step 2", re.IGNORECASE | re.DOTALL)
+
+
+def find_transcript(session_id: str) -> Path | None:
+    """This session's transcript under any `~/.claude*/projects/*/`, or None."""
+    if not session_id or not re.fullmatch(r"[A-Za-z0-9-]+", session_id):
+        return None
+    try:
+        for projects in sorted(Path.home().glob(".claude*/projects")):
+            for hit in projects.glob(f"*/{session_id}.jsonl"):
+                return hit
+    except OSError:
+        return None
+    return None
+
+
+def _skill_names(entry: dict) -> list[str]:
+    names = []
+    content = (entry.get("message") or {}).get("content")
+    if entry.get("type") == "assistant" and isinstance(content, list):
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "tool_use" and block.get("name") == "Skill":
+                skill = (block.get("input") or {}).get("skill")
+                if isinstance(skill, str):
+                    names.append(skill.strip().lstrip("/").lower())
+    elif entry.get("type") == "user":
+        text = content if isinstance(content, str) else "\n".join(
+            b.get("text", "") for b in (content or []) if isinstance(b, dict) and b.get("type") == "text"
+        )
+        names.extend(m.group(1).lower() for m in COMMAND_NAME_RE.finditer(text))
+    return names
+
+
+def _result_text(entry: dict) -> tuple[str, bool]:
+    """(joined text, is_error) of every tool_result block in a user entry."""
+    texts, is_error = [], False
+    for block in (entry.get("message") or {}).get("content") or []:
+        if not isinstance(block, dict) or block.get("type") != "tool_result":
+            continue
+        is_error = is_error or bool(block.get("is_error"))
+        body = block.get("content")
+        if isinstance(body, str):
+            texts.append(body)
+        elif isinstance(body, list):
+            texts.extend(b.get("text", "") for b in body if isinstance(b, dict))
+    return "\n".join(texts), is_error
+
+
+def transcript_evidence(transcript_path) -> tuple[set[str], bool] | None:
+    """(skills loaded after the last push that went through, is_gate_chat), or
+    None when the transcript cannot be read. A push counts only when its tool
+    result came back without an error or a push-hook refusal, so a denied
+    `git push` before this `mark` never erases the skills loaded for it."""
+    try:
+        entries = []
+        with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entries.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pass
+        detector = _load_push_detector()
+        push_ids: dict[str, int] = {}
+        boundary = -1
+        for i, entry in enumerate(entries):
+            content = (entry.get("message") or {}).get("content")
+            if entry.get("type") == "assistant" and isinstance(content, list):
+                for block in content:
+                    if not isinstance(block, dict) or block.get("type") != "tool_use":
+                        continue
+                    if block.get("name") not in ("Bash", "PowerShell"):
+                        continue
+                    command = (block.get("input") or {}).get("command") or ""
+                    if isinstance(command, str) and detector(command) and not all_pushes_delete_only(command):
+                        push_ids[block.get("id") or ""] = i
+            elif entry.get("type") == "user" and isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") == "tool_result" and block.get("tool_use_id") in push_ids:
+                        text, is_error = _result_text(entry)
+                        if not is_error and not any(m in text for m in PUSH_REFUSAL_MARKERS):
+                            boundary = max(boundary, i)
+        skills: set[str] = set()
+        for entry in entries[boundary + 1:]:
+            skills.update(_skill_names(entry))
+        gate_chat = False
+        for entry in entries:
+            if entry.get("type") == "user" and not isinstance(
+                (entry.get("message") or {}).get("content"), list
+            ):
+                gate_chat = bool(GATE_CHAT_PROMPT_RE.search(str((entry.get("message") or {}).get("content"))))
+                break
+        return skills, gate_chat
+    except Exception:
+        return None
+
+
+def _skill_loaded(skills: set[str], name: str) -> bool:
+    return any(s == name or s.endswith(":" + name) for s in skills)
+
+
+def required_skills(root, reason: str, is_gate_chat: bool) -> list[str]:
+    """The skills the Pre-push gate must have loaded for this mark. A repo
+    with no fast-check stack has nothing for /test or /e2e to run, and a
+    reason saying "e2e: no suite" waives the e2e half, which /commit's gate
+    already documents."""
+    try:
+        from _testing_floor_lib import detect_stack
+        if not detect_stack(Path(root)):
+            return []
+    except Exception:
+        pass
+    required = [] if is_gate_chat else ["test"]
+    if not NO_SUITE_RE.search(reason):
+        required.append("e2e")
+        try:
+            pubspec = Path(root) / "pubspec.yaml"
+            if pubspec.is_file() and "flutter:" in pubspec.read_text(encoding="utf-8", errors="replace"):
+                required.append("flutter-e2e")
+        except OSError:
+            pass
+    return required
+
+
+def check_skill_evidence(root, reason: str, transcript=None):
+    """(missing, warning): `missing` lists skills not loaded since the last
+    push; `warning` is set when the transcript could not be found or read, in
+    which case nothing can be proven and the mark proceeds (a gate that bricks
+    pushes made outside a Claude session is worse than an unverified mark)."""
+    if transcript is None:
+        transcript = find_transcript(os.environ.get("CLAUDE_CODE_SESSION_ID", ""))
+    if transcript is None:
+        return [], "no transcript found for this session (CLAUDE_CODE_SESSION_ID unset or unmatched); skill loads not verified"
+    evidence = transcript_evidence(transcript)
+    if evidence is None:
+        return [], f"transcript {transcript} unreadable; skill loads not verified"
+    skills, is_gate_chat = evidence
+    return [s for s in required_skills(root, reason, is_gate_chat) if not _skill_loaded(skills, s)], None
 
 
 def cli(argv) -> int:
@@ -253,8 +416,36 @@ def cli(argv) -> int:
     p_mark = sub.add_parser("mark")
     p_mark.add_argument("path", nargs="?", default=".")
     p_mark.add_argument("--reason", required=True)
+    p_mark.add_argument(
+        "--skip-skill-check",
+        metavar="WHY",
+        help="mark without the /test and /e2e load check; WHY names the dev's approval (pushing past a red or impossible check)",
+    )
+    p_mark.add_argument("--transcript", help="transcript to read instead of this session's own (tests)")
     args = parser.parse_args(argv)
-    sha = mark_pushable(args.path, args.reason)
+
+    note = ""
+    if args.skip_skill_check is not None:
+        if not args.skip_skill_check.strip():
+            print("ERROR: --skip-skill-check needs a reason naming the dev's approval", file=sys.stderr)
+            return 2
+        note = f"skill check skipped: {args.skip_skill_check.strip()}"
+    else:
+        root = git_repo_root(args.path) or args.path
+        missing, warning = check_skill_evidence(root, args.reason, args.transcript)
+        if missing:
+            names = ", ".join(f"/{m}" for m in missing)
+            print(
+                f"ERROR: not marked. This session never loaded {names} since the last push, and --reason is free text. "
+                f"Load {'it' if len(missing) == 1 else 'them'} through the Skill tool and run "
+                f"{'it' if len(missing) == 1 else 'them'}, then mark again. Reason \"e2e: no suite\" waives /e2e; "
+                "if the dev approved pushing past a red or impossible check, pass --skip-skill-check \"<his approval>\".",
+                file=sys.stderr,
+            )
+            return 2
+        if warning:
+            print(f"WARNING: {warning}", file=sys.stderr)
+    sha = mark_pushable(args.path, args.reason, note)
     print(f"marked {sha[:7]} pushable: {args.reason}")
     return 0
 

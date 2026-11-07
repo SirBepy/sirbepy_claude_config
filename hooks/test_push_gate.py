@@ -5,6 +5,9 @@ End-to-end cases build throwaway git repos in a temp dir and point the marker
 dir there, so the real hooks/.push-ok/ is never read or written.
 """
 
+import contextlib
+import io
+import json
 import os
 import subprocess
 import sys
@@ -15,6 +18,10 @@ import _testlib
 
 _HOOKS_DIR = Path(__file__).resolve().parent
 guard = _testlib.load_module("push_gate", _HOOKS_DIR / "push-gate.py")
+
+# The mark CLI reads the running session's own transcript; hide the real session id
+# so every case is hermetic unless it passes --transcript.
+os.environ.pop("CLAUDE_CODE_SESSION_ID", None)
 
 fails = []
 
@@ -184,5 +191,121 @@ with tempfile.TemporaryDirectory() as tmp:
     ]
     for cmd in denied:
         expect(f"push that sends a commit stays denied: {cmd}", call_main(cmd, client), 2)
+
+# --- mark refuses unless /test and /e2e were really loaded ---
+
+
+def tool_use(tool_id: str, name: str, **tool_input) -> dict:
+    return {"type": "assistant", "message": {"content": [{"type": "tool_use", "id": tool_id, "name": name, "input": tool_input}]}}
+
+
+def tool_result(tool_id: str, text: str, is_error: bool = False) -> dict:
+    return {"type": "user", "message": {"content": [
+        {"type": "tool_result", "tool_use_id": tool_id, "is_error": is_error, "content": [{"type": "text", "text": text}]},
+    ]}}
+
+
+def skill(tool_id: str, name: str) -> list:
+    return [tool_use(tool_id, "Skill", skill=name), tool_result(tool_id, f"Launching skill: {name}")]
+
+
+def push(tool_id: str, ok: bool) -> list:
+    text = "To origin\n  a..b  main -> main" if ok else "[push-gate] HEAD abc1234 has not been cleared for push."
+    return [tool_use(tool_id, "Bash", command="git push"), tool_result(tool_id, text, is_error=not ok)]
+
+
+def user_prompt(text: str) -> dict:
+    return {"type": "user", "message": {"content": text}}
+
+
+def run_mark(repo: Path, reason: str, entries, *extra):
+    """(exit code, stderr text, marker written?) of one mark call against a transcript."""
+    transcript = repo.parent / f"{repo.name}-transcript.jsonl"
+    transcript.write_text("\n".join(json.dumps(e) for e in entries) + "\n", encoding="utf-8")
+    sha = guard.head_sha(repo)
+    marker = guard.MARKER_DIR / sha
+    if marker.exists():
+        marker.unlink()
+    err = io.StringIO()
+    with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+        code = guard.cli(["mark", str(repo), "--reason", reason, "--transcript", str(transcript), *extra])
+    return code, err.getvalue(), marker.exists()
+
+
+def make_stack_repo(root: Path, name: str, files: dict) -> Path:
+    repo = make_repo(root, name, "https://github.com/SirBepy/x.git")
+    for rel, text in files.items():
+        (repo / rel).write_text(text, encoding="utf-8")
+    git(repo, "add", ".")
+    git(repo, "commit", "-q", "-m", "stack")
+    return repo
+
+
+with tempfile.TemporaryDirectory() as tmp:
+    tmpdir = Path(tmp)
+    guard.MARKER_DIR = tmpdir / ".push-ok"
+    node = make_stack_repo(tmpdir, "node-app", {"package.json": json.dumps({"scripts": {"test": "vitest run"}})})
+    flutter = make_stack_repo(tmpdir, "flutter-app", {"pubspec.yaml": "name: a\nflutter:\n  uses-material-design: true\n"})
+    docs = make_repo(tmpdir, "notes-only", "https://github.com/SirBepy/notes.git")
+    reason = "code-check + e2e passed"
+
+    code, err, marked = run_mark(node, reason, [user_prompt("push it")])
+    expect("a session that loaded neither skill is refused", (code, marked), (2, False))
+    expect("the refusal names /test and /e2e", "/test" in err and "/e2e" in err, True)
+
+    code, err, marked = run_mark(node, reason, [user_prompt("push it")] + skill("t1", "test"))
+    expect("/test alone is refused, naming /e2e only", (code, marked, "/e2e" in err, "/test," in err), (2, False, True, False))
+
+    both = [user_prompt("push it")] + skill("t1", "test") + skill("t2", "e2e")
+    expect("both skills loaded: mark accepted", run_mark(node, reason, both)[::2], (0, True))
+
+    typed = [user_prompt("<command-message>test</command-message>\n<command-name>/test</command-name>")] + skill("t2", "e2e")
+    expect("a user-typed /test counts as loaded", run_mark(node, reason, typed)[::2], (0, True))
+
+    plugin = [user_prompt("push it")] + skill("t1", "test") + skill("t2", "my-plugin:e2e")
+    expect("a plugin-qualified e2e skill counts", run_mark(node, reason, plugin)[::2], (0, True))
+
+    nosuite = "code-check passed, e2e: no suite"
+    expect("e2e: no suite waives e2e when /test is loaded", run_mark(node, nosuite, [user_prompt("x")] + skill("t1", "test"))[::2], (0, True))
+    expect("e2e: no suite does not waive /test", run_mark(node, nosuite, [user_prompt("x")])[::2], (2, False))
+
+    old = [user_prompt("x")] + skill("t1", "test") + skill("t2", "e2e") + push("p1", True) + [user_prompt("more work")]
+    expect("skills loaded before the last successful push do not count", run_mark(node, reason, old)[::2], (2, False))
+
+    denied_then_mark = [user_prompt("x")] + skill("t1", "test") + skill("t2", "e2e") + push("p1", False)
+    expect("a denied push does not erase the skills loaded for it", run_mark(node, reason, denied_then_mark)[::2], (0, True))
+
+    after_push = old + skill("t3", "test") + skill("t4", "e2e")
+    expect("skills loaded again after the push count", run_mark(node, reason, after_push)[::2], (0, True))
+
+    no_flutter = [user_prompt("x")] + skill("t1", "test") + skill("t2", "e2e")
+    code, err, marked = run_mark(flutter, reason, no_flutter)
+    expect("a Flutter repo also needs /flutter-e2e", (code, marked, "/flutter-e2e" in err), (2, False, True))
+    expect("a Flutter repo with /flutter-e2e loaded is accepted", run_mark(flutter, reason, no_flutter + skill("t3", "flutter-e2e"))[::2], (0, True))
+
+    expect("a repo with no fast-check stack needs no skills", run_mark(docs, "notes repo: no code", [user_prompt("x")])[::2], (0, True))
+
+    gate_prompt = "Run /commit's Push pipeline from step 2 (skip step 1c). Read snippets/auto-commit.md. /close"
+    expect("a gate chat is not asked for /test", run_mark(node, reason, [user_prompt(gate_prompt)] + skill("t2", "e2e"))[::2], (0, True))
+    expect("a gate chat still needs /e2e", run_mark(node, reason, [user_prompt(gate_prompt)])[::2], (2, False))
+
+    code, err, marked = run_mark(node, "pushing past a red e2e", [user_prompt("x")], "--skip-skill-check", "Joe said yes to pushing past the red e2e")
+    expect("--skip-skill-check with his approval marks", (code, marked), (0, True))
+    expect("the marker records the skipped check", "skill check skipped" in (guard.MARKER_DIR / guard.head_sha(node)).read_text(encoding="utf-8"), True)
+    expect("--skip-skill-check with a blank reason is refused", run_mark(node, reason, [user_prompt("x")], "--skip-skill-check", " ")[::2], (2, False))
+
+    err = io.StringIO()
+    with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+        code = guard.cli(["mark", str(node), "--reason", reason, "--transcript", str(tmpdir / "missing.jsonl")])
+    expect("an unreadable transcript warns and still marks", (code, "not verified" in err.getvalue()), (0, True))
+
+    (guard.MARKER_DIR / guard.head_sha(node)).unlink(missing_ok=True)
+    os.environ["CLAUDE_CODE_SESSION_ID"] = "00000000-no-such-session"
+    err = io.StringIO()
+    with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+        code = guard.cli(["mark", str(node), "--reason", reason])
+    os.environ.pop("CLAUDE_CODE_SESSION_ID", None)
+    expect("no transcript for the session id warns and still marks", (code, "not verified" in err.getvalue()), (0, True))
+
 
 sys.exit(_testlib.summarize(fails, style="count"))
