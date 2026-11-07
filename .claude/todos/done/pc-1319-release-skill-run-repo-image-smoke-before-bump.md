@@ -26,3 +26,12 @@ Let a repo name a pre-bump command (a line in its `CLAUDE.md`, or a file the ski
 ## Acceptance
 
 A deliberately failing pre-bump command stops `/release` before the `VERSION:` commit is created.
+
+## Decided
+
+- The repo declares its checks in `.claude/pre-bump.txt` (one command per line, `#` comments), read by `release.py pre-bump`, not a line in `CLAUDE.md`: a file is parseable and testable, prose is not. Step 4a in `skills/release/SKILL.md` and `skills/commit/SKILL.md`'s Push pipeline list.
+- It runs after the gate, before 4b, so a rejected build never gets a VERSION commit; `test_release.py` `PreBumpTest` pins that a failing command exits 1 and stops the rest.
+
+## Completion note
+
+Verify only / follow-up in the other repo: rodge still needs a `.claude/pre-bump.txt` containing `pnpm smoke:image`; that file belongs to rodge and was not written from this repo.

@@ -6,7 +6,9 @@ Every subcommand prints exactly one JSON object; a non-zero exit always prints {
   kit-sync [repo]                  {"changed", "old", "new"} | {"changed": false, "reason"}
   bump [repo]                      {"version", "build", "label", "files"}   (never commits)
   version-diff [repo] [--no-fetch] {"pending", "base_version", "head_version", "base_ref", "reason"}
-Exit codes: 1 = unexpected I/O or parse failure (OSError, RecursionError), 2 = refused / bad input,
+  pre-bump [repo]                  {"ran": [commands]}   (runs the repo's .claude/pre-bump.txt)
+Exit codes: 1 = unexpected I/O or parse failure (OSError, RecursionError) or a failed pre-bump command,
+2 = refused / bad input,
 3 = network (fetch or submodule update failed).
 
 Stdlib only; runs under `python -I`.
@@ -565,12 +567,49 @@ def cmd_version_diff(repo, fetch=True):
     return result
 
 
+# ---------------------------------------------------------------- pre-bump checks
+
+PRE_BUMP_FILE = ".claude/pre-bump.txt"
+# A repo's own smoke check (an image build, an installer run) is slower than any git call.
+PRE_BUMP_TIMEOUT_SECONDS = 1800
+
+
+def cmd_pre_bump(repo):
+    """Runs each command line of the repo's .claude/pre-bump.txt from the repo root.
+
+    The first failure stops the run with exit 1, so /release never creates the VERSION commit
+    for a build the repo's own check rejects. Child output goes to stderr to keep stdout JSON.
+    """
+    root = repo_root(repo, need_git=False)
+    listing = root / PRE_BUMP_FILE
+    if not listing.is_file():
+        return {"ran": []}
+    commands = []
+    for line in listing.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#"):
+            commands.append(line)
+    ran = []
+    for command in commands:
+        try:
+            proc = subprocess.run(
+                command, shell=True, cwd=str(root), stdout=sys.stderr, stderr=sys.stderr,
+                timeout=PRE_BUMP_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired:
+            raise Fail(f"pre-bump command timed out after {PRE_BUMP_TIMEOUT_SECONDS}s: {command}", 1)
+        if proc.returncode != 0:
+            raise Fail(f"pre-bump command failed (exit {proc.returncode}): {command}", 1)
+        ran.append(command)
+    return {"ran": ran}
+
+
 # ---------------------------------------------------------------- CLI
 
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="release.py")
     sub = parser.add_subparsers(dest="cmd", required=True)
-    for name in ("source", "kit-sync", "bump", "version-diff"):
+    for name in ("source", "kit-sync", "bump", "version-diff", "pre-bump"):
         p = sub.add_parser(name)
         p.add_argument("repo", nargs="?", default=".")
         if name == "version-diff":
@@ -589,6 +628,8 @@ def main(argv=None):
             out = cmd_kit_sync(args.repo)
         elif args.cmd == "bump":
             out = cmd_bump(args.repo)
+        elif args.cmd == "pre-bump":
+            out = cmd_pre_bump(args.repo)
         else:
             out = cmd_version_diff(args.repo, fetch=not args.no_fetch)
     except Fail as e:

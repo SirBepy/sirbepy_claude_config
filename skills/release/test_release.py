@@ -387,5 +387,40 @@ class VersionDiffTest(ReleaseBase):
         self.assertIn("error", out)
 
 
+class PreBumpTest(ReleaseBase):
+    """`release.py pre-bump`: a repo's own checks that must pass before the VERSION commit."""
+
+    def listing(self, text):
+        return self.repo({"README.md": "x\n", ".claude/pre-bump.txt": text})
+
+    def test_no_file_runs_nothing(self):
+        r = self.repo({"README.md": "x\n"})
+        rc, out = self.release("pre-bump", r)
+        self.assertEqual((rc, out), (0, {"ran": []}))
+
+    def test_runs_each_command_in_order_from_the_repo_root(self):
+        r = self.listing("# a smoke check\n\necho a>>ran.txt\necho b>>ran.txt\n")
+        rc, out = self.release("pre-bump", r)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(out["ran"], ["echo a>>ran.txt", "echo b>>ran.txt"])
+        self.assertEqual((Path(r) / "ran.txt").read_text().split(), ["a", "b"])
+
+    def test_a_failing_command_stops_the_rest_and_exits_1(self):
+        r = self.listing("echo a>>ran.txt\nexit 3\necho c>>ran.txt\n")
+        rc, out = self.release("pre-bump", r)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("exit 3", out["error"])
+        self.assertIn("exit 3", out["error"].split(": ", 1)[-1])
+        self.assertEqual((Path(r) / "ran.txt").read_text().split(), ["a"])
+
+    def test_runs_from_the_repo_root_even_when_called_from_elsewhere(self):
+        r = self.listing("echo here>>ran.txt\n")
+        sub = Path(r) / "deep" / "dir"
+        sub.mkdir(parents=True)
+        rc, out = self.release("pre-bump", sub)
+        self.assertEqual(rc, 0, out)
+        self.assertTrue((Path(r) / "ran.txt").exists())
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)
