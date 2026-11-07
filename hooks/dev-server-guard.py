@@ -181,9 +181,16 @@ def main() -> None:
     # A backslash or backtick after whitespace, right before the newline, continues
     # the statement. Without the space it ends a Windows path (`ls C:\proj\`), and
     # PowerShell then starts a new statement on the next line.
+    # Both readings are scanned and either one may deny: a continuation glued to
+    # the last word (`npm run dev\`) only reads right when joined, a path ending
+    # in a backslash only reads right when not.
     joined = re.sub(r"(?<=\s)[\\`]\r?\n", " ", command)
-    for segment in split_command_segments(joined) or [joined]:
-        matched = is_dev_server_command(tokenize(segment))
+    glued = re.sub(r"[\\`]\r?\n", " ", command)
+    for variant in dict.fromkeys((joined, glued)):
+        for segment in split_command_segments(variant) or [variant]:
+            matched = is_dev_server_command(tokenize(segment))
+            if matched:
+                break
         if matched:
             break
     if matched and not _shlex_clean(command) and not _confirmed_at_command_position(command, matched):
