@@ -5,6 +5,7 @@ End-to-end cases build throwaway git repos in a temp dir and point the marker
 dir there, so the real hooks/.push-ok/ is never read or written.
 """
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -123,6 +124,16 @@ with tempfile.TemporaryDirectory() as tmp:
         call_main(f'git -C "{client}" status && git push', personal),
         0,
     )
+
+    # A Git Bash `cd /c/...` drive path reaches the same repo as `cd C:/...`
+    # (Windows only: elsewhere `/c/...` is a real path, not a drive alias).
+    posix_client = client.as_posix()
+    if os.name == "nt" and posix_client[1:3] == ":/":
+        msys_client = f"/{posix_client[0].lower()}{posix_client[2:]}"
+        expect("Git Bash cd /c/... into an uncleared repo is denied", call_main(f"cd {msys_client}; git push origin develop", personal), 2)
+        expect("Git Bash git -C /c/... into an uncleared repo is denied", call_main(f"git -C {msys_client} push", personal), 2)
+    expect("an unresolvable cd target is judged by the cwd repo (uncleared, denied)", call_main("cd /no/such/dir/anywhere; git push", client), 2)
+    expect("an unresolvable cd target from a cleared cwd passes", call_main("cd /no/such/dir/anywhere; git push", personal), 0)
 
     # A delete-only push uploads no commits, so the code-check/e2e gate has
     # nothing to check; anything that also sends a commit stays gated. `client`

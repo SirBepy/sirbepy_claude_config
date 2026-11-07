@@ -43,3 +43,7 @@ Also a mismatch to settle at the same time: `/commit fold`'s recipe in `skills/c
 ## Acceptance
 
 The `cd /c/...` commit and push cases exit 2 in the window without an allow marker, `python ci/run_all.py` passes, and `/commit fold` names one working path for a fold inside an approved window.
+
+## Notes
+
+- Root cause: _hooklib.git_repo_root could not resolve a Git Bash /c/... path on Windows, so commit-window-guard (and push-gate, git-workdir-guard) fell through as not-a-client-repo. Fixed with normalize_msys_path in git_repo_root/git_common_dir plus a cwd-repo fallback for unresolvable targets in commit-window-guard and push-gate. Tests: test_commit_window_guard.py 'Git Bash cd /c/...' cases (5 red on HEAD), test_push_gate.py unresolvable-target cases. Fold decision: guard keeps refusing dates in the window (Joe's rule); skills/commit/SKILL.md fold recipe now says wait for 11:00.

@@ -270,7 +270,9 @@ def main() -> None:
         sys.exit(0)
 
     target = resolve_push_target(command, payload.get("cwd") or "")
-    root = git_repo_root(target)
+    # Same fallback as commit-window-guard: a target Python cannot resolve is
+    # judged by the shell's own cwd repo rather than waved through.
+    root = git_repo_root(target) or git_repo_root(payload.get("cwd") or "")
     if not root:
         sys.exit(0)
     sha = head_sha(root)
