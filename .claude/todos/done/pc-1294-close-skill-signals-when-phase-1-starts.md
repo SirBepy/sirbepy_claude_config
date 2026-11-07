@@ -28,3 +28,7 @@ Filed from the Conductor repo (`claude_usage_in_taskbar`) todo pc-1526, Part B. 
 - A `/close` that finishes a task over two turns, with a question card in between, shows neither Closing nor close-failed before its Phase 1 starts.
 - A trailing `/close` shows Closing once Phase 1 starts.
 - `skills/close/SKILL.md` documents the signal and the `--now` exception.
+
+## Completion note
+
+Skill side done: Phase 1 now opens with `close_session(stage: "started")` (skipped when the tool lacks a `stage` parameter or does not exist) and "Host app integration" documents the signal and the `--now` exception. Verify only: the first two Acceptance bullets (Closing badge timing) need a live Conductor build with `stage` support; its `close_session` schema lists `stage` as of 2026-11-07.
