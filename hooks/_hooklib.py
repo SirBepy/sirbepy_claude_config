@@ -490,9 +490,10 @@ def with_wrapper_bodies(segments: list[str], depth: int = 0) -> list[str]:
 # command that may send a request (a launcher, a script, a quoted exe path).
 _DISPLAY_COMMANDS = {
     "echo", "printf", "write-host", "write-output", "write-warning", "write-verbose",
-    "write-information", "write-error", "grep", "egrep", "fgrep", "rg", "select-string", "sls", "findstr",
+    "write-information", "write-error", "grep", "egrep", "fgrep", "select-string", "sls", "findstr",
 }
-_DISPLAY_GIT_SUBCOMMANDS = {"commit", "log", "tag", "notes", "grep", "show", "diff", "blame"}
+# Not `rg` (--pre runs a command) and not `git grep` (-O runs a pager command).
+_DISPLAY_GIT_SUBCOMMANDS = {"commit", "log", "tag", "notes", "show", "diff", "blame"}
 _ASSIGNMENT_RE = re.compile(r"^[A-Za-z_]\w*=")
 
 
@@ -521,7 +522,8 @@ def _command_words(segment: str) -> list[str]:
     return words
 
 
-_HARMLESS_REDIRECT_RE = re.compile(r"\d*>&\d|\d*>>?\s*(?:/dev/null|\$null)\b")
+# The lookahead keeps `>&1.sh` or `>/dev/null.sh` (real file targets) from reading as harmless.
+_HARMLESS_REDIRECT_RE = re.compile(r"\d*>&\d(?=\s|$)|\d*>>?\s*(?:/dev/null|\$null)(?=\s|$)")
 
 
 def _is_display_segment(segment: str) -> bool:
@@ -562,8 +564,12 @@ def without_display_segments(command: str) -> str:
         if start < 0:
             return command  # cannot place the statement, so strip nothing
         cursor = start + len(segment)
-        piped = command[cursor:cursor + 1] == "|" and command[cursor + 1:cursor + 2] != "|"
-        if piped or not _is_display_segment(segment):
+        # The pipe may sit after a line break or a continuation backslash.
+        after = command[cursor:].lstrip(" \t\r\n\\")
+        piped = after.startswith("|") and not after.startswith("||")
+        # A line that continues the previous one (`curl ... \` then `echo -d x`) is an argument, not a statement.
+        continued = command[:start].rstrip(" \t\r\n").endswith(("\\", "`"))
+        if piped or continued or not _is_display_segment(segment):
             kept.append(segment)
     if len(kept) == len(segments):
         return command
