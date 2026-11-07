@@ -50,6 +50,8 @@ CHAT_TOOL_TEXT_FIELDS = {
     "send_message": ["text"],
     "post_message": ["text"],
     "update_message": ["text"],
+    # The drafted message is Joe's outbound text, the same Claude-authored prose.
+    "write_draft": ["topic", "body", "note"],
     "ask_user_question": [
         "questions[].question",
         "questions[].header",
