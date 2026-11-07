@@ -19,6 +19,12 @@ guard = _testlib.load_module(
 
 URL = "https://api.app.shortcut.com/api/v3/stories"
 
+
+def py(body: str) -> str:
+    """An inline python HTTP script as Bash would see it."""
+    return f'python -I -c "import urllib.request as u; {body}"'
+
+
 # (tool_name, command, expect_creation, label)
 CASES = [
     ("Bash", f'curl -s -X POST "{URL}" -H "Shortcut-Token: $TOKEN" -d @payload.json', True, "curl -X POST to /stories"),
@@ -68,6 +74,19 @@ CASES = [
     ("Bash", f"curl -s {URL} \\\necho -d x", True, "a continuation line starting with echo is a curl argument"),
     ("Bash", f'echo "curl -X POST {URL} -d x" 2>&1', False, "an fd redirect does not make an echo run anything"),
     ("Bash", f'echo "curl -X POST {URL} -d x" > /dev/null', False, "echo to the null device runs nothing"),
+    # A python one-liner carries its verb in the call, not in a curl-style flag.
+    ("Bash", py(f"u.urlopen(u.Request('{URL}', data=b'{{}}', method='POST'))"), True, "python urllib Request method='POST' to /stories"),
+    ("Bash", py(f"u.urlopen(u.Request('{URL}', data=b'{{}}'))"), True, "python urllib Request with data and no method is a POST"),
+    ("Bash", py(f"import requests; requests.post('{URL}', json={{'name': 'x'}})"), True, "python requests.post to /stories"),
+    ("Bash", py("import kickoff; t = kickoff.env()['SHORTCUT_API_TOKEN']; u.urlopen(u.Request(API + '/stories', data=b'{}', method='POST'))"), True, "python create with the URL assembled from a base"),
+    ("Bash", f"python - <<'EOF'\nimport urllib.request as u\nu.urlopen(u.Request('{URL}', data=b'{{}}', method='POST'))\nEOF", True, "python heredoc create"),
+    ("PowerShell", f"python -c \"import urllib.request as u; u.urlopen(u.Request('{URL}', data=b'{{}}', method='POST'))\"", True, "python create from the PowerShell tool"),
+    ("Bash", py(f"print(u.urlopen('{URL}/12345').read())"), False, "python GET of one story stays unblocked"),
+    ("Bash", py(f"print(u.urlopen(u.Request('{URL}/search', method='GET')).read())"), False, "python explicit GET stays unblocked"),
+    ("Bash", py(f"u.urlopen(u.Request('{URL}/12345', data=b'{{}}', method='PUT'))"), False, "python PUT to /stories/<id> is an update"),
+    ("Bash", py(f"u.urlopen(u.Request('{URL}/12345/comments', data=b'{{}}', method='POST'))"), False, "python comment POST is not a create"),
+    ("Bash", py("import kickoff; u.urlopen(u.Request(API + '/search/stories', data=b'{}', method='POST'))"), False, "python POST to search/stories is not a create"),
+    ("Bash", f"echo \"python -c u.Request('{URL}', method='POST')\"", False, "echo of a python create is prose"),
     ("mcp__shortcut__stories-update", None, False, "MCP update tool, shortcut-mutation-guard's job"),
     ("Bash", "git commit -m 'FEAT: stories'", False, "unrelated command"),
     ("Read", None, False, "non-shell tool"),

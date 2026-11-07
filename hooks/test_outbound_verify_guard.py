@@ -32,6 +32,13 @@ TITLE = "Validate biller address on the CreateLoan screen"
 # -d flags that are not curl data flags.
 TOKEN_RECIPE = "TOKEN=$(grep -a '^SHORTCUT_API_TOKEN=' ~/.claude/.env | cut -d= -f2 | tr -d '\\r\"'); "
 
+
+
+def py(body: str) -> str:
+    """An inline python HTTP script as Bash would see it."""
+    return f'python -I -c "import urllib.request as u, json; {body}"'
+
+
 # (tool_name, tool_input, expect_detected, label)
 DETECT_CASES = [
     ("Bash", {"command": f"curl -X POST {SC} -d '{{\"name\": \"{TITLE}\", \"description\": \"{CLAIM}\"}}'"}, True, "Shortcut REST create"),
@@ -110,6 +117,23 @@ DETECT_CASES = [
     ("PowerShell", {"command": f"Start-Process -FilePath curl.exe -ArgumentList \"-X POST {SC} -d x\""}, True, "Start-Process -FilePath curl.exe stays gated"),
     ("Bash", {"command": f"echo \"$(curl -X POST {SC} -d \\\"$BODY\\\")\""}, True, "a curl inside a command substitution in a string stays gated"),
     ("Bash", {"command": f"echo 'it'\"'\"'s'; curl -X POST {SC} -d \"$BODY\""}, True, "odd quoting that desyncs the mask keeps the create gated"),
+    # pc-1329: an inline python script names its verb in the call, not in a curl-style flag.
+    ("Bash", {"command": py(f"u.urlopen(u.Request('{SC}', data=json.dumps({{'name': '{TITLE}', 'description': '{CLAIM}'}}).encode(), method='POST'))")}, True, "python urllib story create"),
+    ("Bash", {"command": py(f"u.urlopen(u.Request('{SC}/123/comments', data=json.dumps({{'text': '{CLAIM}'}}).encode(), method='POST'))")}, True, "python urllib comment POST"),
+    ("Bash", {"command": py(f"u.urlopen(u.Request('{SC}/123/comments/456', data=json.dumps({{'text': '{CLAIM}'}}).encode(), method='PUT'))")}, True, "python urllib comment edit"),
+    ("Bash", {"command": py(f"u.urlopen(u.Request('{SC}/123', data=json.dumps({{'description': '{CLAIM}'}}).encode(), method='PUT'))")}, True, "python urllib description rewrite"),
+    ("Bash", {"command": py(f"u.urlopen(u.Request('{SC}/123', data=json.dumps({{'description': '{CLAIM}'}}).encode()))")}, True, "python urllib data with no method is a POST"),
+    ("Bash", {"command": py(f"import requests; requests.post('{SC}/123/comments', json={{'text': '{CLAIM}'}})")}, True, "python requests.post comment"),
+    ("Bash", {"command": py(f"import kickoff; t = kickoff.env()['SHORTCUT_API_TOKEN']; u.urlopen(u.Request(API + '/stories/123/comments', data=json.dumps({{'text': '{CLAIM}'}}).encode(), method='POST'))")}, True, "python comment POST with the URL assembled from a base"),
+    ("Bash", {"command": py("import kickoff; t = kickoff.env(); u.urlopen(u.Request(API + '/stories', data=body, method='POST'))")}, True, "python create with an opaque body is gated"),
+    ("Bash", {"command": f"python -c \"import urllib.request as u, json; u.urlopen(u.Request('{SC}/123/comments', data=json.dumps({{\\\"text\\\": \\\"{CLAIM}\\\"}}).encode(), method='POST'))\""}, True, "python comment POST with backslash-escaped quotes"),
+    ("PowerShell", {"command": f"python -c \"import urllib.request as u; u.urlopen(u.Request('{SC}/123/comments', data=json.dumps({{'text': '{CLAIM}'}}).encode(), method='POST'))\""}, True, "python comment POST from the PowerShell tool"),
+    ("Bash", {"command": py(f"print(u.urlopen('{SC}/123').read())")}, False, "python GET passes"),
+    ("Bash", {"command": py(f"print(u.urlopen(u.Request('{SC}/123/comments', method='GET')).read())")}, False, "python explicit GET of comments passes"),
+    ("Bash", {"command": py("import kickoff; t = kickoff.env()['SHORTCUT_API_TOKEN']; print(u.urlopen(u.Request(API + '/stories/123', headers={'Shortcut-Token': t})).read())")}, False, "python GET with the token plumbing passes"),
+    ("Bash", {"command": py(f"u.urlopen(u.Request('{SC}/123', data=json.dumps({{'workflow_state_id': 500000011}}).encode(), method='PUT'))")}, False, "python state move stays ungated"),
+    ("Bash", {"command": py("u.urlopen(u.Request(API + '/stories/123', data=b'{}', method='PUT'))")}, False, "python id-only PUT from a base URL stays ungated"),
+    ("Bash", {"command": f"echo \"python -c u.Request('{SC}/123/comments', method='POST')\""}, False, "echo of a python comment POST is prose"),
 ]
 
 
@@ -213,6 +237,7 @@ def run_hook(tool_input: dict, entries: list | None, env_extra: dict | None = No
 
 
 COMMENT = {"command": f"gh pr comment 12 --body \"{CLAIM}\""}
+PY_COMMENT = {"command": py(f"u.urlopen(u.Request('{SC}/12/comments', data=json.dumps({{'text': '{CLAIM}'}}).encode(), method='POST'))")}
 BATCH = {"command": f"gh pr create --title \"{TITLE}\" --body \"{CLAIM}\""}
 
 # (tool_input, transcript entries or None, env, expected exit code, label)
@@ -258,6 +283,10 @@ E2E_CASES = [
     ({"command": f"ls\ncurl -d @body.json {SC}/12/comments"}, [], None, 2, "ls newline curl -d @file comment is denied (unreadable body)"),
     ({"command": f"curl -X POST \"{SC}/$(echo $(date))/comments\" -d \"$B\""}, [], None, 2, "nested substitution id comment POST is denied"),
     ({"command": f"curl -s \"{SC}/$(echo $(date))\" -G"}, [], None, 0, "nested substitution id GET is allowed"),
+    (PY_COMMENT, [], None, 2, "python comment POST without verifiers is denied (pc-1329)"),
+    (PY_COMMENT, three_inline(CLAIM), None, 0, "python comment POST clears after 3 PASS"),
+    (PY_COMMENT, three_inline(OTHER), None, 2, "python comment POST of unverified text is denied"),
+    ({"command": py(f"print(u.urlopen('{SC}/12').read())")}, [], None, 0, "python GET passes untouched"),
     (COMMENT, [], {guard.OVERRIDE_ENV: "1"}, 0, "bypass env"),
     (COMMENT, None, None, 0, "no transcript_path fails open"),
     ({"command": "gh pr comment 12 --body-file -"}, [], None, 2, "stdin body is unverifiable"),
