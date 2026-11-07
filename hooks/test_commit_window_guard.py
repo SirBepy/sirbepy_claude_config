@@ -6,6 +6,7 @@ clock, and point its allow dir there, so the real hooks/.commit-window-ok/
 is never read or written.
 """
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -180,6 +181,21 @@ with tempfile.TemporaryDirectory() as tmp:
     )
     expect("second listed client org is gated too", call_main("git push", client2, night), 2)
     expect("client rebase --abort at 00:40 passes", call_main("git rebase --abort", client, night), 0)
+
+    # A Git Bash `cd /c/...` must reach the same repo as `cd C:/...`
+    # (Windows only: elsewhere `/c/...` is a real path, not a drive alias).
+    def msys(repo: Path) -> str:
+        posix = repo.as_posix()
+        return f"/{posix[0].lower()}{posix[2:]}" if os.name == "nt" and posix[1:3] == ":/" else posix
+
+    expect("Windows-style cd into a client repo then commit is denied", call_main(f'cd "{client.as_posix()}"; git commit -q -m x -- a.txt', personal, night), 2)
+    expect("Git Bash cd /c/... into a client repo then commit is denied", call_main(f'cd {msys(client)}; git commit -q -m x -- a.txt', personal, night), 2)
+    expect("Git Bash cd /c/... into a client repo then push is denied", call_main(f"cd {msys(client)}; git push origin develop", personal, night), 2)
+    expect("Git Bash cd /c/... into a personal repo then commit passes", call_main(f"cd {msys(personal)}; git commit -q -m x -- a.txt", client, night), 0)
+    expect("Git Bash git -C /c/... into a client repo is denied", call_main(f"git -C {msys(client)} commit -m x", personal, night), 2)
+    expect("Git Bash style payload cwd of a client repo is denied", call_main("git commit -m x", msys(client), night), 2)
+    expect("an unresolvable cd target falls back to the client cwd repo and is denied", call_main("cd /no/such/dir/anywhere; git commit -m x", client, night), 2)
+    expect("an unresolvable cd target from a personal cwd passes", call_main("cd /no/such/dir/anywhere; git commit -m x", personal, night), 0)
 
     expect("allow CLI on a client repo succeeds", allow(client, at(0, 30)), 0)
     expect("allowed client commit at 00:40 passes", call_main("git commit -m x", client, night), 0)

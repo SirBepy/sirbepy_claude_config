@@ -157,12 +157,26 @@ def tokenize_segment(segment: str) -> list[str]:
         return segment.split()
 
 
+_MSYS_DRIVE_RE = re.compile(r"^/([A-Za-z])(/.*)?$")
+
+
+def normalize_msys_path(path) -> str:
+    """Git Bash spells a drive path `/c/Users/x`; native Windows Python and git
+    read that as a `c` folder at the root of the current drive, which does not exist. Rewrites
+    it to `C:/Users/x` on Windows so a `cd /c/...` in a Bash-tool command
+    resolves to the repo it really targets. Any other path is returned as is."""
+    path = str(path)
+    m = _MSYS_DRIVE_RE.match(path) if os.name == "nt" else None
+    return f"{m.group(1).upper()}:{m.group(2) or '/'}" if m else path
+
+
 def git_repo_root(path) -> str | None:
     """Git toplevel containing `path`, or None if `path` doesn't exist,
     isn't inside a repo, or git fails/times out. Shared resolver (todo 874)
     so a timeout bump or a failure-mode fix lands once for every caller.
+    A Git Bash `/c/...` drive path is accepted (see normalize_msys_path).
     """
-    path = str(path)
+    path = normalize_msys_path(path)
     if not path or not os.path.isdir(path):
         return None
     try:
@@ -192,7 +206,7 @@ def git_common_dir(path) -> str | None:
     own linked worktree apart from an unrelated repo without matching on
     directory names (todo 966).
     """
-    path = str(path)
+    path = normalize_msys_path(path)
     if not path or not os.path.isdir(path):
         return None
     try:

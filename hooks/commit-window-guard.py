@@ -351,7 +351,11 @@ def main() -> None:
     for targets, segment_overrides in segments:
         overrides = env_overrides + segment_overrides
         for _kind, path, _args in targets:
-            root = git_repo_root(path)
+            # A target git_repo_root cannot resolve (a path the shell expands
+            # that Python cannot, e.g. $HOME or a missing dir) falls back to the
+            # shell's own cwd repo: skipping it would let the commit through
+            # unseen, so the gate errs towards the repo it knows.
+            root = git_repo_root(path) or git_repo_root(payload.get("cwd") or "")
             if not root:
                 continue
             if not client_slug(root):
