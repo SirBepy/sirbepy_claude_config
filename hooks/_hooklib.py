@@ -386,7 +386,13 @@ HERESTRING_BODY_RE = re.compile(r"@(['\"])\r?\n.*?\r?\n\1@", re.DOTALL)
 def split_command_segments(command: str) -> list[str]:
     """Statements and pipeline segments of a shell command, split on ; | & and
     newlines that sit outside quotes, with heredoc and here-string bodies
-    dropped first so text inside them never reads as a command."""
+    dropped first so text inside them never reads as a command.
+
+    There is no backslash or backtick escape handling (PowerShell reads
+    "C:\\dir\\" as a closed string), so quotes still open at the end mean the
+    scan desynced, e.g. on `echo "a\\" b"; fvm flutter build`. The text then
+    falls back to the plain split, which over-splits instead of hiding the
+    command after the quote."""
     text = HERESTRING_BODY_RE.sub("", HEREDOC_BODY_RE.sub("", command))
     segments, buf, quote = [], [], None
     for ch in text:
@@ -402,6 +408,8 @@ def split_command_segments(command: str) -> list[str]:
             buf = []
         else:
             buf.append(ch)
+    if quote:
+        return [s for s in re.split(r"[;|&\n]", text) if s.strip()]
     segments.append("".join(buf))
     return [s for s in segments if s.strip()]
 

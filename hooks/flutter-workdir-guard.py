@@ -49,6 +49,7 @@ try:
         tokenize_segment as tokenize,
         basename,
         split_command_segments,
+        normalize_msys_path,
     )
 except Exception as e:
     sys.stderr.write(f"[flutter-workdir-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
@@ -137,9 +138,32 @@ def pinned_cd(tokens: list[str]) -> str | None:
 
 def is_flutter_project(path: str) -> bool:
     try:
-        return os.path.isfile(os.path.join(path, "pubspec.yaml"))
+        return os.path.isfile(os.path.join(normalize_msys_path(path), "pubspec.yaml"))
     except OSError:
         return False
+
+
+# A quoted `-c`/`-Command` argument of a real shell is itself a command line:
+# the quote-aware split keeps it as one token, so its statements are scanned
+# as segments of their own (`bash -c "cd x; dart run build_runner build ..."`).
+SHELL_WRAPPERS = {"bash", "sh", "zsh", "dash", "pwsh", "powershell"}
+INLINE_COMMAND_FLAGS = {"-c", "-lc", "-command"}
+
+
+def with_wrapper_bodies(segments: list[str], depth: int = 0) -> list[str]:
+    out = []
+    for segment in segments:
+        out.append(segment)
+        if depth >= 3:
+            continue
+        tokens = tokenize(segment)
+        for i in range(1, len(tokens) - 1):
+            if tokens[i].lower() in INLINE_COMMAND_FLAGS and any(
+                basename(t).removesuffix(".exe") in SHELL_WRAPPERS for t in tokens[:i]
+            ):
+                body = _lib_strip_quotes(tokens[i + 1])
+                out.extend(with_wrapper_bodies(split_command_segments(body), depth + 1))
+    return out
 
 
 def main() -> None:
@@ -153,7 +177,7 @@ def main() -> None:
 
     # Quote-aware split: a `|` inside a quoted grep -E pattern is not a pipeline
     # boundary, so `grep -E "a|flutter"` never yields a segment led by `flutter`.
-    segments = split_command_segments(command)
+    segments = with_wrapper_bodies(split_command_segments(command))
 
     if tool_name == "Bash":
         for segment in segments:

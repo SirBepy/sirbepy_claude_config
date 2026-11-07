@@ -229,7 +229,7 @@ def _has_iex(masked: str) -> bool:
     return any(is_command_position(masked, m.start()) for m in IEX_RE.finditer(masked))
 
 
-def _check_masked(masked: str, cwd: str) -> str | None:
+def _check_masked(masked: str, cwd: str, redirects: bool = True) -> str | None:
     for m in CONTENT_CMDLET_RE.finditer(masked):
         if is_command_position(masked, m.start()):
             return f"PowerShell content-write cmdlet `{m.group(1)}` writes file content through the shell."
@@ -246,7 +246,7 @@ def _check_masked(masked: str, cwd: str) -> str | None:
         if is_command_position(masked, m.start()):
             return "`ed` edits and writes the file directly through the shell."
 
-    for m in REDIRECT_RE.finditer(masked):
+    for m in REDIRECT_RE.finditer(masked if redirects else ""):
         fd, op, amp, target = m.groups()
         if amp:
             continue  # fd duplication like 2>&1, not a file write
@@ -267,7 +267,7 @@ def _is_bash_family_invocation(command: str) -> bool:
     return bool(BASH_FAMILY_START_RE.match(command))
 
 
-def find_violation(command: str, cwd: str = "") -> str | None:
+def find_violation(command: str, cwd: str = "", tool_name: str = "") -> str | None:
     lowered = command.lower()
     if any(hint in lowered for hint in MARKER_HINTS):
         return None
@@ -281,7 +281,13 @@ def find_violation(command: str, cwd: str = "") -> str | None:
     # one, so the pwsh pass is skipped. An unpaired quote, or any other first
     # word (echo, powershell, pwsh, ...), keeps the dual pass: that is the
     # `echo "foo\" ; Set-Content x "bar"` shape the pass exists to catch.
-    skip_pwsh = _is_bash_family_invocation(command) and '"' not in masked_bash
+    # The PowerShell tool is the exception for everything except redirects: its
+    # shell parses the whole line under PowerShell rules whatever the first
+    # word is, so `git commit -m "a \" ; Set-Content f x ; echo \""` really
+    # runs the Set-Content. Redirects stay skipped there, because that is the
+    # `</body>` false-deny shape the skip exists for.
+    bash_reading_holds = _is_bash_family_invocation(command) and '"' not in masked_bash
+    skip_pwsh = tool_name != "PowerShell" and bash_reading_holds
     masked_pwsh = masked_bash if skip_pwsh else mask_quoted(command, DQUOTE_RE_PWSH)
 
     # iex/Invoke-Expression evaluates its string argument as real code, so a
@@ -295,7 +301,7 @@ def find_violation(command: str, cwd: str = "") -> str | None:
                 "Invoke-Expression, which evaluates it as live code."
             )
 
-    return _check_masked(masked_bash, cwd) or _check_masked(masked_pwsh, cwd)
+    return _check_masked(masked_bash, cwd) or _check_masked(masked_pwsh, cwd, redirects=not bash_reading_holds)
 
 
 def main() -> None:
@@ -305,7 +311,7 @@ def main() -> None:
         sys.exit(0)
 
     cwd = payload.get("cwd") or ""
-    reason = find_violation(command, cwd)
+    reason = find_violation(command, cwd, payload.get("tool_name") or "")
     if reason:
         deny(reason)
     sys.exit(0)

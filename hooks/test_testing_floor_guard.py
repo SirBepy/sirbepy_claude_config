@@ -1153,6 +1153,20 @@ def node_sweep_ownership_checks() -> list:
     lib.sweep_node_orphans(before={}, root=Path("."), lister=lambda: None, killer=killed.append)
     check("a failed process listing kills nothing", killed == [])
 
+    # A relative or filesystem root must not match unrelated command lines.
+    peers = {7: "node C:/elsewhere/node_modules/vitest/vitest.mjs run", 8: "node /usr/lib/tinypool.js"}
+    killed = []
+    lib.sweep_node_orphans(before={}, root=Path("."), lister=lambda: peers, killer=killed.append)
+    check("a relative '.' root kills no unrelated process", killed == [])
+    lib.sweep_node_orphans(before={}, root="", lister=lambda: peers, killer=killed.append)
+    check("an empty root kills no unrelated process", killed == [])
+    lib.sweep_node_orphans(before={}, root=Path(Path.cwd().anchor), lister=lambda: peers, killer=killed.append)
+    check("a filesystem root kills nothing", killed == [])
+    owned = {9: f"node {Path.cwd().as_posix()}/node_modules/vitest/vitest.mjs run"}
+    lib.sweep_node_orphans(before={}, root=Path("."), lister=lambda: owned, killer=killed.append)
+    check("a relative root still cleans a process naming the resolved cwd", killed == [9])
+    killed = []
+
     def boom():
         raise OSError("listing exploded")
     try:

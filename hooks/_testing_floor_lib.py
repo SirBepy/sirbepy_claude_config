@@ -652,11 +652,15 @@ def sweep_node_orphans(before=None, root=None, lister=None, killer=None) -> None
         after = (lister or list_node_runner_processes)()
         if after is None:
             return
-        root_forms = {_norm_path(str(root))}
-        try:
-            root_forms.add(_norm_path(str(Path(root).resolve())))
-        except OSError:
-            pass
+        # A relative root ("." or "") is resolved before use: its own text would
+        # be a substring of nearly every command line and kill a peer's vitest.
+        # A filesystem root names no repo at all, so nothing can be proven.
+        resolved = Path(root).resolve()
+        if resolved == resolved.parent:
+            return
+        root_forms = {_norm_path(str(resolved))}
+        if Path(root).is_absolute():
+            root_forms.add(_norm_path(str(root)))
         for pid, cmd in after.items():
             if pid in before:
                 continue

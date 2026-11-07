@@ -201,7 +201,7 @@ def _find_unquoted_violation(command: str) -> tuple[str, str] | None:
                 continue
             # todo 908: anchored to the segment's own start (post prefix-strip), not
             # a bare search - `| xargs echo tail` merely names tail as an argument.
-            m = PIPE_FILTER_RE.match(_strip_leading_prefix(seg))
+            m = PIPE_FILTER_RE.match(_strip_leading_prefix(_after_pipe(seg)))
             if not m:
                 continue
             filter_name = m.group(1)
@@ -263,32 +263,53 @@ def _scan_quotes(text: str) -> tuple[list[bool], bool]:
 # outside this and are left alone.
 COMMIT_PATHSPEC_RE = re.compile(r"commit-pathspec\.sh\b")
 COMMIT_PATHSPEC_HEAD_RE = re.compile(
-    r"""(?:&\s+)?(?:(?:bash|sh|zsh|source|\.)(?:\.exe)?\s+(?:-\S+\s+)*)?["']?[^\s"']*""",
+    r"""(?:[({]\s*)*(?:&\s+)?(?:(?:bash|sh|zsh|source|\.)(?:\.exe)?\s+(?:-\S+\s+)*)?["']?[^\s"']*""",
     re.IGNORECASE,
 )
 PIPEFAIL_RE = re.compile(r"-o\s+pipefail\b")
+# Any pipe stage after the script replaces its exit status with the stage's own,
+# so tee/cat/sed swallow a refusal exactly as tail does. Kept apart from
+# PIPE_FILTERS: those three never hang a cargo run, so the cargo check ignores them.
+COMMIT_PATHSPEC_FILTER_RE = re.compile(r"\b(" + "|".join(PIPE_FILTERS + ("tee", "Tee-Object", "cat", "sed")) + r")\b", re.IGNORECASE)
 
 
-def find_commit_pathspec_violation(command: str) -> str | None:
+def _after_pipe(segment: str) -> str:
+    """A pipeline stage's own text: `|&` pipes stderr too, leaving a leading `&`."""
+    text = segment.lstrip()
+    return text[1:] if text.startswith("&") else text
+
+
+def find_commit_pathspec_violation(command: str, _depth: int = 0) -> str | None:
     """Returns the filter name when `command` runs commit-pathspec.sh into a
-    PIPE_FILTERS segment without pipefail anywhere in the command, else None.
+    pipe filter without pipefail anywhere in the command, else None. Statements
+    split outside quotes only (a `;` in the commit message is not a statement
+    end) and a shell `-c` argument is scanned as its own command line.
     """
     if PIPEFAIL_RE.search(command):
         return None
-    for statement in STATEMENT_SPLIT_RE.split(command):
+    found = _commit_pathspec_unquoted(command)
+    if found or _depth >= 3:
+        return found
+    for inner in _wrapper_arguments(command):
+        found = find_commit_pathspec_violation(inner, _depth + 1)
+        if found:
+            return found
+    return None
+
+
+def _commit_pathspec_unquoted(command: str) -> str | None:
+    for st_start, st_end in _spans_outside_quotes(command, STATEMENT_SPLIT_RE):
+        statement = command[st_start:st_end]
         if not COMMIT_PATHSPEC_RE.search(statement):
             continue
-        mask = _quote_mask(statement)
-        pipes = [i for i, ch in enumerate(statement) if ch == "|" and not mask[i]]
-        bounds = [-1] + pipes + [len(statement)]
-        segments = [(bounds[i] + 1, bounds[i + 1]) for i in range(len(bounds) - 1)]
+        segments = _spans_outside_quotes(statement, PIPE_RE)
         for idx, (start, end) in enumerate(segments):
             seg = statement[start:end]
             m = COMMIT_PATHSPEC_RE.search(seg)
             if not m or not COMMIT_PATHSPEC_HEAD_RE.fullmatch(_strip_leading_prefix(seg[:m.start()])):
                 continue
             for f_start, f_end in segments[idx + 1:]:
-                fm = PIPE_FILTER_RE.match(_strip_leading_prefix(statement[f_start:f_end]))
+                fm = COMMIT_PATHSPEC_FILTER_RE.match(_strip_leading_prefix(_after_pipe(statement[f_start:f_end])))
                 if fm:
                     return fm.group(1)
     return None
