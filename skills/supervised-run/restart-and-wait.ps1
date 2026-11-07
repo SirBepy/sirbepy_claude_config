@@ -54,7 +54,7 @@ try {
     if ($health.StatusCode -ne 200) { throw "unhealthy" }
 }
 catch {
-    Fail "supervisor not reachable at $($cfg.BaseUrl) - fall back to a plain shell run."
+    Fail "supervisor not reachable at $($cfg.BaseUrl) - stop and tell Joe to start server_supervisor (dev-server-guard.py denies a plain shell run, see SKILL.md Fallback)."
 }
 
 $proc = (Invoke-Api $cfg 'GET' '/procs') | Where-Object { $_.id -eq $Id }

@@ -52,7 +52,7 @@ Joe's hardware can handle 5 fine.
 
 ## Long-running dev servers
 
-**Always launch them via the `/supervised-run` skill** (vite, `cargo tauri dev`, `next dev`, `flutter run`, backends, file watchers, etc.). The supervisor owns the process so there are no orphans, logs it centrally so the agent can read its output without a human pasting a terminal, and can spawn outside the agent's sandbox job (on Windows, a bare agent-shell launch is denied `CREATE_BREAKAWAY_FROM_JOB`, which is the real reason a long-lived server won't start under the agent directly). The skill falls back to a plain shell run only if the supervisor is unreachable.
+**Always launch them via the `/supervised-run` skill** (vite, `cargo tauri dev`, `next dev`, `flutter run`, backends, file watchers, etc.). The supervisor owns the process so there are no orphans, logs it centrally so the agent can read its output without a human pasting a terminal, and can spawn outside the agent's sandbox job (on Windows, a bare agent-shell launch is denied `CREATE_BREAKAWAY_FROM_JOB`, which is the real reason a long-lived server won't start under the agent directly). If the supervisor is unreachable there is no fallback: `hooks/dev-server-guard.py` denies a raw launch, so stop and tell Joe to start server_supervisor.
 
 If you ever bypass the supervisor: track the PID and ensure it terminates on session end / Ctrl-C / completion of the parent task.
 
