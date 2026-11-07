@@ -130,7 +130,9 @@ For a single-day lookback (`today`, `yesterday`, or an explicit single `YYYY-MM-
 
 **Mark the run, once the window is resolved (every run, manual or scheduled, even one the dev later
 cancels or leaves on an open card):** with the Write tool, create one file per local calendar date
-the window covers, up to and including today, at
+the window covers, up to and including the run's date (step 1a's rule: today's local date, or
+yesterday's before 06:00 local, so a 23:55 firing delayed past midnight never marks the new day and
+causes the next night's run to skip), at
 `~/.claude/skills/clockify-reconciliator/.runs/<project-name>/<YYYY-MM-DD>`. Contents: one line,
 `started LOCAL <HH:MM>, window <window as resolved>`. A `yesterday` run marks only yesterday; the
 Friday week run marks Mon to Fri. An existing marker is overwritten with the newer line. `.runs/` is

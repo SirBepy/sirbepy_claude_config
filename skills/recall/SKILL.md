@@ -71,7 +71,8 @@ python ~/.claude/skills/recall/recall.py memory --stale-days N [--memdir DIR]
   the raw transcript.
 - **Client and personal are labelled.** Searching both is allowed (the dev, 2026-10-08), but keep
   client content out of anything written for a different client or posted publicly.
-- **Surface every `WARNING:` line** to the dev as-is. They mean the compressor stopped or failed, an
+- **Surface every `WARNING:` line** to the dev as-is. They print on stderr, so never discard stderr
+  (`2>$null`) when running recall. They mean the compressor stopped or failed, an
   archive failed re-verification, the transcript format changed, or transcripts were deleted
   unarchived. Each is silent data loss otherwise.
 
