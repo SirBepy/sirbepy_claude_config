@@ -585,7 +585,8 @@ def cmd_pre_bump(repo):
     if not listing.is_file():
         return {"ran": []}
     commands = []
-    for line in listing.read_text(encoding="utf-8").splitlines():
+    # utf-8-sig: PowerShell 5.1 writes a BOM, which would otherwise glue to a first-line "#".
+    for line in listing.read_text(encoding="utf-8-sig").splitlines():
         line = line.strip()
         if line and not line.startswith("#"):
             commands.append(line)
