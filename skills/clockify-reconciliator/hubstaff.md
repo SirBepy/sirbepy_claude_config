@@ -203,8 +203,8 @@ assuming the run fully succeeded.
 
 The script retries an entry up to 2 more times when it fails before the Save click (slow page load,
 dialog never opened, select or input step), so a plain `ok:false` means every try failed before
-saving and a rerun of just those entries is safe. `maybeSaved:true` means the failure came after
-Save was clicked and the script did not retry: verify that entry through the HubStaff activities API
+saving and a rerun of just those entries is safe. `maybeSaved:true` means the failure came at or
+after the Save click and the script did not retry: verify that entry through the HubStaff activities API
 before re-adding it, or it may duplicate (2026-11-06: 8 of 21 entries timed out on goto or
 dialog-open, all 8 passed on a rerun, API matched Clockify exactly). `hs_preflight.cjs` retries its
 weekly-page navigation once with a 60s timeout.
