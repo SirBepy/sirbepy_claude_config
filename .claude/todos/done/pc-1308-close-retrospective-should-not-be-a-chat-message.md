@@ -23,3 +23,7 @@ A clean close sends no retrospective or bookkeeping text to Joe. A real miss, or
 
 - A clean `/close` in a Conductor chat shows Joe no retrospective bubble.
 - A close with a real miss still tells him, in one line naming the miss.
+
+## Completion note
+
+Done in `skills/close/SKILL.md`: in a Conductor-hosted chat (the `send_message` tool exists) Phase 1 prints nothing and Phase 4 sends no counter; only a real miss goes out as one `report` or `do_this` line. A plain terminal keeps today's output. Verify only: seeing no bubble needs a live Conductor close. Left alone (outside the lane that touched it): `skills/respawn/SKILL.md:115` still says "Print the one-line counter"; `/commit`'s push report and `/gate-chat`'s report wording were not audited, so the todo's UNVERIFIED sibling-skill question stays open for them.

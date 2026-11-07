@@ -176,6 +176,8 @@ When it does run: `Grep` the file, never `Read` it whole (transcripts embed full
 
 Joe does not read this by default - it exists to feed Phase 3. Print the full bullet list ONLY if at least one of 1-4 has a real (non-"none") entry. If everything is empty, print nothing from Phase 1 and let Phase 4's one-line counter be the only visible trace of this phase. Never print "none" bullets just to show the work happened.
 
+**Conductor-hosted chat (the `send_message` tool exists): print nothing, ever.** The bullet list is Phase 3's input, not a message, so no retrospective bubble reaches Joe from a clean close. Only a real miss is sent: one `send_message` line naming the miss, with `kind` `do_this` when Joe must act and `report` otherwise. A repeated manual step or a skill-rule violation that Phase 3 files as a todo is not a miss; a lost memory write, an unfinished item Joe asked for, or a failed step is.
+
 ## Phase 2 - Code Health Review
 
 Skip this entire phase if ANY:
@@ -278,7 +280,9 @@ Note: there is no implicit /commit step anymore. If the dev wants a commit, they
 
 ## Phase 4 - Counter summary
 
-Print one line, always - this is the one thing Joe reliably sees from Phases 1-3:
+**Conductor-hosted chat (the `send_message` tool exists): do not send the counter.** Joe does not read the bookkeeping footer, so a clean close sends him nothing for this phase. Still compute the counts, since the line below stays the format for a plain terminal session and for anything a later step cites. Send one `send_message` line (`kind` `report`, or `do_this` when Joe must act) only for a counter item that is a real miss: a screenshot `mismatch`, a Phase 2 that could not run, or a Phase 3 write that failed. Name the miss and nothing else.
+
+Otherwise (a plain terminal session) print one line, always - this is the one thing Joe reliably sees from Phases 1-3:
 
 ```
 N memory writes . N todos written (M from review, K skill-improvement) . N screenshots written to <dir> . chain: <list of chained commands or "none"> . closing: yes/no
