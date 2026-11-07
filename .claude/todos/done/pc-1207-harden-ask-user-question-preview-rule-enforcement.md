@@ -64,3 +64,4 @@ This is a cross-project concern (the tool and the rule are global), filed here p
 "work on `~/.claude` itself... always lands in `.claude/todos/`, never in the surfacing project's
 session" rule, even though all three incidents were observed in `claude_usage_in_taskbar` sessions.
 - Deferred question (needs an attended session for its `hooks/`/`settings.json` writes) answered 2026-11-07: Joe said run it now, in the attended 2026-11-07 session; he approves each permission prompt as it appears.
+- Built hooks/question-preview-style-guard.py (denies a question-card preview whose inline style attribute paints; layout-only style and class markup pass; escape marker; fails open). Wired in settings.json; wiring proven 2026-11-07 by a nested claude -p run against a stub cc_conductor MCP: fake preview exit 2 with the message, class-markup preview exit 0. Test hooks/test_question_preview_style_guard.py 14 cases (new file, red by construction without the hook).
