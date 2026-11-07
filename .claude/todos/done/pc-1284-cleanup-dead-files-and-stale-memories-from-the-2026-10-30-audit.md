@@ -31,3 +31,7 @@ Ask the dev once (one card) for the root deletes and the design-review command; 
 
 - `Get-ChildItem C:\Users\tecno\.claude -File -Force` shows none of the confirmed clutter.
 - Every memory change keeps index line and file in sync.
+
+## Notes
+
+- 2026-11-07 done: deleted from C:\Users\tecno\.claude (main checkout): settings.json.bak, settings.json.orig, settings.json.bak-devguard, .caveman-active, COMMENTS_FOR_BEPY.md, TODO-for_bepy-structure-and-comments-cleanup.md, IDEAS.md. Kept .env.bak, /design-review, nul (not in the approved 7). .gitignore: allowlisted aiusage-hook.ps1 and only scripts/Get-SentryIssue.ps1 + scripts/Invoke-SentryTriage.ps1 (scripts/ otherwise holds symlinks into revaire-claude-tools and flutter-auto-bump.ps1, which stay ignored). Memory: deleted feedback_blockquote_tilde_dot_escaping and feedback_for_bepy_scope with their index lines; updated feedback_git_commit_always_allowed, feedback_no_work_with_messages, project_superpowers_migration (now done, plugin off at user scope, rodge-only), reference_claude_roots_layout (.claude-fibo gone). NOT done: moving ~8 cross-project preferences to the Obsidian vault (outside this run's file lane; needs a judgement pass per entry), IDEAS.md content was deleted without a vault copy as briefed.
