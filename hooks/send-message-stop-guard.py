@@ -42,10 +42,13 @@ genuine message that happens to use one of these phrases in passing (e.g.
 quoting Joe's own words back) is not blocked - the incident's own stub was
 90 characters, well under the threshold.
 
-Review hand-off check: a turn that called show_preview or write_draft and whose
-last report_turn_status is "done" is blocked once (stop_hook_active makes it
+Review hand-off check: a turn that called show_preview and whose last
+report_turn_status is "done" is blocked once (stop_hook_active makes it
 one-shot) and told to report "question" instead. Joe, 2026-10-26: design rounds
-awaiting his review kept ending "done".
+awaiting his review kept ending "done". write_draft is deliberately NOT a
+hand-off: Conductor's stop verdict rejects status "question" when no
+ask_user_question card is up, and a draft needs no decision, so a draft turn
+ends "done" (pc-1327: the two rules forced a filler card three times).
 """
 
 import json
@@ -103,7 +106,8 @@ DECOY_PHRASE_RE = re.compile(
 DECOY_SHORT_CHAR_THRESHOLD = 400
 
 # Tools that put something in front of Joe for approval; see _review_handoff_reason.
-REVIEW_HANDOFF_SUFFIXES = {"show_preview", "write_draft"}
+# write_draft is excluded on purpose: see the module docstring.
+REVIEW_HANDOFF_SUFFIXES = {"show_preview"}
 
 
 def _tool_suffix(name: str) -> str:
@@ -118,7 +122,7 @@ def _turn_tool_suffixes(transcript_path: str) -> list:
 
 def _review_handoff_reason(transcript_path: str) -> str:
     """Block reason when this turn handed Joe something to judge (a
-    show_preview or write_draft call) yet its last report_turn_status says
+    show_preview call) yet its last report_turn_status says
     "done", else "". Joe, 2026-10-26: design rounds waiting on his review kept
     ending "done"; a turn awaiting his look is "question" (input needed).
     Only the LAST status counts, and a turn with no report_turn_status makes
@@ -137,7 +141,7 @@ def _review_handoff_reason(transcript_path: str) -> str:
     if handed_off and isinstance(last_status, str) and last_status.strip().lower() == "done":
         return (
             "[send-message-stop-guard] This turn handed Joe something to judge "
-            "(a preview or draft) but ends as status \"done\". A turn waiting "
+            "(a preview) but ends as status \"done\". A turn waiting "
             "on his review is not done: call report_turn_status with status "
             "\"question\" (input needed) before ending the turn."
         )

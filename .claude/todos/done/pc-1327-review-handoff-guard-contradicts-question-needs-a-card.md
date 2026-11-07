@@ -18,3 +18,8 @@ Joe's own edits and rewrites hit this too: a draft in his exact words still coun
 ## Approach
 
 `REVIEW_HANDOFF_SUFFIXES` at `hooks/send-message-stop-guard.py:106`, and its check near line 121. Change the guard so a turn that shows a preview or draft and needs no decision may end as `done`, or have it point at the card explicitly so the two rules agree. Update `hooks/test_send_message_stop_guard.py`. Conductor's rule came from claude_usage_in_taskbar pc-1593, so keep that one.
+
+
+## Notes
+
+- Fixed: write_draft removed from REVIEW_HANDOFF_SUFFIXES in hooks/send-message-stop-guard.py, show_preview kept (decided 2026-11-07 per triage); test r2 inverted and red-checked.
