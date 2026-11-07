@@ -474,16 +474,25 @@ above - only step 2 (diff review) and step 3 (the prefilter, carve-out included)
 floor, then they report their finished paths without touching git. The main thread performs the
 commit at each barrier instead, once per completed todo, in lane order:
 
-1. Write a fresh marker (block's step 1).
-2. `git add` any untracked file that todo's builder created, by name.
-3. Run the branch guard (step 5).
-4. Run the working-tree diff check again, right now, against the same `<FILES>` (step 2, above,
-   which is `/commit` step 8) - time has passed since the builder's own pass and another agent's
-   commit may have landed in between. An unrecognised hunk is the same STOP: drop that path from
-   `<FILES>` and name it in the barrier's own summary, then commit the rest.
-5. `git commit -m "<PREFIX>: <title>" -- <FILES>` (step 6), naming that todo's files only.
+1. Write a fresh marker (block's step 1) once per session, in its own call.
+2. One call per todo, naming that todo's files only:
+   `bash ~/.claude/skills/mega-todos/barrier-commit.sh --expect-branch <EXPECTED_BRANCH> --expect-sha
+   <sha recorded after the previous commit> -m "<PREFIX>: <title>" [-m "<body>"] [--todo <id>] --
+   <FILES>` (or `--files-from <file>`). It declares each file's current hunks as this run's own
+   (`skills/commit/hunk-ranges.sh`), so `commit-pathspec.sh` stops refusing with "UNVERIFIED (N live
+   session markers)" just because builders left markers behind, then runs `commit-pathspec.sh`
+   (prefilter, branch and HEAD guards, overlap and foreign-hunk checks, `git add` of untracked
+   files, the commit) and **exits with its status**.
+3. Read the exit code, never a filtered line: a non-zero exit is a refusal and the commit did not
+   happen. Do not pipe the call (`| tail`) or chain a second commit or a push after it with `&&`
+   (cf. `/commit` step 8). A coverage refusal on a doc-only or hyphen-named-test change takes
+   `--force coverage-tests` on a deliberate rerun, with the reason in the barrier summary.
+   An unrecognised foreign hunk is the same STOP as before: drop that path from `<FILES>` and name
+   it in the barrier's own summary, then commit the rest. Pass `--no-own-ranges` for a file a peer
+   session may also be editing, since the own-range declaration trusts every current hunk.
 
-Same HARD RULES apply, main thread substituted for builder throughout.
+Same HARD RULES apply, main thread substituted for builder throughout. The helper's checks live in
+`skills/mega-todos/test_barrier_commit.sh`.
 
 Alongside it, every builder prompt still carries the doctrine's full canonical preamble from
 `refs/builder-preamble.md`, `<STAGING_LINE>` included as-is: in `barrier` mode the builder genuinely
@@ -540,8 +549,9 @@ Archival is **main-thread only**, because `complete-todo.ps1` prunes the shared 
 
 1. At each barrier, for every todo that passed: decide its ending per `close/ai-todos-format.md`'s
    "Two endings" first. For the Completed ones, call
-   `~/.claude/skills/mega-todos/archive-batch.ps1 -Items "<id>|<what happened>", ...` once for the
-   whole batch instead of hand-rolling the `complete-todo.ps1` loop and pathspec - it resolves each
+   `~/.claude/skills/mega-todos/archive-batch.ps1 -Items "<id>|<what happened>", ... -PathspecFile
+   <path>` once for the whole batch (`-PathspecFile` writes `.Pathspec` as a clean LF list for
+   `barrier-commit.sh --files-from`) instead of hand-rolling the `complete-todo.ps1` loop and pathspec - it resolves each
    id against the live backlog only, never a `done/` glob (the exact shape that broke twice, see
    `done/pc-0855-mega-todos-step-e-archival-is-hand-rolled-every-barrier.md`), and returns `.Pathspec`
    naming both halves of every move plus `PLAN.md`, and `.Failures` for any id it could not resolve
@@ -551,7 +561,9 @@ Archival is **main-thread only**, because `complete-todo.ps1` prunes the shared 
    collision).
 2. Commit the archival as one `CHORE: archive completed todos` commit per barrier, via `/commit`,
    passing the helper's `.Pathspec` as the commit pathspec - the main thread CAN invoke skills, so it
-   uses the real one; the helper itself never commits. This commit is bound by `/commit` step 8's
+   uses the real one; the helper itself never commits. In `barrier` COMMIT_MODE that is
+   `bash ~/.claude/skills/mega-todos/barrier-commit.sh -m "CHORE: archive completed todos"
+   --files-from <the -PathspecFile>` (see "Barrier COMMIT_MODE"). This commit is bound by `/commit` step 8's
    working-tree diff check like any other commit, so the pathspec is the helper's `.Pathspec`, never
    a directory-wide `git status`.
 3. Diff the set of ids actually archived or parked against the lane map from Step C, per

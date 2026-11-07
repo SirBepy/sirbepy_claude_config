@@ -19,3 +19,7 @@ Add `skills/mega-todos/barrier-commit.sh` with a `--force` pass-through and a te
 - [ ] One call commits a todo's files by pathspec and exits non-zero on any refusal.
 - [ ] The archive commit takes the pathspec from `archive-batch.ps1` without hand parsing.
 - [ ] A test covers a refused commit not reading as success.
+
+## Notes
+
+- 2026-11-07: added skills/mega-todos/barrier-commit.sh (own-ranges from hunk-ranges.sh, execs commit-pathspec.sh so its exit status is the caller's; --files-from strips CR), archive-batch.ps1 -PathspecFile (LF, BOM-less, repo-relative list), SKILL.md Barrier COMMIT_MODE and Step E now call them. Tests: skills/mega-todos/test_barrier_commit.sh (19 checks, mutation-checked: dropping the CR strip or the exec fails 5) and extended test-archive-batch.ps1. Verify only: a live /mega-todos barrier run.

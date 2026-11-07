@@ -84,12 +84,23 @@ try {
     $scriptPath = Join-Path $PSScriptRoot 'archive-batch.ps1'
 
     # A full id and a bare number in one batch: both must resolve to this device's pc label.
-    $result = & $scriptPath -Items "pc-0100|closed in test", "200|closed in test" -RepoRoot $seed.Root
+    $pathspecFile = Join-Path $labelDir 'pathspec.txt'
+    $result = & $scriptPath -Items "pc-0100|closed in test", "200|closed in test" -RepoRoot $seed.Root -PathspecFile $pathspecFile
 
     Assert ($result.Failures.Count -eq 0) "zero archive failures (got: $($result.Failures -join '; '))"
 
     $doneTracked = Join-Path $seed.TodosDir 'done\pc-0100-tracked-todo.md'
     $doneUntracked = Join-Path $seed.TodosDir 'done\pc-0200-untracked-todo.md'
+
+    # -PathspecFile: the file barrier-commit.sh reads with --files-from.
+    $specBytes = [System.IO.File]::ReadAllBytes($pathspecFile)
+    $specText = [System.Text.Encoding]::UTF8.GetString($specBytes)
+    Assert (-not ($specBytes.Length -ge 3 -and $specBytes[0] -eq 0xEF -and $specBytes[1] -eq 0xBB -and $specBytes[2] -eq 0xBF)) "pathspec file has no BOM"
+    Assert (-not $specText.Contains("`r")) "pathspec file has LF endings only (a CR would make every path read as not on disk)"
+    $specLines = @($specText -split "`n" | Where-Object { $_ })
+    Assert ($specLines.Count -eq $result.Pathspec.Count) "pathspec file has one line per .Pathspec entry (got $($specLines.Count) vs $($result.Pathspec.Count))"
+    Assert ($specLines -contains '.claude/todos/pc-0100-tracked-todo.md' -and $specLines -contains '.claude/todos/done/pc-0100-tracked-todo.md') "pathspec file lists repo-relative forward-slash paths for both halves of the tracked move"
+    Assert (-not ($specLines | Where-Object { $_.Contains('\') -or $_ -match '^[A-Za-z]:' })) "pathspec file has no backslashes or drive letters"
 
     Assert ($result.Pathspec -contains $seed.Tracked) "tracked source '$($seed.Tracked)' IS in .Pathspec (todo 932 fix)"
     Assert ($result.Pathspec -contains $doneTracked) "tracked dest '$doneTracked' is in .Pathspec"

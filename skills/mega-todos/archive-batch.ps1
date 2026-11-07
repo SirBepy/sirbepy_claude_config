@@ -46,7 +46,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string[]]$Items,
 
-    [string]$RepoRoot
+    [string]$RepoRoot,
+
+    [string]$PathspecFile
 )
 
 $ErrorActionPreference = 'Stop'
@@ -179,6 +181,20 @@ foreach ($p in $pathspec) {
 
 if ($failures.Count -gt 0) {
     foreach ($f in $failures) { Write-Warning "[$RepoRoot] $f" }
+}
+
+# barrier-commit.sh reads this file (--files-from) instead of the caller hand-parsing the object
+# above. Repo-relative forward-slash paths, LF endings, no BOM: a CRLF (what Python and PowerShell
+# redirection write on Windows) leaves a trailing CR on every path, and commit-pathspec.sh then
+# reads each one as "not on disk".
+if ($PathspecFile) {
+    $rootPrefix = ($RepoRoot -replace '\\', '/').TrimEnd('/') + '/'
+    $relPaths = $pathspec | ForEach-Object {
+        $p = $_ -replace '\\', '/'
+        if ($p.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) { $p.Substring($rootPrefix.Length) } else { $p }
+    }
+    $body = if ($relPaths) { (@($relPaths) -join "`n") + "`n" } else { '' }
+    [System.IO.File]::WriteAllText($PathspecFile, $body, (New-Object System.Text.UTF8Encoding $false))
 }
 
 Write-Output ([PSCustomObject]@{
