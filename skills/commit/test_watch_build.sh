@@ -123,7 +123,19 @@ out=$(run_watcher "$fx" -ExpectPublish); rc=$?
 check "-ExpectPublish with an unreadable job list reports watch_error, never success" \
   3 'BUILD_RESULT=watch_error' 'BUILD_RESULT=success' "$out" "$rc"
 
-# Only a job named publish/release counts; release-notes or build-release skipping is routine.
+# A job list of `{"jobs":null}` is unreadable too, and a hyphenated publish job still counts.
+fx=$(new_fixture "[$(run_entry 109 'Tauri Release')]")
+printf '{"status":"completed","conclusion":"success"}' > "$fx/view-109.json"
+printf '{"jobs":null}' > "$fx/jobs-109.json"
+out=$(run_watcher "$fx" -ExpectPublish); rc=$?
+check "-ExpectPublish with a null job list reports watch_error" 3 'BUILD_RESULT=watch_error' 'BUILD_RESULT=success' "$out" "$rc"
+fx=$(new_fixture "[$(run_entry 110 'Tauri Release')]")
+printf '{"status":"completed","conclusion":"success"}' > "$fx/view-110.json"
+printf '{"jobs":[{"name":"build","conclusion":"success"},{"name":"publish-tauri","conclusion":"skipped"}]}' > "$fx/jobs-110.json"
+out=$(run_watcher "$fx" -ExpectPublish); rc=$?
+check "-ExpectPublish catches a skipped hyphenated publish job" 6 'BUILD_RESULT=publish_skipped.*publish-tauri' 'BUILD_RESULT=success' "$out" "$rc"
+
+# Only a publish/release job counts; release-notes or build-release skipping is routine.
 fx=$(new_fixture "[$(run_entry 108 'Tauri Release')]")
 printf '{"status":"completed","conclusion":"success"}' > "$fx/view-108.json"
 printf '{"jobs":[{"name":"build","conclusion":"success"},{"name":"release-notes","conclusion":"skipped"},{"name":"build-release","conclusion":"skipped"}]}' > "$fx/jobs-108.json"

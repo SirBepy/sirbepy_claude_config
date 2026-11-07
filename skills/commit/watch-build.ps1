@@ -147,7 +147,9 @@ function Get-RunJobs {
     # $null (not an empty list) means "could not read the jobs", which -ExpectPublish must not
     # read as "nothing was skipped". The comma keeps an empty array from unrolling to $null.
     if (-not $json) { return $null }
-    return , @(($json | ConvertFrom-Json).jobs)
+    $parsed = ($json | ConvertFrom-Json).jobs
+    if ($null -eq $parsed) { return $null }
+    return , @($parsed)
   } catch {
     return $null
   }
@@ -194,7 +196,7 @@ function Wait-ForRunCompletion {
       $cancelledJobs = @($jobs | Where-Object { $_.conclusion -eq 'cancelled' } | ForEach-Object { $_.name })
       $skippedPublish = @()
       if ($ExpectPublish) {
-        $skippedPublish = @($jobs | Where-Object { $_.conclusion -eq 'skipped' -and $_.name -match '(?i)^(publish|release)(\s|\(|$)' } | ForEach-Object { $_.name })
+        $skippedPublish = @($jobs | Where-Object { $_.conclusion -eq 'skipped' -and $_.name -match '(?i)^(publish|release)([\s(_-]|$)' -and $_.name -notmatch '(?i)notes|docs|changelog' } | ForEach-Object { $_.name })
       }
       if ($info.conclusion -eq 'cancelled' -or $cancelledJobs.Count -gt 0) {
         return @{ Outcome = 'cancelled'; Conclusion = $info.conclusion; Jobs = $cancelledJobs; SkippedPublish = $skippedPublish }
