@@ -624,7 +624,7 @@ INLINE_COMMAND_FLAGS = {"-c", "-lc", "-command"}
 # `-c`, a combined short flag ending in c (`-lc`, `-ec`), every PowerShell
 # abbreviation of -Command, and cmd's /c and /k.
 _INLINE_FLAG_RE = re.compile(
-    r"(?:-(?:(?=[a-z]{1,3}$)[a-z]*c[a-z]*|co(?:m(?:m(?:a(?:n(?:d)?)?)?)?)?)|/[ck])", re.IGNORECASE
+    r"(?:-(?:(?=[a-z]{1,8}$)[a-z]*c[a-z]*|co(?:m(?:m(?:a(?:n(?:d)?)?)?)?)?)|/[ck])", re.IGNORECASE
 )
 _EVAL_NAMES = {"eval", "iex", "invoke-expression"}
 # What may stand before an eval at command position: a call operator, a wrapper
@@ -722,20 +722,39 @@ def substitution_bodies(text: str) -> list[str]:
     return [b for b in bodies if b.strip()]
 
 
-def _drop_quoted_heredoc_bodies(text: str) -> str:
-    """`text` with the body of each quoted-tag heredoc (`<<'EOF'`) removed: the
-    shell does not expand anything in it, so a backtick code span or `$(` there
-    is prose, not a command."""
-    def keep_edges(m: re.Match) -> str:
-        whole = m.group(0)
-        return whole.split("\n", 1)[0] + "\n" + whole.rsplit("\n", 1)[-1]
+# A heredoc opener line that names an interpreter (`bash <<'EOF'`, `cat <<'EOF' | sh`)
+# hands the body to it as a script, so the body's own `$(...)` and backticks are
+# commands even though the heredoc tag is quoted.
+_HEREDOC_EXECUTOR_RE = re.compile(
+    r"(?<![\w-])(?:bash|sh|zsh|dash|ksh|fish|pwsh|powershell|cmd|python3?|node|ruby|perl|php|bun|deno|ssh|source|xargs|eval)"
+    r"(?:\.exe)?(?![\w-])|(?:^|\s)\.\s",
+    re.IGNORECASE,
+)
 
-    return QUOTED_HEREDOC_BODY_RE.sub(keep_edges, text)
+
+def _literal_heredoc_matches(text: str):
+    """Matches of quoted-tag heredocs (`<<'EOF'`) whose opener line names no
+    interpreter. The shell expands nothing in such a body, so a backtick code
+    span or `$(` there is prose, not a command."""
+    for m in QUOTED_HEREDOC_BODY_RE.finditer(text):
+        opener = text[text.rfind("\n", 0, m.start()) + 1:m.start()] + m.group(0).split("\n", 1)[0]
+        if not _HEREDOC_EXECUTOR_RE.search(opener):
+            yield m
+
+
+def _drop_quoted_heredoc_bodies(text: str) -> str:
+    """`text` with the body of each literal heredoc removed."""
+    out, cursor = [], 0
+    for m in _literal_heredoc_matches(text):
+        whole = m.group(0)
+        out.append(text[cursor:m.start()] + whole.split("\n", 1)[0] + "\n" + whole.rsplit("\n", 1)[-1])
+        cursor = m.end()
+    return "".join(out) + text[cursor:]
 
 
 def _quoted_heredoc_body_lines(command: str) -> set[str]:
     lines: set[str] = set()
-    for m in QUOTED_HEREDOC_BODY_RE.finditer(command):
+    for m in _literal_heredoc_matches(command):
         lines.update(line.strip() for line in m.group(0).split("\n")[1:-1])
     return lines
 

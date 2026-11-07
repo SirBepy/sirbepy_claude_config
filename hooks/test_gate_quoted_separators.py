@@ -125,6 +125,9 @@ for label, cmd in (
     ("a stash in an eval after then", 'if true; then eval "git stash pop"; fi'),
     ("a stash nested five substitutions deep", "echo $(echo $(echo $(echo $(echo $(git stash pop)))))"),
     ("a stash after a paren inside quotes in a substitution", 'echo "$(echo ")" ; git stash pop)"'),
+    ("a stash after a long clustered -euxc flag", "bash -euxc 'git stash pop'"),
+    ("a substitution in a quoted heredoc fed to bash", "bash <<'EOF'\nx=$(git stash pop)\nEOF"),
+    ("a substitution in a quoted heredoc piped to sh", "cat <<'EOF' | sh\necho $(git stash pop)\nEOF"),
 ):
     expect(f"agent-shared-tree-guard: {label} is refused", run_hook("agent-shared-tree-guard.py", {**AGENT, "tool_input": {"command": cmd}}), 2)
 for label, cmd in (
