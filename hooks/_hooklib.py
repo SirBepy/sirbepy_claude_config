@@ -726,8 +726,9 @@ def substitution_bodies(text: str) -> list[str]:
 # hands the body to it as a script, so the body's own `$(...)` and backticks are
 # commands even though the heredoc tag is quoted.
 _HEREDOC_EXECUTOR_RE = re.compile(
-    r"(?<![\w-])(?:bash|sh|zsh|dash|ksh|fish|pwsh|powershell|cmd|python3?|node|ruby|perl|php|bun|deno|ssh|source|xargs|eval)"
-    r"(?:\.exe)?(?![\w-])|(?:^|\s)\.\s",
+    # The lookarounds keep a file name (`s.sh`, `node.md`, `tools/node/`) and a prefix (`ssh:`) from reading as the program.
+    r"(?<![\w./\\:-])(?:bash|sh|zsh|dash|ksh|fish|pwsh|powershell|cmd|python3?|node|ruby|perl|php|bun|deno|ssh|source|xargs|eval)"
+    r"(?:\.exe)?(?![\w.:/\\-])|(?:^|\s)\.\s",
     re.IGNORECASE,
 )
 
