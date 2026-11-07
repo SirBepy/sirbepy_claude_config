@@ -33,7 +33,7 @@ Measured 2026-11-04: a 2-step report with 3 lines cost a Sonnet subagent about $
 & "$HOME\.claude\skills\test-report\scripts\setup.ps1"
 ```
 
-Installs a pinned Kokoro voice into `%LOCALAPPDATA%\claude-test-report` (350MB, outside every repo). Skip when `...\claude-test-report\venv\Scripts\python.exe` exists. Raising a pinned version needs the packages safety check first.
+Installs a pinned Kokoro voice into `%LOCALAPPDATA%\claude-test-report` (350MB, outside every repo). Skip when `...\claude-test-report\venv\Scripts\python.exe` exists. Packages install from `scripts/requirements-voice.txt` with `--require-hashes` (the full audited closure) and both model files are SHA-256 checked, so a tampered file fails the install. Raising a version needs the packages safety check first, then a regenerated requirements file.
 
 ## Step 2 - Set up the run
 
