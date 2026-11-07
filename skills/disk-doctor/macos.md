@@ -53,7 +53,7 @@ Hard cap: 3 dirs max regardless of how many exceed the threshold. Skip `~/Librar
 - Per item: size, what it is, regenerates/re-downloadable?, exact delete command.
 - Flag slow-to-restore items (sim runtimes) - confirm live project targets before swinging.
 - Never suggest anything in NEVER-TOUCH below.
-- Offer to write commands; Joe runs them. You never run `rm`.
+- Offer to write commands; Joe runs them. Claude runs a delete only for an item Joe approved on a card (`gate.md`).
 
 ## Self-improvement (only when invoked as /disk-doctor)
 
