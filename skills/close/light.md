@@ -12,11 +12,13 @@ Same bullets as normal Phase 1, but cap every bullet to 1 sentence max. Skip sub
 
 ## Phase 2
 
-Invoke `/code-check` with scope arg `unpushed` (if commits were made this session) or `uncommitted`, via the Skill tool - same as the main path. It handles the analysis and writes the todos directly. Read its summary line for the Phase 4 counter.
+Same skip conditions and same scope-arg rule as the main path's Phase 2: `shas:` of this session's own commits, `files:` or `uncommitted` when there are none, skip when this session's commits can't be determined. Never `unpushed`, which sweeps other sessions' commits on a shared branch. Invoke `/code-check` with that scope arg via the Skill tool. It handles the analysis and writes the todos directly. Read its summary line for the Phase 4 counter.
 
 ## Phase 3
 
 Delegate all writes to a single write-subagent. Do not write files inline.
+
+Before building the payload, run the main path's Phase 3 step 2 peer sweep (`list_peers`, plus `read_messages` when a peer is live) and its cross-repo routing: an item whose fix lives in a different repo is filed there via `skills/create-todo/SKILL.md`'s "Cross-repo filing" flow, so leave it out of the payload below.
 
 Build a compact payload object from Phase 1 output:
 
