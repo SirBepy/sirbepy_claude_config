@@ -48,7 +48,7 @@ INVOCATION_CASES = [
     ("cd x&&git push origin main", True, "an && glued before git"),
     ("git status;git log", False, "two read-only git calls with a glued semicolon"),
     ("echo \\';git push", True, "an escaped quote does not open a quote that hides a glued semicolon"),
-    ("echo a\\;git push", False, "an escaped semicolon is a literal, not a statement end"),
+    ("cd C:\\repo\\;git push", True, "a PowerShell path ending in a backslash before a glued semicolon"),
     ("`git push`", True, "a backtick substitution closed right after the subcommand"),
     ("x=`git push origin`", True, "an assignment from a backtick substitution"),
     ("git push;", True, "a semicolon glued to push"),

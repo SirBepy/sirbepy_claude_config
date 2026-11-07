@@ -187,10 +187,13 @@ def split_shell_words(command: str) -> list[str]:
     return shlex.split("".join(out), posix=True)
 
 
-def _space_operators(command: str) -> str:
+def _space_operators(command: str, honor_escapes: bool) -> str:
     """Put spaces around every unquoted `;`, `&&`, `||`, `&`, `|`, `(` and `)`, so
     `cd x&&git commit` and `echo a;git push` split into the words a shell runs
-    (shlex keeps them glued into `x&&git`). Quoted text is left alone."""
+    (shlex keeps them glued into `x&&git`). Quoted text is left alone. With
+    `honor_escapes` a backslash makes the next character a literal (bash: `\\;`
+    and `\\'` are text); without it a backslash is plain text (PowerShell:
+    `cd C:\\repo\\;git commit` ends the path and starts a statement)."""
     out: list[str] = []
     quote = None
     i = 0
@@ -206,8 +209,7 @@ def _space_operators(command: str) -> str:
         elif ch in "\"'":
             quote = ch
             out.append(ch)
-        elif ch == "\\" and i + 1 < len(command):
-            # An escaped character (`\;`, `\'`) is a literal, not an operator or a quote.
+        elif honor_escapes and ch == "\\" and i + 1 < len(command):
             out.append(ch + command[i + 1])
             i += 1
         elif ch in ";&|()":
@@ -228,16 +230,19 @@ def shell_word_variants(command: str) -> list[list[str]]:
     (`C:\\Git\\git.exe`) and the bash one (`g\\it` is `git`, `\\commit` is
     `commit`). The two disagree only on an unquoted backslash, and a guard
     cannot know whether the command runs in bash or PowerShell, so it checks
-    both. Raises ValueError only when neither split parses."""
+    both, with operators spaced under both escape readings too (an ambiguous
+    command is read as the stricter one). Raises ValueError only when no
+    reading parses."""
     variants: list[list[str]] = []
-    command = _space_operators(command)
-    for split in (split_shell_words, lambda c: shlex.split(join_line_continuations(c), posix=True)):
-        try:
-            words = split(command)
-        except ValueError:
-            continue
-        if words not in variants:
-            variants.append(words)
+    for honor_escapes in (False, True):
+        spaced = _space_operators(command, honor_escapes)
+        for split in (split_shell_words, lambda c: shlex.split(join_line_continuations(c), posix=True)):
+            try:
+                words = split(spaced)
+            except ValueError:
+                continue
+            if words not in variants:
+                variants.append(words)
     if not variants:
         raise ValueError("unbalanced quotes")
     return variants
