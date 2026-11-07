@@ -1190,7 +1190,8 @@ done
 # the staged mode changes in one call; the plumbing commit below replays them into its
 # throwaway index. fileMode=true repos are left alone: there the working tree is the truth.
 declare -A mode_fix=()
-if [ "$(git_c config --get core.fileMode)" = "false" ]; then
+# --type=bool normalises False/0/no/off; an unparsable value errors to empty, i.e. not false.
+if [ "$(git_c config --type=bool --get core.fileMode 2>/dev/null)" = "false" ]; then
   while IFS= read -r -d '' meta && IFS= read -r -d '' mpath; do
     read -r old_mode new_mode _ _ _ <<<"${meta#:}"
     [ -n "${class_of[$mpath]:-}" ] || continue
