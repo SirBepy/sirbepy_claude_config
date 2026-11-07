@@ -79,7 +79,7 @@ Phase 0 starts in the SAME turn /close is invoked, and Phases 1-5 run in that sa
 
 When this session is hosted by Claude Conductor (claude_usage_in_taskbar), the host handles the "Closing" row state and the teardown itself - no text markers:
 
-- **Closing state:** the host marks the row "Closing" automatically the moment a `/close` turn starts, but only for a prompt that BEGINS with `/close`. A trailing `/close` (`do X /close`, a gate chat's spawn prompt) arrives as plain text, so the row is not marked Closing while the task runs. Nothing to emit for this.
+- **Closing state:** the host marks the row "Closing" when Phase 1 calls `close_session` with `stage: "started"` (see Phase 1), not when the turn's prompt starts with `/close`. A turn that finishes a task first (Phase 0, a question card in between) therefore shows Closing only once the closing phases begin, and a trailing `/close` (`do X /close`, a gate chat's spawn prompt) shows it too. The host keeps its prompt heuristic only for a prompt that begins `/close --now`.
 - **Teardown:** confirmed by calling the `close_session` MCP tool in Phase 6 (see below), NOT by any text output. The host then ends the session and kills the process at turn completion.
 
 If the `close_session` tool isn't available (a plain terminal session not hosted by Conductor), just skip it - the Phase 6 script still closes the terminal as usual. Never emit `<cc-close:*>` text markers; they're retired.
@@ -144,6 +144,8 @@ Branches, in order:
 No silent-drop path either way - every unfinished item either gets done now, or gets filed.
 
 ## Phase 1 - Retrospective
+
+**Signal the start first.** Before anything else here, call `close_session` with `stage: "started"` when that tool exists and its schema lists a `stage` parameter. It only marks the chat Closing and tears nothing down. If the tool has no `stage` parameter (an older host), skip the call: without it the call is the final teardown confirmation, which belongs to Phase 6 alone. In a plain terminal session the tool does not exist, so skip silently.
 
 Scan the full session. Compute all bullets below internally every time - Phase 3 persists from them regardless of whether anything gets printed.
 
