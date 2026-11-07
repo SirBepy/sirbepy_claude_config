@@ -38,10 +38,23 @@ def esc(text) -> str:
     return html.escape(str(text), quote=True)
 
 
+_INLINE = re.compile(r"`([^`\n]+)`|\*\*([^*\n]+)\*\*")
+
+
 def inline(text) -> str:
-    out = esc(text)
-    out = re.sub(r"`([^`\n]+)`", r"<code>\1</code>", out)
-    return re.sub(r"\*\*([^*\n]+)\*\*", r"<strong>\1</strong>", out)
+    # One left-to-right pass over the escaped text, so a span opened inside another is never
+    # re-parsed: two sequential substitutions would interleave `**a `b** c`` into mis-nested tags.
+    def span(m):
+        return f"<code>{m.group(1)}</code>" if m.group(1) is not None else f"<strong>{m.group(2)}</strong>"
+
+    return _INLINE.sub(span, esc(text))
+
+
+def scalar(value, where: str) -> str:
+    # A None or nested list would otherwise print as "None" / "[['x']]" in the page.
+    if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+        raise SpecError(f"{where} must be a string or number")
+    return str(value)
 
 
 def need_str(value, where: str) -> str:
@@ -90,13 +103,18 @@ def render_block(block, where: str) -> str:
         raise SpecError(f"{where}.table must be an object with columns and rows")
     cols = need_list(value.get("columns"), f"{where}.table.columns")
     rows = need_list(value.get("rows"), f"{where}.table.rows")
+    cols = [scalar(c, f"{where}.table.columns[{n}]") for n, c in enumerate(cols)]
     head = "".join(f"<th>{inline(c)}</th>" for c in cols)
     body = []
     for n, row in enumerate(rows):
         if not isinstance(row, list) or len(row) != len(cols):
             raise SpecError(f"{where}.table.rows[{n}] needs {len(cols)} cells to match the columns")
         # data-label feeds the phone layout, where each row becomes a labelled card.
-        cells = "".join(f'<td data-label="{esc(c)}">{inline(cell)}</td>' for c, cell in zip(cols, row))
+        cells = "".join(
+            f'<td data-label="{esc(c.replace("**", "").replace(chr(96), ""))}">'
+            f'{inline(scalar(cell, f"{where}.table.rows[{n}][{k}]"))}</td>'
+            for k, (c, cell) in enumerate(zip(cols, row))
+        )
         body.append(f"<tr>{cells}</tr>")
     return f'<table><thead><tr>{head}</tr></thead><tbody>{"".join(body)}</tbody></table>'
 
@@ -113,7 +131,7 @@ def render_stats(stats) -> str:
         note = f'<div class="note">{inline(s["note"])}</div>' if s.get("note") else ""
         tiles.append(
             f'<div class="tile t-{tone}"><div class="lbl">{inline(need_str(s.get("label"), where + ".label"))} {label}</div>'
-            f'<div class="val">{inline(need_str(str(s.get("value", "")), where + ".value"))}</div>{note}</div>'
+            f'<div class="val">{inline(need_str(scalar(s.get("value", ""), where + ".value"), where + ".value"))}</div>{note}</div>'
         )
     return f'<section class="stats">{"".join(tiles)}</section>'
 
@@ -150,7 +168,7 @@ def render_sources(sources) -> str:
         url = s.get("url")
         if url is None:
             lis.append(f"<li>{inline(label)}</li>")
-        elif isinstance(url, str) and re.match(r"https?://", url):
+        elif isinstance(url, str) and re.match(r"https?://", url, re.I):
             lis.append(f'<li><a href="{esc(url)}" rel="noopener noreferrer">{inline(label)}</a></li>')
         else:
             raise SpecError(f"{where}.url must start with http:// or https://")
@@ -181,7 +199,7 @@ h1{font-size:28px;line-height:1.2;letter-spacing:-.02em;margin:.25em 0 .2em}
 .t-good .tw{color:var(--good)}.t-warn .tw{color:var(--warn)}.t-bad .tw{color:var(--bad)}
 .sec{margin:0 0 28px}
 h2{font-size:19px;letter-spacing:-.01em;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
-.num{display:inline-block;min-width:26px;height:26px;line-height:26px;text-align:center;border-radius:13px;background:var(--accent);color:#fff;font-size:13px;margin-right:10px;vertical-align:2px}
+.num{display:inline-block;min-width:26px;height:26px;line-height:26px;text-align:center;border-radius:13px;background:var(--accent);color:var(--bg);font-size:13px;margin-right:10px;vertical-align:2px}
 p,li{margin:.4em 0}
 ul,ol{padding-left:22px}
 code{font:12.5px ui-monospace,Menlo,Consolas,monospace;background:var(--code);padding:1px 5px;border-radius:4px}
@@ -256,16 +274,21 @@ def main(argv=None) -> int:
 
     try:
         spec = json.loads(Path(args.spec).read_text(encoding="utf-8"))
-        page = build(spec)
-    except (OSError, json.JSONDecodeError) as e:
+    except (OSError, ValueError) as e:  # ValueError: bad JSON or a non-UTF-8 file
         print(f"build_report: cannot read spec {args.spec}: {e}", file=sys.stderr)
         return 1
+    try:
+        page = build(spec)
     except SpecError as e:
         print(f"build_report: bad spec: {e}", file=sys.stderr)
         return 1
 
     out = Path(args.out) if args.out else Path(args.spec).with_suffix(".html")
-    out.write_text(page, encoding="utf-8")
+    try:
+        out.write_text(page, encoding="utf-8")
+    except OSError as e:
+        print(f"build_report: cannot write {out}: {e}", file=sys.stderr)
+        return 1
     print(out)
     if not args.post:
         return 0

@@ -85,6 +85,19 @@ check(raises(lambda: br.build({**FULL, "sections": [{"heading": "H", "blocks": [
 check(raises(lambda: br.build({**FULL, "stats": [{"label": "x", "value": "1", "tone": "purple"}]}), "tone"), "unknown tone rejected")
 check(raises(lambda: br.build({**FULL, "sources": [{"label": "x", "url": "javascript:alert(1)"}]}), "http"), "non-http source url rejected")
 
+two = br.build({"title": "T", "summary": "S", "sections": [
+    {"heading": "One", "blocks": [{"p": "x"}]}, {"heading": "Two", "blocks": [{"p": "y"}]}]})
+check(two.count('<span class="num">1</span>') == 1 and two.count('<span class="num">2</span>') == 1, "two sections are numbered 1 and 2")
+check(br.inline("**a `b** c`") == "<strong>a `b</strong> c`", "interleaved bold and code never mis-nest")
+check(br.inline("`x **y` z**") == "<code>x **y</code> z**", "code wins when it opens first")
+quoted = br.build({"title": "T", "summary": "S", "sections": [{"heading": "H", "blocks": [
+    {"table": {"columns": ['a"><i>', "**p95**"], "rows": [["1", "2"]]}}]}]})
+check('data-label="a&quot;&gt;&lt;i&gt;"' in quoted and 'data-label="p95"' in quoted, "data-label is escaped and carries no markdown markers")
+check(raises(lambda: br.build({**FULL, "sections": [{"heading": "H", "blocks": [{"table": {"columns": ["a"], "rows": [[None]]}}]}]}), "string or number"), "None table cell rejected")
+check(raises(lambda: br.build({**FULL, "stats": [{"label": "x", "value": None}]}), "string or number"), "None stat value rejected")
+check("HTTPS://example.com/x" in br.build({**FULL, "sources": [{"label": "x", "url": "HTTPS://example.com/x"}]}), "uppercase URL scheme accepted")
+check("color:var(--bg)" in br.CSS, "section badge text follows the theme so dark mode keeps contrast")
+
 check(br.default_slug("Q3 Latency: report!") == "report-q3-latency-report", "slug derived from title")
 check(br.default_slug("!!!") == "report-untitled", "slug fallback")
 
@@ -101,6 +114,14 @@ with tempfile.TemporaryDirectory() as tmp:
         code = br.main([str(bad)])
     check(code == 1 and "bad spec" in err.getvalue() and not (Path(tmp) / "bad.html").exists(), "bad spec exits 1 and writes nothing")
 
+    latin = Path(tmp) / "latin.json"
+    latin.write_bytes('{"title": "caf\u00e9"}'.encode("latin-1"))
+    with contextlib.redirect_stderr(io.StringIO()) as err:
+        code = br.main([str(latin)])
+    check(code == 1 and "cannot read" in err.getvalue(), "non-UTF-8 spec exits 1 without a traceback")
+    with contextlib.redirect_stderr(io.StringIO()) as err:
+        code = br.main([str(good), "--out", str(Path(tmp) / "no-such-dir" / "r.html")])
+    check(code == 1 and "cannot write" in err.getvalue(), "unwritable --out exits 1 without a traceback")
     with contextlib.redirect_stderr(io.StringIO()) as err:
         code = br.main([str(Path(tmp) / "nope.json")])
     check(code == 1 and "cannot read" in err.getvalue(), "missing spec file exits 1")
