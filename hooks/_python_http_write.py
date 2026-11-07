@@ -53,13 +53,17 @@ _LIST_PARENT_RE = re.compile(
 NON_POST_VERB_RE = re.compile(r"(?:-X\s*|--request\s+|-Method\s+[\"']?)(?:PUT|PATCH|DELETE|GET)\b", re.IGNORECASE)
 
 
-def _statement_bounds(command: str) -> list | None:
-    """(start, end) of each shell statement: split on `;`, `&&`, `||`, `|`, a newline and a
-    whitespace-delimited `&`, outside quotes. A backslash or backtick (outside quotes, or inside
-    double quotes) escapes the next character, which is how a line continuation stays one
-    statement. None when a quote is still open at the end: the scan desynced (a Windows path
-    ending in a backslash), so the caller reads the whole command as one statement."""
-    spans, start, i, n, quote = [], 0, 0, len(command), ""
+_NESTED_BREAK_RE = re.compile(r"[;|\n]|&&")
+
+
+def _statement_bounds(command: str, pos: int = 0) -> tuple:
+    """((start, end) of each shell statement, whether `pos` sits inside a quoted nested command). Statements split
+    on `;`, `&&`, `||`, `|`, a newline and a whitespace-delimited `&`, outside quotes. A
+    backslash or backtick (outside quotes, or inside double quotes) escapes the next character,
+    which is how a line continuation stays one statement. The spans are None when a quote is
+    still open at the end: the scan desynced (a Windows path ending in a backslash, a heredoc
+    body or comment with an apostrophe), so nothing it found can be trusted."""
+    spans, start, i, n, quote, qstart, nested = [], 0, 0, len(command), "", 0, False
     while i < n:
         c = command[i]
         if quote:
@@ -67,9 +71,13 @@ def _statement_bounds(command: str) -> list | None:
                 i += 2
                 continue
             if c == quote:
+                # A quoted string holding statement breaks is a nested command line
+                # (`bash -c "a; b"`), which this scan does not split.
+                if qstart <= pos <= i and _NESTED_BREAK_RE.search(command, qstart, i):
+                    nested = True
                 quote = ""
         elif c in "\"'":
-            quote = c
+            quote, qstart = c, i
         elif c in "\\`":
             i += 3 if command.startswith("\r\n", i + 1) else 2
             continue
@@ -85,14 +93,14 @@ def _statement_bounds(command: str) -> list | None:
                 continue
         i += 1
     if quote:
-        return None
+        return None, nested
     spans.append((start, n))
-    return spans
+    return spans, nested
 
 
 def statement_span(command: str, pos: int) -> str:
     """The text of the shell statement holding `pos`; the whole command when it cannot be split."""
-    bounds = _statement_bounds(command)
+    bounds, _nested = _statement_bounds(command, pos)
     if bounds is None:
         return command
     for start, end in bounds:
@@ -104,7 +112,12 @@ def statement_span(command: str, pos: int) -> str:
 def bulk_is_not_a_post(command: str, pos: int) -> bool:
     """Whether the `/stories/bulk` URL at `pos` sits in a statement that names a non-POST verb,
     which makes it a bulk update or delete. Only that statement counts: a PUT elsewhere in the
-    command says nothing about this call."""
+    command says nothing about this call. A URL inside a quoted nested command (`bash -c "a; b"`)
+    or in a command whose quotes do not balance has no statement the scan can trust, so it
+    reads as a possible POST and stays gated."""
+    bounds, nested = _statement_bounds(command, pos)
+    if bounds is None or nested:
+        return False
     return bool(NON_POST_VERB_RE.search(statement_span(command, pos)))
 
 
