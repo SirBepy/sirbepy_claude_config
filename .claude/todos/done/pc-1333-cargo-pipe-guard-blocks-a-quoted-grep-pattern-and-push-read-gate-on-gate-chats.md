@@ -19,3 +19,7 @@ Mask separators inside quoted spans except when the span is the argument of a sh
 
 ## Acceptance
 `grep -E "a|cargo build|b" file` runs unblocked, `bash -c "cargo test | tail"` is still blocked, and a gate chat's first push is not stopped by the read gate.
+
+## Notes
+
+- cargo-test-pipe-guard now splits statements and pipes outside quotes only (plain-split fallback on unbalanced quotes) and scans a shell -c/-Command quoted argument recursively, so a quoted grep pattern naming cargo build passes and a piped cargo test inside bash -c is blocked (it was NOT blocked before). push-read-gate half, decided 2026-11-07: /gate-chat's spawn prompt now tells the child to read snippets/auto-commit.md before pushing. Tests: test_cargo_test_pipe_guard.py (quoted and -c cases, red on HEAD), test_push_read_gate.py gate-chat prompt assertion.

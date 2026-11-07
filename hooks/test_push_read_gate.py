@@ -197,4 +197,11 @@ with tempfile.TemporaryDirectory() as tmp:
     ok = code == 2
     fails += [] if _testlib.report(ok, f"{label} (exit={code})") else [label]
 
+# A gate chat starts with nothing read, so /gate-chat's spawn prompt has to tell
+# it to read the snippet before its first push or the gate denies it.
+_gate_chat = (_HOOKS_DIR.parent / "skills" / "gate-chat" / "SKILL.md").read_text(encoding="utf-8")
+label = "gate-chat SKILL.md tells the spawned gate chat to read snippets/auto-commit.md before pushing"
+ok = "Read `snippets/auto-commit.md` before the push" in _gate_chat
+fails += [] if _testlib.report(ok, label) else [label]
+
 sys.exit(_testlib.summarize(fails, style="count"))
