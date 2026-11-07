@@ -381,6 +381,27 @@ caller with no one left to prompt it - print the report and let its turn continu
 - The backup path Step 6 printed before any write, and whether `list_peers` found another active
   session in this project.
 
+## `--global` mode - cross-project lessons (todo 1154)
+
+`/cleanup-memory --global` replaces Steps 1-7 with one sweep, run by this one session (never from
+a hook, so concurrent sessions cannot race on the lessons store). It promotes a feedback memory
+learned in one project into `~/.claude/lessons/`, which every session sees without a `CLAUDE.md` line.
+
+1. `python ~/.claude/skills/cleanup-memory/lessons_sweep.py scan` (read-only). It lists feedback
+   memories that say the same lesson in 2+ distinct projects, with their source files. A cluster
+   with a member from a client repo's project is counted as held back and never listed.
+2. One question card: one option per cluster to promote, plus "none". Recommend only a cluster that is
+   about how Claude should work everywhere; a rule that names one repo's files or people is that
+   repo's memory, not a lesson.
+3. Per approved cluster: `python ~/.claude/skills/cleanup-memory/lessons_sweep.py promote --name <slug>
+   --description "<one line>" --source <memory file> [--source ...] [--path <glob> ...] [--skill <name> ...]
+   [--body-file <file>] --supersede`. It follows `refs/memory-rubric.md`: ADD for a new slug, UPDATE in
+   place for an existing one (the file is re-read before writing), and refuses a client-project source.
+   `--supersede` stamps `superseded_by:` on each source and drops its `MEMORY.md` line.
+4. Triggers decide how a lesson loads: with `--path`/`--skill` it loads when that is touched
+   (`hooks/memory-trigger.py`); every lesson also appears in `lessons/INDEX.md`, the 4 KB index that
+   `hooks/lessons-index.py` injects at session start. `lessons_sweep.py index` rebuilds the index.
+
 ## Non-goals (v1)
 
 - No cross-project sweep - one project's memory directory per run. Running it project-by-project

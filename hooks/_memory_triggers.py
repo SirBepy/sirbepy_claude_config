@@ -40,6 +40,7 @@ import time
 ROOTS_ENV = "CLAUDE_MEMORY_TRIGGER_ROOTS"
 STATE_ENV = "CLAUDE_MEMORY_TRIGGER_STATE"
 RECHECK_ENV = "CLAUDE_MEMORY_TRIGGER_RECHECK_S"
+LESSONS_ENV = "CLAUDE_LESSONS_DIR"
 DEFAULT_RECHECK_S = 20.0
 
 COVERED_TOOLS = ("Edit", "Write", "Read", "Skill", "Agent", "MultiEdit", "NotebookEdit")
@@ -110,8 +111,17 @@ def _walk_md(directory: str, out: list) -> None:
             continue
 
 
+def lessons_dir() -> str:
+    """Global cross-project lessons (todo 1154): memory-format files in one
+    flat folder, scanned alongside the per-project memory dirs."""
+    return os.environ.get(LESSONS_ENV) or os.path.join(os.path.expanduser("~"), ".claude", "lessons")
+
+
 def scan_memory_files(roots: list[str]) -> list[tuple[str, int]]:
     files: list[tuple[str, int]] = []
+    if os.path.isdir(lessons_dir()):
+        _walk_md(lessons_dir(), files)
+    files = [(p, m) for p, m in files if os.path.basename(p) != "INDEX.md"]
     for root in roots:
         try:
             projects = list(os.scandir(root))
