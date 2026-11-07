@@ -40,7 +40,16 @@ HOME_SPELLINGS = ("~", "$env:userprofile", "$home", "%userprofile%")
 POWERSHELL_EXES = {"powershell", "powershell.exe", "pwsh", "pwsh.exe"}
 # -Command (and its abbreviations) makes PowerShell run the rest of the line as
 # the command, so a later -File is only text.
-POWERSHELL_COMMAND_FLAGS = {"-command", "-c", "-encodedcommand", "-e", "-ec", "-commandwithargs", "-cwa"}
+POWERSHELL_COMMAND_FLAGS = ("-command", "-encodedcommand", "-commandwithargs")
+POWERSHELL_COMMAND_ALIASES = {"-ec", "-cwa"}
+
+
+def _is_command_flag(token: str) -> bool:
+    """PowerShell accepts any unambiguous prefix of a parameter, so `-com` and
+    `-enc` run the next argument as code just like `-Command`."""
+    return token in POWERSHELL_COMMAND_ALIASES or (
+        len(token) >= 2 and token.startswith("-") and any(f.startswith(token) for f in POWERSHELL_COMMAND_FLAGS)
+    )
 BARE_ASSIGNMENT_RE = re.compile(r"^\$\w+\s*=\s*$")
 ASSIGNMENT_PREFIX_RE = re.compile(r"^\$\w+\s*=\s*")
 
@@ -60,7 +69,7 @@ def _invokes_rename_script(segment: str) -> bool:
         return False
     if basename(tokens[0]) in POWERSHELL_EXES:
         lowered = [t.lower() for t in tokens]
-        if "-file" not in lowered or POWERSHELL_COMMAND_FLAGS & set(lowered):
+        if "-file" not in lowered or any(_is_command_flag(t) for t in lowered):
             return False
         idx = lowered.index("-file")
         return idx + 1 < len(tokens) and _is_rename_script(tokens[idx + 1])
@@ -71,7 +80,8 @@ def approves(command: str) -> bool:
     if not command or not command.strip():
         return False
     # Any expression syntax can run code the statement split cannot see.
-    if any(c in command for c in "`>(){}"):
+    # A bare \r separates PowerShell statements but not the segment splitter's.
+    if any(c in command for c in "`>(){}\r"):
         return False
     segments = [s.strip() for s in split_command_segments(command) if s.strip()]
     segments = [s for s in segments if not BARE_ASSIGNMENT_RE.match(s)]
