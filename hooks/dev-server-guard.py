@@ -178,7 +178,9 @@ def main() -> None:
     # Per statement: a newline is not a token separator, so `npm install\nvite`
     # would otherwise read as one install statement with `vite` as its argument.
     matched = None
-    for segment in split_command_segments(command) or [command]:
+    # A backslash or backtick before the newline continues the statement.
+    joined = re.sub(r"[\\`]\r?\n", " ", command)
+    for segment in split_command_segments(joined) or [joined]:
         matched = is_dev_server_command(tokenize(segment))
         if matched:
             break
