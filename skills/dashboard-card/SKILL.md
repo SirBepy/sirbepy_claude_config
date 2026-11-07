@@ -43,14 +43,18 @@ chat about a broken Clockify dashboard card; `dashboard_card` itself was not sho
    ledger, so a chat that died half-way does not count as a run).
 5. **Check the output offline,** before touching the tool:
    ```powershell
-   python "C:\Users\tecno\.claude\skills\dashboard-card\check_card_output.py" --paths days_since,last_run -- python <script> [args]
+   python "C:\Users\tecno\.claude\skills\dashboard-card\check_card_output.py" --paths "days_since,last_run" -- python <script> [args]
    ```
    Everything after `--` is the card's command; the checker runs it and reads its stdout as UTF-8
-   (a `|` between two native programs in PowerShell re-encodes the text). `--paths` lists every
-   path the display will read; `[]` maps over a list, `sum(...)` totals numbers, and a null value
-   counts as missing. This matters because the tool answers a wrong path, a null, or non-JSON
-   stdout with a `-` value and **no error** (probed 2026-11-07), so a broken card looks like a
-   working one with an empty reading. Exit 0 and `OK` mean the paths and `_card` are sound.
+   (a `|` between two native programs in PowerShell re-encodes the text). Always quote the
+   `--paths` value: an unquoted `(` from `sum(...)` makes PowerShell run it as a subexpression.
+   `--paths` lists the paths the display reads from the root; for a `list` display that is
+   `items[].name` style (the `label_path` is per item, so spell it out from the root). The probes
+   confirmed a wrong path and non-JSON stdout both show `-` with **no error** (2026-11-07), so a
+   broken card looks like a working one with an empty reading. The checker's `[]` fan-out, `sum`
+   over a mapped path, and null-as-missing rules are its own reading of the tool, UNVERIFIED
+   against it: `OK` means the paths exist in the output, and `test` in step 6 is still the
+   final word.
 6. **`test` the card** (`action: test`, same `card` object). Read `result`: `error` must be null and
    every `stats` value real, none `-`. Fix and `test` again until it is.
 7. **`upsert`.** An enabled card runs once on save and returns its `result`; check it again, it
