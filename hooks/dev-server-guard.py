@@ -59,6 +59,19 @@ TEXT_COMMANDS = {
     "git", "ls", "dir", "get-childitem", "which", "where", "get-command",
 }
 
+# Package managers followed by a verb that names a package as its argument
+# (`npm install fastify`, `pip install uvicorn`, `pnpm add -D vite`,
+# `npm view vite version`): the server name there is the thing being
+# installed or inspected, never a program being launched.
+PACKAGE_TOOLS = {
+    "npm", "pnpm", "yarn", "bun", "pip", "pip3", "pipx", "uv", "poetry", "cargo", "gem",
+}
+PACKAGE_VERBS = {
+    "install", "i", "add", "remove", "rm", "uninstall", "un", "update", "upgrade",
+    "view", "info", "show", "ls", "list", "outdated", "why", "explain", "search",
+    "audit", "download", "freeze", "pack",
+}
+
 _SEPARATOR_END = (";", "|", "&")
 
 
@@ -80,6 +93,22 @@ def _is_argument_of_text_command(tokens, i) -> bool:
     return False
 
 
+def _is_argument_of_package_verb(tokens, i) -> bool:
+    """True when tokens[i] sits after `<package manager> <install/inspect verb>`
+    in the same statement (walking back until a separator token)."""
+    for j in range(i - 1, -1, -1):
+        t = tokens[j]
+        if t.endswith(_SEPARATOR_END) or t in ("&&", "||"):
+            return False
+        if (
+            basename(t) in PACKAGE_TOOLS
+            and j + 1 < i
+            and tokens[j + 1].lower() in PACKAGE_VERBS
+        ):
+            return True
+    return False
+
+
 def is_dev_server_command(tokens):
     """Return a short label naming the matched dev-server shape, or None."""
     lc = [_norm(t) for t in tokens]
@@ -91,7 +120,7 @@ def is_dev_server_command(tokens):
         nxt = lc[i + 1] if i + 1 < n else None
         if nxt in INFO_FLAGS:
             continue
-        if _is_argument_of_text_command(tokens, i):
+        if _is_argument_of_text_command(tokens, i) or _is_argument_of_package_verb(tokens, i):
             continue
 
         if base in ("vite", "vite.cmd") and nxt != "build":
