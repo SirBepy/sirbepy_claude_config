@@ -95,6 +95,23 @@ with tempfile.TemporaryDirectory() as tmp:
     pin(at(11, 5))
     expect("client repo at 11:05 passes", _outbound_window.window_denial(bash("x", client), "x") is None)
 
+    # --- a broken commit-window-guard.py (it exit(0)s on a failed import) must not end the caller ---
+    saved = _outbound_window._commit_window
+    _outbound_window._commit_window = None
+    real_spec = _outbound_window.importlib.util.spec_from_file_location
+
+    def exiting_loader(*a, **k):
+        raise SystemExit(0)
+
+    _outbound_window.importlib.util.spec_from_file_location = exiting_loader
+    try:
+        with contextlib.redirect_stderr(io.StringIO()):
+            result = _outbound_window.window_denial(bash("x", client), "x")
+    finally:
+        _outbound_window.importlib.util.spec_from_file_location = real_spec
+        _outbound_window._commit_window = saved
+    expect("a SystemExit while loading the commit window fails open instead of ending the hook", result is None)
+
     # --- the approval is its own scope ---
     pin(at(2, 0))
     cw.grant(SESSION, str(client), "Joe: yes commit", at(2, 0))

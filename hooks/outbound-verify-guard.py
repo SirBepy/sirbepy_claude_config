@@ -57,7 +57,7 @@ try:
         uncovered,
     )
     from _outbound_window import window_denial
-    from _python_http_write import SHORTCUT_HINT_RE, python_write_verbs
+    from _python_http_write import BARE_STORIES_PATH_RE, SHORTCUT_HINT_RE, python_write_verbs
 except Exception as e:
     sys.stderr.write(f"[outbound-verify-guard] FATAL: cannot import a sibling hook module ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -497,7 +497,7 @@ def shortcut_requires_prose(command: str, match: re.Match) -> bool:
 # A python script often builds the URL from a base (`API + "/stories"`), so SHORTCUT_URL_RE misses
 # it. Only a bare `/stories` or anything under `/comments` is known to carry prose; an id-only
 # write (`/stories/<id>` with a state id) stays ungated unless its text is found.
-PY_SHORTCUT_PROSE_PATH_RE = re.compile(r"(?<!search)/stories(?![\w/-])|/comments", re.IGNORECASE)
+PY_SHORTCUT_PROSE_PATH_RE = re.compile(BARE_STORIES_PATH_RE.pattern + r"|/comments", re.IGNORECASE)
 PY_SHORTCUT_STORIES_RE = re.compile(r"(?<!search)/stories\b", re.IGNORECASE)
 
 

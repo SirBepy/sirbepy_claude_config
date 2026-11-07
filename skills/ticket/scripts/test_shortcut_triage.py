@@ -444,6 +444,14 @@ class TestStates(unittest.TestCase):
         self.assertEqual(sum(1 for _, p in api.calls if p == "/api/v3/workflows"), 1)
         self.assertEqual(sum(1 for _, p in api.calls if p == "/api/v3/members"), 1)
 
+    def test_json_flag_keeps_stdout_parseable_when_an_id_404s(self):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            rc, out, _ = self.run_states(["999", "202", "--json"], {202: NO_COMMENTS})
+        self.assertEqual(rc, 1)
+        self.assertEqual(json.loads(out)[0]["id"], 202)
+        self.assertIn("sc-999 | HTTP 404", err.getvalue())
+
     def test_json_flag_prints_raw_stories(self):
         _, out, _ = self.run_states(["202", "--json"], {202: NO_COMMENTS})
         self.assertEqual(json.loads(out)[0]["id"], 202)
