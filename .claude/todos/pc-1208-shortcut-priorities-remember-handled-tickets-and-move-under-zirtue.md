@@ -40,13 +40,7 @@ Existing live todos on the same skill, different subjects: 1186 (misses workable
 - The skill still never posts a comment or changes ticket state.
 - The skill file passes the existing report-only rules; no cookie or token in the decisions file.
 
-<!-- loop-skip: dev deferred 2026-10-24 -->
-## Deferred questions
-
-Written by /auto-do-todos on 2026-10-23. Deferred by /loop-todos on 2026-10-24: Jarvis (answering for Joe while he was asleep) skipped it: it stays for the zng-app chat review Joe mentioned.
-
-- [ ] [ARCH] You said you want to review in the zng-app chat what else should move under Zirtue. Where does shortcut-priorities live: move to `zng-app/.claude/skills/` next to do/framer/verify / keep it global and only add the decisions file / another home you name.
-
 ## Notes
 
 - The decisions file must be re-read before every write, since several chats can run the skill at once.
+- 2026-11-07: Joe picked: move shortcut-priorities to `zng-app/.claude/skills/` (next to do/framer/verify), plus the decisions file.
