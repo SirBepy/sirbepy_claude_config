@@ -85,6 +85,8 @@ bash "$barrier" -C "$repo" -m "FIX: t" >/dev/null 2>&1
 check "$([ $? -eq 2 ] && echo 0 || echo 1)" "no files exits 2"
 bash "$barrier" -C "$repo" -m "FIX: t" --files-from "$tmp/nope.txt" >/dev/null 2>&1
 check "$([ $? -eq 2 ] && echo 0 || echo 1)" "a missing --files-from file exits 2"
+timeout 10 bash "$barrier" -C "$repo" -m >/dev/null 2>&1
+check "$([ $? -eq 2 ] && echo 0 || echo 1)" "a value flag with no value exits 2 instead of looping"
 bash "$barrier" -C "$repo" --bogus -m "FIX: t" -- a.txt >/dev/null 2>&1
 check "$([ $? -eq 2 ] && echo 0 || echo 1)" "an unknown flag exits 2"
 

@@ -42,6 +42,12 @@ pass=()
 files=()
 
 while [ $# -gt 0 ]; do
+  # A value-taking flag as the last argument would make `shift 2` fail without consuming anything
+  # and spin this loop forever, so a truncated command line must exit 2 instead.
+  case "$1" in
+    -C|--repo|--expect-branch|--expect-sha|-m|--force|--todo|--files-from)
+      if [ $# -lt 2 ]; then echo "ERROR: $1 needs a value" >&2; usage; exit 2; fi ;;
+  esac
   case "$1" in
     -C|--repo) repo="${2:-}"; shift 2 ;;
     --expect-branch) expect_branch="${2:-}"; shift 2 ;;
