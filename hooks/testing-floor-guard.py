@@ -54,8 +54,7 @@ caught in `main()` and treated as "allow the turn to end" (see the bottom
 try/except too). A hook that traps a turn because ITS OWN code broke is
 strictly worse than a missed check - the same principle every other Stop
 hook in this repo already follows (em-dash-guard.py, ui-screenshot-
-reminder.py, status-marker-guard.py all fail open on the identical shape of
-try/except).
+reminder.py both fail open on the identical shape of try/except).
 
 Does not run e2e/Playwright or any slow suite - CLAUDE.md explicitly keeps
 those out of the fast-checks floor, and a Stop hook is the worst place to
