@@ -38,6 +38,12 @@ VERB_CASES = [
     ("http_client.post(url)", {"POST"}, "client receiver"),
     ("cache.put(key)", set(), "unrelated put"),
     ("c.request('POST', '/api/v3/stories')", {"POST"}, ".request with a verb"),
+    # pc-review item 10: the default-POST inference is per call, not per script.
+    ("u.urlopen(u.Request(url1, method='GET')); u.urlopen(u.Request(url2, data=b))", {"POST"}, "a GET call elsewhere does not hide a body-carrying call"),
+    ("u.urlopen(u.Request(url1, headers=h, method='GET')); u.urlopen(u.Request(url2, b'{}'))", {"POST"}, "a GET call elsewhere does not hide a positional body"),
+    ("u.urlopen(u.Request(url1, data=b, method='GET'))", set(), "an explicit GET on the same call as the body stays a read"),
+    ("u.urlopen(u.Request(url1, data=b, method=m))", {"POST"}, "a non-literal method on a body-carrying call still reads as POST"),
+    ("u.urlopen(u.Request(url1, data=b, method='DELETE')); u.urlopen(u.Request(url2, data=b))", {"DELETE", "POST"}, "an explicit verb on one call and a default POST on another"),
 ]
 
 # (command, expected, label)
@@ -53,6 +59,12 @@ PATH_CASES = [
     ("API + '/search/stories'", False, "search"),
     (f"u.Request('{SH}/stories/123')", False, "one story"),
     (f"u.Request('{SH}/stories/123/comments')", False, "comments"),
+    (f"u.Request('{SH}/stories/bulk')", True, "literal bulk create URL"),
+    ("API + '/stories/bulk'", True, "base plus quoted bulk path"),
+    ('f"{API}/stories/bulk"', True, "f-string bulk path"),
+    (f"u.Request('{SH}/stories/bulk/extra')", False, "a path under bulk is not the create"),
+    (f"u.Request('{SH}/stories/bulkhead')", False, "a longer word starting with bulk is not the create"),
+    (f"u.Request('{SH}/epics/5/stories/bulk')", False, "bulk under a parent resource"),
 ]
 
 

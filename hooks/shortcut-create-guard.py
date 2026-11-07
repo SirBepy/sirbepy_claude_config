@@ -44,7 +44,9 @@ CREATE_TOOL = "mcp__shortcut__stories-create"
 # The lookahead is load-bearing: it keeps `/stories/<id>` (update) and
 # `/stories/<id>/comments` out, and `/api/v3/search/stories` never matches at all
 # because the path segment order differs.
-STORIES_URL_RE = re.compile(r"api\.app\.shortcut\.com/api/v3/stories(?=[\"'\s?&]|$)", re.IGNORECASE)
+STORIES_URL_RE = re.compile(r"api\.app\.shortcut\.com/api/v3/stories(?P<bulk>/bulk)?(?=[\"'\s?&]|$)", re.IGNORECASE)
+# `/stories/bulk` is the bulk create when POSTed; a PUT or DELETE there is a bulk update or delete.
+NON_POST_VERB_RE = re.compile(r"(?:-X\s*|--request\s+|-Method\s+[\"']?)(?:PUT|PATCH|DELETE|GET)\b", re.IGNORECASE)
 POST_VERB_RE = re.compile(r"(?:-X\s*POST\b|--request\s+POST\b|-Method\s+[\"']?Post\b)", re.IGNORECASE)
 # curl posts on a bare -d unless -G turns the payload into a query string.
 DATA_FLAG_RE = re.compile(r"(?:^|\s)(?:-d\b|--data(?:-raw|-binary|-urlencode)?\b)", re.IGNORECASE)
@@ -66,7 +68,10 @@ def posts_to_stories(command: str) -> bool:
     command = without_display_segments(command)
     if python_posts_to_stories(command):
         return True
-    if not STORIES_URL_RE.search(command):
+    url = STORIES_URL_RE.search(command)
+    if not url:
+        return False
+    if url.group("bulk") and NON_POST_VERB_RE.search(command):
         return False
     if POST_VERB_RE.search(command):
         return True

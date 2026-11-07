@@ -486,7 +486,8 @@ def shortcut_requires_prose(command: str, match: re.Match) -> bool:
     if segments is None or segments[0] != "" or len(segments) < 2:
         return True
     ids = segments[1:]
-    if not ids[0]:
+    # `/stories/bulk` creates (POST) or updates many stories from one body full of prose.
+    if not ids[0] or ids[0].lower() == "bulk":
         return True
     tail = ids[1:]
     if any("$" in s or "`" in s for s in tail):
@@ -525,7 +526,8 @@ def detect_rest(command: str, tokens: list, cwd: str | None, posix: bool = True)
         requires = has_bare_stories_path(command) or "/comments" in command.lower()
         label = "Shortcut REST write (python)"
     elif shortcut:
-        requires = shortcut_requires_prose(command, shortcut)
+        # Every `/stories` URL counts: a read of one story ahead of a create must not hide it.
+        requires = any(shortcut_requires_prose(command, m) for m in SHORTCUT_URL_RE.finditer(command))
         label = "Shortcut REST write"
     elif linear:
         if not LINEAR_GATED_RE.search(command):

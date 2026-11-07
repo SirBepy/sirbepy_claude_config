@@ -139,6 +139,11 @@ DETECT_CASES = [
     ("Bash", {"command": py(f"u.urlopen(u.Request('{SC}/123', data=json.dumps({{'workflow_state_id': 500000011}}).encode(), method='PUT'))")}, False, "python state move stays ungated"),
     ("Bash", {"command": py("u.urlopen(u.Request(API + '/stories/123', data=b'{}', method='PUT'))")}, False, "python id-only PUT from a base URL stays ungated"),
     ("Bash", {"command": f"echo \"python -c u.Request('{SC}/123/comments', method='POST')\""}, False, "echo of a python comment POST is prose"),
+    # pc-review item 10: per-call method inference, and /stories/bulk is a create.
+    ("Bash", {"command": py(f"u.urlopen(u.Request('{SC}/123', method='GET')); u.urlopen(u.Request('{SC}', data=body))")}, True, "python GET call then a body-carrying create call is gated"),
+    ("Bash", {"command": f"curl -X POST {SC}/bulk -d '{{\"stories\": [{{\"workflow_state_id\": 5}}]}}'"}, True, "curl POST to /stories/bulk with no visible prose is gated"),
+    ("Bash", {"command": f"curl -s {SC}/123 -o /c/tmp/s.json; curl -X POST {SC} -d '{{\"project_id\": 5}}'"}, True, "a read of one story ahead of a bare create does not hide it"),
+    ("Bash", {"command": py("import kickoff; kickoff.env(); u.urlopen(u.Request(API + '/stories/bulk', data=body, method='POST'))")}, True, "python POST to /stories/bulk from a base URL is gated"),
 ]
 
 
@@ -159,6 +164,24 @@ REST_CASES = [
     ("", ""),
     ("?archived=false", ""),
 ]
+
+
+# (url tail after /stories, whether the write must carry visible prose). /bulk creates many
+# stories at once, so it is gated like a bare create; an id-only update is not.
+REQUIRES_CASES = [
+    ("/bulk", True),
+    ("/bulk/", True),
+    ("/123", False),
+    ("/123/comments", True),
+    ("", True),
+]
+
+
+def check_requires(case) -> bool:
+    tail, expect = case
+    command = "curl -X POST https://api.app.shortcut.com/api/v3/stories" + tail
+    got = guard.shortcut_requires_prose(command, guard.SHORTCUT_URL_RE.search(command))
+    return _testlib.report(got == expect, f"requires prose: stories{tail} (got {got})")
 
 
 def check_rest(case) -> bool:
@@ -361,6 +384,7 @@ def check_mcp_e2e() -> bool:
 def main() -> int:
     fails = _testlib.run_cases(DETECT_CASES, check_detect)
     fails += _testlib.run_cases(REST_CASES, check_rest)
+    fails += _testlib.run_cases(REQUIRES_CASES, check_requires)
     fails += _testlib.run_cases(E2E_CASES, check_e2e)
     if not check_body_file():
         fails.append("body file")
