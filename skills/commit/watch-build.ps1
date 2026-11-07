@@ -6,13 +6,20 @@
 # aggregate all runs for the sha.
 #
 # Run in the BACKGROUND. Exit codes: 0 = all succeeded, 1 = >=1 failed, 2 = no run found,
-# 3 = watch_error, 4 = timeout.
+# 3 = watch_error, 4 = timeout, 5 = a run or job was cancelled, 6 = publish job skipped
+# (-ExpectPublish only).
 
 param(
   [string]$Sha,
   [Parameter(Mandatory = $true)][string]$Branch, # kept for the caller's convention; no longer used to filter runs, see Get-RunsForSha
   [string]$RepoPath = (Get-Location).Path,
-  [int]$TimeoutMinutes = 30
+  [int]$TimeoutMinutes = 30,
+  # Seconds to let sibling workflows register after the first run appears; a parameter so the
+  # self-test does not pay the full 8s per case.
+  [int]$GraceSeconds = 8,
+  # The push was meant to publish (a /release or a version bump): a skipped publish/release job
+  # then means nothing shipped even though the workflow concluded success.
+  [switch]$ExpectPublish
 )
 
 # PID file next to this script so a session can kill a stuck watcher:
@@ -107,7 +114,7 @@ if ($runs.Count -eq 0) {
 
 # Sibling workflows may register slightly later than the first. Give them a short
 # grace, then take the FULL set of runs for this sha.
-Start-Sleep -Seconds 8
+Start-Sleep -Seconds $GraceSeconds
 $runs = Get-RunsForSha
 if ($runs.Count -eq 0) { Write-Output "BUILD_RESULT=no_run SHA=$Sha"; exit 2 }
 
@@ -128,6 +135,19 @@ function Get-RunConclusion {
     return ($json | ConvertFrom-Json)
   } catch {
     return $null
+  }
+}
+
+# Job-level view of a finished run: the workflow conclusion alone hides a cancelled build job
+# behind a skipped publish job, and a skipped publish behind an overall "success".
+function Get-RunJobs {
+  param([Parameter(Mandatory = $true)]$RunId)
+  try {
+    $json = gh run view $RunId -R $RepoSlug --json jobs
+    if (-not $json) { return @() }
+    return @(($json | ConvertFrom-Json).jobs)
+  } catch {
+    return @()
   }
 }
 
@@ -160,9 +180,22 @@ function Wait-ForRunCompletion {
 
     $info = Get-RunConclusion -RunId $Run.databaseId
     if ($info -and $info.status -eq 'completed') {
-      # Only failure/timed_out are red; skipped/cancelled/neutral are not (todo 371).
+      # failure/timed_out are red. cancelled is its own verdict (a cancelled build job leaves the
+      # publish job skipped, so nothing ships); skipped/neutral stay a callout only.
       if ($info.conclusion -in @('failure', 'timed_out')) {
         return @{ Outcome = 'failure'; Conclusion = $info.conclusion }
+      }
+      $jobs = Get-RunJobs -RunId $Run.databaseId
+      $cancelledJobs = @($jobs | Where-Object { $_.conclusion -eq 'cancelled' } | ForEach-Object { $_.name })
+      $skippedPublish = @()
+      if ($ExpectPublish) {
+        $skippedPublish = @($jobs | Where-Object { $_.conclusion -eq 'skipped' -and $_.name -match '(?i)publish|release' } | ForEach-Object { $_.name })
+      }
+      if ($info.conclusion -eq 'cancelled' -or $cancelledJobs.Count -gt 0) {
+        return @{ Outcome = 'cancelled'; Conclusion = $info.conclusion; Jobs = $cancelledJobs; SkippedPublish = $skippedPublish }
+      }
+      if ($skippedPublish.Count -gt 0) {
+        return @{ Outcome = 'publish_skipped'; Conclusion = $info.conclusion; Jobs = $skippedPublish }
       }
       return @{ Outcome = 'success'; Conclusion = $info.conclusion }
     }
@@ -187,12 +220,21 @@ function Wait-ForRunCompletion {
 $failed = @()
 $watchErrors = @()
 $nonSuccess = @()
+$cancelled = @()
+$publishSkipped = @()
 $timedOut = $false
 foreach ($r in $runs) {
   $result = Wait-ForRunCompletion -Run $r
   if ($result.Outcome -eq 'failure') { $failed += $r }
   elseif ($result.Outcome -eq 'watch_error') { $watchErrors += $r }
   elseif ($result.Outcome -eq 'timeout') { $timedOut = $true; break }
+  elseif ($result.Outcome -eq 'cancelled') {
+    $detail = if ($result.Jobs.Count -gt 0) { ": $($result.Jobs -join ', ')" } else { '' }
+    $cancelled += "$($r.workflowName) run $($r.databaseId)$detail"
+  }
+  elseif ($result.Outcome -eq 'publish_skipped') {
+    $publishSkipped += "$($r.workflowName) run $($r.databaseId): $($result.Jobs -join ', ')"
+  }
   elseif ($result.Outcome -eq 'success' -and $result.Conclusion -and $result.Conclusion -ne 'success') {
     $nonSuccess += "$($r.workflowName)=$($result.Conclusion)"
   }
@@ -201,6 +243,17 @@ foreach ($r in $runs) {
 if ($timedOut) {
   Write-Output "BUILD_RESULT=timeout TIMEOUT_MINUTES=$TimeoutMinutes RUNS=$($runs.Count)"
   exit 4
+}
+
+if ($failed.Count -eq 0 -and $cancelled.Count -gt 0) {
+  Write-Output "BUILD_RESULT=cancelled CANCELLED=$($cancelled.Count)/$($runs.Count) ($($cancelled -join '; '))"
+  Write-Output "NOTE: a cancelled build job leaves tag/publish jobs skipped, so nothing was published; a newer push can also supersede a run via a concurrency group (build-watch.md)"
+  exit 5
+}
+
+if ($failed.Count -eq 0 -and $publishSkipped.Count -gt 0) {
+  Write-Output "BUILD_RESULT=publish_skipped SKIPPED=$($publishSkipped.Count)/$($runs.Count) ($($publishSkipped -join '; '))"
+  exit 6
 }
 
 if ($failed.Count -eq 0 -and $watchErrors.Count -eq 0) {

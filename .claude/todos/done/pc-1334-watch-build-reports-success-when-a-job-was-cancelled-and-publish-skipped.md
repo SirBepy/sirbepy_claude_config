@@ -17,3 +17,7 @@ Treat a `cancelled` workflow conclusion as its own marker (for example `BUILD_RE
 
 ## Acceptance
 A run whose conclusion is `cancelled`, or whose publish job is `skipped` after a version bump, produces a non-success marker naming the job.
+
+## Notes
+
+- watch-build.ps1 reports BUILD_RESULT=cancelled (exit 5) for a cancelled run or job and publish_skipped (exit 6, -ExpectPublish); new skills/commit/test_watch_build.sh with a stubbed gh reproduces the incident and fails without the fix. Live check against a real run is verify only
