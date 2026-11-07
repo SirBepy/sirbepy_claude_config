@@ -228,6 +228,19 @@ _UNLAUNCHABLE_MARKERS = (
 )
 _UNLAUNCHABLE_MARKER = _UNLAUNCHABLE_MARKERS[0]  # back-compat name some callers may still import
 
+# Output signatures of a check that died from the machine, not from the edit:
+# a full disk (Windows os error 112, POSIX ENOSPC wording) or a build script
+# crashing with STATUS_ACCESS_VIOLATION. Looping a session on these cost it
+# minutes per attempt on a full disk (seen 2026-11-04). Matched only on a
+# non-zero exit, lower-cased.
+_ENVIRONMENT_FAILURE_MARKERS = (
+    "os error 112",
+    "not enough space on the disk",
+    "no space left on device",
+    "0xc0000005",
+    "status_access_violation",
+)
+
 BASH_EXE_ENV = "TESTING_FLOOR_BASH_EXE"  # test-only override, same pattern as the other *_ENV points
 
 
@@ -590,6 +603,11 @@ def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner, pa
         # resolved shell itself reported the package manager missing -
         # neither says anything about the edit under test.
         return True, f"{label}: check command could not launch ({output.strip()[:200]}); not verified"
+    if proc.returncode != 0:
+        lowered = output.lower()
+        hit = next((m for m in _ENVIRONMENT_FAILURE_MARKERS if m in lowered), None)
+        if hit:
+            return True, f"{label}: check died from the environment ({hit}); not verified (could not verify, report that)"
     if label == "flutter":
         ok = "All tests passed!" in output
     else:
