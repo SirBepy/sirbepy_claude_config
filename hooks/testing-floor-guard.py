@@ -137,13 +137,16 @@ def closed_this_turn(transcript_path: str) -> bool:
 # (CLAUDE.md, Testing & verification floor). Deliberately narrow: a verb that
 # means "do not" directly in front of "test(s)", so "add tests" never matches.
 _DONT_TEST_RE = re.compile(
-    r"\b(?:don'?t|do not|never|skip|no need to|without)\s+"
+    # The phrase must open a clause, so "Should I skip tests?", "he said don't
+    # test." and "never skip tests" (a negated skip) do not match.
+    r"(?:^|[.!?;,:\n]\s*|\b(?:and|but|please|just|ok|okay)\s+)"
+    r"(?:don'?t|do not|skip|no need to)\s+"
     r"(?:(?:run|running|write|writing|do|doing)\s+)?(?:the\s+|any\s+|more\s+)?tests?"
     # The phrase must end there (optionally after a filler word), so a scoped
     # request like "don't test the CSS" never switches the floor off.
     r"(?:\s+(?:this|it|that|these|those|here|please|now|yet|anything|everything|for now|at all)){0,3}"
     r"\s*(?:[.,!?;:]|$)",
-    re.IGNORECASE | re.MULTILINE,
+    re.IGNORECASE,
 )
 
 
