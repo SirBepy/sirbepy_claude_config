@@ -149,6 +149,11 @@ DETECT_CASES = [
     ("Bash", {"command": f"curl -X DELETE {SC}/bulk -d '{{\"story_ids\": [1, 2]}}'"}, False, "a bulk delete stays ungated"),
     ("Bash", {"command": f"curl -X PUT {SC}/12 -d '{{\"workflow_state_id\": 500}}' && curl -s {SC}/12/comments"}, False, "a state move followed by a comment read stays ungated"),
     ("Bash", {"command": f"curl -X PUT {SC}/bulk -d '{{\"story_ids\": [1]}}'; curl -X POST {SC} -d '{{\"project_id\": 5}}'"}, True, "a bare create after a bulk PUT is gated"),
+    ("Bash", {"command": f"curl -X PUT {SC}/12 -d '{{\"workflow_state_id\": 5}}'; curl -X POST {SC}/12/comments -d \"$BODY\""}, True, "a comment POST after a state move is gated"),
+    ("Bash", {"command": f"curl -s {SC}/12 -o /c/tmp/s.json; curl -X POST {SC}/12/comments -d \"$BODY\""}, True, "a comment POST after a read is gated"),
+    ("Bash", {"command": f"curl -X PUT -H 'Content-Type: application/json; charset=utf-8' -H 'Shortcut-Token: x' {SC}/bulk -d '{{\"story_ids\": [1], \"workflow_state_id\": 5}}'"}, False, "a semicolon inside a header does not hide the bulk PUT verb"),
+    ("Bash", {"command": f"curl -X PUT {SC}/bulk -d '{{\"story_ids\": [1]}}' & curl -X POST {SC}/bulk -d '{{\"story_ids\": [2]}}'"}, True, "a bulk POST after a backgrounded bulk PUT is gated"),
+    ("Bash", {"command": f"curl -X PUT \\\r\n {SC}/bulk -d '{{\"story_ids\": [1]}}'"}, False, "a CRLF line continuation keeps the verb on the bulk statement"),
 ]
 
 

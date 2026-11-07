@@ -58,7 +58,7 @@ try:
         uncovered,
     )
     from _outbound_window import window_denial
-    from _python_http_write import SHORTCUT_HINT_RE, bulk_is_not_a_post, has_bare_stories_path, python_write_verbs
+    from _python_http_write import SHORTCUT_HINT_RE, bulk_is_not_a_post, has_bare_stories_path, python_write_verbs, statement_span
 except Exception as e:
     sys.stderr.write(f"[outbound-verify-guard] FATAL: cannot import a sibling hook module ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -505,12 +505,6 @@ def shortcut_requires_prose(command: str, match: re.Match) -> bool:
 PY_SHORTCUT_STORIES_RE = re.compile(r"(?<!search)/stories\b", re.IGNORECASE)
 
 
-def _is_bare_create(command: str, match: re.Match) -> bool:
-    """A `/stories` URL with no id after it, or `/stories/bulk` in a statement that POSTs."""
-    rest = match.group("rest").rstrip("/").lower()
-    return rest == "" or (rest == "/bulk" and not bulk_is_not_a_post(command, match.start()))
-
-
 def python_shortcut_write(command: str) -> bool:
     return bool(
         python_write_verbs(command) & {"POST", "PUT", "PATCH"}
@@ -535,10 +529,11 @@ def detect_rest(command: str, tokens: list, cwd: str | None, posix: bool = True)
         requires = has_bare_stories_path(command, bulk="POST" in python_write_verbs(command)) or "/comments" in command.lower()
         label = "Shortcut REST write (python)"
     elif shortcut:
-        # A bare create after the first URL counts too: a read of one story ahead of it must not
-        # hide it. Later id or comment URLs do not, so a write followed by a comment read stays allowed.
+        # A later URL counts when its own statement writes: a read of one story ahead of a create
+        # must not hide it, while a write followed by a read of the comments stays allowed.
         requires = shortcut_requires_prose(command, shortcut) or any(
-            _is_bare_create(command, m) for m in SHORTCUT_URL_RE.finditer(command, shortcut.end())
+            shortcut_requires_prose(command, m) and is_http_write(statement_span(command, m.start()), posix)
+            for m in SHORTCUT_URL_RE.finditer(command, shortcut.end())
         )
         label = "Shortcut REST write"
     elif linear:
