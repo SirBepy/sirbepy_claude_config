@@ -43,3 +43,4 @@ advise-only.
   - `skills/disk-doctor/SKILL.md` description: `Use when Joe asks what to delete or how to free disk space. Cleanup scan; Claude deletes only approved items.`
   - `skills/disk-doctor/SKILL.md` line 9: replace `You **advise**, never delete - Joe runs the delete commands.` with `You **advise**, and delete only the items Joe approves one by one on a card (`gate.md`); Joe runs every other delete.`
   - `skills/disk-doctor/macos.md` line 3: replace `You **advise**, never delete. Joe runs the commands.` with the same sentence.
+- done as Joe-approved 2026-11-07: SKILL.md description and line 9, macos.md line 3 reworded to approved-items-only deletes; gate.md and windows.md semantics untouched. Doc-only, no test applies; ci/check_skill_frontmatter.py reports nothing for disk-doctor (only the known impeccable baseline fail remains).

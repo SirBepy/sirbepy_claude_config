@@ -1,6 +1,6 @@
 # disk-doctor — macOS platform file
 
-Repeatable cleanup scan for Joe's Mac (darwin/arm64). You **advise**, never delete. Joe runs the commands.
+Repeatable cleanup scan for Joe's Mac (darwin/arm64). You **advise**, and delete only the items Joe approves one by one on a card (`gate.md`); Joe runs every other delete.
 
 ## How to run a scan
 
