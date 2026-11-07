@@ -199,6 +199,8 @@ document.querySelectorAll('.watch').forEach(watch=>{
 
 document.addEventListener('keydown',e=>{
   if(['INPUT','BUTTON'].includes(e.target.tagName)&&e.key===' ')return;
+  // The focused seek slider owns the arrows (it moves itself); also changing the slide would do both.
+  if(e.target.tagName==='INPUT'&&(e.key==='ArrowLeft'||e.key==='ArrowRight'))return;
   if(e.key==='ArrowRight'&&current<sections.length-1)show(current+1);
   if(e.key==='ArrowLeft'&&current>0)show(current-1);
   if(e.key===' '){const v=sections[current].querySelector('video');if(v){e.preventDefault();v.paused?v.play():v.pause()}}

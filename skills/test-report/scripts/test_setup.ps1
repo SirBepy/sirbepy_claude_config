@@ -20,6 +20,17 @@ function Assert($Condition, $Message) {
   else { $failures.Add($Message); Write-Host "  FAIL: $Message" }
 }
 
+# Runs setup.ps1 in a child pwsh and returns its merged output. Windows PowerShell 5.1 wraps each
+# native stderr line in an ErrorRecord that $ErrorActionPreference='Stop' turns into a terminating
+# NativeCommandError, and the failure paths under test write to stderr on purpose. 'Continue' keeps
+# the expected stderr as plain output; $LASTEXITCODE still carries the child's real exit code.
+function Invoke-Setup([string[]]$SetupArgs) {
+  $saved = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try { & pwsh -NoProfile -File (Join-Path $PSScriptRoot 'setup.ps1') @SetupArgs 2>&1 | Out-String }
+  finally { $ErrorActionPreference = $saved }
+}
+
 . (Join-Path $PSScriptRoot 'setup-lib.ps1')
 
 $work = Join-Path ([System.IO.Path]::GetTempPath()) ('test-report-setup-' + [guid]::NewGuid().ToString('N'))
@@ -67,7 +78,7 @@ try {
   [System.IO.File]::WriteAllBytes((Join-Path $src 'kokoro-v1.0.onnx'), $evil)
   [System.IO.File]::WriteAllBytes((Join-Path $src 'voices-v1.0.bin'), $evil)
   $env:TEST_REPORT_HOME = $home1
-  $out = & pwsh -NoProfile -File (Join-Path $PSScriptRoot 'setup.ps1') -ModelsOnly -ModelSource $src 2>&1 | Out-String
+  $out = Invoke-Setup '-ModelsOnly', '-ModelSource', $src
   Assert ($LASTEXITCODE -ne 0) 'setup.ps1 exits non-zero on a tampered model'
   Assert ($out -match 'failed verification') 'setup.ps1 reports the verification failure'
   Assert (-not (Test-Path (Join-Path $home1 'models\kokoro-v1.0.onnx'))) 'no model file is installed from a tampered source'
@@ -77,7 +88,7 @@ try {
     Write-Host 'setup.ps1 -ModelsOnly with the real installed models'
     $realModels = Join-Path $env:LOCALAPPDATA 'claude-test-report\models'
     $env:TEST_REPORT_HOME = Join-Path $work 'home2'
-    $out = & pwsh -NoProfile -File (Join-Path $PSScriptRoot 'setup.ps1') -ModelsOnly -ModelSource $realModels 2>&1 | Out-String
+    $out = Invoke-Setup '-ModelsOnly', '-ModelSource', $realModels
     Assert ($LASTEXITCODE -eq 0) "setup.ps1 accepts the real model files (output: $out)"
     Assert (Test-Path (Join-Path $env:TEST_REPORT_HOME 'models\kokoro-v1.0.onnx')) 'the verified model is installed'
   }
