@@ -30,6 +30,10 @@ The script resolves its own real path before building `$dir`, so the verdict doe
 - Both paths give the same `[coverage-tests-check]` verdict in a local-only repo.
 - `python ci/run_all.py` passes.
 
+## Notes
+
+- commit-pathspec.sh and secret-scan.sh resolve their dir with pwd -P; symlinked-call case in test_commit_pathspec.sh fails without it
+
 ## Verify
 
 - [ ] Run the two commands from Approach 1 with a harmless pathspec and compare output up to the commit step.

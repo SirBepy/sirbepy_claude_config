@@ -82,7 +82,9 @@ export GIT_CONFIG_COUNT=1
 export GIT_CONFIG_KEY_0=core.safecrlf
 export GIT_CONFIG_VALUE_0=false
 
-dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# pwd -P: skills/ is also reachable through the ~/.claude-personal symlink, which has no hooks/
+# or refs/ of its own, so a logical path would send every ../../ lookup below to a missing file.
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 
 # Windows caps one command line near 32K characters, and a commit of a few hundred generated files
 # names more paths than that. Every external call below that receives the whole path list either
