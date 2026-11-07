@@ -73,7 +73,7 @@ try:
     import _hookboot  # retries a shared module another session is mid-way through writing
     from _hooklib import (
         read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS,
-        HEREDOC_BODY_RE, HERESTRING_BODY_RE, is_agent_call, is_command_position,
+        HEREDOC_BODY_RE, HERESTRING_BODY_RE, is_agent_call, is_command_position, is_program,
     )
 except Exception as e:
     sys.stderr.write(f"[commit-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
@@ -130,17 +130,44 @@ def _tokenize(command: str) -> list[str] | None:
 
 # `git [global flags] commit|commit-tree`, or a branch-moving update-ref, found by
 # regex when shlex cannot tokenize the command (a lone apostrophe in `-m it's`).
+_QUOTED_OR_BARE = r"(?:\"[^\"]*\"|'[^']*'|\S+)"
 _UNPARSED_LANDING_RE = re.compile(
-    r"(?<![\w./-])git(?:[ \t]+(?:-[Cc][ \t]+\S+|-\S+))*[ \t]+"
-    r"(?:commit(?![\w-])|commit-tree(?![\w-])|update-ref(?:[ \t]+-\S+)*[ \t]+(?:HEAD(?![\w/-])|refs/heads/))"
+    r"(?<![\w.-])(?:\S*[\\/])?git(?:\.exe)?(?:[ \t]+(?:-[Cc][ \t]+" + _QUOTED_OR_BARE + r"|-\S+))*[ \t]+"
+    r"(?:commit(?![\w-])|commit-tree(?![\w-])|update-ref(?:[ \t]+-\S+)*[ \t]+(?:HEAD(?![\w/-])|refs/heads/))",
+    re.IGNORECASE,
 )
+_ENV_PREFIX_RE = re.compile(r"(?:\b[A-Za-z_]\w*=\S*[ \t]+)+$")
 
 
 def _unparsed_commit_landing(command: str) -> bool:
     """Fail closed for a command shlex cannot read: gate it when a landing
-    `git` call sits at command position. A mention in prose (`echo it's about
-    git commit`) is not at command position, so it stays ungated."""
-    return any(is_command_position(command, m.start()) for m in _UNPARSED_LANDING_RE.finditer(command))
+    `git` call sits at command position (a `VAR=1` prefix does not move it). A
+    mention in prose (`echo it's about git commit`) is not at command
+    position, so it stays ungated."""
+    for m in _UNPARSED_LANDING_RE.finditer(command):
+        start = m.start()
+        if start and command[start - 1] in "\\/":
+            # Tail of a path to git.exe: the token began at the quote opening it
+            # (the path may hold spaces), or at the preceding whitespace.
+            quote = max(command.rfind('"', 0, start), command.rfind("'", 0, start))
+            ws = max(command.rfind(" ", 0, start), command.rfind("\t", 0, start), command.rfind("\n", 0, start))
+            start = quote if quote > ws else ws + 1
+        env = _ENV_PREFIX_RE.search(command[:start])
+        if is_command_position(command, env.start() if env else start):
+            return True
+    return False
+
+
+# Attribution inside a heredoc or here-string body, or in a command shlex cannot
+# tokenize, never reaches `commit_messages`. Each piece between newlines and quote
+# characters is checked on its own, anchored at its start like the token-based
+# check, so a subject that merely discusses the rule stays allowed.
+def raw_attribution_line(command: str) -> str | None:
+    for piece in re.split(r"[\r\n'\"]", command):
+        piece = piece.strip()
+        if _AI_TRAILER_RE.search(piece) or _AI_GENERATED_RE.search(piece):
+            return piece
+    return None
 
 
 def _subcommand_index(tokens: list[str], name: str, start: int = 0) -> int | None:
@@ -148,7 +175,7 @@ def _subcommand_index(tokens: list[str], name: str, start: int = 0) -> int | Non
     `start`, walking past global flags (skipping their values for flags like
     -C), or None."""
     for i, tok in enumerate(tokens):
-        if i < start or tok != "git":
+        if i < start or not is_program(tok, "git"):
             continue
         j = i + 1
         while j < len(tokens) and tokens[j].startswith("-"):
@@ -414,7 +441,7 @@ def main() -> None:
     tokens = _tokenize(command) or []
 
     # Before the bypass: /commit's Rules allow no AI attribution, ever.
-    attribution = ai_attribution_line(tokens, payload.get("cwd") or "")
+    attribution = ai_attribution_line(tokens, payload.get("cwd") or "") or raw_attribution_line(command)
     if attribution:
         deny(
             "[commit-guard] This commit message carries AI attribution, which /commit's "
