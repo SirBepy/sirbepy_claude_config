@@ -47,7 +47,8 @@ def key_span_end(lines: list, idx: int, close_index: int) -> int:
     as orphaned, invalid YAML. Blank lines count only when an indented line follows them.
     """
     end = idx + 1
-    while end < close_index and (lines[end].strip() == "" or lines[end][0] in (" ", "\t")):
+    # A top-level key never starts with "- ", so an unindented sequence item below it is its value.
+    while end < close_index and (lines[end].strip() == "" or lines[end][0] in (" ", "\t") or lines[end].startswith("- ")):
         end += 1
     while end > idx + 1 and lines[end - 1].strip() == "":
         end -= 1

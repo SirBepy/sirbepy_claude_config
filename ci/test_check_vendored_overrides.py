@@ -96,6 +96,15 @@ with tempfile.TemporaryDirectory() as d:
           "apply drops the block scalar's continuation lines, leaving valid frontmatter")
     check(drift_of(tmp) == [] and cvo.apply_to(skill, DESC["skills/demo/SKILL.md"]) is False, "no drift and idempotent after the rewrite")
 
+# An unindented block sequence belongs to its key too.
+with tempfile.TemporaryDirectory() as d:
+    tmp = Path(d)
+    skill = make_tree(tmp, "---\nname: demo\nallowed-tools:\n- Read\n- Write\nversion: 1\n---\n\nBody\n",
+                      {"skills/demo/SKILL.md": {"allowed-tools": "Read"}})
+    cvo.apply_to(skill, {"allowed-tools": "Read"})
+    check(skill.read_text(encoding="utf-8") == "---\nname: demo\nallowed-tools: Read\nversion: 1\n---\n\nBody\n",
+          "apply drops an unindented sequence under the rewritten key")
+
 # A BOM'd SKILL.md is patched and keeps its BOM instead of raising; the check reads it too.
 with tempfile.TemporaryDirectory() as d:
     tmp = Path(d)
