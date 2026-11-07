@@ -20,3 +20,8 @@ In `Take-Screenshot` (`adb-drive.ps1` around line 121):
 4. Add one line to `SKILL.md` Gotchas: secure windows (authenticators, banking apps) give no screenshot, read them with `uiautomator dump`.
 
 Verify: run `screenshot` against an app with FLAG_SECURE on a connected device, and confirm the clear error, no file under `/sdcard/`, and no bad PNG left locally.
+
+
+## Notes
+
+- fixed: device temp moved to /data/local/tmp, removed in finally, PNG signature check before Get-PngSize, SKILL.md gotcha added; tests in skills/android-drive/test_adb_drive.ps1 (stubbed adb, red on the old script). Live FLAG_SECURE check on a phone: verify only, no device attached tonight.

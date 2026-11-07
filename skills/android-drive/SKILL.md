@@ -131,6 +131,11 @@ powershell -File adb-drive.ps1 record-motion -Serial <id> -Steps "wait:1500;tap:
 - **A plain PowerShell `>` redirect on `screencap` output.** Corrupts the PNG (text-mode CRLF
   translation over a binary stream). The script always does the two-step screencap-to-device-then-
   pull, never a redirect.
+- **Secure windows give no screenshot.** Authenticators and banking apps set FLAG_SECURE, so
+  `screencap` writes an empty or non-PNG file. `screenshot` then throws "screencap returned no
+  image" and deletes the bad local file; read that screen with `adb shell uiautomator dump` instead.
+  The device-side temp file lives in `/data/local/tmp` and is removed even on failure, so nothing
+  lands in `/sdcard` for a backup or verify pass to pick up.
 - **Release Flutter builds produce no logcat output.** They log via `log()` from `dart:developer`,
   which release mode does not surface to `adb logcat`. If the app under test is a release Flutter
   build, the backend/API log is the diagnostic surface for a failed step, not the device log.
