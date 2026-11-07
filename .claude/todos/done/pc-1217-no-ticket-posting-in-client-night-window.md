@@ -36,3 +36,4 @@ Claude does not create or edit Shortcut/Linear tickets or post PR comments for a
 
 - Joe's words are the source; no other incident yet.
 - Deferred question (needs an attended session for its `hooks/`/`settings.json` writes) answered 2026-11-07: Joe said run it now, in the attended 2026-11-07 session; he approves each permission prompt as it appears.
+- Built: hooks/_outbound_window.py (shared helper over commit-window-guard.py's window and allow files, own 'outbound' allow scope, fails open) called by outbound-verify-guard.py and shortcut-create-guard.py; commit-window-guard.py allow gained --scope outbound; deferral recipe in skills/ticket/SKILL.md 'Night window'. No CLAUDE.md line (over budget, per triage). Test hooks/test_outbound_window.py red-checked. State-only moves and reads stay open; a session whose cwd is not a client repo is not gated.

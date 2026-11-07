@@ -140,6 +140,28 @@ blocks (hit 2026-10-21, sc-56468).
 One API call per the quirks file. Capture the returned id and URL, append the log entry the quirks
 file specifies, then tell the dev the id, the URL, and which defaults were applied.
 
+### Night window (client repos, 23:00-10:59)
+
+From a session whose cwd is in a client repo, `hooks/outbound-verify-guard.py` and
+`hooks/shortcut-create-guard.py` deny every ticket create, text edit or comment, and every PR
+create, comment or review with a body, between 23:00 and 10:59 local. Dev, 2026-10-22: "i dont
+wanna create a ticket at 3am". State-only moves and reads stay open. The denial names the window
+and the override.
+
+- **Joe is around:** ask through the question card. Only on a yes, run in its OWN tool call
+  `python C:/Users/tecno/.claude/hooks/commit-window-guard.py allow "<repo root>" --scope outbound --reason "<Joe's answer, quoted>"`
+  and retry. This approval is separate from the commit window's: a yes to a commit does not post
+  a ticket.
+- **Joe is not around (overnight, unattended):** defer, never post:
+  1. Run everything up to the POST now: ground check, then `refs/outbound-verify.md` on the exact
+     text. Verification is not bound to the window.
+  2. Write the request body to a file under `C:\tmp\<topic>\`.
+  3. Schedule a one-shot wake-up with `target: "this_chat"` at 11:00 local. It must be this chat:
+     the verifier proof is read from this chat's transcript, so a new chat cannot post the text.
+     The prompt names the body file, the verified text, and the steps below.
+  4. At fire time: re-run the ground check (the board moves overnight), write the marker as its
+     own tool call, then make the POST in the next one.
+
 ## Update
 
 ### 1. Resolve the targets
