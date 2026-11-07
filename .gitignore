@@ -51,6 +51,9 @@ skills/impeccable/scripts/bin/
 # Per-user ticket log, not shared
 skills/ticket/log.md
 
+# /clockify-reconciliator's "already ran today" markers, machine-local state
+skills/clockify-reconciliator/.runs/
+
 # Runtime artifact written by /commit's build watch, per-machine
 skills/commit/watch-build.pid
 

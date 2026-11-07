@@ -18,6 +18,7 @@ argument-hint: <project-name> [lookback]
   - `past-N-weeks` or `past-N-days` - rolling window ending now
   - `YYYY-MM-DD..YYYY-MM-DD` - explicit date range
   - Default if omitted: current work week (Mon to today, dev timezone).
+- `--precheck` (optional, only the scheduled midnight run passes it): ends the run at step 1a when a run already covered today. A manual run never carries it, so manual runs never skip.
 
 ## Prereqs
 
@@ -61,6 +62,25 @@ Read the named file. Abort with clear error listing missing required fields.
 
 **Resolve the Clockify API key here, before any API call:** use the env var named by `api_key_env` if the config sets it, else `CLOCKIFY_API_KEY`. Every Clockify request in steps 4 and 9 sends that value as the `X-Api-Key` header. Getting this wrong does not error loudly - the default key against another account's workspace returns 403 or an empty entry list, which looks exactly like "nothing to reconcile", so state which var you resolved in the run's first output line. If the resolved var is unset, abort and name it.
 
+### 1a. Already-ran check (only when the invocation contains `--precheck`)
+
+Joe, 2026-10-30: "if I've already run Clockify for the day, don't bother running it again... even
+if it's not full... I can still keep that chat open until all the other hours are finalized." The
+rule is run history, on purpose: it does not try to prove the day is fully covered (a design that
+did, scored 6/10 in /iterate-it, was rejected as heavier than the ask).
+
+Compute today's local date in `Europe/Zagreb`, then look for
+`~/.claude/skills/clockify-reconciliator/.runs/<project-name>/<YYYY-MM-DD>` (a marker step 3 writes).
+
+- Marker exists: print one line, `Skipped: already ran for <date> (marker says <its contents>)`,
+  and end the run. No other step runs, no card is asked. A skipped run counts as finished, so a
+  `/then-close` in the scheduled prompt closes the chat.
+- No marker: continue at step 2 as normal.
+- Anything unreadable (missing directory is the normal "no marker" case, not an error): run normally.
+  A wrong run costs one extra card, a wrong skip costs unlogged hours, so doubt always means run.
+
+Without `--precheck`, skip this step.
+
 ### 2. HubStaff steps are deferred, not run here
 
 Nothing HubStaff-related runs at the top of a run, the screenshot preflight included. Every HubStaff
@@ -99,6 +119,14 @@ only because the dev pushed back. Two rules close it:
 If `[lookback]` given, parse it. Else: Monday 00:00 of current week to now, in dev's timezone.
 
 For a single-day lookback (`today`, `yesterday`, or an explicit single `YYYY-MM-DD`), the window is always a full local calendar day, true midnight-to-midnight: `<day> 00:00:00` to `<day+1> 00:00:00`, dev's timezone. `today` = the current calendar date; `yesterday` = current calendar date minus 1 calendar day. Compute the calendar date first, then take that date's midnight-to-midnight span - never derive the boundary as "now minus 24h", and never use a rounded/approximate cutoff (e.g. `22:00`) in place of true midnight. This window feeds both the Clockify entry fetch (step 4) and the git-log bounds (step 6). See `~/.claude/projects/c--Users-tecno-Desktop-Projects-zng-app/memory/feedback_verify_date_calculations.md` for the 2026-07-28 incident this rule fixes.
+
+**Mark the run, once the window is resolved (every run, manual or scheduled, even one the dev later
+cancels or leaves on an open card):** with the Write tool, create one file per local calendar date
+the window covers, up to and including today, at
+`~/.claude/skills/clockify-reconciliator/.runs/<project-name>/<YYYY-MM-DD>`. Contents: one line,
+`started LOCAL <HH:MM>, window <window as resolved>`. A `yesterday` run marks only yesterday; the
+Friday week run marks Mon to Fri. An existing marker is overwritten with the newer line. `.runs/` is
+gitignored machine-local state. Step 1a reads these markers; nothing else does.
 
 ### 3a. Resolve mode
 
@@ -460,6 +488,32 @@ Build this every run - the only path that skips it is a failed push after both t
 have been tried. Judging it optional for any other reason (a short window, a simple week, a sense
 that the tables suffice) is a scope decision the dev makes, not the run (todo 961).
 
+**In-chat visuals replace the preview when `send_message` accepts `visuals`.** Joe (2026-11-06): he
+wants this skill to draw in the message, not in a preview card. Check the `send_message` tool schema:
+if it lists a `visuals` parameter (Conductor builds from 2026-11-06 on), skip `render_week.cjs` and
+`show_preview` entirely and send the week as ONE `send_message` (`kind: "report"` at step 13, `plan`
+at step 9) carrying these `visuals`, in this order. If the schema has no `visuals`, use the script and
+`show_preview` above exactly as written.
+
+- `timeline`: `title` the project and week, one `rows` entry per day, `label` like `"Mon 3 Nov"`.
+  Each block is `{start, end, label}` with `start`/`end` as 24-hour `"HH:MM"` text (`"24:00"` for a
+  block that runs to midnight) and `label` the first words of the description, 40 chars at most
+  (blank for a block that has none yet). Mark a block this run would write or change by starting its
+  `label` with `+ ` (new) or `~ ` (edited); leave `old` and `meeting` blocks unmarked and say in
+  `text` which is which. At most 10 rows and 12 blocks per row; a longer window goes in several
+  messages. The row total on the right is the day's hours, so no separate day-summary is needed.
+- `bar` (optional): hours per day against nothing else, `unit: "h"`, one `data` item per day.
+  Only when the days differ enough to be worth ranking.
+- `table`: the step 9 block table, `columns: ["Date", "Time", "Dur", "Description"]`, one row per
+  proposed block, cells 80 chars at most (cut a long description and give the full text only on
+  Apply). At most 40 rows; more goes in a second message.
+
+`text` is the one-line conclusion ("Mon to Wed filled, 3 blocks still empty"), `verdict` the
+conclusion in a few words. The card carries no hover text, state colours or progress ring: those lived
+only in `render_week.cjs`. State the target-hours figure in `text` only when the full-week gate below
+has passed, same rule as the ring. A malformed visual comes back as an `ok:false` naming the field:
+read it and resend, never fall back to the preview for a shape error.
+
 **Render denied by the auto-mode classifier.** If the `render_week.cjs` call itself is denied with a
 `[Real-World Transactions]` reason, the run has hit a known false positive: the command is a local
 read-and-render that touches no payment or external transaction (reproduced twice in one session,
@@ -561,7 +615,9 @@ Once the gate passes, run hubstaff.md's "Step 2" preflight first, then step 11, 
 
 Read `skills/clockify-reconciliator/hubstaff.md` and follow its "Step 2" preflight, then its "Step
 11" section. If the dev then asks to update/sync HubStaff (not just compare), follow its "HubStaff
-update mode" section instead of improvising scope or entry-creation mechanics.
+update mode" section instead of improvising scope or entry-creation mechanics. If the comparison
+finds HubStaff completely empty for the window, do not ask: add every Clockify entry right away
+(update mode's "Empty HubStaff window" bullet), then verify and re-take the screenshot.
 
 ### 12. HubStaff weekly screenshot (skip unless step 10a's gate passed, or the preflight marked auth as failed)
 

@@ -27,6 +27,11 @@ const weeklyUrl = (mon, sun) =>
 
 (async () => {
   fs.mkdirSync(outDir, { recursive: true });
+  for (const f of fs.readdirSync(outDir)) {
+    if (/^hubstaff-weekly-.*\.png$/.test(f)) {
+      fs.unlinkSync(path.join(outDir, f));
+    }
+  }
   const context = await launchProfileContext(profile, weeklyUrl(weeks[0].mon, weeks[0].sun));
   const results = [];
   try {
@@ -51,13 +56,31 @@ const weeklyUrl = (mon, sun) =>
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
       await page.waitForTimeout(1500);
 
+      let totalText = null;
+      try {
+        const totalEl = page.locator('text=/Total:\\s*[\\d:]+/').first();
+        if (await totalEl.count() > 0) {
+          totalText = (await totalEl.textContent())?.trim() ?? null;
+        }
+      } catch {}
+      const totalMatch = totalText ? totalText.match(/Total:\s*([\d:]+)/) : null;
+      const totalHours = totalMatch ? totalMatch[1] : null;
+      const isZeroTotal = totalHours != null && /^0+(:0+)*$/.test(totalHours);
+
       const outPath = path.join(outDir, `hubstaff-weekly-${mon}_to_${sun}.png`);
       await page.screenshot({ path: outPath });
       const sizeBytes = fs.statSync(outPath).size;
-      const warning = sizeBytes < 50 * 1024
-        ? `screenshot for ${mon} may be a login page or empty table - check manually before sharing`
-        : null;
-      results.push({ mon, sun, path: outPath, sizeBytes, warning });
+
+      let warning = null;
+      if (sizeBytes < 50 * 1024) {
+        warning = `screenshot for ${mon} may be a login page or empty table - check manually before sharing`;
+      } else if (totalHours == null) {
+        warning = `could not read a Total value for ${mon} - check manually before sharing`;
+      } else if (isZeroTotal) {
+        warning = `Total reads 0:00:00 for ${mon} - check manually before sharing (could be a real zero-hour week)`;
+      }
+
+      results.push({ mon, sun, path: outPath, sizeBytes, totalHours, warning });
     }
   } finally {
     await context.close();
