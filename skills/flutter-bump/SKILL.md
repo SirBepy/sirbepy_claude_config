@@ -82,6 +82,25 @@ Read the repo's current `flutter.version`. If it already equals the resolved
 target version, skip straight to the report as "already on latest" — do not
 re-run `fvm use` or the verify steps for that repo.
 
+### 2b2. Unpushed-stack check (all three repos)
+
+2e step 4's `git push` ships every unpushed commit on the branch, not only the bump. Before the
+bump, list them (quote the revision, PowerShell reads a bare `@{` as a hashtable):
+
+```
+git -C <repo> log --oneline '@{u}..HEAD'
+```
+
+- Empty: nothing else would ride the push. Go on to 2c.
+- Anything in it, or the command fails because the branch has no upstream: that stack is not this
+  skill's to publish. Seen on the 3.47.9 bump, 2026-11-03: zng-app held `a4e8048b` and `a7012c9d`,
+  and zng-biller held 4 commits waiting on a reword; pushing literally would have shipped them. Ask
+  the dev (AskUserQuestion), naming the commits: push the whole stack with the bump, bump and
+  commit but do not push this repo, or skip the repo. With nobody to answer, take the middle
+  option: bump and commit, skip 2e step 4 for this repo, and say so in the report.
+
+Whatever was chosen, record it: 2e step 4 follows it, and the final report names the commits.
+
 ### 2c. Bump
 
 1. `fvm use <version> --force` inside the repo (updates `.fvmrc` and
@@ -212,7 +231,8 @@ repo:
    `--concurrency=5`); zng-admin has its own `e2e/run-all.js`; zng-biller has none, so `/e2e`'s
    "anything else" row applies - drive a smoke check by hand until a committed helper exists (see
    the Biller smoke check section below).
-4. `git -C <repo> push`
+4. `git -C <repo> push`, unless 2b2 found other unpushed commits and the dev did not choose to push
+   them: then stop after the commit and report "committed, not pushed - unpushed stack held".
 
 Message is always exactly `Bump Flutter to <version>` — the established
 style used by every prior bump commit in all three repos. No prefixes.
@@ -319,4 +339,5 @@ Then:
   back wrong or a repair didn't hold.
 - Per repo: the commit sha + push result, or "not committed - verify failed"
   with the failing check named, or "committed but not pushed - push gate red"
-  naming which of `/code-check`/`/e2e` failed (2e step 3).
+  naming which of `/code-check`/`/e2e` failed (2e step 3), or "committed but not pushed -
+  unpushed stack held" listing the commits 2b2 found.
