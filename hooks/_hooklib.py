@@ -623,9 +623,17 @@ NON_BASH_SHELL_NAMES = {"pwsh", "powershell", "cmd"}
 INLINE_COMMAND_FLAGS = {"-c", "-lc", "-command"}
 # `-c`, a combined short flag ending in c (`-lc`, `-ec`), every PowerShell
 # abbreviation of -Command, and cmd's /c and /k.
-_INLINE_FLAG_RE = re.compile(r"(?:-(?:[a-z]*c|co(?:m(?:m(?:a(?:n(?:d)?)?)?)?)?)|/[ck])", re.IGNORECASE)
+_INLINE_FLAG_RE = re.compile(
+    r"(?:-(?:(?=[a-z]{1,3}$)[a-z]*c[a-z]*|co(?:m(?:m(?:a(?:n(?:d)?)?)?)?)?)|/[ck])", re.IGNORECASE
+)
 _EVAL_NAMES = {"eval", "iex", "invoke-expression"}
-_EVAL_PREFIX_NAMES = {"&", "sudo", "command", "builtin", "exec"}
+# What may stand before an eval at command position: a call operator, a wrapper
+# command, or a shell keyword that starts a compound-command body.
+_EVAL_PREFIX_NAMES = {
+    "&", "sudo", "command", "builtin", "exec", "env", "nohup", "time", "!",
+    "then", "do", "else", "elif", "if", "while", "until", "",
+}
+_NESTING_LIMIT = 8
 
 
 def _unquote_body(tok: str) -> str:
@@ -649,9 +657,10 @@ def wrapper_command_bodies(segment: str) -> list[tuple[str, bool]]:
         words = segment.split()
     out: list[tuple[str, bool]] = []
     for i, word in enumerate(words):
-        name = basename(word).removesuffix(".exe")
+        name = basename(word).removesuffix(".exe").lstrip("({")
         if name in _EVAL_NAMES and i + 1 < len(words) and all(
-            basename(w).removesuffix(".exe") in _EVAL_PREFIX_NAMES or _ASSIGNMENT_RE.match(w) for w in words[:i]
+            basename(w).removesuffix(".exe").lstrip("({") in _EVAL_PREFIX_NAMES or _ASSIGNMENT_RE.match(w)
+            for w in words[:i]
         ):
             out.append((" ".join(_unquote_body(w) for w in words[i + 1:]), False))
             continue
@@ -671,11 +680,15 @@ def substitution_bodies(text: str) -> list[str]:
     single quotes. Both shells run it even inside double quotes, where the
     quote-aware splits keep it hidden in one token. An unclosed `$(` runs to the
     end of the text; nested ones are found when the caller rescans a body."""
+    text = _drop_quoted_heredoc_bodies(text)
     bodies: list[str] = []
     quote = None
     i, n = 0, len(text)
     while i < n:
         ch = text[i]
+        if ch == "\\" and quote != "'":
+            i += 2  # an escaped backtick or `$` is text
+            continue
         if quote == "'":
             if ch == "'":
                 quote = None
@@ -684,9 +697,18 @@ def substitution_bodies(text: str) -> list[str]:
         elif ch == '"':
             quote = None if quote == '"' else '"'
         elif ch == "$" and text[i + 1:i + 2] == "(":
-            depth, j = 1, i + 2
+            depth, j, inner = 1, i + 2, None
             while j < n and depth:
-                depth += (text[j] == "(") - (text[j] == ")")
+                c = text[j]
+                if c == "\\" and inner != "'":
+                    j += 2
+                    continue
+                if inner:
+                    inner = None if c == inner else inner
+                elif c in "\"'":
+                    inner = c
+                else:
+                    depth += (c == "(") - (c == ")")
                 j += 1
             bodies.append(text[i + 2:j - 1 if depth == 0 else j])
             i = j
@@ -700,24 +722,46 @@ def substitution_bodies(text: str) -> list[str]:
     return [b for b in bodies if b.strip()]
 
 
-def nested_command_bodies(segment: str) -> list[str]:
+def _drop_quoted_heredoc_bodies(text: str) -> str:
+    """`text` with the body of each quoted-tag heredoc (`<<'EOF'`) removed: the
+    shell does not expand anything in it, so a backtick code span or `$(` there
+    is prose, not a command."""
+    def keep_edges(m: re.Match) -> str:
+        whole = m.group(0)
+        return whole.split("\n", 1)[0] + "\n" + whole.rsplit("\n", 1)[-1]
+
+    return QUOTED_HEREDOC_BODY_RE.sub(keep_edges, text)
+
+
+def _quoted_heredoc_body_lines(command: str) -> set[str]:
+    lines: set[str] = set()
+    for m in QUOTED_HEREDOC_BODY_RE.finditer(command):
+        lines.update(line.strip() for line in m.group(0).split("\n")[1:-1])
+    return lines
+
+
+def nested_command_bodies(segment: str, literal: bool = False) -> list[str]:
     """Every command line `segment` runs inside itself: wrapper bodies
-    (`bash -c "..."`, `eval "..."`) and command substitutions."""
-    return [b for b, _foreign in wrapper_command_bodies(segment)] + substitution_bodies(segment)
+    (`bash -c "..."`, `eval "..."`) and command substitutions. `literal` marks a
+    segment that is a line of a quoted heredoc body, where nothing expands, so
+    only the wrapper bodies (which a body piped into a shell would run) count."""
+    bodies = [b for b, _foreign in wrapper_command_bodies(segment)]
+    return bodies if literal else bodies + substitution_bodies(segment)
 
 
 def split_gate_segments_deep(command: str, depth: int = 0) -> list[str]:
     """split_gate_segments plus, after each segment, the statements of every
-    command line nested in it (up to three levels). For gates that must see
-    `bash -c "echo a; git stash pop"` and `echo "$(git stash pop)"`, which the
-    quote-aware split keeps as one opaque segment. Nested statements run in
+    command line nested in it (up to _NESTING_LIMIT levels). For gates that must
+    see `bash -c "echo a; git stash pop"` and `echo "$(git stash pop)"`, which
+    the quote-aware split keeps as one opaque segment. Nested statements run in
     their own subshell, so callers that track a working directory across
     segments should walk nested_command_bodies themselves."""
     out: list[str] = []
+    literal_lines = _quoted_heredoc_body_lines(command)
     for segment in split_gate_segments(command):
         out.append(segment)
-        if depth < 3:
-            for body in nested_command_bodies(segment):
+        if depth < _NESTING_LIMIT:
+            for body in nested_command_bodies(segment, segment.strip() in literal_lines):
                 out.extend(split_gate_segments_deep(body, depth + 1))
     return out
 

@@ -158,7 +158,7 @@ def _spans_outside_quotes(text: str, pattern: re.Pattern) -> list[tuple[int, int
 _QUOTED_ARG = r"(?:\"(?P<dq>(?:\\.|[^\"\\])*)\"|'(?P<sq>[^']*)')"
 WRAPPER_ARG_RE = re.compile(
     r"\b(?:bash|sh|zsh|dash|ksh|pwsh|powershell)(?:\.exe)?\b[^\"'|;&\n]*?"
-    r"\s-(?:[a-z]*c|co(?:m(?:m(?:a(?:n(?:d)?)?)?)?)?)\s+" + _QUOTED_ARG,
+    r"\s-(?:(?=[a-z]{1,3}\s)[a-z]*c[a-z]*|co(?:m(?:m(?:a(?:n(?:d)?)?)?)?)?)\s+" + _QUOTED_ARG,
     re.IGNORECASE | re.DOTALL,
 )
 # `eval "cargo test | tail"` runs its text as a command line too.
@@ -188,7 +188,7 @@ def find_violation(command: str, cwd: str | None = None, _depth: int = 0) -> tup
     # step 4's own lean), kept as a parameter so a future repo-scoped check
     # only needs to read it here, not re-plumb the call site.
     found = _find_unquoted_violation(command)
-    if found or _depth >= 3:
+    if found or _depth >= 8:
         return found
     for inner in _wrapper_arguments(command):
         found = find_violation(inner, cwd, _depth + 1)

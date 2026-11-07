@@ -206,6 +206,11 @@ CASES = [
     ('eval "cargo test 2>&1 | tail -5"', True, "eval body is rescanned"),
     ("eval 'cargo clippy | head'", True, "single-quoted eval body is rescanned"),
     ("echo '$(cargo test | tail)'", False, "single-quoted substitution is text, not a run"),
+    ('git commit -m "note: \\`cargo test | tail\\` hides a hang"', False, "escaped backticks are text"),
+    ("git commit -F - <<'EOF'\nDeny `cargo test 2>&1 | tail` now\nEOF", False, "backticks in a quoted heredoc body are text"),
+    ('git commit -m "$(cat <<\'EOF\'\nDeny `cargo test | tail` now\nEOF\n)"', False, "backticks in a quoted heredoc inside a substitution are text"),
+    ('bash -ce "cargo test | tail"', True, "bash -ce body is rescanned"),
+    ('echo "$(echo ")" ; cargo test | tail)"', True, "a paren inside quotes does not end the substitution early"),
     ('echo "cargo test | tail"', False, "a quoted pipeline that is only printed stays allowed"),
     ('out="$(cargo test --lib 2>&1)"', False, "a substitution with no filter stays allowed"),
 ]

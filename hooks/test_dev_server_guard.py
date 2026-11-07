@@ -186,6 +186,13 @@ MAIN_CASES = [
     ("echo hi\nvite", 2, "newline after echo then vite"),
     ("git pull\r\nflutter run", 2, "CRLF after git pull then flutter run"),
     ("grep foo x\nuvicorn app:app", 2, "newline after grep then uvicorn"),
+    # A heredoc handed to no interpreter is data, e.g. README setup lines.
+    ("cat <<'EOF' > README.md\n## Setup\nnpm run dev\nEOF", 0, "heredoc written to a file is data"),
+    ("git commit -F - <<'EOF'\ndocs: setup\n\nnpm run dev\nEOF", 0, "heredoc commit message is data"),
+    ("git commit -m \"$(cat <<'EOF'\ndocs\n\nnpm run dev\nEOF\n)\"", 0, "heredoc inside a commit-message substitution is data"),
+    ("cat > a.md <<EOF\nvite\nEOF", 0, "bare heredoc written to a file is data"),
+    ("Set-Content -Path a.md -Value @\"\nvite\n\"@", 0, "here-string written to a file is data"),
+    ("bash -ce \"npm run dev\"", 2, "a clustered -ce flag still runs its body"),
     ("echo vite", 0, "vite named as an echo argument is text"),
     ("npm install vite\necho done", 0, "vite installed, not launched"),
     ("git commit -m \"npm run dev\"", 0, "a quoted commit message is text"),
