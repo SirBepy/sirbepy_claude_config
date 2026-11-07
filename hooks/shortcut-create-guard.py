@@ -28,7 +28,7 @@ if str(_HOOKS_DIR) not in sys.path:
 try:
     from _hooklib import read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS, OUTBOUND_MARKER_GLOB, without_display_segments
     from _outbound_window import window_denial
-    from _python_http_write import BARE_STORIES_PATH_RE, SHORTCUT_HINT_RE, python_write_verbs
+    from _python_http_write import SHORTCUT_HINT_RE, has_bare_stories_path, python_write_verbs
 except Exception as e:
     sys.stderr.write(f"[shortcut-create-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -51,12 +51,12 @@ GET_FLAG_RE = re.compile(r"(?:^|\s)(?:-G\b|--get\b)", re.IGNORECASE)
 
 
 # A python script often builds the URL from a base (`API + "/stories"`), so the full-URL regex
-# above misses it; BARE_STORIES_PATH_RE finds the create path in that case.
+# above misses it; has_bare_stories_path finds the create path in that case.
 def python_posts_to_stories(command: str) -> bool:
     return (
         "POST" in python_write_verbs(command)
         and bool(SHORTCUT_HINT_RE.search(command))
-        and bool(BARE_STORIES_PATH_RE.search(command))
+        and has_bare_stories_path(command)
     )
 
 

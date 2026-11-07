@@ -22,7 +22,7 @@ _CLIENT_CALL_RE = re.compile(
 )
 _REQUEST_CALL_RE = re.compile(r"""\.request\s*\(\s*\\?["']\s*(POST|PUT|PATCH)\b""", re.IGNORECASE)
 _URLLIB_CALL_RE = re.compile(r"\b(?:Request|urlopen)\s*\(")
-_DATA_ARG_RE = re.compile(r"\s*data\s*=(?!=)\s*(?!None\b)")
+_DATA_ARG_RE = re.compile(r"\s*data\s*=(?!=)(?!\s*None\b)")
 _KWARG_RE = re.compile(r"\s*\w+\s*=(?!=)")
 
 # Evidence that the script talks to Shortcut even when the URL is assembled from pieces: the
@@ -32,29 +32,46 @@ SHORTCUT_HINT_RE = re.compile(
     re.IGNORECASE,
 )
 
-# The create path `/stories`: after a quote (`API + '/stories'`), `v3` (the literal URL) or `}`
-# (`f"{API}/stories"`). `/epics/5/stories`, `/iterations/2/stories` and `search/stories` are
-# reads of a story list, so a bare `/stories` anywhere else must not count.
-BARE_STORIES_PATH_RE = re.compile(r"""(?:(?<=["'])|(?<=v3)|(?<=\}))/stories(?![\w/-])""", re.IGNORECASE)
+# The create path `/stories`: after a quote (`API + '/stories'`), `v3` (the literal URL), `}`
+# (`f"{API}/stories"`) or `%s` (`'%s/stories' % API`). A story LIST under another resource
+# (`/epics/5/stories`, `{API}/epics/{eid}/stories`) and `search/stories` are reads.
+BARE_STORIES_PATH_RE = re.compile(r"""(?:(?<=["'])|(?<=v3)|(?<=\})|(?<=%s))/stories(?![\w/-])""", re.IGNORECASE)
+_LIST_PARENT_RE = re.compile(
+    r"""/(?:epics|iterations|groups|labels|milestones|objectives|projects|members|workflows)/[^/\s"']*$""",
+    re.IGNORECASE,
+)
+
+
+def has_bare_stories_path(command: str) -> bool:
+    """Whether `command` names the story-create path, not a story list under a parent resource."""
+    return any(not _LIST_PARENT_RE.search(command[:m.start()]) for m in BARE_STORIES_PATH_RE.finditer(command))
 
 
 def _call_args(command: str, open_idx: int) -> list:
     """Top-level arguments of the call whose `(` sits at `open_idx`, split on commas outside
-    nested brackets and quotes. A heuristic reader for one-liners, not a Python parser."""
+    nested brackets and quotes. A heuristic reader for one-liners, not a Python parser. A
+    string inside a double-quoted `python -c "..."` arrives as backslash-quote pairs; that pair
+    is the quote, so apostrophes and commas inside it are plain text."""
     args, cur, depth, quote = [], [], 0, ""
     i, n = open_idx, len(command)
     while i < n:
         c = command[i]
         if quote:
-            cur.append(c)
-            if c == "\\" and i + 1 < n:
-                cur.append(command[i + 1])
-                i += 1
-            elif c == quote:
+            if command.startswith(quote, i):
+                cur.append(quote)
+                i += len(quote)
                 quote = ""
+                continue
+            if c == "\\" and not quote.startswith("\\") and i + 1 < n:
+                cur.append(command[i:i + 2])
+                i += 2
+                continue
+            cur.append(c)
         elif c == "\\" and i + 1 < n and command[i + 1] in "\"'":
-            cur.append(c + command[i + 1])
-            i += 1
+            quote = command[i:i + 2]
+            cur.append(quote)
+            i += 2
+            continue
         elif c in "\"'":
             quote = c
             cur.append(c)
