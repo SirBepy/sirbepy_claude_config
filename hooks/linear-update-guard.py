@@ -14,6 +14,9 @@ Known false positive, shared with the other guards: matching is on the command S
 command that merely mentions the endpoint and mutation name is blocked too. Use the bypass
 env var or assemble the string at runtime.
 
+A ticket DELETE (issueDelete, or an MCP delete_issue tool) is a separate branch that always
+asks: the dev may delete only tickets he created, and a command string cannot prove that.
+
 Override: set CLAUDE_LINEAR_UPDATE_HOOK_BYPASS=1 if the ground check itself is broken.
 """
 
@@ -27,7 +30,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS, OUTBOUND_MARKER_GLOB, CLAIM_FIELDS
+    from _hooklib import read_payload, deny, ask, consume_fresh_marker, FRESHNESS_SECONDS, OUTBOUND_MARKER_GLOB, CLAIM_FIELDS
 except Exception as e:
     sys.stderr.write(f"[linear-update-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -39,11 +42,24 @@ OVERRIDE_ENV = "CLAUDE_LINEAR_UPDATE_HOOK_BYPASS"
 ENDPOINT_RE = re.compile(r"api\.linear\.app/graphql", re.IGNORECASE)
 UPDATE_MUTATION_RE = re.compile(r"\bissueUpdate\b")
 COMMENT_MUTATION_RE = re.compile(r"\bcommentCreate\b")
+DELETE_MUTATION_RE = re.compile(r"\bissueDelete\b")
 # Built from CLAIM_FIELDS["linear"] in hooks/_hooklib.py (todo 381), not hand-written here.
 # `stateId` and `assigneeId` deliberately absent: those are the moves that assert nothing.
 CLAIM_FIELD_RE = re.compile(r"\b(" + "|".join(CLAIM_FIELDS["linear"]) + r")\b", re.IGNORECASE)
 
 CLAIM_TOOL_RE = re.compile(r"^mcp__.*linear.*__.*(update_issue|issue.?update|create_comment|comment.?create).*$", re.IGNORECASE)
+DELETE_TOOL_RE = re.compile(r"^mcp__.*linear.*__.*(delete_issue|issue.?delete).*$", re.IGNORECASE)
+
+
+def is_issue_delete(tool_name: str, tool_input: dict) -> bool:
+    """A ticket delete. skills/linear/SKILL.md allows it only on a ticket the dev created,
+    which a command string cannot prove, so it always asks."""
+    if DELETE_TOOL_RE.match(tool_name):
+        return True
+    if tool_name in ("Bash", "PowerShell"):
+        command = tool_input.get("command", "") or ""
+        return bool(ENDPOINT_RE.search(command)) and bool(DELETE_MUTATION_RE.search(command))
+    return False
 
 
 def is_claim_bearing(command: str) -> bool:
@@ -66,6 +82,13 @@ def main() -> None:
     payload = read_payload()
     tool_name = payload.get("tool_name", "") or ""
     tool_input = payload.get("tool_input") or {}
+
+    if is_issue_delete(tool_name, tool_input):
+        ask(
+            "[linear-update-guard] This deletes a Linear ticket. skills/linear/SKILL.md allows a delete "
+            "only on a ticket the dev created (creator.id equals his id) and there is no undo for the team, "
+            "so confirm the creator first. Approve only if you have checked it."
+        )
 
     if not needs_ground_check(tool_name, tool_input):
         sys.exit(0)

@@ -16,9 +16,11 @@ writes (PUT/POST/PATCH/DELETE, or curl data without -G) to
 `shortcut-create-guard.py`'s. A write issued from inside a script FILE is not
 visible in the command string; that is the stated limit.
 
-Exempt: a session whose real user turns invoked `/zirtue-release-backfill` or
-`/shortcut-done-audit`, the two skills whose job is to set Release on and
-close other people's stories.
+Exempt: a session that actually invoked `/zirtue-release-backfill` or
+`/shortcut-done-audit` (a real user turn starting with the command, its
+<command-name> block, or a Skill tool call), the two skills whose job is to set
+Release on and close other people's stories. Mentioning the name in prose does
+not count.
 
 Fails closed when a write is detected but the requester cannot be verified
 (no token, network error), matching shortcut-mutation-guard.py. Set
@@ -107,6 +109,42 @@ def real_user_texts(transcript_path: str) -> list[str]:
     return texts
 
 
+def _skill_called(transcript_path: str, name: str) -> bool:
+    """True when the session called `name` through the Skill tool (assistant side)."""
+    path = Path(transcript_path or "")
+    if not transcript_path or not path.is_file():
+        return False
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            content = (entry.get("message", {}) or {}).get("content")
+            if entry.get("type") != "assistant" or not isinstance(content, list):
+                continue
+            for block in content:
+                if isinstance(block, dict) and block.get("type") == "tool_use" and block.get("name") == "Skill":
+                    called = str((block.get("input") or {}).get("skill") or "").strip().lstrip("/")
+                    if called == name or called.endswith(":" + name):
+                        return True
+    return False
+
+
+def skill_invoked(texts: list[str], transcript_path: str, skill: str) -> bool:
+    """True when the session actually ran `skill`: a real user turn that STARTS with
+    `/skill` (typed, then expanded to a command block) or carries its
+    <command-name> tag, or a Skill tool call naming it. The name merely appearing
+    in prose, a pasted ticket or a quoted message is not an invocation; the old
+    substring match let any mention lift both the requester rule and the ceiling."""
+    bare = skill.lstrip("/")
+    typed = re.compile(rf"^\s*/{re.escape(bare)}(?=\s|$)")
+    tagged = re.compile(rf"<command-name>\s*/?{re.escape(bare)}\s*</command-name>")
+    if any(typed.search(t) or tagged.search(t) for t in texts):
+        return True
+    return _skill_called(transcript_path, bare)
+
+
 def named_in_session(story_id: int, texts: list[str]) -> bool:
     pattern = re.compile(rf"(?<!\d)(?:sc-)?{story_id}(?!\d)", re.IGNORECASE)
     return any(pattern.search(t) for t in texts)
@@ -122,7 +160,8 @@ def main() -> None:
         sys.exit(0)
 
     texts = real_user_texts(payload.get("transcript_path", ""))
-    if any(skill in t for t in texts for skill in EXEMPT_SKILLS):
+    transcript_path = payload.get("transcript_path", "")
+    if any(skill_invoked(texts, transcript_path, skill) for skill in EXEMPT_SKILLS):
         sys.exit(0)
 
     if any(state in command for state in CEILING_STATE_IDS):

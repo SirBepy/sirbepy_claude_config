@@ -23,7 +23,7 @@ except Exception as e:
 # .env.example is deliberately excluded below via an explicit basename check,
 # not a regex negative-lookahead, so this stays plain-ERE-portable.
 CRED_BASENAME_RE = re.compile(
-    r"^(\.env(\..*)?|.*\.pem|.*\.key|.*\.p12|.*\.pfx|id_rsa|id_ed25519|credentials\.json|\.npmrc|\.pypirc)$",
+    r"^(\.env(\..*)?|.*\.pem|.*\.key|.*\.p12|.*\.pfx|id_rsa|id_ed25519|\.?credentials\.json|\.npmrc|\.pypirc)$",
     re.IGNORECASE,
 )
 LOCKFILE_RE = re.compile(

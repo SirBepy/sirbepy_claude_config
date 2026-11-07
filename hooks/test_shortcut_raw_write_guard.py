@@ -63,6 +63,21 @@ with tempfile.TemporaryDirectory() as tmp:
     plain = write_transcript(tmpdir, "plain.jsonl", ["move my ticket to testing"])
     named = write_transcript(tmpdir, "named.jsonl", ["please move sc-222 to testing too"])
     backfill = write_transcript(tmpdir, "backfill.jsonl", ["/zirtue-release-backfill 3.4.0"])
+    audit = write_transcript(tmpdir, "audit.jsonl", ["/shortcut-done-audit sc-222"])
+    audit_cmd = write_transcript(
+        tmpdir, "audit-cmd.jsonl",
+        ["<command-message>shortcut-done-audit</command-message>\n<command-name>/shortcut-done-audit</command-name>"],
+    )
+    # The skill name merely mentioned in prose, or quoted from a ticket, is not an invocation.
+    mention = write_transcript(tmpdir, "mention.jsonl", ["last week I ran /shortcut-done-audit and it was fine"])
+    quoted = write_transcript(tmpdir, "quoted.jsonl", ["the ticket says: do not use /zirtue-release-backfill here"])
+    skill_call = tmpdir / "skill-call.jsonl"
+    skill_call.write_text("\n".join(json.dumps(e) for e in (
+        {"type": "user", "message": {"content": "close out the shipped tickets"}},
+        {"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "t1", "name": "Skill", "input": {"skill": "zirtue-release-backfill"}},
+        ]}},
+    )) + "\n", encoding="utf-8")
 
     CASES = [
         ("Bash", f'curl -s -X PUT "{URL}/111" -d \'{{"workflow_state_id":500018257}}\'', plain, 0,
@@ -77,6 +92,16 @@ with tempfile.TemporaryDirectory() as tmp:
          "naming a ticket does not lift the Testing ceiling"),
         ("Bash", f'curl -s -X PUT "{URL}/222" -d \'{{"workflow_state_id":500018258}}\'', backfill, 0,
          "a /zirtue-release-backfill session may close and touch others' stories"),
+        ("Bash", f'curl -s -X PUT "{URL}/222" -d \'{{"workflow_state_id":500018257}}\'', audit, 0,
+         "a typed /shortcut-done-audit session may touch others' stories"),
+        ("Bash", f'curl -s -X PUT "{URL}/222" -d \'{{"workflow_state_id":500018257}}\'', audit_cmd, 0,
+         "a /shortcut-done-audit command block counts as invoked"),
+        ("Bash", f'curl -s -X PUT "{URL}/222" -d \'{{"workflow_state_id":500018257}}\'', skill_call, 0,
+         "a Skill tool call for zirtue-release-backfill counts as invoked"),
+        ("Bash", f'curl -s -X PUT "{URL}/222" -d \'{{"workflow_state_id":500018257}}\'', mention, 2,
+         "mentioning /shortcut-done-audit in prose is not an invocation"),
+        ("Bash", f'curl -s -X PUT "{URL}/222" -d \'{{"workflow_state_id":500018258}}\'', quoted, 2,
+         "a skill name quoted from a ticket does not lift the ceiling or the requester rule"),
         ("PowerShell", f'Invoke-RestMethod -Uri "{URL}/222" -Method Put -Body $b', plain, 2,
          "Invoke-RestMethod -Method Put is a write"),
         ("Bash", f'curl -s -X POST "{URL}/222/comments" -d \'{{"text":"x"}}\'', plain, 2,
