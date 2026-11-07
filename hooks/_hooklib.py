@@ -725,13 +725,27 @@ def substitution_bodies(text: str) -> list[str]:
 # A heredoc opener line that names an interpreter (`bash <<'EOF'`, `cat <<'EOF' | sh`)
 # hands the body to it as a script, so the body's own `$(...)` and backticks are
 # commands even though the heredoc tag is quoted.
-_HEREDOC_EXECUTOR_RE = re.compile(
-    # The lookarounds keep a file name (`s.sh`, `node.md`, `tools/node/`) and a prefix (`ssh:`) from reading as the
-    # program, while a path to it (`/bin/bash`, `C:\Windows\System32\cmd.exe`) still counts: the lookbehind allows `/` and `\`.
-    r"(?<![\w.:-])(?:bash|sh|zsh|dash|ksh|fish|pwsh|powershell|cmd|python3?|node|ruby|perl|php|bun|deno|ssh|source|xargs|eval)"
-    r"(?:\.exe)?(?![\w.:/\\-])|(?:^|\s)\.\s",
-    re.IGNORECASE,
-)
+_EXECUTOR_NAMES = "bash|sh|zsh|dash|ksh|fish|pwsh|powershell|cmd|python3?|node|ruby|perl|php|bun|deno|ssh|source|xargs|eval"
+
+
+def build_executor_regex(names: str = _EXECUTOR_NAMES) -> re.Pattern:
+    """Regex for a program in `names` (alternation) standing where a command
+    word does: at a statement start (line start, after `| ; & ( { [` or a
+    backtick, or after `then`/`do`/`else`), or after a wrapper such as `sudo -u x`
+    or `env`, with an optional path (`/bin/bash`, `C:\\Windows\\System32\\cmd.exe`),
+    quote or `VAR=value` before it. A directory or file that merely ends in the
+    name (`git -C ~/repos/php commit`, `docs/perl.md`, `s.sh`) is an argument, not
+    the program. Also matches the dot-source command (`. /dev/stdin <<EOF`) at
+    a statement start."""
+    start = r"(?:^|[|;&({\[`]|\b(?:then|do|else)\b|\b(?:sudo|env|exec|time|nohup|command|xargs)\s+(?:\S+\s+){0,3}?)"
+    return re.compile(
+        start + r"[ \t]*(?:\w+=\S*[ \t]+)*[\"']?(?:[^\s|;&()`\"']*[/\\])?(?:" + names + r")(?:\.exe)?[\"']?(?![\w.:/\\-])"
+        r"|(?:^|[|;&({`]|\b(?:then|do|else)\b)[ \t]*\.[ \t]",
+        re.IGNORECASE | re.MULTILINE,
+    )
+
+
+_HEREDOC_EXECUTOR_RE = build_executor_regex()
 
 
 def _literal_heredoc_matches(text: str):
