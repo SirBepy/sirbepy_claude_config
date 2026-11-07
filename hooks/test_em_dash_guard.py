@@ -273,6 +273,9 @@ def run_transcript_cases() -> list:
 PRE_TOOL_USE_CASES = [
     ("mcp__cc_conductor__send_message", {"text": f"bad{ED}text"}, True, "send_message denied pre-delivery"),
     ("mcp__cc_conductor__send_message", {"text": "all clean"}, False, "clean send_message not denied"),
+    ("mcp__cc_conductor__write_draft", {"action": "add", "topic": "t", "body": f"bad{ED}draft"}, True, "write_draft body denied pre-delivery"),
+    ("mcp__cc_conductor__write_draft", {"action": "add", "topic": f"bad{ED}topic", "body": "ok"}, True, "write_draft topic denied pre-delivery"),
+    ("mcp__cc_conductor__write_draft", {"action": "add", "topic": "t", "body": "clean draft"}, False, "clean write_draft not denied"),
     ("Write", {"file_path": "foo.py", "content": f"# comment{ED}here"}, False, "Write stays unscanned at PreToolUse too"),
     (
         "AskUserQuestion",
