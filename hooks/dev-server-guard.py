@@ -178,8 +178,10 @@ def main() -> None:
     # Per statement: a newline is not a token separator, so `npm install\nvite`
     # would otherwise read as one install statement with `vite` as its argument.
     matched = None
-    # A backslash or backtick before the newline continues the statement.
-    joined = re.sub(r"[\\`]\r?\n", " ", command)
+    # A backslash or backtick after whitespace, right before the newline, continues
+    # the statement. Without the space it ends a Windows path (`ls C:\proj\`), and
+    # PowerShell then starts a new statement on the next line.
+    joined = re.sub(r"(?<=\s)[\\`]\r?\n", " ", command)
     for segment in split_command_segments(joined) or [joined]:
         matched = is_dev_server_command(tokenize(segment))
         if matched:

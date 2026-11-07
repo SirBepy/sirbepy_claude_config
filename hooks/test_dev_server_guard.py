@@ -140,6 +140,8 @@ MAIN_CASES = [
     ("pip install \\\nuvicorn", 0, "a backslash-continued install of uvicorn is still an install"),
     ("npm install --save-dev \\\n  vite \\\n  vitest", 0, "a multi-line continued install of vite is still an install"),
     ("npm install `\n  vite", 0, "a PowerShell backtick continuation of an install"),
+    ("ls C:\\proj\\\r\nvite", 2, "a path ending in a backslash is not a continuation, the next line launches"),
+    ("cat C:\\x\\\nnpm run dev", 2, "same for cat and npm run dev"),
     ('git commit -m "notes\nnpm run dev\nmore"', 0, "a launch phrase on a line inside a quoted message is still text"),
     ("ls hooks; vite", 2, "a separator ends a text command's argument list, so a later raw vite is caught"),
     ("vite;", 2, "raw vite with a glued separator is still caught"),
