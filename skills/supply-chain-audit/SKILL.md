@@ -138,11 +138,14 @@ the check:
 
 1. Prefer a clone target outside every `permissions.additionalDirectories` entry and outside the
    ancestors of the session cwd. That needs no rename at all.
-2. Before reading anything else, `Glob` the target for `**/.claude`, `**/.claude-plugin` and
-   `**/.agents` directories. None found: carry on. Any found while the tree sits inside a scanned
-   directory: print the list as the first line of the report, mark it WARN "discovery not
-   disabled", and name the exact rename for the caller to run (below). Reading the files with
-   `Read`/`Grep` stays safe, since discovery is what exposes the skills, not reading.
+2. Before reading anything else, detect, don't enumerate: `Glob` the target for `**/.claude/**`,
+   `**/.claude-plugin/**` and `**/.agents/**`. Glob lists files only (a bare directory pattern
+   matches nothing) and caps at 100, so one hit proves a directory exists but the list is not
+   complete, and a hit's parent path is not the directory. None found: carry on. Any hit while the
+   tree sits inside a scanned directory: make the first line of the report a WARN "discovery not
+   disabled" and tell the caller to run the rename in steps 3-4 over the whole tree, never over
+   the files Glob happened to list. Reading the files with `Read`/`Grep` stays safe, since
+   discovery is what exposes the skills, not reading.
 3. The caller renames every `.claude`, `.claude-plugin` and `.agents` directory to `dot-claude`,
    `dot-claude-plugin`, `dot-agents`. That stops discovery while leaving every byte readable.
 4. **Rename deepest-first.** A shallow `find -maxdepth 3` pass missed 222 nested directories on the
