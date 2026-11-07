@@ -142,7 +142,10 @@ def skill_invoked(texts: list[str], transcript_path: str, skill: str) -> bool:
     tagged = re.compile(rf"<command-name>\s*/?{re.escape(bare)}\s*</command-name>")
     if any(typed.search(t) or tagged.search(t) for t in texts):
         return True
-    return _skill_called(transcript_path, bare)
+    try:
+        return _skill_called(transcript_path, bare)
+    except OSError:
+        return False
 
 
 def named_in_session(story_id: int, texts: list[str]) -> bool:

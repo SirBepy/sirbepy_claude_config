@@ -1305,6 +1305,7 @@ def flutter_verdict_checks() -> list:
         ("exit 0 with a failure summary", FakeProc(0, stdout="00:03 +90 -3: Some tests failed.\n"), False),
         ("exit 0 with a failing counter and no summary", FakeProc(0, stdout="00:03 +90 -3: test/a_test.dart: x [E]\n"), False),
         ("exit 1", FakeProc(1, stdout="00:03 +90 -3: Some tests failed.\n"), False),
+        ("a printed '+3 -1' inside test output is not a failure counter", FakeProc(0, stdout="debug: delta +3 -1\n00:02 +93: All tests passed!\n"), True),
         ("exit 0, no verdict line, no failure marker", FakeProc(0, stdout="Resolving dependencies...\nRunning \"flutter pub get\"\n"), True),
         ("exit 0, ansi-wrapped pass", FakeProc(0, stdout="\x1b[32m00:02 +93: All tests passed!\x1b[0m\n"), True),
     )

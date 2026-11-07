@@ -544,7 +544,7 @@ def run_scripts_repo_check(root: Path, timeout: int, runner, paths):
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 # flutter's progress counter shows failures as "+93 -3:" (optionally "~2" skips).
-_FLUTTER_FAILED_COUNTER_RE = re.compile(r"\+\d+(?: ~\d+)? -\d+")
+_FLUTTER_FAILED_COUNTER_RE = re.compile(r"(?m)^(?:\d+:)?\d\d:\d\d \+\d+(?: ~\d+)? -\d+")
 
 
 def _flutter_verdict(returncode: int, output: str):

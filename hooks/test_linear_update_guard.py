@@ -101,6 +101,7 @@ DELETE_CASES = [
     ("Bash", f'curl -X POST "{URL}" -d \'{{"query":"mutation {{ {DELETE}(id:$i) {{ success }} }}"}}\'', True, "issueDelete over the GraphQL endpoint"),
     ("PowerShell", f'Invoke-RestMethod -Uri "{URL}" -Method Post -Body \'{{"query":"mutation {{ {DELETE}(id: 1) {{ success }} }}"}}\'', True, "issueDelete from PowerShell"),
     ("mcp__claude_ai_Linear__delete_issue", None, True, "MCP delete_issue tool"),
+    ("mcp__claude_ai_Linear__delete_issue_label", None, False, "deleting a label is not deleting a ticket"),
     ("Bash", f'curl -X POST "{URL}" -d \'{{"query":"mutation {{ {UPDATE}(id:$i, input:{{stateId:$s}}) {{ success }} }}"}}\'', False, "a state move is not a delete"),
     ("Bash", f'curl -X POST "https://example.com/api" -d \'{{"query":"mutation {{ {DELETE}(id:$i) {{ success }} }}"}}\'', False, "mutation name without the Linear endpoint"),
     ("Bash", "git commit -m 'FEAT: linear'", False, "unrelated command"),
