@@ -38,6 +38,11 @@ lib/ui/loan_request/my_bill/add_account_screen.dart, sc-56598
 ## Provenance
 Joe asked for this on 2026-11-07, descends from todo pc-0254.
 
+## Freshness
+Freshness (fetched 2026-11-07T10:00:00Z):
+- C:\\Users\\tecno\\Desktop\\Projects\\zng-app origin/develop = abc123 2026-11-07T09:00:00+01:00 merged since
+- sc-56598: Complete, blocked=False, updated 2026-11-05T14:30:12Z
+
 ## Sources
 - skips validation: Joe's words, 2026-11-07
 
@@ -92,6 +97,15 @@ class TestVerifyPrompt(unittest.TestCase):
         self.assertIn("git show origin/develop:<path>", text)
         self.assertIn("You are verifying text that is about to be posted to a Shortcut ticket.", text)
         self.assertIn("descends from todo pc-0254", text)
+
+    def test_freshness_rides_in_the_pointers_and_is_required(self):
+        text = self.prompt()
+        self.assertIn("Freshness (fetched 2026-11-07T10:00:00Z):\n- C:", text)
+        self.assertIn("- sc-56598: Complete, blocked=False", text)
+        write(self.dir, "spec.md", SPEC.replace("## Freshness", "## Notes"))
+        with self.assertRaises(vp.SpecError) as ctx:
+            self.prompt()
+        self.assertIn("## freshness", str(ctx.exception))
 
     def test_sources_and_fields_ride_in_the_pointers(self):
         text = self.prompt()

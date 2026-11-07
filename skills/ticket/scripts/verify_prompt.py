@@ -21,6 +21,7 @@ own folder.
     ## Branch        tracked branch, without the origin/ prefix
     ## Pointers      files, ticket ids, PR numbers, endpoints the text talks about
     ## Provenance    who asked for this posting and what it descends from
+    ## Freshness     output of freshness.py (fetched shas and ticket states), or `n/a - <why>`
     ## Sources       (tickets) requirement-to-source list; optional
     ## Fields        planned non-text fields (team, epic, owner, state, links); optional
     ## Draft path    file holding the exact text to be posted
@@ -35,7 +36,7 @@ DEFAULT_REF = Path(__file__).resolve().parents[3] / "refs" / "outbound-verify.md
 TEMPLATE_OPENER = "READ-ONLY DISPATCH"
 DRAFT_CLOSER = "OUTBOUND-DRAFT>>>"
 
-REQUIRED = ("target", "repo", "branch", "pointers", "provenance", "draft path")
+REQUIRED = ("target", "repo", "branch", "pointers", "provenance", "freshness", "draft path")
 OPTIONAL = ("sources", "fields")
 
 # Placeholder text exactly as it stands in the ref's template.
@@ -76,7 +77,9 @@ def parse_spec(text: str) -> dict:
 
 
 def fill(template: str, spec: dict, draft: str) -> str:
-    pointers = spec["pointers"]
+    # The fetched shas and ticket states ride in the Pointers so every verifier starts from the
+    # state the main session saw; a required section means no prompt without the fetch.
+    pointers = spec["pointers"] + "\n\n" + spec["freshness"]
     for key, title in (("sources", "Requirement-to-source list"), ("fields", "Planned non-text fields")):
         if spec.get(key):
             pointers += f"\n\n{title}:\n{spec[key]}"
