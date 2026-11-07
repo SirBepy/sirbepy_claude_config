@@ -21,6 +21,10 @@ If `README.md` exists and contains the expected structure (project icon, title, 
 
 And stop. Only proceed if README.md is missing or clearly outdated/malformed.
 
+A README that already carries `/pretty-readme` output (a banner image, a badge row or icon row
+beyond the structure below) counts as complete too: stop. When facts in it are stale (live URL,
+run command), fix just those lines. Rewriting would wipe the visual work.
+
 ### Step 1 - Gather context
 
 Check for the following, in order. Use what exists, skip what doesn't:
@@ -29,7 +33,7 @@ Check for the following, in order. Use what exists, skip what doesn't:
 - `.portfolio-data/PORTFOLIO.md` - The What, The Why, The How sections
 - `.portfolio-data/screenshot-1.png` or any screenshot - for embedding
 - `assets/images/favicon.png` or `favicon.svg` - for project icon at top
-- `git remote get-url origin` - to construct the GitHub Actions badge and Pages URL
+- `git remote get-url origin` - to construct the GitHub Actions badge and Pages URL. In `/bepy-project-setup-web` this runs after `/github-pages-init`, so the remote exists; standalone, a repo with no remote falls back per Notes.
 - `CLAUDE.md` - for project type and deploy info
 
 ### Step 2 - Construct badges
@@ -111,7 +115,7 @@ Do not commit - the user handles that.
 
 ## Notes
 
-- If README.md already exists, rewrite it fully rather than patching it
+- If README.md exists but is malformed or clearly outdated, and holds no `/pretty-readme` output (see Step 0), rewrite it fully rather than patching it
 - If favicon is SVG only, use the SVG in the img tag instead
 - If no portfolio-data exists at all, infer everything from the codebase and flag it
 - If remote URL is not set, skip badges and use placeholder for live link

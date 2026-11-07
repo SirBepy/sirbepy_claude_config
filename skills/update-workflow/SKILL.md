@@ -14,9 +14,13 @@ argument-hint: "[skipVerification]"
 
 Read `CLAUDE.md` and check the `Type:` field. If CLAUDE.md does not exist or type is missing, infer from the project structure:
 
-- `vite.config.*` exists - vite
-- `package.json` with React deps - react
+- `vite.config.*` exists - vite (also for a Vite + React project: check this first)
+- `package.json` with React deps - react (the `react.yml` template builds Create React App style and uploads `build/`)
 - `index.html` with no `package.json` - html
+
+`init-claude-md` defines `Type: react` as "Vite or CRA", but the `react` template only fits CRA. A
+Vite-based React project whose CLAUDE.md says `react` has a `vite.config.*`: use the `vite`
+template, not `react`.
 
 ### Step 2 - Read the correct template
 
@@ -58,3 +62,4 @@ Do not commit - the user handles that.
 - Templates live in the `templates/` folder next to this SKILL.md
 - To update a workflow template, edit the file directly in `templates/`
 - New project types can be supported by adding a new template file and updating Step 2
+- None of the three templates has a `workflow_dispatch` trigger, so `/deploy` cannot fire a workflow synced from them. Adding the trigger is a template change that alters deployed sites; it is not done here.

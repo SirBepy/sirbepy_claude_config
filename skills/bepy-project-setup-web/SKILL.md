@@ -41,19 +41,39 @@ ask:
 
 "Which skills do you want to SKIP? (Everything else will run)"
 
-Options:
+Options (listed in run order, see Step 2):
 - "/init-claude-md" - Generate or update CLAUDE.md
-- "/readme" - Generate or update README.md
 - "/favicon" - Check and generate favicon svg + png + ico
-- "/meta-tags" - Add missing meta tags to index.html
 - "/update-workflow" - Ensure deploy.yml matches the correct template
+- "/github-pages-init" - Create the GitHub repo if missing and enable Pages
 - "/inject-widgets" - Inject settings widget and animated background
 - "/apply-styleguide" - Apply bepy styleguide and CSS vars
 - "/portfolio-data" - Generate or update portfolio metadata (runs after styleguide so screenshots reflect final look)
+- "/meta-tags" - Add missing meta tags to index.html
+- "/readme" - Generate or update README.md
+- "/pwa" - Add manifest.json + service worker
 
 ## Step 2 - Run skills in order
 
-Run all non-skipped skills in the order listed. For each one:
+Run all non-skipped skills in exactly this order. The order is load-bearing: later steps read what
+earlier ones produce.
+
+1. `/init-claude-md` - later steps read `Type:` from CLAUDE.md.
+2. `/favicon`
+3. `/update-workflow` - `/github-pages-init` warns when `deploy.yml` is missing.
+4. `/github-pages-init` - creates the GitHub repo when none exists. `/meta-tags` and `/readme`
+   derive the Pages URL and badges from `git remote get-url origin`, so the remote has to exist
+   before them.
+5. `/inject-widgets`
+6. `/apply-styleguide`
+7. `/portfolio-data` - after the styleguide so its screenshots show the final look, and before
+   `/meta-tags` and `/readme`, which read `.portfolio-data/metadata.json` and `PORTFOLIO.md`.
+8. `/meta-tags`
+9. `/readme`
+10. `/pwa` - runs by default. Skip only if the dev's invocation text says not to (e.g. "skip pwa",
+    "no pwa", "without PWA"), or the `pick` escape hatch was used and PWA was picked to skip.
+
+For each one:
 
 - Print `Running /skill-name...` before starting
 - Run the full skill as defined in its SKILL.md
@@ -62,24 +82,20 @@ Run all non-skipped skills in the order listed. For each one:
 
 Do not stop between skills unless a skill requires user input. Handle the input and continue.
 
-## Step 3 - PWA setup
+A `/pretty-readme` result is not part of this flow: `/readme` keeps an existing banner-style README
+instead of rewriting it, see its Step 0.
 
-Run `/pwa` by default. Skip only if the dev's invocation text says not to (e.g. "skip pwa", "no
-pwa", "without PWA"), or the `pick` escape hatch from Step 1 was used and PWA was picked to skip.
+## Step 3 - Commit
 
-## Step 4 - Commit
-
-After everything is done (including PWA if selected), run `/commit`:
+After everything is done, run `/commit`:
 
 ```
 CHORE: bepy project setup
 ```
 
-## Step 5 - GitHub Pages (web projects only)
+`/github-pages-init` ends by saying the push is left to the dev; this flow never pushes either.
 
-Run `/github-pages-init`. It will skip automatically if not a web project.
-
-## Step 6 - Summary
+## Step 4 - Summary
 
 Print a summary of everything that ran:
 
@@ -87,17 +103,19 @@ Print a summary of everything that ran:
 Done. Here's what ran:
 
 /init-claude-md     - created
-/readme             - generated
 /favicon            - generated svg + png + ico
-/meta-tags          - added og:title, og:description, og:image
 /update-workflow    - already up to date, skipped
+/github-pages-init  - repo created, Pages enabled
 /inject-widgets     - injected both scripts
 /apply-styleguide   - replaced 14 hardcoded values, applied .card to 3 elements
 /portfolio-data     - updated, screenshots taken
+/meta-tags          - added og:title, og:description, og:image
+/readme             - generated
+/pwa                - manifest + service worker created
 ```
 
 ## Notes
 
-- Auto-commit at the end via /commit.
+- Commit at the end via /commit (Step 3).
 - If a skill is skipped by request (named skip or interactive picker), note it as "skipped by request" in the summary.
 - If a skill has nothing to do, note it as "skipped - nothing to do" in the summary.

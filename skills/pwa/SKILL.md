@@ -155,7 +155,12 @@ Add before `</body>` if missing:
 Tell the user what was created and remind them:
 
 - `theme_color` and `background_color` in `manifest.json` can be updated to match their preferred theme
-- The service worker caches files at install time - run `/pwa` again if the file list changes significantly
+- The service worker is cache-first and precaches at install time. Returning users keep the cached
+  copy of every listed file until `CACHE_NAME` in `sw.js` changes, so after editing CSS/JS or
+  adding files, edit the `ASSETS` list and bump `CACHE_NAME` (`v1` -> `v2`) by hand. Running `/pwa`
+  again does not do this: Step 1 sees a complete setup and stops, and `/pwa skipVerification`
+  regenerates `manifest.json` and `sw.js` from the template, overwriting any colors or names
+  edited since.
 - PWA install prompt will appear in supported browsers once deployed to GitHub Pages
 
 Do not commit - the user handles that.
