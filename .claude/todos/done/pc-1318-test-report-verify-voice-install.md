@@ -23,3 +23,7 @@ Found by /code-check. `skills/test-report/scripts/setup.ps1:23` checks the two d
 
 - `setup.ps1` in an empty `TEST_REPORT_HOME`-style location fails on a tampered model file and installs cleanly otherwise.
 - Speech still generates.
+
+## Notes
+
+- done without installing: scripts/requirements-voice.txt pins the 16-wheel runtime closure from the 2026-11-04 venv's metadata (installed WHEEL tags) with PyPI sha256s; pip install --dry-run --require-hashes accepted it and rejected a one-character tamper. setup.ps1 now installs with --require-hashes and verifies both model files by SHA-256 (hashes of the installed copies; upstream publishes sizes only). Tests scripts/test_setup.ps1. pip-audit was not rerun (not installed here): versions equal the audited set. A real fresh-venv run of setup.ps1 and speech generation: verify only.
