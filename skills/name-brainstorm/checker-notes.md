@@ -24,10 +24,10 @@ Resume: only FREE/TAKEN are cached, keyed `kind:name`; a rerun skips them and re
 | .hr | port-43 whois `whois.dns.hr` (no RDAP exists) | reliable answers, but rationed: about 10 s per name without NS records |
 | .eu, .co | port-43 whois | reliable answers; quarantined names read as TAKEN |
 | DNS cross-check | `NS` then `SOA` | NS present overrides "free" to TAKEN (taken or parked); no NS never proves FREE |
-| npm | `registry.npmjs.org/<name>` | reliable for the exact name only |
+| npm | `registry.npmjs.org/<name>` | exact name only; a 200 is TAKEN, a 404 is UNKNOWN with the note "npm 404: free or unpublished" (never FREE: an unpublished name usually cannot be republished) |
 | GitHub | `HEAD github.com/<name>` | weak: users, orgs and reserved paths look alike |
 
-"FREE" means **not registered today**, not buyable at the standard price: premium and registry-blocked names can read free, and TAKEN includes parked and for-sale names. 429, 5xx, timeouts and odd answers are retried 4 times, then UNKNOWN with a reason in `notes`; never FREE.
+"FREE" means **not registered today**, not buyable at the standard price: premium and registry-blocked names can read free, and TAKEN includes parked and for-sale names. 429, 5xx, timeouts and odd answers are retried 4 times, then UNKNOWN with a reason in `notes`; never FREE. An npm 404 is UNKNOWN straight away, no retry. `view-cache.mjs` prints every UNKNOWN as `?`.
 
 ## Practical rules
 

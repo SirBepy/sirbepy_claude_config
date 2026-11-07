@@ -18,3 +18,7 @@ Reword the two lines in `checker-notes.md`. In `view-cache.mjs` either map UNKNO
 ## Acceptance
 - [ ] `checker-notes.md` states that an npm 404 is UNKNOWN with the note "free or unpublished".
 - [ ] `view-cache.mjs` and its comment agree, with a test.
+
+## Notes
+
+- view-cache.mjs now prints ? for UNKNOWN (was U); checker-notes.md states an npm 404 is UNKNOWN with the note "free or unpublished". test_view_cache.cjs fails on the old script (red-proved via VIEW_CACHE_PATH).

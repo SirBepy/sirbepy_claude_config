@@ -28,6 +28,8 @@ try {
       "com:beta": { status: "TAKEN", note: "" },
       "ai:beta": { status: "FREE", note: "" },
       "co:beta": { status: "TAKEN", note: "" },
+      "npm:alpha": { status: "UNKNOWN", note: "npm 404: free or unpublished" },
+      "npm:beta": { status: "TAKEN", note: "" },
     }),
   );
 
@@ -39,6 +41,8 @@ try {
   check("FREE shows F", /\bcom=F\b/.test(alpha), alpha);
   check("TAKEN shows T", /\bio=T\b/.test(alpha), alpha);
   check("never-looked-up shows ?", /\bhr=\?/.test(alpha) && /\bnpm=\?/.test(alpha), alpha);
+  check("UNKNOWN shows ? (not U)", /npm=\?/.test(alpha) && !/=U/.test(alpha), alpha);
+  check("npm TAKEN still shows T", /npm=T/.test(beta), beta);
   check(".co FREE is shown", /\bco=F\b/.test(alpha), alpha);
   check(".co TAKEN is shown", /\bco=T\b/.test(beta), beta);
 
