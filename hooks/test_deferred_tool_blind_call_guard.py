@@ -59,6 +59,7 @@ def cases(tmp):
     search = lambda q: assistant_tool_use("ToolSearch", {"query": q, "max_results": 5})
     return [
         (WRITE_DRAFT, make_transcript(tmp, [assistant_tool_use("Read", {"file_path": "x"})]), True, "blind first call is denied"),
+        (WRITE_DRAFT, make_transcript(tmp, []), True, "an existing transcript with no load is still denied"),
         (WRITE_DRAFT, make_transcript(tmp, [search(f"select:{WRITE_DRAFT}")]), False, "after ToolSearch select of that tool -> allow"),
         (WRITE_DRAFT, make_transcript(tmp, [search(f"select:{SEND},{WRITE_DRAFT}")]), False, "tool inside a comma-separated select -> allow"),
         (WRITE_DRAFT, make_transcript(tmp, [search("select:write_draft")]), False, "short-name select -> allow"),
@@ -112,9 +113,32 @@ def check_subagent_exempt(_case) -> bool:
     return ok
 
 
+def check_missing_transcript(case) -> bool:
+    """pc-review item 11: without a readable transcript the guard cannot know what was loaded,
+    so it must fail open instead of denying every Conductor call with no way to clear it."""
+    label, build = case
+    with tempfile.TemporaryDirectory() as tmp:
+        payload = json.loads(pre(WRITE_DRAFT, ""))
+        build(payload, tmp)
+        proc = run_hook(json.dumps(payload))
+    ok = proc.returncode == 0
+    print(f"[{'PASS' if ok else 'FAIL'}] {label} -> exit={proc.returncode}")
+    return ok
+
+
+MISSING_TRANSCRIPT_CASES = [
+    ("payload without transcript_path allows", lambda p, tmp: p.pop("transcript_path")),
+    ("empty transcript_path allows", lambda p, tmp: p.update(transcript_path="")),
+    ("null transcript_path allows", lambda p, tmp: p.update(transcript_path=None)),
+    ("transcript_path to a missing file allows", lambda p, tmp: p.update(transcript_path=str(Path(tmp) / "gone.jsonl"))),
+    ("transcript_path naming a directory allows", lambda p, tmp: p.update(transcript_path=tmp)),
+]
+
+
 def run() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         fails = _testlib.run_cases(cases(tmp), check)
+    fails += _testlib.run_cases(MISSING_TRANSCRIPT_CASES, check_missing_transcript)
     fails += _testlib.run_cases([("cache",)], check_cache)
     fails += _testlib.run_cases([("garbage",)], check_fail_open)
     fails += _testlib.run_cases([("subagent",)], check_subagent_exempt)
