@@ -93,6 +93,16 @@ Distinct from the read-only comparison above - this is for when the dev asks Cla
 into HubStaff, not just report on drift. Only offer this mode when step 11 (whole-day or per-entry)
 flagged something outside tolerance - never run it unprompted.
 
+- **Empty HubStaff window: no question, no table, just add.** When step 11 finds ZERO HubStaff
+  coverage across the whole window (every day 0 tracked, weekly Total 0:00:00), every Clockify
+  entry is an "add missing" row and the dev's answer is always yes. Skip the scope question and the
+  proposed-edit table, announce the count in one line ("Adding all 22 entries to HubStaff"), and go
+  straight to `hs_addtime.cjs` with the standard defaults (project label from the config, reason
+  `Forgot to start/stop timer`, billable unchecked, Clockify description as the note). The dev,
+  2026-10-30: "Of course I want to add all of the entries into Hubstaff because there are none... Don't
+  even ask that." Verify afterwards through the activities API and re-take the screenshot as usual.
+  Anything short of fully empty (some days or entries already covered) still gets the two prompts
+  below.
 - **Scope default is the FULL reconciled window**, not just entries created/edited this run. Ask via
   AskUserQuestion with the full window as the recommended option:
   - "Full window (N entries, recommended - matches Clockify)"
@@ -135,6 +145,14 @@ flagged something outside tolerance - never run it unprompted.
 Auth already confirmed in step 2 - no login-check needed here. Same orphan-browser guard as step 2
 applies before opening the browser here too.
 
+Before writing anything, the script deletes every pre-existing `hubstaff-weekly-*.png` in
+`--out-dir` - only this run's screenshot(s) survive on disk afterward. This exists specifically so a
+stale screenshot from an earlier run (or an earlier session) can never be confused for, or
+accidentally handed to the dev as, the current one - see the 2026-10-19 incident in
+`feedback_hubstaff_screenshot_handoff_must_be_fresh` (zng-app project memory): the dev was shown an
+empty-looking screenshot despite the real HubStaff data being fine the whole time, root cause
+unconfirmed but a leftover stale file on Desktop was one live suspect.
+
 Run `node skills/clockify-reconciliator/scripts/hs_weekshot.cjs --org {hubstaff_org_id} --user
 {hubstaff_user_id} --profile C:/Users/tecno/AppData/Local/claude-clockify/playwright-profiles/hubstaff --weeks
 {mon1}:{sun1},{mon2}:{sun2},... --out-dir C:/Users/tecno/Desktop` with all Mon-Sun weeks computed in
@@ -142,10 +160,14 @@ step 2 (dates as `YYYY-MM-DD`). The script navigates each week (with the require
 param, resizes the viewport to >= 2300 wide, and collapses the left nav so the **Total** column isn't
 behind a scrollbar), waits up to 10s for the grid to render, and writes
 `hubstaff-weekly-{mon}_to_{sun}.png` straight to `--out-dir` - no relative-path-then-Move-Item dance,
-a local script has no write-root restriction. It prints one JSON array line, one object per week:
-`{mon, sun, path, sizeBytes, warning}` (`warning` set and `path`/`sizeBytes` absent if the grid never
-loaded; `warning` set alongside `path` if the file saved under 50 KB, which usually means a login page
-or empty table). Report any `warning` to the dev instead of treating that week's screenshot as done.
+a local script has no write-root restriction. It also reads the page's own "Total: H:MM:SS" text
+directly, so the check isn't just a file-size guess. It prints one JSON array line, one object per
+week: `{mon, sun, path, sizeBytes, totalHours, warning}` (`warning` set and `path`/`sizeBytes`/
+`totalHours` absent if the grid never loaded; `warning` set alongside the rest if the file saved under
+50 KB, if no "Total:" text could be read at all, or if the Total parsed as all-zero). Report any
+`warning` to the dev instead of treating that week's screenshot as done - and still open the saved
+PNG with Read to visually confirm the Total row before sending it, per the memory file above: this
+script-level check narrows the failure window but doesn't replace the visual confirmation.
 
 To READ exact per-slot time boundaries when verifying alignment (not for the screenshot itself), use
 the Calendar view instead: `https://app.hubstaff.com/organizations/{hubstaff_org_id}/time_entries/calendar?date={mon}&date_end={sun}&filters%5Buser%5D={hubstaff_user_id}`.
@@ -159,7 +181,8 @@ verified via the activities API and the weekly-screenshot total afterward - all 
 Bulk-writes HubStaff time entries via the web UI Add-time dialog (the v2 API is read-only for
 time), one entry per call to `skills/clockify-reconciliator/scripts/hs_addtime.cjs`. Only offer
 this inside "HubStaff update mode" above, for the "Add missing" case, and only after the dev has
-seen and approved the proposed-edit table.
+seen and approved the proposed-edit table (except when HubStaff is fully empty for the window, where
+the update-mode section skips the table and the question).
 
 Entries file shape, one object per HubStaff entry to create:
 ```json
