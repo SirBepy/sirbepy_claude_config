@@ -1,12 +1,12 @@
 ---
 name: disk-doctor
-description: Use when Joe asks what to delete or how to free disk space. Repeatable cleanup scan, advise-only (Claude never deletes).
+description: Use when Joe asks what to delete or how to free disk space. Cleanup scan; Claude deletes only approved items.
 argument-hint: "(no args - just scan and advise)"
 ---
 
 # /disk-doctor — Self-Improving Disk Cleanup Advisor
 
-OS-aware cleanup scan. You **advise**, never delete - Joe runs the delete commands. The actual scan logic, scan commands, NEVER-TOUCH / KNOWN-SAFE lists, and SCAN LOG all live in a per-platform file. This file is just the router.
+OS-aware cleanup scan. You **advise**, and delete only the items Joe approves one by one on a card (`gate.md`); Joe runs every other delete. The actual scan logic, scan commands, NEVER-TOUCH / KNOWN-SAFE lists, and SCAN LOG all live in a per-platform file. This file is just the router.
 
 ## Step 1 — Detect the platform
 
