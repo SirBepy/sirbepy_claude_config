@@ -604,6 +604,16 @@
         "hooks": [
           {
             "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\question-preview-style-guard.py\"",
+            "statusMessage": "Checking question card previews for hand-styled imitation markup"
+          }
+        ]
+      },
+      {
+        "matcher": "^(AskUserQuestion|([A-Za-z0-9_]+__)?ask_user_question)$",
+        "hooks": [
+          {
+            "type": "command",
             "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\question-card-live-agent-warn.py\"",
             "statusMessage": "Checking for live background agents before this question card"
           }
