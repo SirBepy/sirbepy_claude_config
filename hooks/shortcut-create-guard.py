@@ -27,6 +27,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     from _hooklib import read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS, OUTBOUND_MARKER_GLOB, without_display_segments
+    from _outbound_window import window_denial
     from _python_http_write import SHORTCUT_HINT_RE, python_write_verbs
 except Exception as e:
     sys.stderr.write(f"[shortcut-create-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
@@ -92,6 +93,11 @@ def main() -> None:
 
     if os.environ.get(OVERRIDE_ENV):
         sys.exit(0)
+
+    # Before the marker is consumed: a call denied for the hour must not spend the ground check.
+    night = window_denial(payload, "Shortcut story creation")
+    if night:
+        deny(night)
 
     if any(consume_fresh_marker(MARKER_DIR, glob, FRESHNESS_SECONDS) for glob in MARKER_GLOBS):
         sys.exit(0)

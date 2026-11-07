@@ -48,6 +48,10 @@ statement in the same invocation, and telling those two apart from the raw
 command text isn't reliable, so this half of the check stays a superset
 that can over-block but never misses a real override.
 
+The same window also gates the tickets and PR comments Claude posts itself
+(`_outbound_window.py`, called by outbound-verify-guard.py and shortcut-create-guard.py), with
+its own allow scope: `allow <repo> --scope outbound --reason "..."`.
+
 Override, only after Joe says yes through the ask_user_question card, in
 its own tool call (the hook reads the whole command before any of it runs,
 so a chained allow never exists in time):
@@ -286,21 +290,23 @@ def _repo_key(root: str) -> str:
     return hashlib.sha1(norm.encode("utf-8")).hexdigest()[:16]
 
 
-def allow_path(session_id: str, root: str) -> Path:
-    return ALLOW_DIR / f"{session_id}--{_repo_key(root)}"
+def allow_path(session_id: str, root: str, scope: str = "") -> Path:
+    # A scope keeps one approval from standing in for another: Joe's yes to a commit is not a
+    # yes to posting a ticket (_outbound_window.py uses scope "outbound").
+    return ALLOW_DIR / (f"{session_id}--{_repo_key(root)}" + (f"--{scope}" if scope else ""))
 
 
-def is_allowed(session_id: str, root: str, now: datetime) -> bool:
+def is_allowed(session_id: str, root: str, now: datetime, scope: str = "") -> bool:
     if not session_id or not _SAFE_SESSION_ID_RE.match(session_id):
         return False
     try:
-        data = json.loads(allow_path(session_id, root).read_text(encoding="utf-8"))
+        data = json.loads(allow_path(session_id, root, scope).read_text(encoding="utf-8"))
         return float(data["expires"]) > now.timestamp()
     except (OSError, ValueError, KeyError, TypeError):
         return False
 
 
-def grant(session_id: str, root: str, reason: str, now: datetime) -> datetime:
+def grant(session_id: str, root: str, reason: str, now: datetime, scope: str = "") -> datetime:
     expires = min(now + timedelta(seconds=ALLOW_TTL_SECONDS), window_end(now)) if in_window(now) else now + timedelta(seconds=ALLOW_TTL_SECONDS)
     ALLOW_DIR.mkdir(parents=True, exist_ok=True)
     for old in ALLOW_DIR.glob("*"):
@@ -309,7 +315,7 @@ def grant(session_id: str, root: str, reason: str, now: datetime) -> datetime:
                 old.unlink()
         except (OSError, ValueError, KeyError, TypeError):
             pass
-    allow_path(session_id, root).write_text(json.dumps({
+    allow_path(session_id, root, scope).write_text(json.dumps({
         "repo": root,
         "reason": reason,
         "granted": now.isoformat(timespec="seconds"),
@@ -400,6 +406,7 @@ def cli(argv) -> int:
     p_allow.add_argument("path", nargs="?", default=".")
     p_allow.add_argument("--reason", required=True)
     p_allow.add_argument("--session", default=os.environ.get("CLAUDE_CODE_SESSION_ID", ""))
+    p_allow.add_argument("--scope", choices=("", "outbound"), default="")
     args = parser.parse_args(argv)
 
     if not args.reason.strip():
@@ -415,8 +422,9 @@ def cli(argv) -> int:
     if not client_slug(root):
         print(f"{Path(root).name} is a personal repo; the commit window does not apply, nothing written")
         return 0
-    expires = grant(args.session, root, args.reason, now_fn())
-    print(f"commit window opened for {Path(root).name} (this session) until {expires:%Y-%m-%d %H:%M}: {args.reason}")
+    expires = grant(args.session, root, args.reason, now_fn(), args.scope)
+    what = "ticket and PR posting window" if args.scope else "commit window"
+    print(f"{what} opened for {Path(root).name} (this session) until {expires:%Y-%m-%d %H:%M}: {args.reason}")
     return 0
 
 

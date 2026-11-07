@@ -56,6 +56,7 @@ try:
         normalize,
         uncovered,
     )
+    from _outbound_window import window_denial
     from _python_http_write import SHORTCUT_HINT_RE, python_write_verbs
 except Exception as e:
     sys.stderr.write(f"[outbound-verify-guard] FATAL: cannot import a sibling hook module ({e}); blocking to avoid silently disabling this guard.\n")
@@ -590,6 +591,10 @@ def main() -> None:
         )
     if outbound is None or os.environ.get(OVERRIDE_ENV):
         sys.exit(0)
+
+    night = window_denial(payload, outbound.label)
+    if night:
+        deny(night)
 
     if outbound.requires_prose and not outbound.found_any:
         deny(
