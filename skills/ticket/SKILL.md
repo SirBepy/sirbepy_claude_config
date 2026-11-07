@@ -273,7 +273,7 @@ script or a subagent fan-out, never this file. Run its offline test with
 
 ## Out of scope, deliberately
 
-- Cross-ticket sweeps: `/shortcut-priorities`, `/shortcut-done-audit`. They operate on a board, not
+- Cross-ticket sweeps: `/shortcut-priorities` (in zng-app's `.claude/skills/`), `/shortcut-done-audit`. They operate on a board, not
   a ticket, so they stay separate skills.
 - Linear reads (search, list, lookup): `/linear` still owns those, along with the `Invoke-Linear`
   helper and the ownership gate that `linear.md` points at. Shortcut's equivalent cheap read path
