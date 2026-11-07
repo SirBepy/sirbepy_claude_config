@@ -27,6 +27,8 @@ VERB_CASES = [
     ('python -c "u.Request(\\"u\\", headers={\\"X\\": \\"it\'s\\"}, data=b)"', {"POST"}, "apostrophe inside an escaped-quote string"),
     ('python -c "u.Request(\\"a\\\\\\"b\\", data=b\'x\')"', {"POST"}, "escaped quote inside an escaped-quote string"),
     ('python -c "u.urlopen(u.Request(url, headers={\\"X\\": \\"it\\\\\\"s\\"}, data=b\'x\'))"', {"POST"}, "escaped quote inside a header value"),
+    ('python -c "u.Request(\\"C:\\\\\\\\\\", data=b\'x\')"', {"POST"}, "string ending in an escaped backslash"),
+    ('python -c "print(u.urlopen(u.Request(\\"C:\\\\\\\\\\", headers=h)).read())"', set(), "same string in a GET"),
     ("u.Request(" * 30000, set(), "an unclosed call repeated many times finishes (bounded scan)"),
     ("u.Request(url, headers=h, method='GET')", set(), "explicit GET"),
     ("u.Request(url, data=b, method='PUT')", {"PUT"}, "explicit PUT"),
