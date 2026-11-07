@@ -1183,7 +1183,32 @@ for f in "${files[@]}"; do
   [ "${class_of[$f]}" = "index-removed" ] && has_index_removed=1
 done
 
-if [ "$has_index_removed" -eq 1 ]; then
+# A mode change that only the real index holds. With core.fileMode=false (NTFS) git has no
+# executable bit to read from the working tree, so `git commit -- <paths>` rebuilds each path's
+# entry from HEAD's mode and silently drops a `git update-index --chmod=+x` (a script that must
+# be executable on a Linux runner then ships as 100644). `diff --cached --raw` lists exactly
+# the staged mode changes in one call; the plumbing commit below replays them into its
+# throwaway index. fileMode=true repos are left alone: there the working tree is the truth.
+declare -A mode_fix=()
+if [ "$(git_c config --get core.fileMode)" = "false" ]; then
+  while IFS= read -r -d '' meta && IFS= read -r -d '' mpath; do
+    read -r old_mode new_mode _ _ _ <<<"${meta#:}"
+    [ -n "${class_of[$mpath]:-}" ] || continue
+    case "${class_of[$mpath]}" in live|untracked) ;; *) continue ;; esac
+    # A new file staged as plain 100644 is what `git add` produces anyway; only an exec bit
+    # (or its removal from a path HEAD holds as 100755) needs replaying.
+    if [ "$new_mode" = 100755 ] && [ "$old_mode" != 100755 ]; then
+      mode_fix["$mpath"]=+x
+    elif [ "$new_mode" = 100644 ] && [ "$old_mode" = 100755 ]; then
+      mode_fix["$mpath"]=-x
+    fi
+  done < <(git_c diff --cached --raw -z --no-renames 2>/dev/null)
+fi
+
+if [ "$has_index_removed" -eq 1 ] || [ "${#mode_fix[@]}" -gt 0 ]; then
+  if [ "${#mode_fix[@]}" -gt 0 ]; then
+    printf '[commit] staged mode change(s) kept via a plumbing commit (pre-commit hooks do not run): %s\n' "${!mode_fix[*]}"
+  fi
   # A plain `git commit -- <pathspec>` cannot express an index-only removal - it
   # records the NAMED paths' current WORKING-TREE content, never the index, so a `git rm
   # --cached` path whose file is still on disk unchanged comes back exactly as it was (the
@@ -1211,6 +1236,9 @@ if [ "$has_index_removed" -eq 1 ]; then
         if ! GIT_INDEX_FILE="$tmp_index" git_c add -- "$f" >/dev/null 2>&1; then
           printf '[commit] ERROR: could not stage %s into the temporary index\n' "$f"
           plumbing_err=1
+        elif [ -n "${mode_fix[$f]:-}" ] && ! GIT_INDEX_FILE="$tmp_index" git_c update-index --chmod="${mode_fix[$f]}" -- "$f" >/dev/null 2>&1; then
+          printf '[commit] ERROR: could not set the mode of %s in the temporary index\n' "$f"
+          plumbing_err=1
         fi
         ;;
       deleted-staged|deleted-unstaged|index-removed)
@@ -1236,7 +1264,7 @@ if [ "$has_index_removed" -eq 1 ]; then
     printf '[commit] ERROR: commit-tree failed:\n%s\n' "$new_commit"
     exit 2
   fi
-  if ! git_c update-ref -m "commit-pathspec: index-only removal (todo 1141)" "refs/heads/$actual_branch" "$new_commit" "$actual_sha" >/dev/null 2>&1; then
+  if ! git_c update-ref -m "commit-pathspec: plumbing commit (index-only removal or staged mode change)" "refs/heads/$actual_branch" "$new_commit" "$actual_sha" >/dev/null 2>&1; then
     printf '[commit] ERROR: update-ref failed to advance %s to %s\n' "$actual_branch" "$new_commit"
     exit 2
   fi

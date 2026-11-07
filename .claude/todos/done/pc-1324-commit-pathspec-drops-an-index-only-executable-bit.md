@@ -23,3 +23,7 @@ In `skills/commit/commit-pathspec.sh`, after the pathspec commit, compare `git l
 ## Acceptance
 
 - A test repo with `core.fileMode=false`: stage `--chmod=+x` on a file, run the script with that file in the pathspec, and `git ls-tree HEAD` shows 100755 (or the script printed the warning).
+
+## Notes
+
+- commit-pathspec.sh replays staged exec-bit changes through its plumbing commit under core.fileMode=false; chmod +x and -x cases in test_commit_pathspec.sh fail without it
