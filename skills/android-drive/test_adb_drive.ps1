@@ -80,6 +80,27 @@ try {
     Assert ($r.Error -match 'No adb devices') "no device: throws 'No adb devices' (got: $($r.Error))"
 
     $global:DeviceLines = @("List of devices attached", "emulator-5554`tdevice")
+
+    Write-Host '1328: screenshot temp file and secure windows'
+    $out = Join-Path $work 'shot.png'
+    $r = Invoke-Drive 'screenshot' @{ Out = $out }
+    Assert ($null -eq $r.Error) "valid PNG: screenshot succeeds (got: $($r.Error))"
+    Assert ($r.Out -match 'pngSize=4x8') "valid PNG: size is reported (got: $($r.Out))"
+    Assert ((Test-Path $out)) 'valid PNG: file kept'
+    Assert (-not ($global:AdbLog -match '/sdcard/')) 'device temp file is not in /sdcard'
+    Assert ($global:AdbLog -match 'screencap -p /data/local/tmp/') 'device temp file is in /data/local/tmp'
+    Assert ($global:DeviceFiles.Count -eq 0) 'valid PNG: device temp file removed'
+
+    foreach ($case in @(@{ Name = 'empty file'; Bytes = [byte[]]@() }, @{ Name = 'non-PNG bytes'; Bytes = [byte[]](1..40) })) {
+        $out2 = Join-Path $work 'secure.png'
+        $global:PullBytes = $case.Bytes
+        $r = Invoke-Drive 'screenshot' @{ Out = $out2 }
+        Assert ($r.Error -match 'screencap returned no image') "$($case.Name): clear FLAG_SECURE error (got: $($r.Error))"
+        Assert ($r.Error -notmatch 'Out of memory') "$($case.Name): not the GDI+ Out of memory message"
+        Assert (-not (Test-Path $out2)) "$($case.Name): bad local file deleted"
+        Assert ($global:DeviceFiles.Count -eq 0) "$($case.Name): device temp file removed after the failure"
+    }
+    $global:PullBytes = $goodBytes
 } finally {
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }

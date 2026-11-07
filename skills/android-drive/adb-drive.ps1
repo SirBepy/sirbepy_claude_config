@@ -119,16 +119,38 @@ function ConvertTo-DeviceShellSteps {
     return $parts
 }
 
+function Assert-PngFile {
+    # A FLAG_SECURE window (authenticators, banking apps) makes screencap write an empty or
+    # non-PNG file; System.Drawing then reports that as a misleading "Out of memory".
+    param([string]$Path)
+    $pngSignature = [byte[]](0x89, 0x50, 0x4E, 0x47)
+    $head = $null
+    if (Test-Path -LiteralPath $Path) {
+        $bytes = [System.IO.File]::ReadAllBytes($Path)
+        if ($bytes.Length -ge 4) { $head = $bytes[0..3] }
+    }
+    if ($head -and -not (Compare-Object $head $pngSignature)) { return }
+    Remove-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+    throw "screencap returned no image: the foreground window is probably FLAG_SECURE; use uiautomator dump to read it instead."
+}
+
 function Take-Screenshot {
     # Two-step screencap+pull, never a shell `>` redirect - that corrupts the PNG
     # (text-mode CRLF translation over the binary stream).
+    # /data/local/tmp, not /sdcard: /sdcard is user storage that a concurrent backup pull or
+    # verify pass reads as a real file. The finally removes the device file even when the
+    # pull or the PNG check fails.
     param([string]$Serial, [string]$LocalPath)
-    $remote = '/sdcard/_adb_drive_tmp.png'
-    & adb -s $Serial shell screencap -p $remote | Out-Null
-    $dir = Split-Path -Parent $LocalPath
-    if ($dir) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
-    & adb -s $Serial pull $remote $LocalPath | Out-Null
-    & adb -s $Serial shell rm $remote | Out-Null
+    $remote = '/data/local/tmp/_adb_drive_tmp.png'
+    try {
+        & adb -s $Serial shell screencap -p $remote | Out-Null
+        $dir = Split-Path -Parent $LocalPath
+        if ($dir) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+        & adb -s $Serial pull $remote $LocalPath | Out-Null
+        Assert-PngFile -Path $LocalPath
+    } finally {
+        & adb -s $Serial shell rm $remote | Out-Null
+    }
     return $LocalPath
 }
 
