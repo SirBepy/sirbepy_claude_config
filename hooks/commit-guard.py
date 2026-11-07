@@ -74,6 +74,7 @@ try:
     from _hooklib import (
         read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS,
         HEREDOC_BODY_RE, HERESTRING_BODY_RE, is_agent_call, is_command_position, is_program,
+        split_shell_words, join_line_continuations,
     )
 except Exception as e:
     sys.stderr.write(f"[commit-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
@@ -97,7 +98,10 @@ OVERRIDE_ENV = "CLAUDE_COMMIT_HOOK_BYPASS"
 
 # Short flags that consume a separate following token as their value (so it
 # doesn't get mistaken for the subcommand), e.g. `git -C <path> commit ...`.
-VALUE_FLAGS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
+VALUE_FLAGS = {
+    "-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path",
+    "--config-env", "--super-prefix", "--attr-source",
+}
 
 # Shell operators that can follow a `git commit` invocation in a chained
 # command; a pathspec scan must stop at these, never swallow tokens from a
@@ -116,12 +120,15 @@ def _mask_bodies(command: str) -> str:
 
 
 def _tokenize(command: str) -> list[str] | None:
+    # split_shell_words keeps the backslashes of `C:\Git\git.exe` and joins
+    # `git \<newline>commit`; plain posix shlex dropped the first (the program
+    # no longer read as git) and folded a newline into the word after the second.
     try:
-        return shlex.split(command, posix=True)
+        return split_shell_words(command)
     except ValueError:
         pass
     try:
-        return shlex.split(_mask_bodies(command), posix=True)
+        return split_shell_words(_mask_bodies(command))
     except ValueError:
         # Still unbalanced after masking: the caller falls back to
         # `_unparsed_commit_landing` instead of reading None as "not a commit".
@@ -130,19 +137,31 @@ def _tokenize(command: str) -> list[str] | None:
 
 # `git [global flags] commit|commit-tree`, or a branch-moving update-ref, found by
 # regex when shlex cannot tokenize the command (a lone apostrophe in `-m it's`).
-_VALUE = r"(?:[^\s\"';|&]|\"[^\"]*\"|'[^']*')+"
+_VALUE = r"(?:\\[ \t]|[^\s\"';|&]|\"[^\"]*\"|'[^']*')+"
 _UNPARSED_LANDING_RE = re.compile(
     r"(?<![\w.-])git(?:\.exe)?[\"']?"
-    r"(?:[ \t]+(?:-[Cc][ \t]+" + _VALUE + r"|--(?:git-dir|work-tree|namespace|exec-path)[ \t]+" + _VALUE + r"|-\S+))*[ \t]+"
-    r"(?:commit(?![\w-])|commit-tree(?![\w-])|update-ref(?:[ \t]+-\S+)*[ \t]+(?:HEAD(?![\w/-])|refs/heads/))",
+    r"(?:[ \t]+(?:-[Cc][ \t]+" + _VALUE
+    + r"|--(?:git-dir|work-tree|namespace|exec-path|config-env|super-prefix|attr-source)[ \t]+" + _VALUE + r"|-\S+))*[ \t]+"
+    r"(?:commit(?![\w-])|commit-tree(?![\w-])"
+    r"|update-ref(?:[ \t]+(?:-m[ \t]+" + _VALUE + r"|-\S+))*[ \t]+(?:HEAD(?![\w/-])|refs/heads/))",
     re.IGNORECASE,
 )
-# Words that run the next word as a command, and VAR=value assignments (the value
-# may hold a quoted space but never a statement terminator).
+# Words that run the next word as a command (a wrapper with its own options, a
+# shell keyword, `!`), and VAR=value assignments (the value may hold a quoted or
+# escaped space but never a statement terminator). The letters in the option
+# class are the ones env, sudo and xargs give a separate value.
+_WRAPPER_OPTIONS = r"(?:[ \t]+(?:-[uCSgnIPLsdE][ \t]+" + _VALUE + r"|-\S+))*"
 _ENV_PREFIX_RE = re.compile(
-    r"(?:(?:env|sudo|time|nohup|command|exec)[ \t]+|\b[A-Za-z_]\w*=" + _VALUE + r"?[ \t]+)+$",
+    r"(?:(?:!|then|do|else|elif|if|while|until|time|nohup|command|exec)[ \t]+"
+    r"|(?:env|sudo|xargs)" + _WRAPPER_OPTIONS + r"[ \t]+"
+    r"|\b[A-Za-z_]\w*=" + _VALUE + r"?[ \t]+)+$",
     re.IGNORECASE,
 )
+
+
+def _at_command_position(command: str, idx: int) -> bool:
+    """is_command_position, plus a backtick: `` `git commit` `` runs the call."""
+    return is_command_position(command, idx) or command[:idx].rstrip(" \t").endswith("`")
 
 
 def _unparsed_commit_landing(command: str) -> bool:
@@ -150,6 +169,7 @@ def _unparsed_commit_landing(command: str) -> bool:
     `git` call sits at command position (a `VAR=1` prefix does not move it). A
     mention in prose (`echo it's about git commit`) is not at command
     position, so it stays ungated."""
+    command = join_line_continuations(command)
     for m in _UNPARSED_LANDING_RE.finditer(command):
         start = m.start()
         starts = [start]
@@ -169,7 +189,7 @@ def _unparsed_commit_landing(command: str) -> bool:
                     starts.append(i)
         for token_start in starts:
             env = _ENV_PREFIX_RE.search(command[:token_start])
-            if is_command_position(command, env.start() if env else token_start):
+            if _at_command_position(command, env.start() if env else token_start):
                 return True
     return False
 
@@ -397,8 +417,15 @@ def _deny_prefilter_failure() -> None:
 
 
 # Same two patterns commit-pathspec.sh refuses, for the by-hand `git commit -m` fallback.
-_AI_TRAILER_RE = re.compile(r"^co-authored-by:.*(claude|anthropic)", re.IGNORECASE)
-_AI_GENERATED_RE = re.compile(r"generated with \[?claude code", re.IGNORECASE)
+# git accepts `=` as well as `:` between a trailer token and its value.
+_AI_TRAILER_RE = re.compile(r"^co-authored-by\s*[:=].*(claude|anthropic)", re.IGNORECASE)
+# The footer line itself: it opens a line (an emoji may lead), or carries the markdown
+# link. A subject that only discusses the footer ("drop the Generated with Claude Code
+# line") has neither, so it stays allowed.
+_AI_GENERATED_RE = re.compile(
+    r"^\W*generated with (?:claude code\b|\[claude code\])|generated with \[claude code\]\(",
+    re.IGNORECASE,
+)
 # -m, or -m bundled after git commit's boolean short flags (`-am`, `-avm`), with the
 # value either attached or in the next token.
 _SHORT_MESSAGE_RE = re.compile(r"^-[aenqsv]*m(.*)$", re.DOTALL)
@@ -415,8 +442,8 @@ def _read_message_file(name: str, cwd: str) -> str | None:
 
 
 def commit_messages(tokens: list[str], cwd: str = "") -> list[str]:
-    """Every -m / --message value in the command, however it is spelled, plus
-    the content of a -F / --file message file that exists."""
+    """Every -m / --message / --trailer value in the command, however it is
+    spelled, plus the content of a -F / --file message file that exists."""
     messages = []
     for i, tok in enumerate(tokens):
         short = _SHORT_MESSAGE_RE.match(tok)
@@ -433,6 +460,10 @@ def commit_messages(tokens: list[str], cwd: str = "") -> list[str]:
             messages.append(tokens[i + 1])
         elif tok.startswith("--message="):
             messages.append(tok[len("--message="):])
+        elif tok == "--trailer" and i + 1 < len(tokens):
+            messages.append(tokens[i + 1])
+        elif tok.startswith("--trailer="):
+            messages.append(tok[len("--trailer="):])
         elif short and short.group(1):
             messages.append(short.group(1))
         elif short and i + 1 < len(tokens):
