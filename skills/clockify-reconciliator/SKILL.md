@@ -18,7 +18,7 @@ argument-hint: <project-name> [lookback]
   - `past-N-weeks` or `past-N-days` - rolling window ending now
   - `YYYY-MM-DD..YYYY-MM-DD` - explicit date range
   - Default if omitted: current work week (Mon to today, dev timezone).
-- `--precheck` (optional, only the scheduled midnight run passes it): ends the run at step 1a when a run already covered today. A manual run never carries it, so manual runs never skip.
+- `--precheck` (optional, only the scheduled 23:55 run passes it): ends the run at step 1a when a run already covered today. A manual run never carries it, so manual runs never skip.
 
 ## Prereqs
 
@@ -69,7 +69,11 @@ if it's not full... I can still keep that chat open until all the other hours ar
 rule is run history, on purpose: it does not try to prove the day is fully covered (a design that
 did, scored 6/10 in /iterate-it, was rejected as heavier than the ask).
 
-Compute today's local date in `Europe/Zagreb`, then look for
+The scheduled run fires at 23:55 (todo pc-1295), so the day it covers is the one ending at that
+firing. Compute the run's date in `Europe/Zagreb`: today's local date, EXCEPT before 06:00 local,
+where it is yesterday's date (a firing delayed past midnight is still that day's run, and the
+manual run marked the previous date; checking the new date would miss that marker and repeat the
+run). Then look for
 `~/.claude/skills/clockify-reconciliator/.runs/<project-name>/<YYYY-MM-DD>` (a marker step 3 writes).
 
 - Marker exists: print one line, `Skipped: already ran for <date> (marker says <its contents>)`,
@@ -635,8 +639,11 @@ Once the gate passes, run hubstaff.md's "Step 2" preflight first, then step 11, 
 Read `skills/clockify-reconciliator/hubstaff.md` and follow its "Step 2" preflight, then its "Step
 11" section. If the dev then asks to update/sync HubStaff (not just compare), follow its "HubStaff
 update mode" section instead of improvising scope or entry-creation mechanics. If the comparison
-finds HubStaff completely empty for the window, do not ask: add every Clockify entry right away
-(update mode's "Empty HubStaff window" bullet), then verify and re-take the screenshot.
+finds HubStaff completely empty for the window AND the evidence check in update mode's "Empty
+HubStaff window" bullet passes (a control fetch for the same org and user returned activity in
+another week), do not ask: add every Clockify entry right away, then verify and re-take the
+screenshot. If the evidence check fails or cannot run, the empty result is unproven: ask as for any
+other update.
 
 ### 12. HubStaff weekly screenshot (skip unless step 10a's gate passed, or the preflight marked auth as failed)
 

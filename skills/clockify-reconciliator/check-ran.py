@@ -35,13 +35,25 @@ def skill_dir() -> Path:
     return Path(os.environ.get("CLOCKIFY_SKILL_DIR") or Path(__file__).resolve().parent)
 
 
+# The schedule fires at 23:55, so the day it covers ends at that firing. A firing delayed past
+# midnight (PC asleep, app closed) is still that day's run: before this hour the "day" is yesterday,
+# otherwise a manual run's yesterday marker would not match and the run would repeat.
+NEW_DAY_FROM_HOUR = 6
+
+
+def day_for(now: datetime.datetime) -> str:
+    if now.hour < NEW_DAY_FROM_HOUR:
+        now = now - datetime.timedelta(days=1)
+    return now.strftime("%Y-%m-%d")
+
+
 def today() -> str:
     try:
         from zoneinfo import ZoneInfo
-        return datetime.datetime.now(ZoneInfo("Europe/Zagreb")).strftime("%Y-%m-%d")
+        return day_for(datetime.datetime.now(ZoneInfo("Europe/Zagreb")))
     except Exception:
         # No tzdata on some Windows Pythons: the machine is in the dev's timezone anyway.
-        return datetime.date.today().isoformat()
+        return day_for(datetime.datetime.now())
 
 
 def norm(p: str) -> str:

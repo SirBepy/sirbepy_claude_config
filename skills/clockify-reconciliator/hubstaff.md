@@ -91,18 +91,38 @@ Do NOT auto-fix anything here - report only. User decides what to adjust.
 
 Distinct from the read-only comparison above - this is for when the dev asks Claude to write entries
 into HubStaff, not just report on drift. Only offer this mode when step 11 (whole-day or per-entry)
-flagged something outside tolerance - never run it unprompted.
+flagged something outside tolerance - never run it unprompted, with one exception: the verified-empty
+window in the first bullet below.
 
-- **Empty HubStaff window: no question, no table, just add.** When step 11 finds ZERO HubStaff
-  coverage across the whole window (every day 0 tracked, weekly Total 0:00:00), every Clockify
-  entry is an "add missing" row and the dev's answer is always yes. Skip the scope question and the
-  proposed-edit table, announce the count in one line ("Adding all 22 entries to HubStaff"), and go
-  straight to `hs_addtime.cjs` with the standard defaults (project label from the config, reason
-  `Forgot to start/stop timer`, billable unchecked, Clockify description as the note). The dev,
-  2026-10-30: "Of course I want to add all of the entries into Hubstaff because there are none... Don't
-  even ask that." Verify afterwards through the activities API and re-take the screenshot as usual.
-  Anything short of fully empty (some days or entries already covered) still gets the two prompts
-  below.
+- **Empty HubStaff window: no question, no table, just add - but only once the emptiness is proven
+  real.** When step 11 finds ZERO HubStaff coverage across the whole window (every day 0 tracked,
+  weekly Total 0:00:00), every Clockify entry is an "add missing" row and the dev's answer is always
+  yes, so skip the scope question and the proposed-edit table. The dev, 2026-10-30: "Of course I want
+  to add all of the entries into Hubstaff because there are none... Don't even ask that."
+
+  The bulk add cannot be undone from here (the v2 API is read-only for time, and a wrong add means
+  hand-deleting rows in the UI), and an empty result is exactly what a wrong org id, wrong user id,
+  stale token or unloaded page also returns (2026-10-19: an empty-looking page over real data;
+  `hs_weekshot.cjs` warns that a 0:00:00 Total can be a real zero week). So the skip applies only
+  after this **evidence check** passes:
+  1. The window's own fetch used the same `hubstaff_org_id` and `hubstaff_user_id` as the config, and
+     returned HTTP 200 with `activities: []` on every day (an error, a 4xx/5xx or a missing field is
+     not "empty", it is a failed read).
+  2. A **control fetch with the same org, user and token returned at least one activity in a
+     different week**: probe the 4 weeks before the window, newest first, one request per week with
+     `page_limit=1`, and stop at the first non-empty answer. That proves the credentials, org and
+     user resolve to a person who has tracked time, so an empty window is a real gap and not a
+     misread.
+  Both hold: announce the count and the evidence in one line ("Adding all 22 entries to HubStaff;
+  the same user had activity in the week of 2026-10-26") and go straight to `hs_addtime.cjs` with the
+  standard defaults (project label from the config, reason `Forgot to start/stop timer`, billable
+  unchecked, Clockify description as the note). Verify afterwards through the activities API and
+  re-take the screenshot as usual.
+
+  Either check fails or cannot run (control weeks all empty too, e.g. a brand-new account): treat the
+  window as unproven, do NOT add anything unprompted, and fall back to the two prompts below (scope
+  question and proposed-edit table) with the empty result stated as unverified. Anything short of
+  fully empty (some days or entries already covered) also gets the two prompts below.
 - **Scope default is the FULL reconciled window**, not just entries created/edited this run. Ask via
   AskUserQuestion with the full window as the recommended option:
   - "Full window (N entries, recommended - matches Clockify)"
@@ -181,7 +201,7 @@ verified via the activities API and the weekly-screenshot total afterward - all 
 Bulk-writes HubStaff time entries via the web UI Add-time dialog (the v2 API is read-only for
 time), one entry per call to `skills/clockify-reconciliator/scripts/hs_addtime.cjs`. Only offer
 this inside "HubStaff update mode" above, for the "Add missing" case, and only after the dev has
-seen and approved the proposed-edit table (except when HubStaff is fully empty for the window, where
+seen and approved the proposed-edit table (except when HubStaff is verifiably empty for the window, where
 the update-mode section skips the table and the question).
 
 Entries file shape, one object per HubStaff entry to create:

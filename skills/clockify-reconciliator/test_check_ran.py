@@ -102,6 +102,18 @@ class CheckRan(unittest.TestCase):
         r = run(self.skill, ["demo"])
         self.assertEqual((r.returncode, r.stdout.strip()), (0, f"already ran for {mod.today()}"))
 
+    def test_firing_just_after_midnight_belongs_to_the_previous_day(self):
+        import datetime
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("check_ran", SCRIPT)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        d = datetime.datetime
+        self.assertEqual(mod.day_for(d(2026, 11, 8, 0, 3)), "2026-11-07")
+        self.assertEqual(mod.day_for(d(2026, 11, 8, 5, 59)), "2026-11-07")
+        self.assertEqual(mod.day_for(d(2026, 11, 8, 6, 0)), "2026-11-08")
+        self.assertEqual(mod.day_for(d(2026, 11, 7, 23, 55)), "2026-11-07")
+
 
 if __name__ == "__main__":
     unittest.main()
