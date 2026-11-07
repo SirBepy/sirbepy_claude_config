@@ -593,7 +593,7 @@ def cmd_pre_bump(repo):
     for command in commands:
         try:
             proc = subprocess.run(
-                command, shell=True, cwd=str(root), stdout=sys.stderr, stderr=sys.stderr,
+                command, shell=True, cwd=str(root), stdin=subprocess.DEVNULL, stdout=sys.stderr, stderr=sys.stderr,
                 timeout=PRE_BUMP_TIMEOUT_SECONDS,
             )
         except subprocess.TimeoutExpired:

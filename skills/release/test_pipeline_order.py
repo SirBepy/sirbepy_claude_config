@@ -68,6 +68,7 @@ if GATE_CHAT.exists():
     step2 = gate_text.split("\n2. ", 1)[-1].split("\n3. ", 1)[0]
     check("gate: true" in step2 and "Subchats mode is ON for this chat" in step2, "gate-chat step 2 adds gate: true in a Subchats-mode chat")
     check("Subchats mode is now OFF" in step2, "gate-chat step 2 honours the later 'now OFF' note")
+    check("sections 4a and 4b" in step2, "gate-chat step 2 sends the gate child to /release sections 4a and 4b")
     check("snippets/auto-commit.md" in step2, "gate-chat still pre-reads snippets/auto-commit.md for the push-read gate")
     check("Subchats" in commit_text.split("1c. ", 1)[-1].split("\n", 1)[0], "commit step 1c exempts a Subchats-mode chat from the 30% threshold")
 

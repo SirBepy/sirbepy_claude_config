@@ -142,7 +142,7 @@ The full ordered sequence for every push (`/commit push`, a plain push request, 
 
 ## Gate hand-off
 
-Runs after step 1 (and 1b under `/release`), for an attended push or `/release` from a chat that has used 30% or more of its context or is in Subchats mode. Invoke `/gate-chat` through the Skill tool and follow it in full: it measures the context, then runs the transcript check here, spawns the gate chat with `/close` at the end of its prompt, and stops this chat. Under 30% it returns and the pipeline continues here. Unattended runs (`/autopilot`, `/auto-do-todos`, `/mega-todos`) and a chat that is itself a gate chat skip it and keep the gate in place.
+Runs after step 1 (and 1b under `/release`), for an attended push or `/release` from a chat that has used 30% or more of its context or is in Subchats mode. Invoke `/gate-chat` through the Skill tool and follow it in full: it measures the context, then runs the transcript check here, spawns the gate chat with `/close` at the end of its prompt, and stops this chat. Under 30% with Subchats mode off it returns and the pipeline continues here. Unattended runs (`/autopilot`, `/auto-do-todos`, `/mega-todos`) and a chat that is itself a gate chat skip it and keep the gate in place.
 
 ## Pre-push todo sweep
 
