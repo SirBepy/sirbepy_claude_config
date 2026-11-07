@@ -39,7 +39,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny, tokenize_command, basename, split_gate_segments, is_program, shell_word_variants
+    from _hooklib import read_payload, deny, tokenize_command, basename, split_gate_segments, is_program, shell_word_variants, command_word
 except Exception as e:
     sys.stderr.write(f"[push-read-gate] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -49,7 +49,10 @@ READ_MARKER_PREFIX = "read-auto-commit-"
 PASSED_MARKER_PREFIX = "push-gate-passed-"
 AUTO_COMMIT_SUFFIX = ("snippets", "auto-commit.md")
 
-VALUE_FLAGS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
+VALUE_FLAGS = {
+    "-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path",
+    "--config-env", "--super-prefix", "--attr-source",
+}
 _SAFE_SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 
 # Commands whose first argument is a file they actually read. A command
@@ -79,7 +82,7 @@ def is_git_push_invocation(command: str) -> bool:
     if tokens is None:
         return False
     for i, tok in enumerate(tokens):
-        if not is_program(tok, "git"):
+        if not is_program(command_word(tok), "git"):
             continue
         j = i + 1
         while j < len(tokens) and tokens[j].startswith("-"):
@@ -87,7 +90,7 @@ def is_git_push_invocation(command: str) -> bool:
                 j += 2
             else:
                 j += 1
-        if j < len(tokens) and tokens[j] == "push":
+        if j < len(tokens) and command_word(tokens[j]) == "push":
             return True
     return False
 

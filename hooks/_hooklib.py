@@ -206,6 +206,14 @@ def shell_word_variants(command: str) -> list[list[str]]:
     return variants
 
 
+def command_word(tok: str) -> str:
+    """`tok` without a leading subshell or substitution opener (`(git`, `$(git`,
+    a backtick) and without a statement terminator glued to its end (`commit;`,
+    `push&&echo`, `commit|cat`), which shlex keeps inside the word. Use it where a
+    token is compared with a program or subcommand name."""
+    return re.split(r"[;&|)]", tok.lstrip("(`$"))[0]
+
+
 def flatten_tokens(tokens: list[str]) -> list[str]:
     """PowerShell `-ArgumentList "a","b","c"` collapses to one shlex token
     when there's no whitespace between the commas; split those back apart.

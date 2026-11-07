@@ -52,6 +52,15 @@ INVOCATION_CASES = [
     ("git --config-env a=b commit -m x", True, "--config-env takes a separate value"),
     ("git --super-prefix x commit -m x", True, "--super-prefix takes a separate value"),
     ("git --attr-source HEAD commit -m x", True, "--attr-source takes a separate value"),
+    # A terminator glued to the subcommand stays inside the shlex word; a subshell opener too.
+    ("git commit; echo hi", True, "a semicolon glued to commit"),
+    ("git commit&&echo hi", True, "an && glued to commit"),
+    ("git commit|cat", True, "a pipe glued to commit"),
+    ("git -C . commit;", True, "a glued semicolon after -C <path> commit"),
+    ("(git commit -m x)", True, "a subshell around git commit"),
+    ("$(git commit -m x)", True, "a command substitution around git commit"),
+    ("echo `git commit -m x`", True, "a backtick substitution around git commit"),
+    ("git commit-graph write;", False, "commit-graph with a glued semicolon is still not a commit"),
     # Bash drops a backslash before an ordinary letter, so these are still `git commit`.
     ("g\\it commit -m x", True, "a backslash-escaped letter inside the program name"),
     ("git comm\\it -m x", True, "a backslash-escaped letter inside the subcommand"),

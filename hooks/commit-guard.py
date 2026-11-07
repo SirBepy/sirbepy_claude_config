@@ -74,7 +74,7 @@ try:
     from _hooklib import (
         read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS,
         HEREDOC_BODY_RE, HERESTRING_BODY_RE, is_agent_call, is_command_position, is_program,
-        shell_word_variants, join_line_continuations,
+        shell_word_variants, join_line_continuations, command_word,
     )
 except Exception as e:
     sys.stderr.write(f"[commit-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
@@ -217,7 +217,7 @@ def _subcommand_index(tokens: list[str], name: str, start: int = 0) -> int | Non
     `start`, walking past global flags (skipping their values for flags like
     -C), or None."""
     for i, tok in enumerate(tokens):
-        if i < start or not is_program(tok, "git"):
+        if i < start or not is_program(command_word(tok), "git"):
             continue
         j = i + 1
         while j < len(tokens) and tokens[j].startswith("-"):
@@ -225,7 +225,7 @@ def _subcommand_index(tokens: list[str], name: str, start: int = 0) -> int | Non
                 j += 2
             else:
                 j += 1
-        if j < len(tokens) and tokens[j] == name:
+        if j < len(tokens) and command_word(tokens[j]) == name:
             return j
     return None
 

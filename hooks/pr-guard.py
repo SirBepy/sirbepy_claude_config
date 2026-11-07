@@ -35,7 +35,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS, is_program, shell_word_variants
+    from _hooklib import read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS, is_program, shell_word_variants, command_word
 except Exception as e:
     sys.stderr.write(f"[pr-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -74,19 +74,21 @@ def gh_pr_action(command: str) -> tuple[str, str | None] | None:
         # Unbalanced quotes etc. - can't safely tokenize; don't block on a guess.
         return None
 
-    found = None
-    for tokens in variants:
-        for action in _pr_actions(tokens):
-            if action[0] in MUTATING_ACTIONS:
+    # A chained call must not hide a stricter one: `create` always needs a marker, an
+    # `edit` of the dev's own PR does not, so `gh pr edit 5; gh pr create` reports the
+    # create. Then the first mutating call, then the first call of any kind.
+    actions = [a for tokens in variants for a in _pr_actions(tokens)]
+    for wanted in (lambda a: a[0] == "create", lambda a: a[0] in MUTATING_ACTIONS, lambda a: True):
+        for action in actions:
+            if wanted(action):
                 return action
-            found = found or action
-    return found
+    return None
 
 
 def _pr_actions(tokens: list[str]):
     """Every `(action, target)` of a `gh pr` call in `tokens`, in order."""
     for i, tok in enumerate(tokens):
-        if not is_program(tok, "gh"):
+        if not is_program(command_word(tok), "gh"):
             continue
         j = i + 1
         while j < len(tokens) and tokens[j].startswith("-"):
@@ -94,13 +96,17 @@ def _pr_actions(tokens: list[str]):
                 j += 2
             else:
                 j += 1
-        if j < len(tokens) and tokens[j] == "pr":
+        if j < len(tokens) and command_word(tokens[j]) == "pr":
             k = j + 1
             while k < len(tokens) and tokens[k].startswith("-"):
-                k += 1
+                # `-R` is persistent on `gh pr`, so `gh pr -R o/r create` takes a value too.
+                k += 2 if tokens[k] in VALUE_FLAGS and "=" not in tokens[k] else 1
             if k < len(tokens):
-                target = tokens[k + 1] if k + 1 < len(tokens) and not tokens[k + 1].startswith("-") else None
-                yield tokens[k], target
+                action = command_word(tokens[k])
+                # A terminator glued to the action ends the call: what follows is another command.
+                glued = action != tokens[k]
+                target = tokens[k + 1] if not glued and k + 1 < len(tokens) and not tokens[k + 1].startswith("-") else None
+                yield action, target
 
 
 def cd_target(command: str) -> str | None:
