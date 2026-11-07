@@ -10,7 +10,7 @@ const noSleep = async () => {};
 const entry = { date: '2026-11-02', from: '9:00 am', to: '10:00 am', note: 'n' };
 
 // A locator whose every method returns another locator; hooks decide waitFor/click behaviour.
-function fakePage({ gotoFails = 0, dialogFails = 0, saveFails = false } = {}) {
+function fakePage({ gotoFails = 0, dialogFails = 0, saveFails = false, closeFails = false } = {}) {
   const log = { goto: 0, dialogWaits: 0, saveClicks: 0, gotoOpts: [] };
   const loc = (name) => new Proxy(function () {}, {
     get(_t, prop) {
@@ -32,7 +32,8 @@ function fakePage({ gotoFails = 0, dialogFails = 0, saveFails = false } = {}) {
   const page = {
     goto: async (_url, opts) => { log.gotoOpts.push(opts); if (++log.goto <= gotoFails) throw new Error('page.goto: Timeout 30000ms exceeded'); },
     waitForTimeout: async () => {},
-    waitForFunction: async () => {},
+    // The dialog failing to close after Save is the real maybeSaved case: the click went through.
+    waitForFunction: async () => { if (closeFails) throw new Error('page.waitForFunction: Timeout 10000ms exceeded'); },
     keyboard: { press: async () => {}, type: async () => {} },
     getByText: () => loc('text'),
     locator: (s) => (String(s).includes('.app-dialog.opened') ? loc('dialog') : loc('x')),
@@ -92,6 +93,17 @@ function fakePage({ gotoFails = 0, dialogFails = 0, saveFails = false } = {}) {
     const r = await addEntryWithRetry(entry, makeAttempt(page, cfg), { sleep: noSleep });
     assert.strictEqual(r.ok, false);
     assert.strictEqual(r.maybeSaved, true);
+    assert.strictEqual(log.saveClicks, 1);
+    assert.strictEqual(log.goto, 1);
+  }
+
+  // Save clicked, dialog never closes: the entry may exist, so no retry and maybeSaved is set.
+  {
+    const { page, log } = fakePage({ closeFails: true });
+    const r = await addEntryWithRetry(entry, makeAttempt(page, cfg), { sleep: noSleep });
+    assert.strictEqual(r.ok, false);
+    assert.strictEqual(r.maybeSaved, true);
+    assert.match(r.error, /waitForFunction/);
     assert.strictEqual(log.saveClicks, 1);
     assert.strictEqual(log.goto, 1);
   }
