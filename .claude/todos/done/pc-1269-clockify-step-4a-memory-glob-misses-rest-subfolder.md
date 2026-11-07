@@ -24,3 +24,7 @@ Seen 2026-10-28/29 in the scheduled zng-app run (Zirtue, window Wed 2026-10-28).
 
 - Step 4a's wording finds files in `memory/rest/` with no manual `ls` of the subfolder.
 - Re-reading the step cold, a run in zng-app would list both Clockify feedback files above.
+
+## Notes
+
+- Step 4a now globs **/ and cross-checks rest/INDEX.md; modes.md and hubstaff.md have no root-only memory path. Prose-only change, no script test.

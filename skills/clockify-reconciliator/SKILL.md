@@ -211,8 +211,12 @@ never build a plan, or report "nothing to reconcile", off a stale response.
 
 ### 4a. Memory check
 
-Glob the project's memory dir for `feedback_clockify_*.md` and `reference_clockify_*.md` - no
-filename list hardcoded here, the set grows - and read every hit before identifying targets.
+Glob the project's memory dir recursively (`**/feedback_clockify_*.md` and
+`**/reference_clockify_*.md`) - no filename list hardcoded here, the set grows - and read every hit
+before identifying targets. A subfolder counts: `/cleanup-memory` moves most memories into
+`memory/rest/` (2026-10-28, zng-app: both Clockify feedback files sat there and a root-only glob
+returned "No such file"). Cross-check the hit list against the Clockify section of
+`memory/rest/INDEX.md` when that file exists.
 **The recalled `MEMORY.md` index line is a pointer to these files, not a substitute for them -
 reading the index line does not satisfy this step.** Print one line naming the files actually read,
 in the run's output, right after step 1's resolved-var line: a silent skip and a silent success
