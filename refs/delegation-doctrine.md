@@ -7,7 +7,7 @@ neither restates these rules, so they can never drift apart.
 This file is the delegation MECHANICS only. The model-tier and cost rules live in the global
 `CLAUDE.md` "Subagent-Driven vs Inline Execution" section and are not repeated here: follow them
 as written (every dispatch passes `model: 'sonnet'`; escalate above sonnet only on the triggers
-listed there; tune `effort` freely). Process/orphan rules live in `~/.claude/refs/process-hygiene.md`.
+listed there; set `effort` only when Joe asks). Process/orphan rules live in `~/.claude/refs/process-hygiene.md`.
 
 ## The 90/10 rule
 
