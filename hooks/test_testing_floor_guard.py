@@ -1177,6 +1177,116 @@ def node_sweep_ownership_checks() -> list:
     return fails
 
 
+def close_session_checks() -> list:
+    """A turn that already called close_session has no later turn in which to
+    fix anything, and the host only ends the session when the turn completes,
+    so a blocked Stop leaves a chat open that was reported closed (seen
+    2026-11-04)."""
+    fails = []
+
+    def check(label, ok, detail):
+        print(f"[{'PASS' if ok else 'FAIL'}] close_session: {label} -> {detail}")
+        if not ok:
+            fails.append(f"close_session: {label}")
+
+    def entries_with(*tool_names, user_text="close it"):
+        entries = [{"type": "user", "message": {"content": user_text}}]
+        for i, name in enumerate(tool_names):
+            entries.append({"type": "assistant", "message": {"content": [
+                {"type": "tool_use", "id": f"toolu_C{i}", "name": name, "input": {}},
+            ]}})
+        return entries
+
+    with tempfile.TemporaryDirectory(prefix="testing-floor-close-") as tmp:
+        tmp_path = Path(tmp)
+        ran = []
+
+        def spying_failing_checks(root, **kwargs):
+            ran.append(root)
+            return (False, "stubbed summary")
+
+        def run_case(name, entries, **extra):
+            state_dir = tmp_path / ("s-" + name.replace(" ", "_"))
+            state_dir.mkdir(exist_ok=True)
+            flag = state_dir / "s1"
+            flag.write_text(json.dumps({"attempts": 0, "root": tmp, "paths": []}), encoding="utf-8")
+            transcript = tmp_path / (name.replace(" ", "_") + ".jsonl")
+            _write_transcript(transcript, entries)
+            ran.clear()
+            got = guard.evaluate(
+                {"session_id": "s1", "transcript_path": str(transcript)},
+                state_dir=state_dir, skip_flag_path=tmp_path / "no-skip",
+                cap=3, run_checks_fn=spying_failing_checks, env={}, **extra,
+            )
+            return got, flag
+
+        got, flag = run_case("closed", entries_with("mcp__cc_conductor__close_session"))
+        check("a turn that called close_session is never blocked", got is None, got)
+        check("closed: checks were not run", ran == [], ran)
+        attempts = json.loads(flag.read_text(encoding="utf-8")).get("attempts") if flag.is_file() else None
+        check("closed: no retry attempt spent", attempts == 0, attempts)
+
+        got, _ = run_case("closed after status", entries_with(
+            "mcp__cc_conductor__report_turn_status", "mcp__cc_conductor__close_session"))
+        check("close_session among other calls still exempts", got is None, got)
+
+        got, _ = run_case("not closed", entries_with("Edit", "mcp__cc_conductor__report_turn_status"))
+        check("a turn without close_session still blocks on a red check", got is not None, got)
+
+        got, _ = run_case("lookalike", entries_with("mcp__cc_conductor__close_session_note", "close_sessions"))
+        check("a differently named tool does not exempt", got is not None, got)
+
+        # An earlier turn's close_session does not exempt a later turn.
+        stale = entries_with("mcp__cc_conductor__close_session") + [
+            {"type": "user", "message": {"content": "actually keep going"}},
+        ]
+        got, _ = run_case("stale", stale)
+        check("a close_session from a previous turn does not exempt this one", got is not None, got)
+
+        def boom(_path):
+            raise RuntimeError("stubbed close reader failure")
+
+        got, _ = run_case("boom", entries_with("mcp__cc_conductor__close_session"), closed_fn=boom)
+        check("a raising close reader falls back to running the checks", got is not None, got)
+    return fails
+
+
+def environment_failure_checks() -> list:
+    """A check that dies from the machine (full disk, a build script's access
+    violation) says nothing about the edit, so it is reported as not verified
+    instead of a block. A real compile error still fails."""
+    fails = []
+    lib = _testlib.load_module("testing_floor_lib_for_env_test", _HOOKS_DIR / "_testing_floor_lib.py")
+
+    class FakeProc:
+        def __init__(self, returncode, stdout="", stderr=""):
+            self.returncode, self.stdout, self.stderr = returncode, stdout, stderr
+
+    cases = (
+        ("disk full (os error 112)", FakeProc(101, stderr="error: failed to write\nThere is not enough space on the disk. (os error 112)"), True),
+        ("disk full phrase alone", FakeProc(101, stderr="No space left on device"), True),
+        ("build script access violation", FakeProc(101, stderr="process didn't exit successfully: build-script-build (exit code: 0xc0000005, STATUS_ACCESS_VIOLATION)"), True),
+        ("a real compile error", FakeProc(101, stderr="error[E0308]: mismatched types\n --> src/main.rs:3:5"), False),
+        ("compile error text mentioning nothing environmental", FakeProc(1, stdout="FAIL src/a.test.ts"), False),
+    )
+    with tempfile.TemporaryDirectory(prefix="testing-floor-env-") as tmp:
+        for label, proc, expect_ok in cases:
+            ok, summary = lib.run_stack_check("rust", ["cargo", "check"], Path(tmp), 300, lambda argv, _p=proc, **kw: _p)
+            good = ok == expect_ok
+            print(f"[{'PASS' if good else 'FAIL'}] environment: {label} -> ok={ok} {summary[:100]!r}")
+            if not good:
+                fails.append(f"environment: {label}")
+            if expect_ok and good and "not verified" not in summary:
+                print(f"[FAIL] environment: {label}: summary does not say 'not verified' -> {summary[:100]!r}")
+                fails.append(f"environment: {label}: summary wording")
+        # An environment failure on a passing run is irrelevant: exit 0 stays a pass.
+        ok, _ = lib.run_stack_check("rust", ["cargo", "check"], Path(tmp), 300, lambda argv, **kw: FakeProc(0, stdout="Finished"))
+        print(f"[{'PASS' if ok else 'FAIL'}] environment: exit 0 still passes -> ok={ok}")
+        if not ok:
+            fails.append("environment: exit 0 still passes")
+    return fails
+
+
 def _guarded(fn):
     def _run():
         try:
@@ -1201,6 +1311,8 @@ def run() -> int:
         + _guarded(launcher_resolution_checks)()
         + _guarded(git_bash_launcher_checks)()
         + _guarded(infra_failure_checks)()
+        + _guarded(close_session_checks)()
+        + _guarded(environment_failure_checks)()
         + _guarded(node_sweep_ownership_checks)()
     )
     return _testlib.summarize(fails)

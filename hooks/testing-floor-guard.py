@@ -39,6 +39,10 @@ done, so it ends without running checks or spending an attempt; the flag is
 kept and the next non-question turn is checked. An unreadable transcript or a
 failing reader means no exemption.
 
+Close exemption: a turn that already called the close_session MCP tool is
+never blocked and runs no checks, because the host ends the session when the
+turn completes and a block would only keep a "closed" chat open.
+
 Subagent exclusion: never fires when the payload carries `agent_id` (reuses
 agent-todo-write-guard.py's own `is_agent_call` test, per this dispatch's
 instruction to reuse rather than reinvent it). A dispatched builder has its
@@ -107,6 +111,23 @@ def last_turn_status(transcript_path: str) -> str | None:
         return None
 
 
+def turn_called_tool(transcript_path: str, tool_name: str) -> bool:
+    """True when this turn made a call to the tool whose bare name (the part
+    after the last "__") is `tool_name`. Same turn scoping as last_turn_status;
+    any parse trouble reads as False, which leaves the gate running its checks.
+    """
+    if not transcript_path:
+        return False
+    try:
+        return any(name.rsplit("__", 1)[-1] == tool_name for name, _input in iter_turn_tool_uses(transcript_path))
+    except Exception:
+        return False
+
+
+def closed_this_turn(transcript_path: str) -> bool:
+    return turn_called_tool(transcript_path, "close_session")
+
+
 def evaluate(
     payload: dict,
     *,
@@ -117,6 +138,7 @@ def evaluate(
     env: dict | None = None,
     running_agents_fn=running_background_agents,
     status_fn=last_turn_status,
+    closed_fn=closed_this_turn,
 ):
     """Pure decision core: returns a dict to print+block on, or None to
     allow the turn to end silently. Every dependency (state dir, skip-flag
@@ -160,6 +182,18 @@ def evaluate(
     except Exception:
         turn_status = None
     if turn_status == "question":
+        return None
+
+    # A session that already called close_session ends when this turn
+    # completes, so a block here has no later turn to fix anything in: it only
+    # leaves a chat open that was reported closed. Allowed without
+    # running checks or spending an attempt; the flag is left for /close's own
+    # verification record.
+    try:
+        closing = bool(closed_fn(payload.get("transcript_path") or ""))
+    except Exception:
+        closing = False
+    if closing:
         return None
 
     state = read_state(flag_path)
