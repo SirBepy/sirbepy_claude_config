@@ -32,3 +32,7 @@ Found by the `/close` code-check of commits b4cb674 and f9b3753 (fresh subagent,
 - A forced refused run (start a `cargo` process, run the wrapper with `-ThresholdPct 100`) logs `refused` and does not log `done`.
 - The wrapper's no-op path still logs `ok: ...` as before.
 - No comment mentions Tier C in the wrapper except the one saying it stays manual.
+
+## Notes
+
+- Decided (triage 2026-11-07): distinct log prefix (done/refused/aborted/failed) AND propagate the child's exit code. Tail filter anchored, removed lines counted, Tier C wording and the tier B comment fixed, host exe via (Get-Process -Id PID).Path instead of PATH powershell. The StartsWith hardening is done with 1313 in d-cargo-sweep.ps1. Test skills/disk-doctor/test_d_cargo_sweep_auto.ps1 (stub sweep, red on the old wrapper). The real scheduled task run on D: is verify only.
