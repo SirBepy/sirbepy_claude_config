@@ -57,6 +57,25 @@ ALLOW_CASES = [
     (f'powershell -com "Remove-Item C:/x" -File {R_FWD}', False, "-com is an unambiguous prefix of -Command"),
     (f"powershell -enc abc -File {R_FWD}", False, "-enc is a prefix of -EncodedCommand"),
     (f'pwsh -comm "Remove-Item C:/x" -File {R_FWD}', False, "pwsh -comm"),
+    # Review findings 2026-11-07: typographic quotes hide a second statement, and a
+    # token before -File is a command PowerShell runs first.
+    (f"& {R_WIN} -Name 'a\u2019; New-Item C:/x -ItemType File; \u2018b'", False, "smart single quotes hide a second statement"),
+    (f'& {R_WIN} -Name "a\u201d; New-Item C:/x; \u201cb"', False, "smart double quotes hide a second statement"),
+    (f"& {R_WIN} -Name \u2018x\u2019", False, "a typographic-quoted value is not a plain quoted value"),
+    (f"powershell C:\\evil.ps1 -File {R_FWD}", False, "a positional script before -File runs first"),
+    (f"powershell evil -File {R_FWD}", False, "a bare word before -File is a command"),
+    (f"powershell -NoProfile evil -File {R_FWD}", False, "a bare word after -NoProfile is a command"),
+    (f"powershell -f C:\\evil.ps1 -File {R_FWD}", False, "-f is an abbreviation of -File and runs the first script"),
+    (f"powershell -fi C:\\evil.ps1 -File {R_FWD}", False, "-fi is an abbreviation of -File"),
+    (f"powershell -f {R_FWD}", False, "an abbreviated -f is not the strict -File shape"),
+    (f"C:\\evil\\powershell.exe -File {R_FWD}", False, "a path-spelled powershell is an attacker-chosen executable"),
+    (f"powershell -NoProfile -ExecutionPolicy Bypass -File {R_FWD} -Name 'my chat'", True, "the strict -File shape with an execution policy"),
+    (f"powershell -ExecutionPolicy Unrestricted -File {R_FWD}", False, "only Bypass is an allowed execution policy"),
+    (f"& '{R_WIN}' -Name 'my chat'", True, "the direct call with a single-quoted value"),
+    (f"& {R_WIN} -Name $env:USERNAME", False, "a variable expansion in an argument"),
+    (f"& {R_WIN} -Name 'a $x'", False, "a dollar sign inside a quoted value"),
+    (f"& {R_WIN} positional", False, "a positional argument is not a named argument"),
+    (f"& {R_WIN} -Name @'\nx\n'@", False, "a here-string argument"),
 ]
 
 
