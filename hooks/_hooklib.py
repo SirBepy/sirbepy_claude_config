@@ -390,3 +390,48 @@ def split_command_segments(command: str) -> list[str]:
             buf.append(ch)
     segments.append("".join(buf))
     return [s for s in segments if s.strip()]
+
+
+# The separators the gate guards have always split on: `&&`, `||`, `;`, newline
+# and `|`. A lone `&` is deliberately not one, so `2>&1` stays inside its segment.
+_GATE_CHAIN_SPLIT_RE = re.compile(r"&&|\|\||;|\n|\|")
+
+
+def split_gate_segments(command: str) -> list[str]:
+    """Statements and pipeline segments for the fail-closed gate guards: split
+    on `&&`, `||`, `;`, newline and `|` that sit outside single or double
+    quotes, so a pattern like grep "a|b" or a commit message holding "x; y"
+    stays one segment.
+
+    Unlike split_command_segments, heredoc bodies are kept (a body piped into
+    `bash` is executed, so a gate must still see it), and a lone `&` is not a
+    separator. There is no backslash or backtick escape handling, because
+    PowerShell reads "C:\\dir\\" as a closed string; instead, quotes still open
+    at the end mean the scan desynced (an escaped quote, a stray apostrophe in
+    a heredoc body), so the whole command falls back to the plain split, which
+    over-splits and therefore over-gates rather than hiding a later command."""
+    command = command or ""
+    segments, buf, quote, i = [], [], None, 0
+    while i < len(command):
+        ch = command[i]
+        if quote:
+            buf.append(ch)
+            if ch == quote:
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+            buf.append(ch)
+        elif ch in ";|\n":
+            segments.append("".join(buf))
+            buf = []
+        elif ch == "&" and command[i + 1:i + 2] == "&":
+            segments.append("".join(buf))
+            buf = []
+            i += 1
+        else:
+            buf.append(ch)
+        i += 1
+    if quote:
+        return [s for s in _GATE_CHAIN_SPLIT_RE.split(command) if s.strip()]
+    segments.append("".join(buf))
+    return [s for s in segments if s.strip()]

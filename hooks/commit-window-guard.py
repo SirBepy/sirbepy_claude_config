@@ -76,7 +76,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, git_repo_root, strip_quotes, basename
+    from _hooklib import read_payload, deny, git_repo_root, strip_quotes, basename, split_gate_segments
     from _client_repo import client_slug
 except Exception as e:
     sys.stderr.write(f"[commit-window] hook error, failing open: cannot import helpers ({e})\n")
@@ -91,7 +91,6 @@ LANDING_SUBCOMMANDS = {"commit", "commit-tree", "merge", "cherry-pick", "revert"
 NON_LANDING_FLAGS = {"--abort", "--quit"}
 VALUE_FLAGS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
 GIT_NAMES = {"git", "git.exe"}
-CHAIN_SPLIT_RE = re.compile(r"&&|\|\||;|\n|\|")
 ABS_PATH_RE = re.compile(r"^(?:[A-Za-z]:[\\/]|\\\\|/)")
 ENV_DATE_RE = re.compile(r"GIT_(?:AUTHOR|COMMITTER)_DATE\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s;&|]+)")
 DATE_FLAG_RE = re.compile(r"(?<![\w-])--date(?:=|\s+)(\"[^\"]*\"|'[^']*'|[^\s;&|]+)")
@@ -219,7 +218,7 @@ def segmented_landing_targets(command: str, payload_cwd: str) -> list[tuple[list
     (targets_in_segment, segment_date_overrides)."""
     effective_cwd = payload_cwd or "."
     segments = []
-    for segment in CHAIN_SPLIT_RE.split(command or ""):
+    for segment in split_gate_segments(command):
         tokens = _tokenize(segment)
         if not tokens:
             continue
@@ -229,7 +228,7 @@ def segmented_landing_targets(command: str, payload_cwd: str) -> list[tuple[list
             # Any earlier shell word in the segment counts, not just the token
             # before the flag: `powershell -NoProfile -Command "..."` puts flags between them.
             if prev.lower() in INLINE_COMMAND_FLAGS and any(basename(t).lower() in SHELL_NAMES for t in tokens[:i]):
-                for inner in CHAIN_SPLIT_RE.split(tok):
+                for inner in split_gate_segments(tok):
                     landings += _segment_landings(_tokenize(inner))
         targets = []
         for kind, repo, args in landings:

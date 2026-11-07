@@ -18,3 +18,7 @@ One guard per commit, each with its own test. Start with `push-gate.py` and `pus
 ## Acceptance
 - [ ] Every guard above uses the shared quote-aware splitter, or has a stated reason it cannot.
 - [ ] Each guard's test covers a quoted separator (not split) and an unquoted one (split).
+
+## Notes
+
+- Added hooks/_hooklib.py split_gate_segments (quote-aware, keeps heredoc bodies, falls back to the plain split on unbalanced quotes so gates stay fail-closed) and switched all six guards to it. Test: hooks/test_gate_quoted_separators.py (8 guard cases fail on HEAD guards, pass now). Landed in the commit titled 'FIX: six gate hooks split on separators outside quotes only'.

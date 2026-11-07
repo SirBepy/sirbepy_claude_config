@@ -33,7 +33,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, allow_with_warning, strip_quotes, basename, git_repo_root, git_common_dir
+    from _hooklib import read_payload, deny, allow_with_warning, strip_quotes, basename, git_repo_root, git_common_dir, split_gate_segments
 except Exception as e:
     sys.stderr.write(f"[git-workdir-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -53,7 +53,6 @@ VALUE_FLAGS = {"-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
 CD_WORDS = {"cd", "cd.", "chdir", "pushd", "sl", "set-location", "push-location"}
 
 ABS_PATH_RE = re.compile(r"^(?:[A-Za-z]:[\\/]|\\\\|/[^/\s])")
-CHAIN_SPLIT_RE = re.compile(r"&&|\|\||;|\n|\|")
 
 
 def tokenize(segment: str) -> list[str]:
@@ -120,7 +119,7 @@ def main() -> None:
 
     effective_cwd = payload.get("cwd") or ""
     write_hit = False
-    for segment in CHAIN_SPLIT_RE.split(command):
+    for segment in split_gate_segments(command):
         tokens = tokenize(segment)
         if not tokens:
             continue

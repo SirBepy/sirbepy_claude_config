@@ -47,7 +47,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, tokenize_segment as tokenize, basename
+    from _hooklib import read_payload, deny, tokenize_segment as tokenize, basename, split_gate_segments
 except Exception as e:
     sys.stderr.write(
         f"[dev-backend-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n"
@@ -87,8 +87,6 @@ E2E_TARGET_RE = re.compile(
     r"""(?:--?target[=\s]+|E2E_TARGET\s*=\s*)['"]?(?P<value>[A-Za-z0-9_-]+)""",
     re.IGNORECASE,
 )
-
-CHAIN_SPLIT_RE = re.compile(r"&&|\|\||;|\n|\|")
 
 # A leading `VAR=value` env assignment (e.g. `E2E_TARGET=dev node run-all.js`)
 # is not the executable; skip it when looking for the real command name.
@@ -173,7 +171,7 @@ def main() -> None:
     if os.environ.get(OVERRIDE_ENV):
         allow()
 
-    for segment in CHAIN_SPLIT_RE.split(command):
+    for segment in split_gate_segments(command):
         tokens = tokenize(segment)
         if not tokens:
             continue

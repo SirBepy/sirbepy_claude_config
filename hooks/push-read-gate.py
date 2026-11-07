@@ -38,7 +38,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
-    from _hooklib import read_payload, deny, tokenize_command, basename
+    from _hooklib import read_payload, deny, tokenize_command, basename, split_gate_segments
 except Exception as e:
     sys.stderr.write(f"[push-read-gate] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -50,12 +50,6 @@ AUTO_COMMIT_SUFFIX = ("snippets", "auto-commit.md")
 
 VALUE_FLAGS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
 _SAFE_SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
-
-# Chain operators split a compound shell command into independent pieces
-# (verified byte-identical against other guards' own copies, e.g.
-# dev-backend-guard.py, push-gate.py - no shared constant for it in
-# _hooklib yet).
-CHAIN_SPLIT_RE = re.compile(r"&&|\|\||;|\n|\|")
 
 # Commands whose first argument is a file they actually read. A command
 # that only mentions the path as an argument to something else (git log --,
@@ -110,7 +104,7 @@ def is_shell_read_of_auto_commit(command: str) -> bool:
     appears as an argument to an unrelated command (`git log --
     snippets/auto-commit.md`, `echo snippets/auto-commit.md`) does not
     count - the command name itself must be a real read."""
-    for segment in CHAIN_SPLIT_RE.split(command or ""):
+    for segment in split_gate_segments(command):
         tokens = tokenize_command(segment)
         if not tokens:
             continue
