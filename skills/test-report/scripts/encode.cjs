@@ -3,21 +3,9 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync, spawnSync } = require('child_process');
+const { readWav } = require('./wav.cjs');
 
 const RATE = 24000;
-
-// Reads the mono 16-bit PCM body of a WAV. tts.py writes exactly this shape.
-function readPcm(file) {
-  const b = fs.readFileSync(file);
-  let at = 12;
-  while (at < b.length) {
-    const id = b.toString('ascii', at, at + 4);
-    const size = b.readUInt32LE(at + 4);
-    if (id === 'data') return b.subarray(at + 8, at + 8 + size);
-    at += 8 + size + (size % 2);
-  }
-  throw new Error(`no data chunk in ${file}`);
-}
 
 function writeWav(file, pcm) {
   const h = Buffer.alloc(44);
@@ -92,7 +80,7 @@ function timeline(takes) {
 function buildSpeech(file, captions, total) {
   const pcm = Buffer.alloc(Math.ceil(total / 1000 * RATE) * 2);
   for (const c of captions) {
-    const clip = readPcm(c.wav);
+    const clip = readWav(c.wav).pcm;
     clip.copy(pcm, Math.round(c.at / 1000 * RATE) * 2);
   }
   writeWav(file, pcm);
