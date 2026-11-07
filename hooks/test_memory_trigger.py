@@ -191,6 +191,11 @@ def run_cases(w):
     fm = mt.parse_frontmatter(["triggers:", "  paths: [\"src/{a,b}/*.ts\", c/{d,e}.md, 'x,y.txt']"])
     case("parser: commas inside braces and quotes stay in one glob",
          fm["triggers"]["paths"] == ["src/{a,b}/*.ts", "c/{d,e}.md", "x,y.txt"])
+    fm = mt.parse_frontmatter(["triggers:", "  paths: [src/{a,b, c.md, d]"])
+    case("parser: an unclosed brace falls back to a comma split instead of eating the list",
+         fm["triggers"]["paths"] == ["src/{a", "b", "c.md", "d"])
+    fm = mt.parse_frontmatter(["triggers:", "  paths: [a.md, don't.md, b.md]"])
+    case("parser: an apostrophe inside an unquoted item is text", fm["triggers"]["paths"] == ["a.md", "don't.md", "b.md"])
     rx = mt.glob_to_regex("src/{a,b}/*.ts")
     case("glob: braces match each alternative", bool(re.match(rx, "c:/p/src/a/z.ts")) and bool(re.match(rx, "c:/p/src/b/z.ts")))
     case("glob: braces reject a non-alternative", not re.match(rx, "c:/p/src/c/z.ts"))
