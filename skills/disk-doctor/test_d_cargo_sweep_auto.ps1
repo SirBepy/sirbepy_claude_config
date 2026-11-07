@@ -50,6 +50,12 @@ try {
   Assert ($r.Log -match 'Tier D: removed 40 of 41') 'keeps the Tier D summary even after 15 removed lines'
   Assert ($r.Log -notmatch 'refused|aborted|failed') 'no failure word on a clean run'
 
+  Write-Host 'sweep left many dirs behind (STILL PRESENT lines before the Tier D summary)'
+  $stuck = 1..15 | ForEach-Object { "STILL PRESENT D:\cargo-target\debug\incremental\locked-$_" }
+  $r = Invoke-Wrapper 'stuck' (New-Stub 'stuck' ($stuck + 'Tier D: removed 3 of 41 files (38 not removed: locked)') 0)
+  Assert ($r.Log -match '15 still present') 'counts the STILL PRESENT dirs instead of listing them'
+  Assert ($r.Log -match 'Tier D: removed 3 of 41') 'keeps the Tier D summary behind 15 STILL PRESENT lines'
+
   Write-Host 'child refused (exit 3)'
   $r = Invoke-Wrapper 'refused' (New-Stub 'refused' @('REFUSING -Apply: a build is running. Stop these first:') 3)
   Assert ($r.Exit -eq 3) "exit 3 propagates (got $($r.Exit))"

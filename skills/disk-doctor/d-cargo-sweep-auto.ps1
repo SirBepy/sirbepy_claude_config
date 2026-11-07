@@ -62,11 +62,13 @@ $code = $LASTEXITCODE
 $vol2 = Get-Volume -DriveLetter $Drive
 $after = [math]::Round($vol2.SizeRemaining / 1GB, 1)
 $lines = $out -split "`r?`n"
-# The child prints one "removed <path>" line per tier A/B/E dir before its summary, so those are counted
-# and only the summary and refusal lines are kept.
+# The child prints one "removed <path>" line per tier A/B/E dir and one "STILL PRESENT <path>" line per
+# dir it could not remove, both before its summary. Both are counted so a long run of either cannot
+# push the Tier D summary or a refusal out of the capped tail, which keeps only those lines.
 $removedDirs = @($lines | Where-Object { $_ -match '^removed ' }).Count
-$tail = ($lines | Where-Object { $_ -match '^(Tier D:|REFUSING|ABORT|STILL PRESENT)' } | Select-Object -First 12) -join ' | '
-$detail = "{0}: {1} GB -> {2} GB free ({3}{4} GB). {5} dirs removed. {6}" -f $Drive, $freeGB, $after, $(if ($after -ge $freeGB) { '+' } else { '' }), [math]::Round($after - $freeGB, 1), $removedDirs, $tail
+$stillPresent = @($lines | Where-Object { $_ -match '^STILL PRESENT' }).Count
+$tail = ($lines | Where-Object { $_ -match '^(Tier D:|REFUSING|ABORT)' } | Select-Object -First 12) -join ' | '
+$detail = "{0}: {1} GB -> {2} GB free ({3}{4} GB). {5} dirs removed, {6} still present. {7}" -f $Drive, $freeGB, $after, $(if ($after -ge $freeGB) { '+' } else { '' }), [math]::Round($after - $freeGB, 1), $removedDirs, $stillPresent, $tail
 switch ($code) {
   0 { Write-Log "done: $detail" }
   3 { Write-Log "refused (exit 3, a build is running): $detail" }
