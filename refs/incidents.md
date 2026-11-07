@@ -141,3 +141,15 @@ it can be figured out, and do that checking with subagents so the lookups do not
 context. His earlier wording of the same rule (2026-11-03, sc-56595 chat): "are you sure this even
 needs to be asked?" and "Do not bring him questions the code or his own goal already answers."
 The CLAUDE.md Communication bullet "Before asking Joe to relay a question to anyone" is the rule.
+
+## Communication - Claude's own prose to Joe is always English
+
+Reaffirmed 2026-09-04 after Claude answered a Croatian-thread question in Croatian. Only the
+copyable draft inside the blockquote takes the recipient's language; everything around it stays
+English.
+
+## Memory Discipline - why a conclusion needs its conditions
+
+A conclusion stored without the conditions that produced it is the failure mode that misleads future
+sessions (cut from the CLAUDE.md gist bullet 2026-11-07 to pay for the tier-exception clause; the
+rubric in `refs/memory-rubric.md` carries the same rule).

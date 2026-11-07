@@ -39,3 +39,7 @@ When `superpowers:brainstorming` (or the local `/brainstorm`) runs in a Conducto
 
 A brainstorming run in a Conductor chat asks its questions on cards; the rule is written where the next session reads
 it before the skill's own conversation guidance.
+
+## Notes
+
+- 2026-11-07: part 1 shipped earlier in skills/brainstorm/SKILL.md:24; the CLAUDE.md half landed with todo 1296 (exception line now says rodge questions still go on the question card), net-zero tokens.

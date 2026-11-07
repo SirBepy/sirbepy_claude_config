@@ -24,3 +24,7 @@ Make the red-check tool discoverable at the moment the rule applies.
 
 ## Acceptance
 - The CLAUDE.md bullet names `red-check.ps1`, and `python ci/run_all.py` (instruction token budget) passes.
+
+## Notes
+
+- 2026-11-07: CLAUDE.md Testing floor bullet now names skills/close/red-check.ps1 (prove red there, never by reverting files in the live tree); paid for by trims elsewhere in CLAUDE.md, net-zero.

@@ -320,8 +320,7 @@ pass/fail. Never file bodies, never transcripts.
 ## The injected commit block
 
 This is the deliberate divergence from the delegation doctrine. `/commit` is pure procedure - git
-commands, one awk prefilter, and a marker file - so it CAN be followed by an agent that cannot invoke
-skills. Paste the full `refs/builder-preamble.md` block first (unmodified, including its screenshot-id
+commands, one awk prefilter, and a marker file - so an agent follows it by hand with no Skill tool at all. Paste the full `refs/builder-preamble.md` block first (unmodified, including its screenshot-id
 paragraph and its `run_in_background ... FORBIDDEN` line - those two are hook-enforced markers, see
 that file's own note), then append this block verbatim when `COMMIT_MODE = per-builder` (Step A) -
 see "Barrier COMMIT_MODE" below for the `barrier` case. Substitute `<EXPECTED_BRANCH>` from Step A;
@@ -384,7 +383,8 @@ different phrasing, both were tried and both either got rejected or misled the b
 A normal dispatch says: "Stage your changes but do NOT commit." THIS DISPATCH IS THE DOCUMENTED
 EXCEPTION - see the COMMITTING section below.
 
-COMMITTING IS PART OF YOUR JOB. You cannot invoke /commit as a skill, so follow this procedure
+COMMITTING IS PART OF YOUR JOB. A builder can load /commit through the Skill tool, but this
+injected procedure is the fixed per-builder sequence the run was set up around, so follow it
 exactly. Do not improvise around it and do not skip a step because the change looks small.
 
 Commit as soon as this work is gated, before you write your report-back. A builder that commits
