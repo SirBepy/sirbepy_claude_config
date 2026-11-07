@@ -620,6 +620,16 @@
         ]
       },
       {
+        "matcher": "^mcp__cc_conductor__.+$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\tecno\\.claude\\hooks\\deferred-tool-blind-call-guard.py\"",
+            "statusMessage": "Checking the Conductor tool schema was loaded"
+          }
+        ]
+      },
+      {
         "matcher": "^(AskUserQuestion|([A-Za-z0-9_]+__)?ask_user_question)$",
         "hooks": [
           {
