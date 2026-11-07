@@ -137,11 +137,12 @@ def closed_this_turn(transcript_path: str) -> bool:
 # (CLAUDE.md, Testing & verification floor). Deliberately narrow: a verb that
 # means "do not" directly in front of "test(s)", so "add tests" never matches.
 _DONT_TEST_RE = re.compile(
-    # The phrase must open a clause, so "Should I skip tests?", "he said don't
-    # test." and "never skip tests" (a negated skip) do not match.
-    r"(?:(?:^|[.!?;,:\n]\s*|(?<!\S)[-*]\s+)"
+    # The phrase must open a clause, so "Should I skip tests?", "Should we just
+    # skip the tests?", "he said please don't test." and "never skip tests" (a
+    # negated skip) do not match. Openers like "just" or "and" count only
+    # directly after the clause start, never in the middle of a sentence.
+    r"(?:^|[.!?;,:\n]\s*|(?<!\S)[-*]\s+)"
     r"(?:(?:also|now|then|so|hey|let'?s|feel free to|there'?s|and|but|please|just|ok|okay)\s+)*"
-    r"|\b(?:and|but|please|just|ok|okay)\s+)"
     r"(?:don'?t|do not|skip|no need to|never run)\s+"
     r"(?:(?:run|running|write|writing|do|doing)\s+)?(?:the\s+|any\s+|more\s+)?tests?"
     # The phrase must end there (optionally after a filler word), so a scoped
