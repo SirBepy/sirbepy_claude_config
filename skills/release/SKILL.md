@@ -18,8 +18,8 @@ The sequence is `skills/commit/SKILL.md`'s "Push pipeline" list, the only place 
 2. Class `unknown` (attended or not): show the resolver's `reason` and stop without pushing. Never ask the card: `ship-config.py set` always refuses class `unknown`. Class `client` with `release: null` (no override yet):
    - Unattended: stop without pushing, "no release mode for <slug>; run /release attended once".
    - Attended: one `ask_user_question` card, options "No bump, push only" / "Patch bump + VERSION commit". Then `ship-config.py set <repo> release=none|patch`, which prints `{"path"}` (exit 2: show its message, stop). Commit that file by pathspec in its own repo: personal, the project repo; client, the ~/.claude repo via `git -C C:/Users/tecno/.claude` (never pushed). Continue.
-3. `release: "none"`: say "/release here is a plain push (release: none)" and run the Push pipeline without 1b and 4b.
-4. `release: "patch"`: run the Push pipeline with 1b and 4b.
+3. `release: "none"`: say "/release here is a plain push (release: none)" and run the Push pipeline without 1b, 4a and 4b.
+4. `release: "patch"`: run the Push pipeline with 1b, 4a and 4b.
 5. After 1b: when the branch has no upstream (`git rev-list --count @{u}..HEAD` errors), say so and offer `git push -u origin <branch>`, same as `/commit`'s push rule; the count check below applies once an upstream exists. When `git rev-list --count @{u}..HEAD` is 0 and `release.py version-diff <repo>` shows nothing pending, print "nothing to release" and stop. A release is never version-only.
 
 ## Gate chat

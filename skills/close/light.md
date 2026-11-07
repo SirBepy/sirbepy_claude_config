@@ -6,6 +6,8 @@ Use when context is already high (~65%+) and you want /close to complete without
 
 ## Phase 1
 
+First, the same "Signal the start first" `close_session` `stage: "started"` call as the main path's Phase 1 (skipped under `--dont-close`, or when the tool has no `stage` parameter).
+
 Same bullets as normal Phase 1, but cap every bullet to 1 sentence max. Skip sub-bullets and examples. Verdict still required. Same print rule applies: only surface it if 1-4 have a real entry.
 
 ## Phase 2
