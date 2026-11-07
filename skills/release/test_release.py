@@ -413,6 +413,15 @@ class PreBumpTest(ReleaseBase):
         self.assertIn("exit 3", out["error"].split(": ", 1)[-1])
         self.assertEqual((Path(r) / "ran.txt").read_text().split(), ["a"])
 
+    def test_a_utf8_bom_does_not_turn_a_first_line_comment_into_a_command(self):
+        # PowerShell 5.1 writes a BOM; read as plain utf-8 it sits in front of the "#" and the
+        # comment line runs as a command that fails, blocking every /release for the repo.
+        r = self.listing("x\n")
+        (Path(r) / ".claude" / "pre-bump.txt").write_bytes(b"\xef\xbb\xbf# a smoke check\r\necho a>>ran.txt\r\n")
+        rc, out = self.release("pre-bump", r)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(out["ran"], ["echo a>>ran.txt"])
+
     def test_runs_from_the_repo_root_even_when_called_from_elsewhere(self):
         r = self.listing("echo here>>ran.txt\n")
         sub = Path(r) / "deep" / "dir"
