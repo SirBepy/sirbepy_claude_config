@@ -39,8 +39,8 @@ CLAUDE.md holds only rules that must be in every session's context, each stated 
 
 2026-11-07 (/loop-todos, unattended; Joe asked for a full draft to review, nothing from it is applied):
 
-**Draft cut list for Joe's review.** 43 items, total 1,588 tokens saved: `CLAUDE.md` 27,017 chars / 6,755 tokens now
-(198 over the 6,558 ceiling) becomes 20,667 chars / 5,167 tokens, i.e. 1,391 tokens of headroom (acceptance asks
+**Draft cut list for Joe's review.** 43 items, total 1,587 tokens saved: `CLAUDE.md` 27,019 chars / 6,755 tokens now
+(197 over the 6,558 ceiling) becomes 20,669 chars / 5,168 tokens, i.e. 1,390 tokens of headroom (acceptance asks
 ~1,000). The list is executable: `.claude/todos/notes/1281-cut-list.py` holds every item's exact start/end anchors
 and replacement text, applies them to an in-memory copy of `CLAUDE.md`, asserts each anchor is unique, and prints
 this table plus the totals (`python -I .claude/todos/notes/1281-cut-list.py`). Line numbers are CLAUDE.md lines as

@@ -320,7 +320,7 @@ pass/fail. Never file bodies, never transcripts.
 ## The injected commit block
 
 This is the deliberate divergence from the delegation doctrine. `/commit` is pure procedure - git
-commands, one awk prefilter, and a marker file - so an agent follows it by hand with no Skill tool at all. Paste the full `refs/builder-preamble.md` block first (unmodified, including its screenshot-id
+commands, one awk prefilter, and a marker file - so a builder can follow it by hand as written. Paste the full `refs/builder-preamble.md` block first (unmodified, including its screenshot-id
 paragraph and its `run_in_background ... FORBIDDEN` line - those two are hook-enforced markers, see
 that file's own note), then append this block verbatim when `COMMIT_MODE = per-builder` (Step A) -
 see "Barrier COMMIT_MODE" below for the `barrier` case. Substitute `<EXPECTED_BRANCH>` from Step A;
