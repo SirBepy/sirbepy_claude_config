@@ -85,6 +85,8 @@ LANDING_CASES = [
     ("echo it's done; /usr/bin/git commit -m x", True, "an earlier unbalanced quote must not hide a path-prefixed git"),
     ("echo it's done && C:/Git/cmd/git.exe commit -m x", True, "an earlier apostrophe before a Windows git.exe path"),
     ("echo it's; ./git commit -m x", True, "a relative ./git after an apostrophe"),
+    ("\"git\" commit -m it's", True, "a double-quoted bare git in the regex fallback"),
+    ("echo it's; & 'git' commit -m x", True, "a single-quoted bare git after the call operator"),
     ("echo 5\" tall; /usr/bin/git commit -m x", True, "an earlier stray double quote before a path-prefixed git"),
     ("sudo git commit -m it's", True, "sudo wrapper in the regex fallback"),
     ("git commit-tree deadbeef -p HEAD -m 'x'", True, "commit-tree alone still creates a commit object"),
