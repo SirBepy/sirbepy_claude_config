@@ -1930,6 +1930,29 @@ out=$("$cp" -C "$r79" --expect-branch "$branch" --expect-sha "$sha" --own-range 
 check "a partial --own-range still refuses a hunk outside it, with no whole-file WARNING" \
   1 'foreign-hunk-check\] REFUSED' 'whole file' "$out" "$rc"
 
+# --- symlinked skills path: ~/.claude-personal/skills is a symlink to ~/.claude/skills
+# and has no refs/ or hooks/ beside it, so a logical $dir sent the local-only-tests lookup to files
+# that do not exist and the repo was refused as "no test in the pathspec". The fake root below has
+# the same shape: skills -> real skills dir, nothing else.
+sym_root=$(mktemp -d); tmp_dirs+=("$sym_root")
+# nativestrict makes MSYS create a real symlink instead of a silent copy; a copy would not
+# reproduce the logical-path problem, so a failed link skips the case rather than passing it.
+if MSYS=winsymlinks:nativestrict ln -s "$script_dir/.." "$sym_root/skills" 2>/dev/null && [ -L "$sym_root/skills" ]; then
+  r90=$(new_listed_repo); tmp_dirs+=("$r90")
+  branch=$(git -C "$r90" rev-parse --abbrev-ref HEAD)
+  sha=$(git -C "$r90" rev-parse HEAD)
+  mkdir -p "$r90/src"
+  printf 'export const x = 1;\n' > "$r90/src/x.ts"
+  printf 'test x\n' > "$r90/src/x.test.ts"
+  out=$(COMMIT_PATHSPEC_SESSION_MARKER_DIR="$solo_marker_dir" bash "$sym_root/skills/commit/commit-pathspec.sh" -C "$r90" \
+    --expect-branch "$branch" --expect-sha "$sha" \
+    -m "src/x.ts only, called through a symlinked skills dir" -- src/x.ts 2>&1); rc=$?
+  check "a local-only-tests repo gets the same verdict when the script is called through a symlinked skills dir (todo 1309)" \
+    0 'coverage-tests-check.*clean.*local-only-tests repo' 'REFUSED' "$out" "$rc"
+else
+  echo "SKIP: todo 1309 - cannot create a native symlink here"
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"
 else

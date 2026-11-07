@@ -13,7 +13,8 @@
 # abort, which step 5a's "no output means clean" contract would read as passing.
 set -uo pipefail
 
-script_dir=$(cd "$(dirname "$0")" && pwd)
+# pwd -P: the ../../hooks lookup below must not depend on a symlinked skills/ path.
+script_dir=$(cd "$(dirname "$0")" && pwd -P)
 # shellcheck disable=SC1091
 . "$script_dir/_prefilter-lib.sh" || { printf 'ERROR: missing prefilter lib: %s/_prefilter-lib.sh\n' "$script_dir"; exit 1; }
 patfile="$script_dir/../../hooks/secret-patterns.txt"
