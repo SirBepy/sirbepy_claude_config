@@ -130,13 +130,19 @@ def _tokenize(command: str) -> list[str] | None:
 
 # `git [global flags] commit|commit-tree`, or a branch-moving update-ref, found by
 # regex when shlex cannot tokenize the command (a lone apostrophe in `-m it's`).
-_QUOTED_OR_BARE = r"(?:\"[^\"]*\"|'[^']*'|\S+)"
+_VALUE = r"(?:[^\s\"';|&]|\"[^\"]*\"|'[^']*')+"
 _UNPARSED_LANDING_RE = re.compile(
-    r"(?<![\w.-])(?:\S*[\\/])?git(?:\.exe)?(?:[ \t]+(?:-[Cc][ \t]+" + _QUOTED_OR_BARE + r"|-\S+))*[ \t]+"
+    r"(?<![\w.-])git(?:\.exe)?[\"']?"
+    r"(?:[ \t]+(?:-[Cc][ \t]+" + _VALUE + r"|--(?:git-dir|work-tree|namespace|exec-path)[ \t]+" + _VALUE + r"|-\S+))*[ \t]+"
     r"(?:commit(?![\w-])|commit-tree(?![\w-])|update-ref(?:[ \t]+-\S+)*[ \t]+(?:HEAD(?![\w/-])|refs/heads/))",
     re.IGNORECASE,
 )
-_ENV_PREFIX_RE = re.compile(r"(?:\b[A-Za-z_]\w*=\S*[ \t]+)+$")
+# Words that run the next word as a command, and VAR=value assignments (the value
+# may hold a quoted space but never a statement terminator).
+_ENV_PREFIX_RE = re.compile(
+    r"(?:(?:env|sudo|time|nohup|command|exec)[ \t]+|\b[A-Za-z_]\w*=" + _VALUE + r"?[ \t]+)+$",
+    re.IGNORECASE,
+)
 
 
 def _unparsed_commit_landing(command: str) -> bool:
@@ -147,11 +153,14 @@ def _unparsed_commit_landing(command: str) -> bool:
     for m in _UNPARSED_LANDING_RE.finditer(command):
         start = m.start()
         if start and command[start - 1] in "\\/":
-            # Tail of a path to git.exe: the token began at the quote opening it
-            # (the path may hold spaces), or at the preceding whitespace.
-            quote = max(command.rfind('"', 0, start), command.rfind("'", 0, start))
-            ws = max(command.rfind(" ", 0, start), command.rfind("\t", 0, start), command.rfind("\n", 0, start))
-            start = quote if quote > ws else ws + 1
+            # Tail of a path to git.exe: the token began at the quote still open
+            # at this point (the path may hold spaces), else at the preceding space.
+            before = command[:start]
+            open_quote = [q for q in ('"', "'") if before.count(q) % 2 == 1]
+            if open_quote:
+                start = before.rfind(open_quote[0])
+            else:
+                start = max(before.rfind(" "), before.rfind("\t"), before.rfind("\n")) + 1
         env = _ENV_PREFIX_RE.search(command[:start])
         if is_command_position(command, env.start() if env else start):
             return True
@@ -163,10 +172,13 @@ def _unparsed_commit_landing(command: str) -> bool:
 # characters is checked on its own, anchored at its start like the token-based
 # check, so a subject that merely discusses the rule stays allowed.
 def raw_attribution_line(command: str) -> str | None:
-    for piece in re.split(r"[\r\n'\"]", command):
-        piece = piece.strip()
-        if _AI_TRAILER_RE.search(piece) or _AI_GENERATED_RE.search(piece):
-            return piece
+    # Real newlines, the escape spellings a shell turns into one (`\n`, `` `n ``),
+    # and a quote-stripped copy so `Co-Authored-By: "Claude"` still reads.
+    for line in re.split(r"[\r\n]|\\r|\\n|`n|`r", command):
+        for piece in (*re.split(r"['\"]", line), line.replace("'", "").replace('"', "")):
+            piece = piece.strip()
+            if _AI_TRAILER_RE.search(piece) or _AI_GENERATED_RE.search(piece):
+                return piece
     return None
 
 
