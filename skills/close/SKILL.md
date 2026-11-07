@@ -145,7 +145,7 @@ No silent-drop path either way - every unfinished item either gets done now, or 
 
 ## Phase 1 - Retrospective
 
-**Signal the start first.** Before anything else here, call `close_session` with `stage: "started"` when that tool exists and its schema lists a `stage` parameter. It only marks the chat Closing and tears nothing down. If the tool has no `stage` parameter (an older host), skip the call: without it the call is the final teardown confirmation, which belongs to Phase 6 alone. In a plain terminal session the tool does not exist, so skip silently.
+**Signal the start first.** Before anything else here, unless `--dont-close` was passed, call `close_session` with `stage: "started"` when that tool exists and its schema lists a `stage` parameter. It only marks the chat Closing and tears nothing down. If the tool has no `stage` parameter (an older host), skip the call: without it the call is the final teardown confirmation, which belongs to Phase 6 alone. In a plain terminal session the tool does not exist, so skip silently.
 
 Scan the full session. Compute all bullets below internally every time - Phase 3 persists from them regardless of whether anything gets printed.
 
@@ -314,7 +314,7 @@ If no chained commands, skip this phase.
 
 **Supervised servers.** If wrapping up this session means stopping any `supervised-run` entry, call `list_peers` first - see that skill's Stop step. A live peer in the same repo may be depending on it as shared infra, not this session's own orphan; default to leaving it running and saying so instead of stopping it. A port still answering a probe after the process dies is not proof anything is alive (2026-09-01, zng-app incident).
 
-If all clear: first, if the `close_session` MCP tool is available (Conductor-hosted session), call it once - this is the host's authoritative teardown confirmation, so the session ends and its process is killed at turn completion. Never call it if any skip condition above applies; skip it silently in a plain terminal session where the tool doesn't exist.
+If all clear: first, if the `close_session` MCP tool is available (Conductor-hosted session), call it once - this is the host's authoritative teardown confirmation, so the session ends and its process is killed at turn completion. Never make this final call if any skip condition above applies (the Phase 1 `stage: "started"` signal is separate and only marks Closing); skip it silently in a plain terminal session where the tool doesn't exist.
 
 **HARD ORDERING RULE:** running the rename/kill script WITHOUT having called `close_session` first, in a session where that tool exists, leaves Conductor chats permanently un-closed - killing the process is MEANINGLESS to the daemon, it respawns the process every turn, so only the tool call actually ends the chat. If `close_session` is in your tool list, the script line below is FORBIDDEN until the tool call has returned.
 
