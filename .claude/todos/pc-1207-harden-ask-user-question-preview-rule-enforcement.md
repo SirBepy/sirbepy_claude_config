@@ -58,15 +58,9 @@ Ideas to evaluate, not prescriptive:
   of the three documented incidents before the card was posted.
 - Does not block/slow down a genuinely real-markup preview.
 
-<!-- loop-skip: dev deferred 2026-10-24 -->
-## Deferred questions
-
-Written by /auto-do-todos on 2026-10-23. Deferred by /loop-todos on 2026-10-24: Jarvis (answering for Joe while he was asleep) picked "you decide"; Claude's 2026-10-24 re-check of the real write target found the fix needs a `hooks/` or `settings.json` write, which prompts for permission, so it waits for an attended session.
-
-- [ ] [TOOLING] Run this todo in an attended session (say which). Its fix writes to `hooks/` or `settings.json`, which `hooks/sensitive-file-guard.py` gates with a permission ask, and the autopilot rules bar a dispatched subagent from those writes, so an unattended loop cannot land it.
-
 ## Notes
 
 This is a cross-project concern (the tool and the rule are global), filed here per CLAUDE.md's
 "work on `~/.claude` itself... always lands in `.claude/todos/`, never in the surfacing project's
 session" rule, even though all three incidents were observed in `claude_usage_in_taskbar` sessions.
+- Deferred question (needs an attended session for its `hooks/`/`settings.json` writes) answered 2026-11-07: Joe said run it now, in the attended 2026-11-07 session; he approves each permission prompt as it appears.

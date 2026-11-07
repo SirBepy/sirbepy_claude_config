@@ -44,14 +44,8 @@ Decided by /auto-do-todos on 2026-10-23.
 
 - [x] [ARCH] Where a demoted memory lives - decided **a demotion-tier subfolder** (the existing convention: any subfolder of the memory dir except `archive/`, e.g. claude-usage-in-taskbar's `cold/`; `rest/` when a dir has none), because reachability.mjs already treated such subfolders as deliberately unindexed, so this reuses one mechanism instead of adding a second.
 
-<!-- loop-skip: dev deferred 2026-10-24 -->
-## Deferred questions
-
-Written by /auto-do-todos on 2026-10-23. Deferred by /loop-todos on 2026-10-24: Jarvis (answering for Joe while he was asleep) deferred both items: global CLAUDE.md wording and its cuts get Joe's own review, and the index cleanup depends on that clause.
-
-- [ ] [TOOLING] Needs an attended session: approve this CLAUDE.md Memory Discipline clause (CLAUDE.md has about 0 tokens of headroom, so `ci/check_instruction_budget.py` needs a trade elsewhere): "Tier exception: a memory file inside a demotion-tier subfolder of its memory dir (any subfolder except `archive/`, e.g. `cold/`, `rest/`) needs no index line and is not an orphan; `/cleanup-memory` moves a file there and deletes its index line in one pass, and `recall.py memory` still finds it." The same clause should also cover a memory carrying `superseded_by:` frontmatter: `refs/memory-rubric.md:17-18` (commit 2aa0a38) already tells Claude to drop a superseded memory's index line while its file stays on disk, which the current CLAUDE.md rule forbids (found by the 2026-10-23 per-commit review).
-- [ ] [DATA] After the clause lands, run `/cleanup-memory` Step 1.7 on the real indexes, attended, since it moves entries out of what every session in that project loads. Dry run 2026-10-23: claude-usage-in-taskbar 29,030 bytes (past the 24.4 KB cut, truncating today), zng-app 22,929, mc-plugins-tag 20,705, all against the 8,192-byte core cap.
-
 ## Notes
 
 - /loop-todos cycle 2, 2026-10-23: tooling half built. `recall.py memory` searches every demotion tier (hits tagged `[cold]`/`[rest]`) and gains `--all-projects`; `reachability.mjs` resolves links into tiers and prints `core index: <bytes> / 8192 bytes [OVER by n]`; `cleanup-memory` SKILL.md gains Step 1.7 (core cap, axiom test, demote into the dir's tier). Tests in test_recall.py and test_reachability.cjs. Not applied to any real memory dir.
+- 2026-11-07: Joe approved the CLAUDE.md Memory Discipline tier-exception clause as written: "Tier exception: a memory file inside a demotion-tier subfolder of its memory dir (any subfolder except `archive/`, e.g. `cold/`, `rest/`) needs no index line and is not an orphan; `/cleanup-memory` moves a file there and deletes its index line in one pass, and `recall.py memory` still finds it." The same clause also covers a memory carrying `superseded_by:` frontmatter (`refs/memory-rubric.md:17-18`). Claude finds the `ci/check_instruction_budget.py` trade elsewhere in CLAUDE.md and shows the cut in the commit.
+- 2026-11-07: Joe said run `/cleanup-memory` Step 1.7 on the real indexes after the clause lands: dry run first, show the moves per index, apply only after his approval on a card. Dry run 2026-10-23: claude-usage-in-taskbar 29,030 bytes, zng-app 22,929, mc-plugins-tag 20,705, against the 8,192-byte core cap.
