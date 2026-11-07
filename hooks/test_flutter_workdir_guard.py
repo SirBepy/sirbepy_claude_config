@@ -212,6 +212,20 @@ CASES = [
         0,
         "a bash -c named only inside an echo is prose, not a wrapper",
     ),
+    # A PowerShell body run from the Bash tool is already PowerShell: the deny message's own fix.
+    ("Bash", 'pwsh -Command "fvm flutter analyze"', 0, "pc-review item 7: pwsh -Command body is not a leading Bash command"),
+    ("Bash", 'powershell -Command "fvm dart test"', 0, "pc-review item 7: powershell -Command body is not a leading Bash command"),
+    ("Bash", 'pwsh -NoProfile -c "fvm flutter test"', 0, "pwsh -NoProfile -c body is not a leading Bash command"),
+    ("Bash", 'cmd /c "fvm flutter test"', 0, "cmd /c body is not a leading Bash command"),
+    ("Bash", 'bash -c "pwsh -Command \'fvm flutter test\'"', 0, "a pwsh body nested in a bash body is still PowerShell"),
+    ("Bash", 'bash -ec "fvm flutter test"', 2, "fvm leading a bash -ec body is still denied"),
+    ("Bash", 'pwsh -Command "echo ok"; fvm flutter test', 2, "a real leading fvm after a pwsh statement is still denied"),
+    (
+        "Bash",
+        'pwsh -Command "dart run build_runner build --delete-conflicting-outputs"',
+        2,
+        "an unpinned destructive build_runner in a pwsh body is still blocked",
+    ),
 ]
 
 # A Git Bash `cd /c/...` pin must reach the same pubspec.yaml check as `cd C:/...`

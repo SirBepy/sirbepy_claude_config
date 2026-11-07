@@ -157,10 +157,13 @@ def main() -> None:
     # Quote-aware split: a `|` inside a quoted grep -E pattern is not a pipeline
     # boundary, so `grep -E "a|flutter"` never yields a segment led by `flutter`.
     # A `bash -c "..."` argument is a command line of its own, so its statements join the scan.
-    segments = with_wrapper_bodies(split_command_segments(command))
+    top_segments = split_command_segments(command)
+    segments = with_wrapper_bodies(top_segments)
 
     if tool_name == "Bash":
-        for segment in segments:
+        # The PATH gap is Bash's own, so a `pwsh -Command "fvm ..."` body (already
+        # PowerShell, exactly where this message sends the command) is not read as Bash.
+        for segment in with_wrapper_bodies(top_segments, skip_non_bash=True):
             tokens = tokenize(segment)
             if tokens and basename(tokens[0]) in BASH_LEADING_BASENAMES:
                 deny(
