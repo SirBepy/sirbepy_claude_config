@@ -1,45 +1,73 @@
 #!/usr/bin/env python3
 """Checks the JSON a dashboard card's command prints, before the card is tested live.
 
-Usage: python <your card script> | python check_card_output.py [--paths a,items[0].name,...]
-       python check_card_output.py out.json [--paths ...]
+Usage: python check_card_output.py --paths days_since,items[].n,sum(items[].n) -- python my_card.py [args]
+       python check_card_output.py out.json --paths ...      (a saved copy of the output)
+       python check_card_output.py - --paths ... < out.json  (stdin)
 
 Why: the dashboard tool answers a wrong path or non-JSON stdout with a "-" value and no error
 (observed 2026-11-07 with `test`), so a broken script looks like a working card with an empty
-reading. This prints exactly what is wrong. Exit 0 = fine, 1 = problems listed one per line.
+reading. This prints exactly what is wrong. Exit 0 = fine, 1 = problems listed one per line,
+2 = could not read or run the input.
 
-Checks: stdout is one JSON object; each `--paths` entry resolves (dotted, `[n]`, `[]` meaning
-the first element of a list); the optional top-level `_card` has only known keys, a headline
-string, a `warn`/`good` tone, a `progress` with numeric value and max above 0, and `segments`
-whose items are numeric and add up to no more than `max`.
+The `-- command` form runs the script itself and decodes its stdout as UTF-8: piping one native
+program into another in PowerShell goes through its text re-encoding layer instead.
+
+Checks: stdout is one JSON object; each `--paths` entry resolves to a non-null value (dotted,
+`[n]`, `[]` mapping over every element of a list, `sum(<path>)` over numbers); the optional
+top-level `_card` has only known keys, a headline string, a `warn`/`good` tone, a `progress` with
+numeric value and max above 0, and `segments` whose items are non-negative numbers. Two checks
+are sanity rules of this script, not behaviour probed in the tool: progress value above max and
+segment values adding up to more than max.
 """
 
 import argparse
 import json
 import re
+import subprocess
 import sys
 
 TONES = ("warn", "good")
 CARD_KEYS = {"headline", "headline_tone", "progress", "segments"}
 TOKEN = re.compile(r"\[(\d*)\]|([^.\[\]]+)")
+SUM = re.compile(r"^sum\((.+)\)$")
+
+
+def _walk(cur, tokens):
+    """Yields every value a path reaches; `[]` fans out over all elements of a list."""
+    if not tokens:
+        yield cur
+        return
+    (index, name), rest = tokens[0], tokens[1:]
+    if name:
+        if isinstance(cur, dict) and name in cur:
+            yield from _walk(cur[name], rest)
+    elif isinstance(cur, list):
+        if index == "":
+            for item in cur:
+                yield from _walk(item, rest)
+        elif int(index) < len(cur):
+            yield from _walk(cur[int(index)], rest)
 
 
 def resolve(data, path: str):
-    """Returns (found, value) for a dotted path with [n] / [] steps."""
-    cur = data
-    for index, name in TOKEN.findall(path):
-        if name:
-            if not isinstance(cur, dict) or name not in cur:
-                return False, None
-            cur = cur[name]
-        else:
-            if not isinstance(cur, list):
-                return False, None
-            i = int(index) if index else 0
-            if i >= len(cur):
-                return False, None
-            cur = cur[i]
-    return True, cur
+    """Returns (found, value). A null value counts as not found: the card shows '-' for it.
+
+    A path with `[]` returns the list of values it reached; `sum(...)` returns their total.
+    """
+    m = SUM.match(path)
+    inner = m.group(1) if m else path
+    tokens = TOKEN.findall(inner)
+    values = [v for v in _walk(data, tokens) if v is not None]
+    if m:
+        # The tool sums a plain list too (probed 2026-11-07: sum(items) of [1,2,3] shows 6).
+        values = [x for v in values for x in (v if isinstance(v, list) else [v])]
+        if not values or not all(is_num(v) for v in values):
+            return False, None
+        return True, sum(values)
+    if not values:
+        return False, None
+    return True, values if any(i == "" and not n for i, n in tokens) else values[0]
 
 
 def is_num(v) -> bool:
@@ -60,6 +88,8 @@ def check_card(card) -> list:
             problems.append("_card.progress needs numeric value and max")
         elif prog["max"] <= 0:
             problems.append("_card.progress.max must be above 0")
+        elif prog["value"] > prog["max"]:
+            problems.append("_card.progress.value is above max, so the bar overfills")
     seg = card.get("segments")
     if seg is not None:
         items = seg.get("items") if isinstance(seg, dict) else None
@@ -71,6 +101,8 @@ def check_card(card) -> list:
             bad = [i for i, it in enumerate(items) if not isinstance(it, dict) or not is_num(it.get("value")) or "label" not in it]
             if bad:
                 problems.append(f"_card.segments.items[{bad[0]}] needs a label and a numeric value")
+            elif any(it["value"] < 0 for it in items):
+                problems.append("_card.segments item values must not be negative")
             elif sum(it["value"] for it in items) > seg["max"]:
                 problems.append("_card.segments item values add up to more than max, so the bar overflows")
         if isinstance(seg, dict) and seg.get("note_tone") not in (None, *TONES):
@@ -85,21 +117,36 @@ def check(text: str, paths: list) -> list:
         return [f"stdout is not a single JSON document ({e}); anything else printed (logs, a banner) must go to stderr"]
     if not isinstance(data, dict):
         return ["top level must be a JSON object, not " + type(data).__name__]
-    problems = [f"path {p!r} does not resolve in the output (the card would show '-')" for p in paths if not resolve(data, p)[0]]
+    problems = [f"path {p!r} has no non-null value in the output (the card would show '-')" for p in paths if not resolve(data, p)[0]]
     if "_card" in data:
         problems += check_card(data["_card"])
     return problems
 
 
 def main(argv=None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    command = []
+    if "--" in argv:
+        i = argv.index("--")
+        argv, command = argv[:i], argv[i + 1:]
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("file", nargs="?", default="-", help="JSON file, or - for stdin (default)")
+    ap.add_argument("file", nargs="?", default=None, help="JSON file, or - for stdin; omit when using -- command")
     ap.add_argument("--paths", default="", help="comma-separated display paths that must resolve")
     args = ap.parse_args(argv)
     try:
-        text = sys.stdin.read() if args.file == "-" else open(args.file, encoding="utf-8").read()
-    except OSError as e:
-        print(f"check_card_output: cannot read {args.file}: {e}", file=sys.stderr)
+        if command:
+            run = subprocess.run(command, capture_output=True, timeout=120)
+            if run.returncode != 0:
+                print(f"PROBLEM: command exited {run.returncode}: {run.stderr.decode('utf-8', 'replace').strip()}")
+                return 1
+            text = run.stdout.decode("utf-8")
+        elif args.file in (None, "-"):
+            text = sys.stdin.buffer.read().decode("utf-8")
+        else:
+            with open(args.file, encoding="utf-8") as f:
+                text = f.read()
+    except (OSError, ValueError, subprocess.SubprocessError) as e:
+        print(f"check_card_output: cannot read the card output: {e}", file=sys.stderr)
         return 2
     paths = [p.strip() for p in args.paths.split(",") if p.strip()]
     problems = check(text, paths)

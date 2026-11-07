@@ -45,7 +45,7 @@ check(problems({"n": 1}) == [], "a card without _card passes")
 check("not a single JSON document" in problems("Loading...\n{}")[0], "log noise before the JSON is named")
 check("not a single JSON document" in problems("")[0], "empty stdout is named")
 check("top level" in problems([1, 2])[0], "a top-level list is rejected")
-check("'missing' does not resolve" in problems({"n": 1}, ["missing"])[0], "unresolved path is named")
+check("'missing' has no non-null value" in problems({"n": 1}, ["missing"])[0], "unresolved path is named")
 check(problems({"items": []}, ["items[0].name"]) != [], "[0] on an empty list does not resolve")
 check(problems({"n": 1}, ["n.deeper"]) != [], "descending into a number does not resolve")
 
@@ -58,7 +58,16 @@ check("segments.items" in problems({"_card": {"segments": {"items": [], "max": 1
 check("note_tone" in problems({"_card": {"segments": {"items": [{"label": "a", "value": 1}], "max": 2, "note_tone": "bad"}}})[0], "bad note_tone rejected")
 
 check(cc.resolve({"a": [{"b": 5}]}, "a[0].b") == (True, 5), "resolve follows [n]")
-check(cc.resolve({"a": [{"b": 5}]}, "a[].b") == (True, 5), "resolve treats [] as the first element")
+check(cc.resolve({"a": [{"b": 5}, {"c": 1}, {"b": 7}]}, "a[].b") == (True, [5, 7]), "[] maps over every element, skipping ones without the key")
+check(cc.resolve({"a": [{"c": 1}, {"b": 7}]}, "a[].b") == (True, [7]), "[] finds a key present only in a later element")
+check(cc.resolve({"a": []}, "a[].b") == (False, None), "[] over an empty list is not found")
+check(cc.resolve({"a": None}, "a") == (False, None), "a null value counts as not found, the card shows '-'")
+check(cc.resolve({"items": [1, 2, 3]}, "sum(items[])") == (True, 6) and cc.resolve({"items": [{"n": 2}, {"n": 5}]}, "sum(items[].n)") == (True, 7), "sum() totals a mapped path")
+check(cc.resolve({"items": [1, 2, 3]}, "sum(items)") == (True, 6), "sum() of a plain list totals it, as the tool does")
+check(cc.resolve({"items": ["x"]}, "sum(items[])") == (False, None), "sum() over non-numbers is not found")
+check(problems({"items": [{"n": 2}]}, ["sum(items[].n)", "items[].n"]) == [], "sum() and [] paths pass the checker")
+check("progress.value is above max" in problems({"_card": {"progress": {"value": 20, "max": 10}}})[0], "progress above max reported")
+check("must not be negative" in problems({"_card": {"segments": {"items": [{"label": "a", "value": -3}, {"label": "b", "value": 9}], "max": 10}}})[0], "negative segment value reported")
 
 with tempfile.TemporaryDirectory() as tmp:
     f = Path(tmp) / "out.json"
@@ -74,9 +83,35 @@ with tempfile.TemporaryDirectory() as tmp:
     check(code == 2, "unreadable file exits 2")
 
     # Stdin is the documented way to use it, so run it as a real subprocess once.
-    run = subprocess.run([sys.executable, str(HERE / "check_card_output.py"), "--paths", "n"],
-                         input=json.dumps(good), capture_output=True, text=True)
-    check(run.returncode == 0 and run.stdout.strip() == "OK", "stdin pipe works end to end")
+    run = subprocess.run([sys.executable, str(HERE / "check_card_output.py"), "-", "--paths", "n"],
+                         input=json.dumps(good).encode("utf-8"), capture_output=True)
+    check(run.returncode == 0 and run.stdout.decode().strip() == "OK", "stdin works end to end")
+
+    script = Path(tmp) / "card.py"
+    script.write_text(
+        "import json, sys\n"
+        "sys.stdout.buffer.write(json.dumps({'name': 'caf\\u00e9'}, ensure_ascii=False).encode('utf-8'))\n",
+        encoding="utf-8",
+    )
+    with contextlib.redirect_stdout(io.StringIO()) as out:
+        code = cc.main(["--paths", "name", "--", sys.executable, str(script)])
+    check(code == 0 and out.getvalue().strip() == "OK", "-- command runs the script and decodes UTF-8 output")
+    with contextlib.redirect_stdout(io.StringIO()) as out:
+        code = cc.main(["--paths", "nope", "--", sys.executable, str(script)])
+    check(code == 1 and "PROBLEM" in out.getvalue(), "-- command with a missing path exits 1")
+    failing = Path(tmp) / "fail.py"
+    failing.write_text("import sys\nprint('boom', file=sys.stderr)\nsys.exit(3)\n", encoding="utf-8")
+    with contextlib.redirect_stdout(io.StringIO()) as out:
+        code = cc.main(["--", sys.executable, str(failing)])
+    check(code == 1 and "exited 3: boom" in out.getvalue(), "-- command that fails reports its exit code and stderr")
+    with contextlib.redirect_stderr(io.StringIO()):
+        code = cc.main(["--", "no-such-program-xyz"])
+    check(code == 2, "-- command that cannot start exits 2")
+    binary = Path(tmp) / "bin.json"
+    binary.write_bytes(bytes([0xff, 0xfe]) + b"{}")
+    with contextlib.redirect_stderr(io.StringIO()):
+        code = cc.main([str(binary)])
+    check(code == 2, "non-UTF-8 file exits 2 without a traceback")
 
 print(f"\n{len(failures)} failure(s)" if failures else "\nall passed")
 sys.exit(1 if failures else 0)
