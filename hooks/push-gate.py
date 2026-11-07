@@ -196,6 +196,40 @@ def all_pushes_delete_only(command: str) -> bool:
     return all(is_delete_only(args) for args in pushes)
 
 
+def is_dry_run(args: list[str]) -> bool:
+    """True when the push args (tokens after `push`) carry `--dry-run` or a short cluster with
+    `n` (`-n`, `-nv`), so the push sends nothing. A value flag's operand is skipped, so
+    `--push-option -n` is a server option and not a dry run."""
+    i = 0
+    while i < len(args):
+        tok = args[i]
+        i += 1
+        if tok == "--dry-run":
+            return True
+        if tok.startswith("--"):
+            if tok.split("=", 1)[0] in VALUE_LONG_FLAGS and "=" not in tok:
+                i += 1
+        elif tok.startswith("-") and len(tok) > 1 and set(tok[1:]) <= SHORT_FLAG_CHARS and "n" in tok[1:]:
+            return True
+        elif tok == "-o":
+            i += 1
+    return False
+
+
+def all_pushes_upload_nothing(command: str) -> bool:
+    """True when every `git push` in `command` is delete-only or a dry run, with the same
+    accounting as all_pushes_delete_only: a `push` word the segment walk cannot see keeps
+    the command a real push."""
+    pushes = []
+    for segment in split_gate_segments(command):
+        is_push, _dash_c, args = _git_push_walk(_tokenize_segment(segment))
+        if is_push:
+            pushes.append(args)
+    if not pushes or len(pushes) != len(PUSH_WORD_RE.findall(command)):
+        return False
+    return all(is_delete_only(args) or is_dry_run(args) for args in pushes)
+
+
 def git_dash_c_path(command: str) -> str | None:
     """The `-C <path>` attached to the specific `git ... push` invocation in
     `command`, if any - never an earlier, unrelated `git -C` call in the same
@@ -345,7 +379,7 @@ def transcript_evidence(transcript_path) -> tuple[set[str], bool] | None:
                     if block.get("name") not in ("Bash", "PowerShell"):
                         continue
                     command = (block.get("input") or {}).get("command") or ""
-                    if isinstance(command, str) and detector(command) and not all_pushes_delete_only(command):
+                    if isinstance(command, str) and detector(command) and not all_pushes_upload_nothing(command):
                         push_ids[block.get("id") or ""] = i
             elif entry.get("type") == "user" and isinstance(content, list):
                 for block in content:

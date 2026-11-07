@@ -276,6 +276,19 @@ with tempfile.TemporaryDirectory() as tmp:
     denied_then_mark = [user_prompt("x")] + skill("t1", "test") + skill("t2", "e2e") + push("p1", False)
     expect("a denied push does not erase the skills loaded for it", run_mark(node, reason, denied_then_mark)[::2], (0, True))
 
+    # pc-review item 14: a push that sends nothing is not the boundary the skills must follow.
+    def pushed_with(command: str) -> list:
+        return [tool_use("p9", "Bash", command=command), tool_result("p9", "Everything up-to-date")]
+
+    loaded = [user_prompt("x")] + skill("t1", "test") + skill("t2", "e2e")
+    for dry in ("git push --dry-run", "git push -n origin main", "git push origin main --dry-run", "git push -nv origin main",
+                "git -C /some/repo push --dry-run origin main", "git push --dry-run --force-with-lease origin main",
+                "git push --dry-run origin main 2>&1", "git push --dry-run && git push -n"):
+        expect(f"a dry-run push is not the boundary: {dry}", run_mark(node, reason, loaded + pushed_with(dry))[::2], (0, True))
+    for real in ("git push", "git push origin main", "git push --dry-run && git push origin main", "git push -n; git push",
+                 "git push --push-option -n origin main", "git push -o -n origin main"):
+        expect(f"a real push still is the boundary: {real}", run_mark(node, reason, loaded + pushed_with(real))[::2], (2, False))
+
     after_push = old + skill("t3", "test") + skill("t4", "e2e")
     expect("skills loaded again after the push count", run_mark(node, reason, after_push)[::2], (0, True))
 
