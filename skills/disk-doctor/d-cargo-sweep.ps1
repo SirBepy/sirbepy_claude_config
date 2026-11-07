@@ -17,7 +17,9 @@
 #   D  superseded variants of OUR OWN test/lib binaries in debug\deps: for each crate named in
 #      claude_usage_in_taskbar\src-tauri\tests\*.rs (plus the four conductor crates), every
 #      <crate>-<hash>.{pdb,exe,d,o} whose hash is not the newest for that crate and whose newest
-#      artifact is older than -ObjDays. .rlib/.rmeta/.lib/.dll are never touched. Rebuild cost only.
+#      artifact is older than -ObjDays. The newest hash that has an .exe or .pdb is kept too, so a
+#      later metadata-only hash cannot cost the crate its only runnable binary.
+#      .rlib/.rmeta/.lib/.dll are never touched. Rebuild cost only.
 #   E  D:\cargo-target\loop1025-target, a finished one-off Claude Conductor build from 2026-10-25
 #      with no references, process or schedule (checked 2026-11-04). Skipped if touched within 7 days.
 #
@@ -40,6 +42,7 @@ param(
 )
 
 $ErrorActionPreference = 'Continue'
+. (Join-Path $PSScriptRoot 'd-cargo-sweep-lib.ps1')
 # powershell -File hands "-Tiers B,C,D" over as one string, so split it back into tiers.
 $Tiers = @($Tiers | ForEach-Object { $_ -split '[,\s]+' } | Where-Object { $_ })
 $root = 'D:\cargo-target'
@@ -153,29 +156,7 @@ if ($Tiers -contains 'D' -and $depFiles) {
     Get-ChildItem $testsDir -Filter *.rs -File | ForEach-Object { [void]$own.Add($_.BaseName) }
   }
   foreach ($n in @('claude_conductor_lib', 'cc_conductor_daemon', 'claude_conductor', 'conductor_mobile_lib')) { [void]$own.Add($n) }
-  # Group by crate + 16-hex hash. A hash's age is its newest NON-.o file, so a variant that was just
-  # linked is never mistaken for an old one because of stale object files.
-  $units = @{}
-  foreach ($f in $depFiles) {
-    if ($f.Name -notmatch '^(?<crate>[A-Za-z0-9_]+)-(?<hash>[0-9a-f]{16})\.(?<rest>.+)$') { continue }
-    if (-not $own.Contains($Matches['crate'])) { continue }
-    $k = $Matches['crate'] + '-' + $Matches['hash']
-    if (-not $units.ContainsKey($k)) {
-      $units[$k] = [PSCustomObject]@{ Crate = $Matches['crate']; Newest = [datetime]::MinValue; Files = (New-Object System.Collections.ArrayList) }
-    }
-    [void]$units[$k].Files.Add($f)
-    if ($f.Name -notlike '*.o' -and $f.LastWriteTime -gt $units[$k].Newest) { $units[$k].Newest = $f.LastWriteTime }
-  }
-  $del = New-Object System.Collections.ArrayList
-  foreach ($grp in ($units.Values | Group-Object Crate)) {
-    $sorted = @($grp.Group | Sort-Object Newest -Descending)
-    for ($i = 1; $i -lt $sorted.Count; $i++) {   # index 0 is the newest variant: always kept
-      if ($sorted[$i].Newest -ge $objCut) { continue }
-      foreach ($f in $sorted[$i].Files) {
-        if ($f.Name -match '\.(pdb|exe|d|o)$') { [void]$del.Add($f) }
-      }
-    }
-  }
+  $del = @(Get-TierDDeletions -DepFiles $depFiles -Own $own -ObjCut $objCut)
   [void]$filePlan.Add([PSCustomObject]@{
     Tier = 'D'; Files = @($del | ForEach-Object { $_.FullName }); Count = $del.Count
     GB = [math]::Round((($del | Measure-Object Length -Sum).Sum) / 1GB, 2) })
@@ -229,7 +210,7 @@ foreach ($t in @('C', 'D')) {
   foreach ($path in $set.Files) {
     $n++
     if ($n % 200 -eq 0) { Stop-IfBuilding }
-    if (-not $path.StartsWith($deps + '\')) { $fail++; continue }   # never leave debug\deps
+    if (-not $path.StartsWith($deps + '\', [StringComparison]::OrdinalIgnoreCase)) { $fail++; continue }   # never leave debug\deps
     try { [System.IO.File]::Delete($path); if (-not (Test-Path -LiteralPath $path)) { $ok++ } else { $fail++ } }
     catch { $fail++ }
   }

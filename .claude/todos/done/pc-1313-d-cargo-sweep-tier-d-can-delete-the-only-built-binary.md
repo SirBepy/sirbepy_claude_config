@@ -27,3 +27,7 @@ Make a unit eligible as the kept index 0 only if it has an `.exe` or `.pdb`; or 
 
 - A crate whose newest hash is `.d`-only keeps its newest `.exe`/`.pdb` hash in a preview run (`d-cargo-sweep.ps1 -Tiers D`, no `-Apply`).
 - A normal crate still has all older variants listed for deletion.
+
+## Notes
+
+- fixed: tier D selection moved to d-cargo-sweep-lib.ps1 Get-TierDDeletions; keeps the newest hash overall plus the newest hash carrying an .exe/.pdb. Test skills/disk-doctor/test_d_cargo_sweep.ps1 (fake deps dir; red with the old keep rule). Whether the real D: deps dir has a metadata-only newest hash was not checked (listing is minutes on the HDD, verify only). Also did the 1312 optional StartsWith OrdinalIgnoreCase.
