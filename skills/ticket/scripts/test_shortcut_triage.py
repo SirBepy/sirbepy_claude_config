@@ -5,6 +5,8 @@ ticket content. Picked up by ci/run_all.py's discover_skill_tests() glob for
 skills/**/test_*.py beside its script.
 """
 
+import contextlib
+import io
 import json
 import os
 import sys
@@ -357,6 +359,99 @@ class TestCmdDossierIntegration(unittest.TestCase):
             with open(out_path, encoding="utf-8") as f:
                 written = json.load(f)
             self.assertEqual(written["owners"], ["alice"])
+
+
+STATES_WORKFLOWS = [{"name": "ENG", "states": [{"id": 500, "name": "To Do"}, {"id": 501, "name": "Testing"}]}]
+STATES_MEMBERS = [
+    {"id": "m1", "profile": {"mention_name": "alice"}},
+    {"id": "m2", "profile": {"mention_name": "bob"}},
+]
+WITH_COMMENTS = {
+    "id": 201, "name": "Has comments", "workflow_state_id": 501, "blocked": True, "epic_id": 9,
+    "owner_ids": ["m1", "m2"], "updated_at": "2026-11-01T10:00:00Z",
+    "comments": [
+        {"created_at": "2026-10-30T09:00:00Z", "author_id": "m1", "text": "older note"},
+        {"created_at": "2026-11-01T09:30:00Z", "author_id": "m2", "text": "x" * 300},
+        {"created_at": "2026-11-02T00:00:00Z", "author_id": "m1", "text": "deleted one", "deleted": True},
+    ],
+}
+NO_COMMENTS = {
+    "id": 202, "name": "Quiet", "workflow_state_id": 500, "blocked": False, "epic_id": None,
+    "owner_ids": [], "updated_at": "2026-10-01T00:00:00Z", "comments": [],
+}
+
+
+def fake_api(stories):
+    """Stub for shortcut_triage.api_call: serves the lookups and `stories`, 404 for the rest."""
+    calls = []
+
+    def api(method, path, token, body=None, timeout=30):
+        calls.append((method, path))
+        if path == "/api/v3/workflows":
+            return STATES_WORKFLOWS
+        if path == "/api/v3/members":
+            return STATES_MEMBERS
+        sid = int(path.rsplit("/", 1)[1])
+        if sid in stories:
+            return stories[sid]
+        raise st.urllib.error.HTTPError(path, 404, "Not Found", {}, io.BytesIO())
+
+    api.calls = calls
+    return api
+
+
+class TestStates(unittest.TestCase):
+    def run_states(self, argv, stories):
+        api = fake_api(stories)
+        out = io.StringIO()
+        with mock.patch.object(st, "api_call", api), mock.patch.object(st, "read_token", return_value="t"), \
+                contextlib.redirect_stdout(out):
+            rc = st.main(["states", *argv])
+        return rc, out.getvalue(), api
+
+    def test_story_with_comments_shows_state_owners_and_last_live_comment(self):
+        rc, out, _ = self.run_states(["201"], {201: WITH_COMMENTS})
+        self.assertEqual(rc, 0)
+        header, comment = out.strip().splitlines()
+        self.assertEqual(
+            header,
+            "sc-201 | Testing | blocked=True | epic=9 | owners=@alice,@bob | upd=2026-11-01T10:00:00Z | Has comments",
+        )
+        self.assertTrue(comment.startswith("  last comment 2026-11-01T09:30:00Z @bob: xxxx"))
+        self.assertTrue(comment.endswith("..."))
+        self.assertNotIn("deleted one", out)
+
+    def test_comments_flag_shows_more_in_order(self):
+        _, out, _ = self.run_states(["201", "--comments", "2"], {201: WITH_COMMENTS})
+        self.assertEqual(len(out.strip().splitlines()), 3)
+        self.assertLess(out.index("older note"), out.index("xxxx"))
+
+    def test_story_without_comments_prints_only_the_header(self):
+        rc, out, _ = self.run_states(["sc-202"], {202: NO_COMMENTS})
+        self.assertEqual(rc, 0)
+        self.assertEqual(out.strip(), "sc-202 | To Do | blocked=False | epic=- | owners=- | upd=2026-10-01T00:00:00Z | Quiet")
+
+    def test_unknown_id_prints_the_status_keeps_going_and_exits_one(self):
+        rc, out, _ = self.run_states(["999", "202"], {202: NO_COMMENTS})
+        self.assertEqual(rc, 1)
+        lines = out.strip().splitlines()
+        self.assertEqual(lines[0], "sc-999 | HTTP 404")
+        self.assertTrue(lines[1].startswith("sc-202 | To Do"))
+
+    def test_only_get_requests_and_lookups_fetched_once(self):
+        _, _, api = self.run_states(["201", "202"], {201: WITH_COMMENTS, 202: NO_COMMENTS})
+        self.assertEqual({m for m, _ in api.calls}, {"GET"})
+        self.assertEqual(sum(1 for _, p in api.calls if p == "/api/v3/workflows"), 1)
+        self.assertEqual(sum(1 for _, p in api.calls if p == "/api/v3/members"), 1)
+
+    def test_json_flag_prints_raw_stories(self):
+        _, out, _ = self.run_states(["202", "--json"], {202: NO_COMMENTS})
+        self.assertEqual(json.loads(out)[0]["id"], 202)
+
+    def test_non_numeric_id_is_refused(self):
+        with self.assertRaises(ValueError):
+            st.parse_story_id("abc")
+        self.assertEqual(st.parse_story_id("SC-56598"), 56598)
 
 
 if __name__ == "__main__":

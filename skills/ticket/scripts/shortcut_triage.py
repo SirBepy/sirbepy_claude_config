@@ -20,6 +20,9 @@ Subcommands:
     batch       group rendered markdown dossiers into size-capped batch files
     consensus   merge N judge verdict files into a vote tally or a
                 per-key median (e.g. estimate_hours)
+    states      one line per story id (state, blocked, epic, owners,
+                updated, name) plus its latest comment; the ad hoc read,
+                writes no files
 """
 
 import argparse
@@ -447,6 +450,77 @@ def cmd_consensus(args):
 
 
 # ---------------------------------------------------------------------------
+# states (one-shot ad hoc read, no files)
+# ---------------------------------------------------------------------------
+
+COMMENT_PREVIEW_CHARS = 120
+
+
+def parse_story_id(raw):
+    """`56598`, `sc-56598` and `SC-56598` all name story 56598."""
+    text = str(raw).strip().lower()
+    if text.startswith("sc-"):
+        text = text[3:]
+    if not text.isdigit():
+        raise ValueError(f"not a story id: {raw!r}")
+    return int(text)
+
+
+def format_story_state(story, states, members, n_comments=1):
+    """Lines for one story: a header line, then its last `n_comments` live comments.
+
+    `states` maps workflow_state_id -> state name, `members` maps member id ->
+    mention name; an id missing from either prints raw rather than failing.
+    """
+    owners = ",".join(f"@{members.get(o, o)}" for o in story.get("owner_ids", [])) or "-"
+    header = (
+        f"sc-{story['id']} | {states.get(story.get('workflow_state_id'), story.get('workflow_state_id'))}"
+        f" | blocked={bool(story.get('blocked'))} | epic={story.get('epic_id') or '-'}"
+        f" | owners={owners} | upd={story.get('updated_at') or '-'} | {story.get('name')}"
+    )
+    lines = [header]
+    live = [c for c in story.get("comments", []) if not c.get("deleted")]
+    live.sort(key=lambda c: c.get("created_at") or "")
+    for c in live[-n_comments:] if n_comments > 0 else []:
+        text = " ".join((c.get("text") or "").split())
+        if len(text) > COMMENT_PREVIEW_CHARS:
+            text = text[:COMMENT_PREVIEW_CHARS] + "..."
+        author = members.get(c.get("author_id"), c.get("author_id") or "-")
+        lines.append(f"  last comment {c.get('created_at') or '-'} @{author}: {text}")
+    return lines
+
+
+def cmd_states(args):
+    ids = [parse_story_id(i) for i in args.ids]
+    token = read_token()
+    states = {
+        s["id"]: s["name"]
+        for wf in api_call("GET", "/api/v3/workflows", token)
+        for s in wf["states"]
+    }
+    members = {
+        m["id"]: m["profile"]["mention_name"]
+        for m in api_call("GET", "/api/v3/members", token)
+    }
+    failed = False
+    out = []
+    for sid in ids:
+        try:
+            story = api_call("GET", f"/api/v3/stories/{sid}", token)
+        except urllib.error.HTTPError as e:
+            print(f"sc-{sid} | HTTP {e.code}")
+            failed = True
+            continue
+        if args.json:
+            out.append(story)
+        else:
+            print("\n".join(format_story_state(story, states, members, args.comments)))
+    if args.json:
+        print(json.dumps(out, indent=2))
+    return 1 if failed else 0
+
+
+# ---------------------------------------------------------------------------
 # plumbing
 # ---------------------------------------------------------------------------
 
@@ -500,6 +574,12 @@ def build_parser():
     p_consensus.add_argument("--key-field", dest="key_field", default="key")
     p_consensus.add_argument("--out", default=None)
     p_consensus.set_defaults(func=cmd_consensus)
+
+    p_states = sub.add_parser("states", help="print state, blocked, epic, owners and last comment per story id")
+    p_states.add_argument("ids", nargs="+", help="story ids, with or without an sc- prefix")
+    p_states.add_argument("--comments", type=int, default=1, help="how many of the latest comments to show (default 1)")
+    p_states.add_argument("--json", action="store_true", help="print the raw story objects instead of one line each")
+    p_states.set_defaults(func=cmd_states)
 
     return parser
 
