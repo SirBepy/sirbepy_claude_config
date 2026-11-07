@@ -741,8 +741,8 @@ def build_executor_regex(names: str = _EXECUTOR_NAMES) -> re.Pattern:
     # word, so `sudo git -C /x/node commit` leaves `git` unskipped and `node` is not at command position.
     start = (
         r"(?:^|[|;&({\[`!]|\b(?:then|do|else)\b"
-        r"|\b(?:sudo|doas|su|env|exec|time|nohup|nice|ionice|timeout|setsid|stdbuf|busybox|wsl|xargs)\s+"
-        r"(?:(?:-[ugCUDRTphniec]\s+\S+|-\S+|\d+[smhd]?|\w+=\S*)\s+){0,6})"
+        r"|\b(?:sudo|doas|su|env|exec|time|nohup|nice|ionice|timeout|setsid|stdbuf|busybox|wsl|xargs)(?:\.exe)?\s+"
+        r"(?:(?:-[ugCUDRTphniecs]\s+\S+|-\S+|\d+[smhd]?|\w+=\S*)\s+){0,6})"
     )
     return re.compile(
         start + r"[ \t]*(?:\w+=\S*[ \t]+)*[\"']?(?:[^\s|;&()`\"']*[/\\])?(?:" + names + r")(?:\.exe)?[\"']?(?![\w.:/\\-])"
