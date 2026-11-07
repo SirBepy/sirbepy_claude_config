@@ -14,7 +14,8 @@ Frontmatter a memory file may carry (top level, block form):
 A path glob without a leading "/" or drive letter or "**" matches any path
 whose tail it matches ("auth/*.ts" matches "C:/x/src/auth/a.ts"); "**"
 crosses directories, "*" and "?" do not. Matching is case-insensitive and
-slash-agnostic. A skill trigger matches the Skill tool's `skill` argument.
+slash-agnostic; `{a,b}` is an alternation. A skill trigger matches the Skill tool's
+`skill` argument, or a `/name` token in an Agent prompt (never the bare word).
 A repo trigger matches the name of the git repo root above the tool call's
 cwd, on any covered tool.
 
@@ -151,11 +152,32 @@ def _strip_quotes(s: str) -> str:
     return s
 
 
+def _split_list_items(inner: str) -> list[str]:
+    """Split on commas that sit outside quotes and outside a glob's `{a,b}` braces."""
+    items, cur, depth, quote = [], [], 0, ""
+    for c in inner:
+        if quote:
+            if c == quote:
+                quote = ""
+        elif c in "\"'":
+            quote = c
+        elif c == "{":
+            depth += 1
+        elif c == "}":
+            depth = max(0, depth - 1)
+        elif c == "," and depth == 0:
+            items.append("".join(cur))
+            cur = []
+            continue
+        cur.append(c)
+    items.append("".join(cur))
+    return items
+
+
 def _inline_list(value: str) -> list[str]:
     value = value.strip()
     if value.startswith("[") and value.endswith("]"):
-        inner = value[1:-1]
-        return [_strip_quotes(p) for p in inner.split(",") if _strip_quotes(p)]
+        return [s for s in (_strip_quotes(p) for p in _split_list_items(value[1:-1])) if s]
     return [_strip_quotes(value)] if value else []
 
 
@@ -237,6 +259,7 @@ def glob_to_regex(glob: str) -> str:
     anchored = g.startswith("/") or g.startswith("**") or re.match(r"^[a-z]:/", g) is not None
     out = []
     i = 0
+    depth = 0
     while i < len(g):
         if g.startswith("**/", i):
             out.append("(?:.*/)?")
@@ -249,6 +272,17 @@ def glob_to_regex(glob: str) -> str:
             i += 1
         elif g[i] == "?":
             out.append("[^/]")
+            i += 1
+        elif g[i] == "{" and "}" in g[i + 1:]:
+            depth += 1
+            out.append("(?:")
+            i += 1
+        elif g[i] == "," and depth:
+            out.append("|")
+            i += 1
+        elif g[i] == "}" and depth:
+            depth -= 1
+            out.append(")")
             i += 1
         else:
             out.append(re.escape(g[i]))
@@ -418,8 +452,13 @@ def match_entries(table: dict, tool_name: str, tool_input: dict, cwd: str) -> li
             matched = True
         if not matched and skill_names and any(s in skill_names for s in entry["skills"]):
             matched = True
+        # An Agent prompt names a skill as `/name` (or `/plugin:name`). The bare word is not a
+        # signal: every dispatch preamble says "commit", so a word match fired and retired
+        # commit-skill memories on the first dispatch of every session. The lookbehind keeps a
+        # path segment (`skills/name`, `C:\x\name`, `http://h/name`) from reading as a token.
         if not matched and sig["text"] and any(
-            re.search(r"(?<![\w-])" + re.escape(s) + r"(?![\w-])", sig["text"]) for s in entry["skills"]
+            re.search(r"(?<![\w/\\:.-])/(?:[\w-]+:)?" + re.escape(s) + r"(?![\w/\\-])", sig["text"])
+            for s in entry["skills"]
         ):
             matched = True
         if not matched and sig["paths"] and any(
