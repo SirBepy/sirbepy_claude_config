@@ -24,3 +24,7 @@ In `skills/brainstorm/SKILL.md`, add a stop-word list beside step 6's go-words: 
 
 - A full-auto repo plus "grill me about it" produces questions and no announcement of a build.
 - A full-auto repo with no stop-word still proceeds as it does today.
+
+## Notes
+
+- Added a stop-word bullet to skills/brainstorm/SKILL.md step 6 (beats both escapes and step 7's full-auto proceed). Prose-only skill rule: no script test possible, the model's behavior is the unit.
