@@ -80,7 +80,12 @@ class CheckRan(unittest.TestCase):
         self.assertEqual(run(self.skill, [], date="2026-11-05", cwd=self.repo).returncode, 1)
 
     def test_bad_date_or_name_fails_open(self):
+        # Markers sit at the exact paths an unvalidated traversal would resolve to, so dropping the
+        # date/name validation turns these into exit 0.
         self.mark("demo", "2026-11-05")
+        (self.skill / ".runs" / "2026-11-05").write_text("x", encoding="utf-8")
+        (self.skill / "demo").mkdir()
+        (self.skill / "demo" / "2026-11-05").write_text("x", encoding="utf-8")
         self.assertEqual(run(self.skill, ["demo"], date="../2026-11-05").returncode, 1)
         self.assertEqual(run(self.skill, ["../demo"], date="2026-11-05").returncode, 1)
 

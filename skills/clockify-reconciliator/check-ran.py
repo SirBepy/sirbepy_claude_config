@@ -77,7 +77,7 @@ def main(argv) -> int:
     skill = skill_dir()
     project = argv[1] if len(argv) > 1 else project_from_cwd(skill)
     date = os.environ.get("CC_SCHEDULE_DATE") or today()
-    if not project or not NAME_RE.match(project) or not DATE_RE.match(date):
+    if not project or not NAME_RE.fullmatch(project) or not DATE_RE.fullmatch(date):
         return 1
     marker = skill / ".runs" / project / date
     if not marker.is_file():
