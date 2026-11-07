@@ -158,7 +158,7 @@ def _spans_outside_quotes(text: str, pattern: re.Pattern) -> list[tuple[int, int
 _QUOTED_ARG = r"(?:\"(?P<dq>(?:\\.|[^\"\\])*)\"|'(?P<sq>[^']*)')"
 WRAPPER_ARG_RE = re.compile(
     r"\b(?:bash|sh|zsh|dash|ksh|pwsh|powershell)(?:\.exe)?\b[^\"'|;&\n]*?"
-    r"\s-(?:(?=[a-z]{1,3}\s)[a-z]*c[a-z]*|co(?:m(?:m(?:a(?:n(?:d)?)?)?)?)?)\s+" + _QUOTED_ARG,
+    r"\s-(?:(?=[a-z]{1,8}\s)[a-z]*c[a-z]*|co(?:m(?:m(?:a(?:n(?:d)?)?)?)?)?)\s+" + _QUOTED_ARG,
     re.IGNORECASE | re.DOTALL,
 )
 # `eval "cargo test | tail"` runs its text as a command line too.

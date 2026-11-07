@@ -40,7 +40,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny, tokenize_command as tokenize, basename, is_command_position, split_command_segments, split_gate_segments_deep, HERESTRING_BODY_RE, HEREDOC_BODY_RE
+    from _hooklib import read_payload, deny, tokenize_command as tokenize, basename, is_command_position, split_command_segments, split_gate_segments_deep, HERESTRING_BODY_RE, HEREDOC_BODY_RE, substitution_bodies
 except Exception as e:
     sys.stderr.write(f"[dev-server-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -165,7 +165,10 @@ def _confirmed_at_command_position(command: str, label: str) -> bool:
 # A body only runs when something hands it to an interpreter. Without one of these
 # words outside the bodies, a heredoc is data (`cat > README.md <<EOF`, `git commit -F - <<EOF`).
 _INTERPRETER_RE = re.compile(
-    r"(?<![\w-])(?:bash|sh|zsh|dash|ksh|pwsh|powershell|cmd|iex|invoke-expression|eval|source|python3?|node)(?:\.exe)?(?![\w-])",
+    r"(?<![\w-])(?:bash|sh|zsh|dash|ksh|fish|pwsh|powershell|cmd|iex|invoke-expression|invoke-command|start-process"
+    r"|scriptblock|eval|source|exec|xargs|ssh|python3?|node|ruby|perl|php|bun|deno)(?:\.exe)?(?![\w-])"
+    # `. /dev/stdin <<EOF` (source) and PowerShell's `& $script` call operator.
+    r"|(?:^|[\s;|(])[.&]\s+(?=[$(/\w\"'])",
     re.IGNORECASE,
 )
 
@@ -182,6 +185,11 @@ def _statements(command: str) -> list[str]:
     if not _INTERPRETER_RE.search(outside_bodies):
         statements = split_gate_segments_deep(HERESTRING_BODY_RE.sub("", HEREDOC_BODY_RE.sub("", command)))
         statements += split_command_segments(command)
+        # An unquoted heredoc still expands `$(...)` and backticks, which run whatever interpreter is absent.
+        for m in HEREDOC_BODY_RE.finditer(command):
+            if not re.match(r"<<-?[ \t]*['\"]", m.group(0)):
+                for body in substitution_bodies(m.group(0).split("\n", 1)[1]):
+                    statements += split_gate_segments_deep(body)
         return list(dict.fromkeys(statements)) or [command]
     statements = list(split_gate_segments_deep(command))
     for m in HERESTRING_BODY_RE.finditer(command):
