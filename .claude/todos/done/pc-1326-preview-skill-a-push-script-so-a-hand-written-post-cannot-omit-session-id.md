@@ -25,3 +25,7 @@ Found by the `/close` retrospective of the claude_usage_in_taskbar "subchat mock
 - Running it with the env var unset exits non-zero without posting.
 - Running it from a Conductor chat shows the page in that chat's panel.
 - `python ci/check_skill_frontmatter.py` and `python ci/check_instruction_budget.py` pass.
+
+## Notes
+
+- Added skills/preview/push_html.py + test_push_html.py (exits 2 without posting when CLAUDE_CODE_SESSION_ID is unset); SKILL.md Steps now point at it. The 'shows in the chat panel' acceptance bullet is verify-only (needs a live Conductor chat).

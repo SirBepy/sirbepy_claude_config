@@ -114,13 +114,13 @@ Manifest: a JSON list, or `{"title": "...", "items": [...]}`. Each item is `{"id
    `POST http://127.0.0.1:27182/hooks/preview`
    Body: `{ "title": string, "slug"?: string, "html": string, "source": "terminal", "session_id": string }`
 
-   **Primary: Node body-builder + curl.exe POST** (reliable string escaping on a large HTML string - write the JSON to a temp file, then POST that file so quoting/escaping isn't hand-rolled). This exact one-liner only survives PowerShell because every JS string inside it is single-quoted with no embedded `"` - PowerShell 5.1 strips `\"` out of a double-quoted native-command argument before node ever sees it. The moment a payload needs an embedded `"` (e.g. building HTML with double-quoted attributes), switch to the `.mjs` file variant shown in the Image branch below instead of trying to escape it inline:
+   **Primary: `push_html.py`** (stdlib Python). It reads `CLAUDE_CODE_SESSION_ID` itself and exits 2 without posting when it is unset or empty, so the `session_id` omission cannot happen (hand-written POSTs left it out in a seven-push mockup board, 2026-11-05, and Joe kept seeing the previous board). It prints the returned id and exits non-zero on any non-200:
    ```powershell
-   node -e "const fs=require('fs');const html=fs.readFileSync('C:/path/to/mockup.html','utf8');fs.writeFileSync('C:/tmp/preview-body.json',JSON.stringify({title:'Ring preview',slug:'mockup-ring-preview',html,source:'terminal',session_id:process.env.CLAUDE_CODE_SESSION_ID}))"
-   curl.exe -X POST http://127.0.0.1:27182/hooks/preview -H "Content-Type: application/json" --data-binary "@C:\tmp\preview-body.json"
+   python "C:\Users\tecno\.claude\skills\preview\push_html.py" C:\path\to\mockup.html --slug mockup-ring-preview --title "Ring preview" [--source terminal|chat]
    ```
+   A push under the slug already open in the panel replaces it in place and the panel follows it; a new slug only adds a dot to the picker.
 
-   **No-Node fallback: PowerShell `ConvertTo-Json`** (build the body via `ConvertTo-Json` so the HTML is escaped correctly - never hand-splice it into a JSON string). Known quirk: `ConvertTo-Json` sometimes wraps a large raw string value as `{"value": "..."}` instead of a plain string, which the daemon then rejects with "html: invalid type: map, expected a string" - if that happens, use the Node builder above instead:
+   **No-Python fallback: PowerShell `ConvertTo-Json`** (build the body via `ConvertTo-Json` so the HTML is escaped correctly - never hand-splice it into a JSON string). Known quirk: `ConvertTo-Json` sometimes wraps a large raw string value as `{"value": "..."}` instead of a plain string, which the daemon then rejects with "html: invalid type: map, expected a string" - if that happens, build the body in a `.mjs` file instead (the Image branch above shows one):
    ```powershell
    $html = Get-Content -Raw -Path "C:\path\to\mockup.html"
    $body = @{ title = "Ring preview"; slug = "mockup-ring-preview"; html = $html; source = "terminal"; session_id = $env:CLAUDE_CODE_SESSION_ID } | ConvertTo-Json
