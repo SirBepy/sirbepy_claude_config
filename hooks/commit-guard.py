@@ -106,7 +106,7 @@ VALUE_FLAGS = {
 # Shell operators that can follow a `git commit` invocation in a chained
 # command; a pathspec scan must stop at these, never swallow tokens from a
 # following command as if they were commit paths.
-_CHAIN_OPERATORS = {";", "&&", "||"}
+_CHAIN_OPERATORS = {";", "&&", "||", "&", "|", ")"}
 
 PREFILTER_GATE_SCRIPT = _HOOKS_DIR.parent / "skills" / "commit" / "prefilter-gate.sh"
 

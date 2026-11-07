@@ -61,6 +61,15 @@ INVOCATION_CASES = [
     ("$(git commit -m x)", True, "a command substitution around git commit"),
     ("echo `git commit -m x`", True, "a backtick substitution around git commit"),
     ("git commit-graph write;", False, "commit-graph with a glued semicolon is still not a commit"),
+    # A terminator glued BEFORE the program word keeps `x;git` as one shlex word.
+    ("echo x;git commit -m x", True, "a semicolon glued before git"),
+    ("cd x&&git commit -m x", True, "an && glued before git"),
+    ("git status;git commit -m x", True, "a semicolon between two git calls with no spaces"),
+    ("true&git commit -m x", True, "a background & glued before git"),
+    ("echo a|git commit -m x", True, "a pipe glued before git"),
+    ("ls;(git commit -m x)", True, "a subshell after a glued semicolon"),
+    ("git status;git log", False, "two read-only git calls with a glued semicolon"),
+    ("git log --grep='a;b'", False, "a semicolon inside quotes is not a statement end"),
     # Bash drops a backslash before an ordinary letter, so these are still `git commit`.
     ("g\\it commit -m x", True, "a backslash-escaped letter inside the program name"),
     ("git comm\\it -m x", True, "a backslash-escaped letter inside the subcommand"),
@@ -138,6 +147,8 @@ LANDING_CASES = [
     ),
     # Review findings 2026-11-07: the regex fallback (an unbalanced quote earlier in the
     # command makes shlex fail) missed wrappers, keywords and a few git spellings.
+    ("git commit-tree abc;git update-ref HEAD abc", True, "commit-tree and update-ref glued by a semicolon"),
+    ("cd x&&git update-ref refs/heads/main abc", True, "a branch update-ref glued after &&"),
     ("echo it's; env -i git commit -m x", True, "env -i wrapper in the regex fallback"),
     ("echo it's; env -u X git commit -m x", True, "env -u X wrapper in the regex fallback"),
     ("echo it's; xargs git commit -m x", True, "xargs wrapper in the regex fallback"),
