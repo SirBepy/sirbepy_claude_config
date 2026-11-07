@@ -214,7 +214,18 @@ A plain lookup - "what does sc-12345 say", a before-filing search, confirming a 
 offer). This is Shortcut's equivalent of the `/linear` read path named in "Out of scope" below, so
 a session stops hand-rolling the same curl one-liner per ticket.
 
-Two gotchas are load-bearing, both hit live 2026-09-24: `~/.claude/.env` carries a BOM/CRLF, so a
+**State of one or more tickets** ("what state are sc-56598 and 56595 in, and what was the last
+comment"): one command, no files written, member names and state names resolved.
+
+```bash
+python -I ~/.claude/skills/ticket/scripts/shortcut_triage.py states 56598 56595
+```
+
+It prints `sc-<id> | <state> | blocked=<bool> | epic=<id> | owners=<mentions> | upd=<ts> | <name>`
+plus the latest comment per id (`--comments N` for more, `--json` for the raw stories). Never a
+curl loop (`hooks/outbound-verify-guard.py` blocks one) and never a fresh Python heredoc for this.
+
+For the full text of one ticket, use the recipe below. Two gotchas are load-bearing, both hit live 2026-09-24: `~/.claude/.env` carries a BOM/CRLF, so a
 naive `grep '^KEY='` fails - the BOM strip must run before the anchored grep, and the `tr` after
 it is required too, not decorative. And Shortcut
 descriptions contain narrow no-break spaces that crash a default Windows Python's cp1250 stdout

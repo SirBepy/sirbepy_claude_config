@@ -31,3 +31,7 @@ A session that needs "what state are sc-56598, 56551, 56595 in, and what was the
 - The test covers one story with comments, one without, and one 404.
 - SKILL.md names the command; a fresh session reading only SKILL.md finds it without opening the script.
 - Does not change `search`/`dossier`/`render`/`batch`/`consensus` behaviour (existing tests still pass).
+
+## Notes
+
+- Built: 'states <ids>' subcommand in skills/ticket/scripts/shortcut_triage.py (GET only, resolves state and member names, latest comment, exit 1 on any 404); skills/ticket/SKILL.md names it under 'Shortcut reads'. Tests stub api_call: story with comments, without, and 404. Live check (read-only GET) of sc-56598/56595/56606 returned the expected lines. The move/comment subcommands the todo floated were not built: writes stay /ticket's job. shortcut.md left alone per the brief.
