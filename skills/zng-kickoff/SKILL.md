@@ -69,7 +69,7 @@ had no ticket id, so triage reported "no reply". Never write "no reply" without 
 
 ## Hub steps (what this chat does)
 
-1. Call `write_plan` with: spawn the triage chat, relay its picks, spawn the chosen work chats.
+1. Call `write_plan` with: run the triage subagent, relay its picks, spawn the chosen work chats.
 2. Run triage as ONE foreground subagent (`Agent`, `model: 'sonnet'`, `run_in_background: false`),
    not a separate chat: its report returns straight to the hub. A separate chat's report did not
    reach the hub on 2026-11-04 and the chat then refused to close on a peer message. The prompt tells

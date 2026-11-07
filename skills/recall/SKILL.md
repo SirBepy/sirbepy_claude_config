@@ -49,7 +49,7 @@ python ~/.claude/skills/recall/recall.py memory --stale-days N [--memdir DIR]
   Digests are the one recall output that cannot be rebuilt from transcripts, so they live outside
   `index/`; deleting and rebuilding the index leaves them intact. `/close` writes its own session's.
   Hidden Conductor sub chats never run `/close`: the app leaves each finished sub's digest at
-  `%APPDATA%\claude-conductor\subchats\<sub id>.digest.md`, and every command ingests those files
+  `%APPDATA%\claude-conductor\subchats\<sub id>.digest.md`, and every index-backed command (not `memory` or `compress`) ingests those files
   (read-only; `--subchats DIR` overrides the folder) with a replace when a sub finishes again.
 - `decisions`: searches only the Decided and Rejected sections of saved digests (every term must
   appear in one entry), newest first, with citations. Run it before proposing an option; a
