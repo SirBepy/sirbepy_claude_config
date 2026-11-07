@@ -22,6 +22,17 @@ similar item minutes earlier.
   "Nothing references it" needs a receipt (a grep result, a process list), not an assertion. This
   is the information Joe actually asks for before approving (2026-10-05: 4 of 7 cards stalled on
   "what's it from?" / "are we still using it?" and needed a second round to answer).
+- **Mtime alone is not last-use evidence for a venv, model dir, or anything a running process
+  reads without writing to.** A venv's own files don't get touched while a long-running service
+  imports from them, so a venv that hasn't been modified in months can still be the live backing
+  for a process running right now (2026-10-14: `stt-sidecar\.venv` showed no file newer than
+  2026-08-06 yet had two `server.py` processes actively running out of it at delete time - caught
+  only because `Remove-Item` hit an access-denied on an open `.pyd` and the locking-process check
+  from the Windows gotcha above was run). Before asking about any `.venv`/model-weights/library dir
+  specifically (not needed for a plain build-output dir like `build`/`dist`/`target`, which no
+  process holds open while idle), check for a process with that path in its working directory or
+  command line (`Get-CimInstance Win32_Process -Filter "Name='<exe>'" | Where-Object { $_.CommandLine
+  -match '<path-fragment>' }`) and fold the result into the last-use evidence line.
 - NEVER-TOUCH entries (below, in the platform file) are never offered as an option, regardless of
   anything Joe says in the same conversation - if Joe asks for one anyway, say why it's off the
   table instead of asking.
