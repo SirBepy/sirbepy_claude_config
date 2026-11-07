@@ -43,6 +43,10 @@ Close exemption: a turn that already called the close_session MCP tool is
 never blocked and runs no checks, because the host ends the session when the
 turn completes and a block would only keep a "closed" chat open.
 
+Dont-test exemption: a real user prompt anywhere in the session transcript that
+says to skip testing ("don't test", "skip tests", "no need to test") ends the
+gate for the rest of the session, per CLAUDE.md's standing-instruction rule.
+
 Subagent exclusion: never fires when the payload carries `agent_id` (reuses
 agent-todo-write-guard.py's own `is_agent_call` test, per this dispatch's
 instruction to reuse rather than reinvent it). A dispatched builder has its
@@ -63,6 +67,7 @@ violate that (todo's own Notes section).
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -72,7 +77,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import iter_turn_tool_uses, read_payload
+    from _hooklib import is_injected_user_entry, is_tool_result_entry, iter_turn_tool_uses, read_payload
     from _testing_floor_lib import (
         ESCAPE_ENV_VAR,
         clear_state,
@@ -128,6 +133,51 @@ def closed_this_turn(transcript_path: str) -> bool:
     return turn_called_tool(transcript_path, "close_session")
 
 
+# An explicit "don't test" from the dev stands for the rest of the session
+# (CLAUDE.md, Testing & verification floor). Deliberately narrow: a verb that
+# means "do not" directly in front of "test(s)", so "add tests" never matches.
+_DONT_TEST_RE = re.compile(
+    r"\b(?:don'?t|do not|never|skip|no need to|without)\s+"
+    r"(?:(?:run|running|write|writing|do|doing)\s+)?(?:the\s+|any\s+|more\s+)?tests?\b",
+    re.IGNORECASE,
+)
+
+
+def _user_text(entry: dict) -> str:
+    content = (entry.get("message", {}) or {}).get("content")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text")
+    return ""
+
+
+def dev_said_dont_test(transcript_path: str) -> bool:
+    """True when any real user prompt in this session's transcript says to skip
+    testing. Tool results, harness-injected entries and assistant text never
+    count, so a quoted phrase cannot switch the gate off. Any read trouble is
+    False, which leaves the gate running its checks."""
+    if not transcript_path:
+        return False
+    try:
+        with open(transcript_path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                try:
+                    entry = json.loads(line)
+                except ValueError:
+                    continue
+                if (
+                    entry.get("type") == "user"
+                    and not is_tool_result_entry(entry)
+                    and not is_injected_user_entry(entry)
+                    and _DONT_TEST_RE.search(_user_text(entry))
+                ):
+                    return True
+    except OSError:
+        return False
+    return False
+
+
 def evaluate(
     payload: dict,
     *,
@@ -139,6 +189,7 @@ def evaluate(
     running_agents_fn=running_background_agents,
     status_fn=last_turn_status,
     closed_fn=closed_this_turn,
+    dont_test_fn=dev_said_dont_test,
 ):
     """Pure decision core: returns a dict to print+block on, or None to
     allow the turn to end silently. Every dependency (state dir, skip-flag
@@ -194,6 +245,10 @@ def evaluate(
     except Exception:
         closing = False
     if closing:
+        return None
+
+    # The dev said not to test: no checks, no attempt spent, flag kept.
+    if dont_test_fn(payload.get("transcript_path") or ""):
         return None
 
     state = read_state(flag_path)
