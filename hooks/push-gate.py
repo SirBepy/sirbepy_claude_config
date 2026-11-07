@@ -52,6 +52,7 @@ MARKER_DIR = _HOOKS_DIR / ".push-ok"
 GIT_TIMEOUT_SECONDS = 10
 
 try:
+    import _hookboot  # retries a shared module another session is mid-way through writing
     from _hooklib import read_payload, deny, git_repo_root, strip_quotes, split_gate_segments
 except Exception as e:
     sys.stderr.write(f"[push-gate] hook error, failing open: cannot import helpers ({e})\n")

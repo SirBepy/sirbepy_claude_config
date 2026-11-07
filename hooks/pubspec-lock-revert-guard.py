@@ -34,6 +34,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
+    import _hookboot  # retries a shared module another session is mid-way through writing
     from _hooklib import read_payload, GIT_TIMEOUT_SECONDS, FRESHNESS_SECONDS, is_command_position
 except Exception as e:
     sys.stderr.write(f"[pubspec-lock-revert-guard] cannot import _hooklib ({e}); failing open.\n")

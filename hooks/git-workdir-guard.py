@@ -33,6 +33,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
+    import _hookboot  # retries a shared module another session is mid-way through writing
     from _hooklib import read_payload, deny, allow_with_warning, strip_quotes, basename, git_repo_root, git_common_dir, split_gate_segments
 except Exception as e:
     sys.stderr.write(f"[git-workdir-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")

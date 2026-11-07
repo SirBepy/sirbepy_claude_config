@@ -24,6 +24,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
+    import _hookboot  # retries a shared module another session is mid-way through writing
     # strip_quotes stays imported under its own name (unused locally, no
     # longer than a line) purely to keep test_package_manager_guard.py's
     # todo-501 alias-pin case (guard._lib_strip_quotes) passing.

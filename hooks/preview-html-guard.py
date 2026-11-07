@@ -23,6 +23,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
+    import _hookboot  # retries a shared module another session is mid-way through writing
     from _hooklib import read_payload, deny
 except Exception as e:
     sys.stderr.write(f"[preview-html-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")

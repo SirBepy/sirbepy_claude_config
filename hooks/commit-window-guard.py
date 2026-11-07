@@ -80,6 +80,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
+    import _hookboot  # retries a shared module another session is mid-way through writing
     from _hooklib import read_payload, deny, git_repo_root, strip_quotes, basename, split_gate_segments
     from _client_repo import client_slug
 except Exception as e:
