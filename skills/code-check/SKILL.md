@@ -20,13 +20,19 @@ Split of duties, and it is not negotiable:
 - **The invoking session** resolves the scope (below), dispatches, then acts on what comes back:
   Step 4a's routing, Step 5's output, and any todo files. Writing into `.claude/todos/` stays here
   because the backlog contract forbids a subagent doing it.
-- **The subagent** runs Steps 0-4 read-only and returns findings. It edits nothing and writes no
+- **The subagent** runs Steps 1-4 read-only and returns findings. It edits nothing and writes no
   todo.
 
 **What the dispatch may carry:** the scope arg, the resolved file list, and the diff. **What it must
 never carry:** what the session was trying to do, why it chose an approach, or any assurance that
 the code is correct. Passing the authoring rationale reintroduces exactly the bias this dispatch
 exists to remove, and a reviewer told "this is fine, just check it" is no longer independent.
+
+**Resolve and filter before dispatching.** "Scope resolution" and "Filter the scope" below are
+cheap file-list work, so the invoking session runs both itself, before any subagent exists. When
+the filter leaves both the prose-artifact and code groups empty, print "No code files in scope."
+and stop: an empty-scope push never pays for a no-op dispatch. The dispatch carries the filtered
+list, not the raw one.
 
 Dispatch with `general-purpose` and `model: 'sonnet'` explicitly. The three preamble markers below
 are required by `hooks/dispatch-preamble-guard.py`, which requires *a* staging line and accepts
@@ -64,7 +70,7 @@ Scope: <scope arg>
 Files: <resolved file list>
 Diff: <the diff, or the command that produces it>
 
-Run Steps 0 through 4 (including Step 3b) of ~/.claude/skills/code-check/SKILL.md against that scope. Edit nothing.
+Run Steps 1 through 4 (including Step 3b) of ~/.claude/skills/code-check/SKILL.md against that scope. Edit nothing.
 Write no todo files. Return the findings as the JSON blocks that skill defines, each with your
 class-1/2/3 judgement from Step 4a and the reason for it.
 ```
@@ -89,22 +95,19 @@ Determine what to review based on args:
 
 "Uncommitted" means everything `git status` would show as dirty, not everything `git diff` alone can see: `--diff-filter` only matches paths already in the index, so a brand-new untracked file needs the `git ls-files --others --exclude-standard` half of the union or it never enters scope.
 
-## Step 0 - Skill description budget
+## Step 0 - Skill description budget: not checked here
 
-Before filtering, scan the resolved scope for any `SKILL.md` files. For each, read the `description:` frontmatter and count its words. If over budget (> ~25 words / 120 chars), record a finding - unless the extra length is a trigger keyword that can't be cut without breaking the skill's firing (same judgment as bepy-skill-creator's Description budget gate):
-
-```json
-{ "title": "[skill] description over budget", "files": ["path"], "problem": "description is N words; skill descriptions load into every session's system prompt, so verbosity is a per-session token cost", "fix": "trim to trigger surface (~25 words), preserving every trigger clause and when-to-use keyword" }
-```
-
-If scope has no `SKILL.md` files, skip this step.
+`ci/check_skill_frontmatter.py` owns the description word/char budget, including its exemptions
+(`disable-model-invocation: true` skills never enter the listing, plus the dated
+`LEGACY_OVER_BUDGET_DEBT` set). A word count here would ignore those exemptions and report
+findings the gate already accepted, so this skill counts nothing and files nothing for it.
 
 ## Filter the scope
 
 After resolving, split the scope into three groups:
 
 - **Prose artifact** - any file literally named `SKILL.md` (filename-keyed: the narrowest detection
-  that needs no repo-root hardcoding and no new config). Keep it in scope for Steps 0 and 4 only (Step 3b is skipped with Steps 1-3).
+  that needs no repo-root hardcoding and no new config). Keep it in scope for Step 4 only (Step 3b is skipped with Steps 1-3).
   Print `Skipping Steps 1-3b for [file]: prose, not code.` and do not run those steps on it. This is
   deliberately NOT "review every `.md`": a README, `CLAUDE.md` edit, or a `refs/`/`code-style/` doc
   has no written FAIL/WARN checklist the way a skill file does, so widening the branch to any
@@ -114,7 +117,7 @@ After resolving, split the scope into three groups:
 - **Dropped** - `.json`, `.toml`, `.yaml`, `.yml`, `.gitignore`, any `.md` that is not `SKILL.md`,
   anything under `.for_bepy/`, `.claude/todos/`, or `memory/`.
 
-If both the prose-artifact and code groups are empty (and Step 0 produced no findings): print
+If both the prose-artifact and code groups are empty: print
 "No code files in scope." and stop.
 
 **What counts as a finding on a `SKILL.md` (Step 4 only, since Steps 1-3b don't run on it):** a rule
@@ -245,7 +248,7 @@ that breaks a rule the repo spent a page explaining.
 
 ## Step 4a - Classify and route each finding
 
-Every finding from Steps 0-4 gets exactly one class, and the class decides whether it is applied
+Every finding from Steps 1-4 gets exactly one class, and the class decides whether it is applied
 here or filed for later. Filing is the default; applying is the exception that must earn itself.
 
 **Check for a prior decline before classifying.** Diff each finding's `path:line` against
@@ -257,7 +260,7 @@ finding a human already saw and rejected from costing a fresh review cycle every
 
 | Class | What it covers | Route |
 |-------|----------------|-------|
-| 1 - mechanical | An unused import, a symbol nothing references, a duplicated helper collapsed onto one that already exists, a description over budget, a comment reworded or deleted because the range removed its subject | Apply it, if and only if the exercise test below passes |
+| 1 - mechanical | An unused import, a symbol nothing references, a duplicated helper collapsed onto one that already exists, a comment reworded or deleted because the range removed its subject | Apply it, if and only if the exercise test below passes |
 | 2 - structural | Splitting an over-long file, extracting a repeated block, centralising constants | File it, unless the exercise test passes AND the suite is green |
 | 3 - judgment | The abstraction is wrong, the boundary is in the wrong place, a convention breach with a real decision inside it | Always file it. Never apply |
 
@@ -302,7 +305,7 @@ than vanishing silently.
 
 ## Step 5 - Output
 
-Merge findings from Steps 0-4 (3b included), minus anything Step 4a applied or dropped.
+Merge findings from Steps 1-4 (3b included), minus anything Step 4a applied or dropped.
 
 **If the project has a repo root for `.claude/todos/`:** write each finding as a `.md` file there, per `~/.claude/skills/close/ai-todos-format.md` (filename/id rules, git-policy self-heal; create the folder if missing). A finding whose fix lives in a DIFFERENT repo, typically one about the global `~/.claude` tree hit from a project session, is filed into THAT repo's backlog instead, per root `CLAUDE.md`'s allocation rule: use `skills/create-todo/SKILL.md`'s "Cross-repo filing" flow, which carries the destination-side duplicate guard, id reservation and exclude self-heal. Format:
 
@@ -336,7 +339,7 @@ the reserved id (`pc-NNNN` form).
 Print a summary line:
 
 ```
-code-check: N findings (A size, B DRY, C dead code, D desc, E comments, F convention). M written to todos, P applied, Q dropped.
+code-check: N findings (A size, B DRY, C dead code, D comments, E convention). M written to todos, P applied, Q dropped.
 ```
 
 `P` and `Q` come from Step 4a. Name each applied finding and each dropped one on its own line
