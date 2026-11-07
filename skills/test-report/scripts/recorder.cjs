@@ -11,7 +11,9 @@ const states = new WeakMap();
 function setup(options) {
   config = {
     viewport: { width: 1280, height: 800 },
-    allowHosts: /gstatic\.com|googleapis\.com|jsdelivr|fonts\./,
+    // Exact hosts a Flutter web build fetches from the internet: the CanvasKit wasm, fallback fonts and
+    // the icon font CDN. Any other non-local host is answered with a stub and listed in take.outside.
+    allowHosts: /^(www\.gstatic\.com|fonts\.gstatic\.com|fonts\.googleapis\.com|cdn\.jsdelivr\.net)$/,
     refuseUrls: null,
     narrate: true,
     ...options,
@@ -52,10 +54,21 @@ async function open({ take, initScripts = [], viewport, contextOptions = {} }) {
     recordVideo: { dir: path.join(config.workDir, 'raw', take), size },
     ...contextOptions,
   });
-  // Nothing may leave this machine: no error reporting, no analytics, no deployed backend.
+  // Nothing may leave this machine except the allowed CDN hosts: no error reporting, no analytics, no
+  // deployed backend. Every request passes through here so a refuseUrls match is caught even on an
+  // allowed host (firestore.googleapis.com is a googleapis.com host too). A refused request is aborted
+  // before it leaves the machine and recorded, and finish fails the take.
   const outside = [];
-  await context.route((u) => !/^(localhost|127\.0\.0\.1)$/.test(u.hostname) && !config.allowHosts.test(u.hostname), (route) => {
-    outside.push(route.request().url().slice(0, 100));
+  const refused = [];
+  await context.route('**/*', (route) => {
+    const url = route.request().url();
+    if (config.refuseUrls && config.refuseUrls.test(url)) {
+      refused.push(url.slice(0, 100));
+      return route.abort('blockedbyclient');
+    }
+    const host = new URL(url).hostname;
+    if (!host || /^(localhost|127\.0\.0\.1)$/.test(host) || config.allowHosts.test(host)) return route.continue();
+    outside.push(url.slice(0, 100));
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
   await context.addInitScript(overlay);
@@ -65,12 +78,7 @@ async function open({ take, initScripts = [], viewport, contextOptions = {} }) {
   states.set(page, state);
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e).slice(0, 300)));
-  if (config.refuseUrls) {
-    page.on('request', (r) => {
-      if (config.refuseUrls.test(r.url())) throw new Error(`refusing deployed backend: ${r.url()}`);
-    });
-  }
-  return { browser, context, page, errors, outside, state };
+  return { browser, context, page, errors, outside, refused, state };
 }
 
 const stateOf = (page) => {
@@ -145,13 +153,16 @@ function stepper(page) {
 }
 
 async function finish(session, extra = {}) {
-  const { page, context, browser, state, errors, outside } = session;
+  const { page, context, browser, state, errors, outside, refused } = session;
   const video = page.video();
   state.end = now(state);
   // A live voice process would keep node from ever exiting.
   tts.stop();
   await context.close();
   await browser.close();
+  if (refused.length) {
+    throw new Error(`${state.take}: take failed, the page requested a refused URL (blocked, never sent): ${[...new Set(refused)].join(', ')}`);
+  }
   const raw = await video.path();
   const seconds = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', raw]).toString().trim());
   const take = { ...state, t0: undefined, raw, videoMs: Math.round(seconds * 1000), errors, outside: [...new Set(outside)], ...extra };

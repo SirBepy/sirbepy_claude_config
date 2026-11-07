@@ -70,7 +70,7 @@ await R.finish(s);
 | Never speed narrated video up in the encode | It breaks the sync. The player has a speed button |
 | Pass `{ min }` only to keep a screen up longer | `say` already holds for the length of the speech |
 
-Run a take with `$env:REPORT_WORK='<work folder>'; node rec-app.cjs`. `R.finish(s, extra)` stores an optional object in the take's JSON. Generating speech is cut from the video, and clips are cached by text, so a retake is free. Flutter driving rules: `~/.claude/refs/flutter-web-playwright.md`.
+Run a take with `$env:REPORT_WORK='<work folder>'; node rec-app.cjs`. A request matching `refuseUrls` is aborted before it is sent and `R.finish` then throws, so a take that touches a deployed backend fails. Only exact CDN hosts (`allowHosts`, a regex on the host) get through; any other non-local host gets a stub reply and shows in the take's `outside` list. `R.finish(s, extra)` stores an optional object in the take's JSON. Generating speech is cut from the video, and clips are cached by text, so a retake is free. Flutter driving rules: `~/.claude/refs/flutter-web-playwright.md`.
 
 ## Step 4 - Write `report.cjs` and build
 

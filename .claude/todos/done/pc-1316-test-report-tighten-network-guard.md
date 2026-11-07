@@ -31,3 +31,7 @@ Why it matters: past runs against the dev backend paged the team (zng-app memory
 
 - A take that requests a URL matching `refuseUrls` ends with a visible failure, and nothing reaches that host.
 - A Biller Groups take still renders, with its fonts.
+
+## Notes
+
+- fixed: recorder routes every request, aborts and records refuseUrls matches (even on allowed hosts), finish throws; allowHosts anchored to www.gstatic.com, fonts.gstatic.com, fonts.googleapis.com, cdn.jsdelivr.net. Test skills/test-report/scripts/recorder.test.cjs (fake Playwright, red on the old recorder). The host list is Flutter web's known CDN set, not read from a live take's outside list: a Biller Groups take is verify only.
