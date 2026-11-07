@@ -128,6 +128,8 @@ for label, cmd in (
     ("a stash after a long clustered -euxc flag", "bash -euxc 'git stash pop'"),
     ("a substitution in a quoted heredoc fed to bash", "bash <<'EOF'\nx=$(git stash pop)\nEOF"),
     ("a substitution in a quoted heredoc piped to sh", "cat <<'EOF' | sh\necho $(git stash pop)\nEOF"),
+    ("a substitution in a quoted heredoc fed to /bin/bash", "/bin/bash <<'EOF'\nx=$(git stash pop)\nEOF"),
+    ("a substitution in a quoted heredoc piped to /usr/bin/sh", "cat <<'EOF' | /usr/bin/sh\necho $(git stash pop)\nEOF"),
 ):
     expect(f"agent-shared-tree-guard: {label} is refused", run_hook("agent-shared-tree-guard.py", {**AGENT, "tool_input": {"command": cmd}}), 2)
 for label, cmd in (
