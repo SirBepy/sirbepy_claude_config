@@ -153,13 +153,15 @@ def _strip_quotes(s: str) -> str:
 
 
 def _split_list_items(inner: str) -> list[str]:
-    """Split on commas that sit outside quotes and outside a glob's `{a,b}` braces."""
+    """Split on commas that sit outside quotes and outside a glob's `{a,b}` braces. A quote opens
+    only at the start of an item (an apostrophe inside `don't` is text), and unbalanced
+    punctuation falls back to a plain comma split so one typo cannot swallow the rest of the list."""
     items, cur, depth, quote = [], [], 0, ""
     for c in inner:
         if quote:
             if c == quote:
                 quote = ""
-        elif c in "\"'":
+        elif c in "\"'" and not "".join(cur).strip():
             quote = c
         elif c == "{":
             depth += 1
@@ -170,6 +172,8 @@ def _split_list_items(inner: str) -> list[str]:
             cur = []
             continue
         cur.append(c)
+    if quote or depth:
+        return inner.split(",")
     items.append("".join(cur))
     return items
 
