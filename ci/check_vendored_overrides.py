@@ -14,10 +14,12 @@ the exact text after `key:` on that line (so a quoted description keeps its quot
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
 OVERRIDES_FILE = Path("skills") / "VENDORED.overrides.json"
+SEQ_ITEM_RE = re.compile(r"-(?:[ \t]|\r?$)")
 
 
 def split_frontmatter(text: str):
@@ -47,8 +49,8 @@ def key_span_end(lines: list, idx: int, close_index: int) -> int:
     as orphaned, invalid YAML. Blank lines count only when an indented line follows them.
     """
     end = idx + 1
-    # A top-level key never starts with "- ", so an unindented sequence item below it is its value.
-    while end < close_index and (lines[end].strip() == "" or lines[end][0] in (" ", "\t") or lines[end].startswith("- ")):
+    # A top-level key never starts with "-", so an unindented sequence item below it is its value.
+    while end < close_index and (lines[end].strip() == "" or lines[end][0] in (" ", "\t") or SEQ_ITEM_RE.match(lines[end])):
         end += 1
     while end > idx + 1 and lines[end - 1].strip() == "":
         end -= 1
@@ -74,8 +76,14 @@ def drift_for(path: Path, wanted: dict) -> list:
     problems = []
     for key, value in wanted.items():
         have = current_value(lines, close, key)
+        idx = find_key_line(lines, close, key)
+        # Continuation lines change the YAML value even when the first line matches, and --apply
+        # would rewrite them, so the check must flag them too.
+        multiline = idx is not None and key_span_end(lines, idx, close) != idx + 1
         if have is None:
             problems.append(f"{path.as_posix()}: frontmatter key '{key}' is missing, override wants: {value}")
+        elif multiline:
+            problems.append(f"{path.as_posix()}: '{key}' spans several lines but the override is one line (have: {have[:80]}; want: {value[:80]})")
         elif have != value.strip():
             problems.append(f"{path.as_posix()}: '{key}' differs from the override (have: {have[:80]}; want: {value[:80]})")
     return problems

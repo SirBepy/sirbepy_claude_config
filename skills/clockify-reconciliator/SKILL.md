@@ -18,7 +18,7 @@ argument-hint: <project-name> [lookback]
   - `past-N-weeks` or `past-N-days` - rolling window ending now
   - `YYYY-MM-DD..YYYY-MM-DD` - explicit date range
   - Default if omitted: current work week (Mon to today, dev timezone).
-- `--precheck` (optional, only the scheduled 23:55 run passes it): ends the run at step 1a when a run already covered today. A manual run never carries it, so manual runs never skip.
+- `--precheck` (optional, only the scheduled 23:55 run passes it): ends the run at step 1a when a run already covered the run's date (step 1a). A manual run never carries it, so manual runs never skip.
 
 ## Prereqs
 
@@ -69,7 +69,7 @@ if it's not full... I can still keep that chat open until all the other hours ar
 rule is run history, on purpose: it does not try to prove the day is fully covered (a design that
 did, scored 6/10 in /iterate-it, was rejected as heavier than the ask).
 
-The scheduled run fires at 23:55 (todo pc-1295), so the day it covers is the one ending at that
+The scheduled run fires at 23:55, so the day it covers is the one ending at that
 firing. Compute the run's date in `Europe/Zagreb`: today's local date, EXCEPT before 06:00 local,
 where it is yesterday's date (a firing delayed past midnight is still that day's run, and the
 manual run marked the previous date; checking the new date would miss that marker and repeat the
