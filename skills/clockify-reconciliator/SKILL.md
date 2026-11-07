@@ -79,6 +79,10 @@ Compute today's local date in `Europe/Zagreb`, then look for
 - Anything unreadable (missing directory is the normal "no marker" case, not an error): run normally.
   A wrong run costs one extra card, a wrong skip costs unlogged hours, so doubt always means run.
 
+`check-ran.py <project>` in this folder applies the same marker test for Conductor's schedule guard
+(exit 0 and `already ran for <date>` skips the firing before a chat opens); this step stays as the
+fallback for a firing the guard let through.
+
 Without `--precheck`, skip this step.
 
 ### 2. HubStaff steps are deferred, not run here
