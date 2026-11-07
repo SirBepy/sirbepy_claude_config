@@ -22,3 +22,7 @@ Add `scripts/wav.cjs` exporting `readWav(file)` returning `{ rate, pcm }`, plus 
 
 - `node scripts/encode.test.cjs` and the new test pass.
 - A rebuilt report measures the same line count and 0 overlaps.
+
+## Notes
+
+- fixed: scripts/wav.cjs readWav is the only WAV parser; tts-client lengthMs and encode buildSpeech use it. Test scripts/wav.test.cjs (odd-sized chunk before data, rate from fmt, red against the old tts-client). Rebuilt-report line count/overlap check: verify only, no voice run tonight.

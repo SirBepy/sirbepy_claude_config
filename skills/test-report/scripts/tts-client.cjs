@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
+const { readWav } = require('./wav.cjs');
 
 const HOME = process.env.TEST_REPORT_HOME || path.join(process.env.LOCALAPPDATA || '', 'claude-test-report');
 const PYTHON = path.join(HOME, 'venv', 'Scripts', 'python.exe');
@@ -54,17 +55,10 @@ function start() {
   return ready.promise;
 }
 
+// 16-bit mono, so two bytes per sample.
 function lengthMs(file) {
-  const b = fs.readFileSync(file);
-  let at = 12;
-  while (at < b.length) {
-    const id = b.toString('ascii', at, at + 4);
-    const size = b.readUInt32LE(at + 4);
-    if (id === 'fmt ') var rate = b.readUInt32LE(at + 12);
-    if (id === 'data') return Math.round(size / 2 / rate * 1000);
-    at += 8 + size + (size % 2);
-  }
-  throw new Error(`no data chunk in ${file}`);
+  const { rate, pcm } = readWav(file);
+  return Math.round(pcm.length / 2 / rate * 1000);
 }
 
 // Requests run one at a time: the protocol answers in order and a single voice is all the CPU should run.
@@ -91,4 +85,4 @@ function stop() {
   child = null;
 }
 
-module.exports = { speak, stop, HOME };
+module.exports = { speak, stop, lengthMs, HOME };
