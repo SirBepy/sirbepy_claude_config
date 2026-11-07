@@ -18,7 +18,7 @@ visible in the command string; that is the stated limit.
 
 Exempt: a session that actually invoked `/zirtue-release-backfill` or
 `/shortcut-done-audit` (a real user turn starting with the command, its
-<command-name> block, or a Skill tool call), the two skills whose job is to set
+<command-name> block, or a Skill tool call that returned without an error), the two skills whose job is to set
 Release on and close other people's stories. Mentioning the name in prose does
 not count.
 
@@ -111,10 +111,16 @@ def real_user_texts(transcript_path: str) -> list[str]:
 
 
 def _skill_called(transcript_path: str, name: str) -> bool:
-    """True when the session called `name` through the Skill tool (assistant side)."""
+    """True when the session called `name` through the Skill tool (assistant side)
+    and that call returned without an error. Both exempt skills are
+    disable-model-invocation, so a model-issued Skill call fails; a failed call
+    must not lift the requester and ceiling rules. A call with no result yet
+    counts as not called."""
     path = Path(transcript_path or "")
     if not transcript_path or not path.is_file():
         return False
+    call_ids: set[str] = set()
+    ok_result_ids: set[str] = set()
     with open(path, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
             try:
@@ -122,14 +128,18 @@ def _skill_called(transcript_path: str, name: str) -> bool:
             except json.JSONDecodeError:
                 continue
             content = (entry.get("message", {}) or {}).get("content")
-            if entry.get("type") != "assistant" or not isinstance(content, list):
+            if not isinstance(content, list):
                 continue
             for block in content:
-                if isinstance(block, dict) and block.get("type") == "tool_use" and block.get("name") == "Skill":
+                if not isinstance(block, dict):
+                    continue
+                if entry.get("type") == "assistant" and block.get("type") == "tool_use" and block.get("name") == "Skill":
                     called = str((block.get("input") or {}).get("skill") or "").strip().lstrip("/")
-                    if called == name or called.endswith(":" + name):
-                        return True
-    return False
+                    if (called == name or called.endswith(":" + name)) and block.get("id"):
+                        call_ids.add(str(block["id"]))
+                elif entry.get("type") == "user" and block.get("type") == "tool_result" and not block.get("is_error"):
+                    ok_result_ids.add(str(block.get("tool_use_id") or ""))
+    return bool(call_ids & ok_result_ids)
 
 
 def skill_invoked(texts: list[str], transcript_path: str, skill: str) -> bool:

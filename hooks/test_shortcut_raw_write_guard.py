@@ -77,7 +77,40 @@ with tempfile.TemporaryDirectory() as tmp:
         {"type": "assistant", "message": {"content": [
             {"type": "tool_use", "id": "t1", "name": "Skill", "input": {"skill": "zirtue-release-backfill"}},
         ]}},
+        {"type": "user", "message": {"content": [
+            {"type": "tool_result", "tool_use_id": "t1", "content": "Launching skill", "is_error": False},
+        ]}},
     )) + "\n", encoding="utf-8")
+
+    def skill_transcript(name: str, entries: list) -> Path:
+        path = tmpdir / name
+        path.write_text("\n".join(json.dumps(e) for e in (
+            {"type": "user", "message": {"content": "close out the shipped tickets"}},
+            *entries,
+        )) + "\n", encoding="utf-8")
+        return path
+
+    def skill_use(call_id: str, skill: str = "zirtue-release-backfill") -> dict:
+        return {"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": call_id, "name": "Skill", "input": {"skill": skill}},
+        ]}}
+
+    def skill_result(call_id: str, is_error: bool) -> dict:
+        return {"type": "user", "message": {"content": [
+            {"type": "tool_result", "tool_use_id": call_id, "content": "x", "is_error": is_error},
+        ]}}
+
+    # Review finding 2026-11-07: a model-issued Skill call to a disable-model-invocation
+    # skill errors, and the errored call used to lift the requester and ceiling rules.
+    skill_errored = skill_transcript("skill-errored.jsonl", [skill_use("e1"), skill_result("e1", True)])
+    skill_no_result = skill_transcript("skill-no-result.jsonl", [skill_use("n1")])
+    skill_other_result = skill_transcript("skill-other.jsonl", [skill_use("o1"), skill_result("zzz", False)])
+    skill_ok_after_error = skill_transcript(
+        "skill-retry.jsonl", [skill_use("r1"), skill_result("r1", True), skill_use("r2"), skill_result("r2", False)],
+    )
+    skill_plugin_ok = skill_transcript(
+        "skill-plugin.jsonl", [skill_use("p1", "plugin:shortcut-done-audit"), skill_result("p1", False)],
+    )
 
     CASES = [
         ("Bash", f'curl -s -X PUT "{URL}/111" -d \'{{"workflow_state_id":500018257}}\'', plain, 0,
@@ -98,6 +131,18 @@ with tempfile.TemporaryDirectory() as tmp:
          "a /shortcut-done-audit command block counts as invoked"),
         ("Bash", f'curl -s -X PUT "{URL}/222" -d \'{{"workflow_state_id":500018257}}\'', skill_call, 0,
          "a Skill tool call for zirtue-release-backfill counts as invoked"),
+        ("Bash", f'curl -s -X PUT "{URL}/222" -d \'{{"workflow_state_id":500018257}}\'', skill_errored, 2,
+         "an errored Skill tool call does not lift the requester rule"),
+        ("Bash", f'curl -s -X PUT "{URL}/111" -d \'{{"workflow_state_id":500018258}}\'', skill_errored, 2,
+         "an errored Skill tool call does not lift the Testing ceiling"),
+        ("Bash", f'curl -s -X PUT "{URL}/222" -d \'{{"workflow_state_id":500018257}}\'', skill_no_result, 2,
+         "a Skill tool call with no result yet does not lift the rules"),
+        ("Bash", f'curl -s -X PUT "{URL}/222" -d \'{{"workflow_state_id":500018257}}\'', skill_other_result, 2,
+         "a success result for a different tool call does not count"),
+        ("Bash", f'curl -s -X PUT "{URL}/222" -d \'{{"workflow_state_id":500018257}}\'', skill_ok_after_error, 0,
+         "a Skill call that succeeded on retry counts"),
+        ("Bash", f'curl -s -X PUT "{URL}/222" -d \'{{"workflow_state_id":500018257}}\'', skill_plugin_ok, 0,
+         "a plugin-prefixed Skill name that succeeded counts"),
         ("Bash", f'curl -s -X PUT "{URL}/222" -d \'{{"workflow_state_id":500018257}}\'', mention, 2,
          "mentioning /shortcut-done-audit in prose is not an invocation"),
         ("Bash", f'curl -s -X PUT "{URL}/222" -d \'{{"workflow_state_id":500018258}}\'', quoted, 2,
