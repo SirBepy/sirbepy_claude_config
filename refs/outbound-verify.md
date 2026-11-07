@@ -61,6 +61,18 @@ this text where the calling skill asks him to; if he edits it, the round below r
 claim that only a run against shared state can verify (an e2e suite on a shared database, a
 deploy) rather than have three verifiers re-run it.
 
+**Refresh the moving state, in the same turn, before the first dispatch** (required whenever the
+text names a repo state, branch, PR or ticket state): `git fetch --quiet` in every repo the draft
+or its pointers name and record `origin/<branch>`'s sha, and read the current Shortcut state of
+every ticket the draft cites. One call prints both, ready for the Pointers field:
+`python ~/.claude/skills/ticket/scripts/freshness.py --repo <path>@<branch> --story <id> --find <file name>`
+(`--find` lists real tracked paths so verifiers do not rediscover them). `verify_prompt.py`
+refuses to build a prompt without that output (`## Freshness` in its spec). A merged PR or a moved
+ticket makes text stale: zng-app, 2026-11-03, PRs 970 and 971 had merged into zng-api develop
+and the draft said they had not; three verifiers each fetched, all FAILed it, and the round cost
+about 280k tokens for a fact one fetch catches. A fetch after a FAIL does not undo that FAIL for
+that text, so do it before round 1.
+
 ### 2. Dispatch 3 identical verifiers
 
 Use this template from round 1 for any verify request on text plausibly headed for a tracker or PR
@@ -171,7 +183,8 @@ Converged practice (zng-biller, 2026-10-21/22, a batch of 3 long tickets took 4 
   (read from this file at run time) and prints the prompt to paste into all 3 `Agent` calls. After
   a draft edit, rerun it and paste the new output; the pointers never drift between rounds.
   The spec format is in the script's docstring.
-- A newly merged PR or ticket makes text stale: re-check claims about moving state before round 1.
+- A newly merged PR or ticket makes text stale: step 1's refresh runs before round 1, and again
+  before any later round that comes more than a few minutes after the last one.
 
 ## When the hook itself is broken
 

@@ -131,6 +131,9 @@ smaller scopes as well as smaller descriptions: two independently shippable chun
 
 First run `~/.claude/refs/outbound-verify.md` on the final title and description: 3 fresh
 subagents must each PASS that exact text, or `hooks/outbound-verify-guard.py` blocks the call.
+Before round 1, run its step 1 refresh (`scripts/freshness.py`: fetch every repo the draft names,
+read the state of every ticket it cites) and hand the printed shas and states to the verifiers;
+`scripts/verify_prompt.py` will not build the prompt without them.
 
 Write the ground-check marker as its OWN tool call, then make the create call in the next one,
 inside the marker's 120 s window. Never chain the marker script and the POST in one command:
