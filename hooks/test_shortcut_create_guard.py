@@ -115,6 +115,11 @@ CASES = [
     ("Bash", f'curl -X PUT {URL}/bulk -d @a.json & curl -X POST {URL}/bulk -d @b.json', True, "a bulk POST after a backgrounded bulk PUT"),
     ("Bash", f'curl -X PUT \\\r\n {URL}/bulk -d @a.json', False, "a CRLF line continuation keeps the verb on the bulk statement"),
     ("Bash", f'curl -X PUT \\\n {URL}/bulk -d @a.json', False, "an LF line continuation keeps the verb on the bulk statement"),
+    # Where the statement scan cannot be trusted, a bulk URL reads as a possible POST.
+    ("Bash", f'bash -c "curl -X PUT {URL}/bulk -d @a; curl -X POST {URL}/bulk -d @b"', True, "a bulk POST next to a bulk PUT inside bash -c"),
+    ("Bash", f"sh -c 'curl -X PUT {URL}/bulk -d @a && curl -X POST {URL}/bulk -d @b'", True, "a bulk POST next to a bulk PUT inside sh -c"),
+    ("Bash", f"curl -X PUT {URL}/bulk -d @a # don't\ncurl -X POST {URL}/bulk -d @b", True, "an apostrophe in a comment desyncs the scan, so the bulk stays gated"),
+    ("PowerShell", f'curl.exe -X PUT -o "C:\\x\\" {URL}/bulk -d @a.json', True, "a path ending in a backslash desyncs the scan, so the bulk stays gated"),
     ("Bash", f'curl -s -X PUT "{URL}/bulk" -d @payload.json', False, "PUT to /stories/bulk is a bulk update"),
     ("Bash", f'curl -s -X DELETE "{URL}/bulk" -d @payload.json', False, "DELETE to /stories/bulk is a bulk delete"),
     ("Bash", f'curl -s "{URL}/bulkhead" -d @payload.json', False, "a longer word starting with bulk is not the create"),
