@@ -146,6 +146,8 @@ function Take-Screenshot {
         & adb -s $Serial shell screencap -p $remote | Out-Null
         $dir = Split-Path -Parent $LocalPath
         if ($dir) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+        # A failed pull must not leave an earlier valid PNG at this path to pass the check below.
+        Remove-Item -LiteralPath $LocalPath -Force -ErrorAction SilentlyContinue
         & adb -s $Serial pull $remote $LocalPath | Out-Null
         Assert-PngFile -Path $LocalPath
     } finally {
