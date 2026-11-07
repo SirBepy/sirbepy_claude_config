@@ -493,8 +493,6 @@ _DISPLAY_COMMANDS = {
     "write-information", "write-error", "grep", "egrep", "fgrep", "rg", "select-string", "sls", "findstr",
 }
 _DISPLAY_GIT_SUBCOMMANDS = {"commit", "log", "tag", "notes", "grep", "show", "diff", "blame"}
-# Display text piped into one of these gets executed, so nothing is stripped then.
-_EXECUTING_COMMANDS = SHELL_WRAPPER_NAMES | {"cmd", "iex", "invoke-expression", "eval", "source", ".", "xargs", "python", "python3", "py", "node", "perl", "ruby"}
 _ASSIGNMENT_RE = re.compile(r"^[A-Za-z_]\w*=")
 
 
@@ -523,10 +521,19 @@ def _command_words(segment: str) -> list[str]:
     return words
 
 
+_HARMLESS_REDIRECT_RE = re.compile(r"\d*>&\d|\d*>>?\s*(?:/dev/null|\$null)\b")
+
+
 def _is_display_segment(segment: str) -> bool:
-    _mask, balanced = _quoted_mask(segment)
+    mask, balanced = _quoted_mask(segment)
     # Unpaired quotes mean the read cannot be trusted; a command substitution runs.
     if not balanced or "$(" in segment or "`" in segment:
+        return False
+    # Outside quotes, `&` (background), parentheses (a PowerShell subexpression
+    # runs), and redirects (a script file written now and run later) all mean the
+    # statement does more than print; only a redirect to the null device or an fd is harmless.
+    bare = _HARMLESS_REDIRECT_RE.sub(" ", "".join(" " if m else c for c, m in zip(segment, mask)))
+    if any(c in bare for c in "&()<>"):
         return False
     words = _command_words(segment)
     if not words:
@@ -545,14 +552,19 @@ def _is_display_segment(segment: str) -> bool:
 def without_display_segments(command: str) -> str:
     """`command` with the statements that only print or search text removed, so
     a request named in `echo "curl -X POST <url> -d x"` or a commit message is
-    not mistaken for one. Anything else stays, and so does everything when a
-    statement hands text to a shell (`echo "..." | bash`) or has unpaired quotes."""
+    not mistaken for one. Anything else stays. A display statement whose output
+    is piped onward (`echo "..." | bash`, `| sudo bash`, `| % { iex $_ }`) stays
+    too: the next stage may execute it, and no list of executors is complete."""
     segments = split_gate_segments(command)
-    kept = [s for s in segments if not _is_display_segment(s)]
+    kept, cursor = [], 0
+    for segment in segments:
+        start = command.find(segment, cursor)
+        if start < 0:
+            return command  # cannot place the statement, so strip nothing
+        cursor = start + len(segment)
+        piped = command[cursor:cursor + 1] == "|" and command[cursor + 1:cursor + 2] != "|"
+        if piped or not _is_display_segment(segment):
+            kept.append(segment)
     if len(kept) == len(segments):
         return command
-    for s in kept:
-        words = _command_words(s)
-        if words and basename(words[0]).removesuffix(".exe") in _EXECUTING_COMMANDS:
-            return command
     return " ; ".join(kept)
