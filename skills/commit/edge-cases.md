@@ -83,3 +83,21 @@ when `src-tauri/Cargo.toml` exists:
 - Apply the same timestamp to both author and committer dates: `GIT_COMMITTER_DATE="..." git ... commit --date="..." ...`.
 - Confirm the resulting timestamp back to the user after committing.
 - **Client repos** (`refs/client-repos.txt`): backdating is only for a time Joe explicitly names, and never into 23:00-10:59 or as a way to move a night commit out of that window. `hooks/commit-window-guard.py` refuses `--date`/`GIT_*_DATE` there whenever the value lands in the window, has no readable HH:MM, or the commit runs inside the window. A `/commit fold` replaying a commit that really was made at night needs Joe's approval and the hook's `allow` first.
+
+## Branch protection (step 1a)
+
+Verbatim step 1a from the pre-split `SKILL.md`; the bookkeeping lists it initialises (EXPECTED branch and sha, OWN-COMMIT list, overlap queue, session-scoped lists) stay in `SKILL.md` step 1a.
+
+1a. **Branch-protection check** - convention-driven, not branch-name-driven, so it only fires where a repo has actually opted in. Run `git rev-parse --abbrev-ref HEAD` and record the result as this run's EXPECTED branch, and `git rev-parse HEAD` as this run's EXPECTED sha (step 8 re-checks both against it before every commit - the sha catches a peer commit that landed on the SAME branch, which a branch-name-only check would miss). Also start this run's OWN-COMMIT list empty and its overlap queue empty (step 8 appends to both - todo 860). These two are per-run; two more are session-scoped and survive across separate `/commit` invocations in the same session, so only initialize them if this is the session's first invocation: this session's cumulative own-commit list (every sha this session has committed, appended alongside the per-run list at step 8's post-commit line), and this session's fold-policy, unset until step 8's end-of-queue question is first answered (todo 862). If ALL three hold - the branch matches a protected-trunk name (`main`, `master`, `develop`, or a project override), the repo has a remote (`git remote` is non-empty), and a `GIT_FLOW.md` (or an equivalent documented trunk-protection rule in root `CLAUDE.md`) exists at the repo root - stop and ask via `AskUserQuestion`: branch first, commit anyway (explicit override), or abort. Repos with no such documented convention are unaffected, protected-sounding branch name or not - this explicitly does NOT fire on `~/.claude` itself, which commits to `master` by design and has no `GIT_FLOW.md`.
+
+## Submodule check (step 7)
+
+7. **Submodule check:** run `git submodule status` (no flags). For each submodule whose sha is prefixed with `+` (modified) or `-` (uninitialized/not checked out), handle it before committing the parent:
+   - If prefixed with `-`: warn the user, do not auto-commit an uninitialized submodule.
+   - If prefixed with `+` (dirty pointer: submodule has new commits not yet staged in parent): this is fine, include `<submodule-path>` in step 8's commit pathspec and the pointer bump lands with the parent commit.
+   - If the submodule itself has **uncommitted working-tree changes** (detected via `git -C <submodule-path> status --porcelain`): run the 4-step submodule commit flow first:
+     1. `git -C <submodule-path> add <changed files by name>` - stage changed files inside the submodule.
+     2. `git -C <submodule-path> commit -m "<message>"` - commit inside the submodule using the same prefix/style rules as the parent commit.
+     3. Include `<submodule-path>` in step 8's commit pathspec - a gitlink path commits the submodule's current HEAD, so no `git add` is needed in the parent.
+     4. Then continue to step 8 as normal; the parent commit will include the pointer bump.
+   - If no submodules or all are clean: skip this step silently.
