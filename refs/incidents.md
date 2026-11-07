@@ -122,3 +122,22 @@ archival string (`mega-todos` instead of `/mega-todos`). Verified reproducible o
 the slash, clean without it, same script, same nonexistent id) but not proven deterministic across
 scripts - it is read as a semantic classifier, not a fixed regex, so a future session hitting a
 variant shape should re-probe rather than assume this list of triggers is exhaustive.
+
+## Communication - questions for teammates that the docs already answered
+
+2026-11-03, zng-app "Biller Groups ticket decision" chat. After filing sc-56607 the chat wrote a
+4-question Slack draft for Airion from the verifiers' NOTEs: which inactive reason wins on the
+admin biller table, whether the per-biller bank account is editable, whether Remove needs a
+confirm, and a heads-up about a decision already made. Joe: "are you 100% sure we cant determine
+the answers from some random tickets/docs or smth?" Two greps and one ticket re-read later, every
+one was answerable: sc-56593 already said the portal derives the inactive reasons; the admin biller
+page already shows the payment account read-only and only the create flow enters bank fields; the
+confirm dialog is a FE call with a DS component for it; the heads-up was not a question. The RPPS
+worry raised for Stevan died the same way (`rpps.db.import.ts:72` gives every network biller the
+network payment account). Zero questions survived.
+
+Joe's rule, same message: before ever asking him to ask someone something, always check whether
+it can be figured out, and do that checking with subagents so the lookups do not cloud the main
+context. His earlier wording of the same rule (2026-11-03, sc-56595 chat): "are you sure this even
+needs to be asked?" and "Do not bring him questions the code or his own goal already answers."
+The CLAUDE.md Communication bullet "Before asking Joe to relay a question to anyone" is the rule.
