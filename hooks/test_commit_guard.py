@@ -72,7 +72,8 @@ INVOCATION_CASES = [
     ("git log --grep='a;b'", False, "a semicolon inside quotes is not a statement end"),
     ("echo \\'&&git commit -m x", True, "an escaped quote does not open a quote that hides a glued &&"),
     ("echo \\\";git commit -m x", True, "an escaped double quote does not hide a glued semicolon"),
-    ("echo a\\;git commit -m x", False, "an escaped semicolon is a literal, not a statement end"),
+    ("cd C:\\repo\\;git commit -m x", True, "a PowerShell path ending in a backslash before a glued semicolon"),
+    ("cd C:\\repo\\|git commit -m x", True, "a PowerShell path ending in a backslash before a glued pipe"),
     ("`git commit`", True, "a backtick substitution closed right after the subcommand"),
     ("x=`git commit -m x`", True, "an assignment from a backtick substitution"),
     # Bash drops a backslash before an ordinary letter, so these are still `git commit`.
