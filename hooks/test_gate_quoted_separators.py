@@ -120,6 +120,19 @@ for label, cmd in (
     ("a git stash inside an eval body", "eval 'echo a; git reset --hard'"),
 ):
     expect(f"agent-shared-tree-guard: {label} is refused", run_hook("agent-shared-tree-guard.py", {**AGENT, "tool_input": {"command": cmd}}), 2)
+for label, cmd in (
+    ("a stash after a clustered -ce flag", 'bash -ce "echo a; git stash pop"'),
+    ("a stash in an eval after then", 'if true; then eval "git stash pop"; fi'),
+    ("a stash nested five substitutions deep", "echo $(echo $(echo $(echo $(echo $(git stash pop)))))"),
+    ("a stash after a paren inside quotes in a substitution", 'echo "$(echo ")" ; git stash pop)"'),
+):
+    expect(f"agent-shared-tree-guard: {label} is refused", run_hook("agent-shared-tree-guard.py", {**AGENT, "tool_input": {"command": cmd}}), 2)
+for label, cmd in (
+    ("an escaped-backtick code span", 'git commit -m "never run \\`git stash pop\\` here" -- f'),
+    ("a code span in a quoted heredoc commit message", "git commit -F - <<'EOF'\nBlocks `git stash` now\nEOF"),
+    ("a code span in a quoted heredoc inside a substitution", "git commit -m \"$(cat <<'EOF'\nBlocks `git stash` now\nEOF\n)\""),
+):
+    expect(f"agent-shared-tree-guard: {label} is allowed", run_hook("agent-shared-tree-guard.py", {**AGENT, "tool_input": {"command": cmd}}), 0)
 expect(
     "agent-shared-tree-guard: a stash named in a single-quoted bash -c argument of echo is allowed",
     run_hook("agent-shared-tree-guard.py", {**AGENT, "tool_input": {"command": "echo 'bash -c \"git stash pop\"'"}}),

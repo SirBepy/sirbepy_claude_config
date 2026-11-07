@@ -126,7 +126,7 @@ def scan_segments(segments: list[str], cwd: str, depth: int = 0) -> tuple[bool, 
         if sub and pinned:
             return False, cwd
 
-        if depth < 3:
+        if depth < 8:
             for body in nested_command_bodies(segment):
                 hit, inner_cwd = scan_segments(split_gate_segments(body), cwd, depth + 1)
                 if hit:
