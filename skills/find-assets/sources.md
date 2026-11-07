@@ -6,9 +6,13 @@ was learned. **Nothing here replaces reading the license on the asset's own page
 
 Provenance codes: `R1028` = the 2026-10-28 claude_usage_in_taskbar "Game city view" research
 (sonnet subagents, web), recorded in todo 1265. `bg` = Claude's background knowledge when the row was
-added, NOT checked against the live site: treat as a lead only.
+added, NOT checked against the live site: treat as a lead only. `mem` = a Claude memory note from
+earlier asset work in this setup.
 
-Row format when adding: `| source | kinds | typical license | notes | seen (date, how) |`.
+Row format when adding: `| source | kinds | typical license | notes | seen |`, where `seen` is
+`YYYY-MM-DD` plus how it was checked (the page's license text read, or a code above). Rows added
+before 2026-11-07 carry only a code. The avoid table has no kinds or license columns:
+`| source | why | seen |`.
 
 ## Art: sprites, tilesets, UI packs
 
@@ -42,7 +46,7 @@ Row format when adding: `| source | kinds | typical license | notes | seen (date
 |---|---|---|
 | itch.io LimeZu Modern Interiors / Office | Cheap, not free, and forbids redistribution: local use only, keep out of git | R1028 |
 | The Spriters Resource | Rips with no license; private local use only, never a public repo or a store build (Google Play's IP policy bans video-game artwork) | R1028 |
-| Myinstants, 101soundboards, Sounds Resource | Game and meme rips, no license; also reject scrapers (HTTP 403 seen in character-creator work) | memory `reference_character_creator_sources` |
+| Myinstants, 101soundboards, Sounds Resource | Game and meme rips, no license; also reject scrapers (HTTP 403 seen in character-creator work) | mem (`reference_character_creator_sources`) |
 
 ## Leads, not sources
 

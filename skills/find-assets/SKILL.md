@@ -16,7 +16,9 @@ searching for assets". A standing preference in every project, not only the one 
 
 **Claude does not create art or sound assets** (sprites, tiles, characters, backgrounds, SFX, music,
 logos) by hand, SVG, CSS pixel art, canvas code or an image model, unless Joe explicitly asks for
-that asset in the current session. A missing asset is a search task, then a placeholder (a flat
+that asset in the current session. Joe typing `/generate` or asking for an image-model asset by
+name is that explicit ask; Claude reaching for `/generate` on its own to fill a gap is not. A
+missing asset is a search task, then a placeholder (a flat
 colour block or the engine's default) while the search runs. Asking for "a character" in a
 brainstorm is not asking Claude to draw one.
 
@@ -53,9 +55,11 @@ palette swap script): running those is fine, hand-drawing is not.
    recommendation. Do not download, unpack or commit anything until Joe picks, except to look at a
    preview image.
 6. **Update `sources.md`** when the search found a good source not already listed: one row, with the
-   date, the license seen on the page, and what it is good for. Edit that file in place, line by
-   line. A source that burned a search (paywalled, ripped, dead, license unclear) gets a row too,
-   marked avoid, so the next search skips it.
+   date, the license seen on the page, and what it is good for. A source that burned a search
+   (paywalled, ripped, dead, license unclear) gets a row too, marked avoid, so the next search
+   skips it. Only a session working in `~/.claude` edits the file (in place, line by line). From
+   any other project, do not edit it: file the proposed row as a todo in
+   `C:\Users\tecno\.claude\.claude\todos\` and mention it in the report.
 7. **When Joe picks one,** record its credit in the project (a `CREDITS.md` or the engine's
    equivalent) with name, creator, URL, license and the date seen. CC-BY and CC-BY-SA need that
    credit; CC0 does not, but the row is still worth keeping.
@@ -71,9 +75,9 @@ pack with mixed per-file licenses (LPC, OpenGameArt) is checked per file actuall
 | CC-BY | yes, with credit | yes, with credit | yes | Credit creator, link license |
 | CC-BY-SA | yes, with credit | avoid: share-alike on adapted art, effect on the game is unsettled | yes | Ask Joe before shipping it |
 | GPL (on art) | yes, with the license text | avoid: copyleft may reach the game | yes | Rare; treat like CC-BY-SA but stricter |
-| CC-BY-NC | yes (non-commercial repo only) | no | yes | Fails any commercial or ad-supported release |
+| CC-BY-NC | only while the repo stays non-commercial and nothing downstream is licensed for commercial reuse | no | yes | Fails any commercial or ad-supported release |
 | "No redistribution" (paid itch.io packs, e.g. LimeZu) | **no**: a public repo redistributes it | no | yes | Keep out of git entirely (gitignore it) |
-| Unlicensed rip (Spriters Resource, game rips) | no | no: store policies ban game artwork | yes, private use only | Never in a public repo or a store build |
+| Unlicensed rip (Spriters Resource, game rips) | no | no (Google Play's IP policy is reported to ban game artwork; checked against no policy page tonight) | yes, private use only | Never in a public repo or a store build |
 | No license stated | no | no | yes, private use only | "Free to download" is not a license |
 
 ## Pitfalls
