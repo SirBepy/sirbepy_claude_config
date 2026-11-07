@@ -2,7 +2,7 @@
 // No Playwright MCP dependency - playwright resolution lives in hs_common.cjs (fallback chain,
 // not a pinned npx cache path).
 // Usage: node hs_preflight.cjs --org <id> --user <id> --profile <dir> --mon <YYYY-MM-DD> --sun <YYYY-MM-DD>
-const { getArg, launchProfileContext } = require('./hs_common.cjs');
+const { getArg, launchProfileContext, gotoWithRetry } = require('./hs_common.cjs');
 
 const args = process.argv.slice(2);
 const org = getArg(args, '--org');
@@ -26,7 +26,8 @@ function report(result) {
   const context = await launchProfileContext(profile, weeklyUrl);
   try {
     const page = context.pages()[0] || await context.newPage();
-    await page.goto(weeklyUrl, { waitUntil: 'domcontentloaded' });
+    // A slow first load of the weekly page timed out the run once on a healthy network (2026-11-06).
+    await gotoWithRetry(page, weeklyUrl);
 
     if (!page.url().includes('account.hubstaff.com/login')) {
       return report({ authOk: true });

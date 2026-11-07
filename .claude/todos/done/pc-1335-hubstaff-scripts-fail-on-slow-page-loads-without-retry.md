@@ -17,3 +17,7 @@ In `skills/clockify-reconciliator/scripts/hs_addtime.cjs`, retry an entry up to 
 
 ## Acceptance
 A transient goto or dialog-open timeout no longer leaves an entry `ok:false` when a retry succeeds. A failure after Save is never retried automatically. `hs_preflight.cjs` survives one slow navigation.
+
+## Notes
+
+- Retry in hs_addtime.cjs (addEntryWithRetry: 2 retries before Save, none after, maybeSaved flag) and gotoWithRetry in hs_common.cjs (60s, 1 retry) used by hs_preflight.cjs. Tested with a stubbed page (scripts/test_hs_retry.cjs). Live HubStaff check: verify only, not run (no login, no writes).

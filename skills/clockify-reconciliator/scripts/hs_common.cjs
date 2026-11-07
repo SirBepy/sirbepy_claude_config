@@ -20,4 +20,20 @@ async function launchProfileContext(profile, firstTargetUrl = null) {
   return getChromium().launchPersistentContext(profile, { headless: false });
 }
 
-module.exports = { getChromium, getArg, launchProfileContext };
+// HubStaff's app pages are slow to settle: 30s page.goto timeouts hit on a healthy network
+// (2026-11-06), so navigation gets a longer budget and a bounded retry.
+const NAV_TIMEOUT_MS = 60000;
+const defaultSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function gotoWithRetry(page, url, { retries = 1, timeout = NAV_TIMEOUT_MS, sleep = defaultSleep } = {}) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await page.goto(url, { waitUntil: 'domcontentloaded', timeout });
+    } catch (e) {
+      if (attempt >= retries) throw e;
+      await sleep(2000);
+    }
+  }
+}
+
+module.exports = { getChromium, getArg, launchProfileContext, gotoWithRetry, NAV_TIMEOUT_MS };
