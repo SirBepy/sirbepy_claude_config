@@ -39,6 +39,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
+    import _hookboot  # retries a shared module another session is mid-way through writing
     from _hooklib import read_payload, deny, is_tool_result_entry, is_injected_user_entry, split_command_segments
     _spec = importlib.util.spec_from_file_location("_shortcut_mutation_guard", _HOOKS_DIR / "shortcut-mutation-guard.py")
     _mutation_guard = importlib.util.module_from_spec(_spec)

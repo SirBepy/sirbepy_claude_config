@@ -55,6 +55,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
+    import _hookboot  # retries a shared module another session is mid-way through writing
     from _hooklib import GIT_TIMEOUT_SECONDS, git_repo_root, read_payload, allow_with_warning
 except Exception as e:
     sys.stderr.write(f"[list-peers-pre-edit-guard] FATAL: cannot import _hooklib ({e}); failing open.\n")

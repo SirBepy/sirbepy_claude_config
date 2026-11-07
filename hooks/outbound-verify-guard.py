@@ -48,6 +48,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 try:
+    import _hookboot  # retries a shared module another session is mid-way through writing
     from _hooklib import read_payload, deny, basename, strip_quotes, tokenize_command, without_display_segments
     from _outbound_verify_transcript import (
         MIN_PROSE_CHARS,

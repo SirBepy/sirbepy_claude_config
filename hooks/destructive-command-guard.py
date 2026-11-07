@@ -131,6 +131,7 @@ IMPORT_RETRY_DELAY_S = 0.15
 
 
 def _import_guard_modules():
+    import _hookboot  # also retries a half-written (SyntaxError) _hooklib, which the ImportError-only retry below misses
     from _hooklib import read_payload, deny as _lib_deny, ask as _lib_ask
     from _destructive_guard_shared import verb_segments
     from _destructive_guard_fs import (

@@ -7,11 +7,16 @@ instead" tail is representable without duplicating the function.
 
 Callers import this via a loud try/except (see any guard's top few lines):
 a broken/missing _hooklib must block hard, not let every guard go quiet.
+Each caller first does `import _hookboot`, which retries a half-written
+_hooklib once after a short sleep (a session mid-edit clears well inside it).
 
 dev-backend-guard.py's matcher (`^(Bash|PowerShell)$`) is broad: a broken
 symbol here blocks every Bash/PowerShell call in every session (todo 850).
-Locked out? Edit/Write tool calls bypass that matcher, so fix this file (or
-remove the guard's settings.json entry) without needing a shell.
+There is NO in-session escape: the Write/Edit guards (secret-write-guard.py
+and others) fail closed on the same import, so a genuinely broken file blocks
+Bash, PowerShell, Write and Edit together. Repair it from a terminal outside
+Claude Code (`git -C ~/.claude checkout -- hooks/_hooklib.py`), and write this
+file in ONE Write call so no reader ever sees it half-finished.
 """
 
 import json
