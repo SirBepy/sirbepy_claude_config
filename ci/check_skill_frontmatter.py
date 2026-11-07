@@ -62,6 +62,11 @@ DESCRIPTION_BUDGET_CHARS = 120
 # The one sound automatic exemption is `disable-model-invocation: true`, applied live from the file
 # in check_description_budget below. A skill that never enters the listing genuinely costs nothing.
 LEGACY_OVER_BUDGET_DEBT = frozenset({
+    # Vendored upstream description (118 words), kept verbatim on purpose: `npx impeccable update`
+    # overwrites SKILL.md in place and restores it, so a local trim would be undone on every update
+    # (decided 2026-11-07). asd-ste100 stays trimmed via skills/VENDORED.overrides.json because
+    # its trim survives the re-apply step.
+    "impeccable",
 })
 
 TOP_LEVEL_KEY = re.compile(r"^([A-Za-z][A-Za-z0-9_-]*):(.*)$")

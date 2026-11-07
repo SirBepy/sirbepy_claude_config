@@ -16,10 +16,13 @@ TIMEOUT_SECONDS = 120
 
 
 def discover(root: Path) -> list:
-    tools_dir = root / "tools"
-    if not tools_dir.is_dir():
-        return []
-    return sorted(p for p in tools_dir.glob(TEST_GLOB) if "__pycache__" not in p.parts)
+    # ci/ carries its own check scripts, so their self-tests sit beside them.
+    found = []
+    for sub in ("tools", "ci"):
+        folder = root / sub
+        if folder.is_dir():
+            found.extend(p for p in folder.glob(TEST_GLOB) if "__pycache__" not in p.parts)
+    return sorted(found)
 
 
 def main() -> int:
@@ -29,7 +32,7 @@ def main() -> int:
     root = args.root.resolve()
 
     tests = discover(root)
-    print(f"discovered {len(tests)} tool test suite(s) under {root / 'tools'}")
+    print(f"discovered {len(tests)} tool test suite(s) under {root / 'tools'} and {root / 'ci'}")
     if not tests:
         print("FAIL: zero tool test suites discovered")
         return 1
