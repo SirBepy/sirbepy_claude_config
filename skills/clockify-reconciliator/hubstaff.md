@@ -110,7 +110,9 @@ window in the first bullet below.
      not "empty", it is a failed read).
   2. A **control fetch with the same org, user and token returned at least one activity in a
      different week**: probe the 4 weeks before the window, newest first, one request per week with
-     `page_limit=1`, and stop at the first non-empty answer. That proves the credentials, org and
+     `page_limit=1`, and stop at the first non-empty answer. (This is exempt from the day-by-day
+     rule above, which exists to avoid truncation; a one-record probe only needs existence. If the
+     endpoint rejects a week-wide `time_slot` range, probe one day at a time within that week.) That proves the credentials, org and
      user resolve to a person who has tracked time, so an empty window is a real gap and not a
      misread.
   Both hold: announce the count and the evidence in one line ("Adding all 22 entries to HubStaff;
