@@ -63,10 +63,10 @@ the literal line `READ-ONLY DISPATCH` (audits capture no screenshots, so the scr
 requirement is exempted by that marker). `model: 'sonnet'` on every one - a well-written dispatch
 prompt is what determines quality here, and the orchestrator controls that.
 
-**The concurrency cap is 20.** `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` governs it; the 21st dispatch
-returns "Concurrent subagent limit reached" and is simply not launched. Launch in waves and refill
-slots as reports land. Tell the dev they can raise the env var and `/respawn` if they want the whole
-fan-out live at once.
+**The concurrency cap is `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`** (set to 30 in
+`~/.claude/settings.json`; the harness default is 20). A dispatch past it returns "Concurrent subagent
+limit reached" and is simply not launched; if that ever happens, launch in waves and refill slots as
+reports land.
 
 ### The two kinds of slice
 

@@ -1,9 +1,12 @@
 {
+  "cleanupPeriodDays": 36500,
   "env": {
-    "CLAUDE_CODE_DISABLE_MOUSE_CLICKS": "1"
+    "CLAUDE_CODE_DISABLE_MOUSE_CLICKS": "1",
+    "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "30"
   },
   "permissions": {
     "allow": [
+      "Workflow",
       "Read(/Users/josipmuzic/.claude/**)",
       "Edit(C:/Users/tecno/Desktop/Projects/Web/video-script-assistant/**)",
       "Bash(git add*)",
@@ -178,7 +181,6 @@
     ]
   },
   "model": "Opus",
-  "cleanupPeriodDays": 36500,
   "skillOverrides": {
     "apply-styleguide": "name-only",
     "favicon": "name-only",
