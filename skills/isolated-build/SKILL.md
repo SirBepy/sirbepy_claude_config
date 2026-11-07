@@ -32,9 +32,11 @@ port would collide with the one already running. Not for a quick single-file edi
    dependency 403s at request time instead of failing at install time.
 3. Bring up the dev server per `~/.claude/skills/supervised-run/SKILL.md`, with two settings that
    matter here specifically: `-Kind ephemeral` (this entry has no reuse value once landed) and a
-   PINNED port via `-NoDynamicPort` if the app persists to localStorage/sessionStorage/IndexedDB
-   (those are per-origin, so a random port each restart orphans the old data). Read that skill's
-   Port table for the exact `{PORT}` flag per tool - not restated here.
+   PINNED port if the app persists to localStorage/sessionStorage/IndexedDB (those are per-origin,
+   so a random port each restart orphans the old data). `-NoDynamicPort` does NOT pin a port: it
+   only stops the supervisor injecting `PORT` and lets the app bind its own default. To pin, follow
+   that skill's "Pinned port for client-side persisted state" note (wrap the entry command to set
+   the env var). Read its Port table for the exact `{PORT}` flag per tool - not restated here.
 4. Poll for the readiness marker per the same skill's "Wait for readiness" section before using
    the port.
 5. Report the id and port back. Everything from here happens in the worktree: edits, the dev

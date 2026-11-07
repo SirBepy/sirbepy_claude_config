@@ -131,18 +131,25 @@ cloned into `C:\tmp\claude-harvest\repos` made **100+ third-party skills model-i
 session**, because `\tmp` is listed in `settings.json`'s `permissions.additionalDirectories`.
 Nothing was executed and no foreign skill was invoked, but the exposure was real.
 
-So, before reading anything:
+This audit runs as a read-only fork: its `allowed-tools` has no tool that renames or moves a
+directory (`Bash` only allows `git diff`, `git log`, `git status`, `wc`, `file`). So the rename is
+the caller's job, done before invoking `/supply-chain-audit`, never the fork's. The fork's part is
+the check:
 
 1. Prefer a clone target outside every `permissions.additionalDirectories` entry and outside the
-   ancestors of the session cwd.
-2. If it is already cloned inside one, rename every `.claude`, `.claude-plugin` and `.agents`
-   directory to `dot-claude`, `dot-claude-plugin`, `dot-agents` before opening a single file. That
-   stops discovery while leaving every byte readable.
-3. **Rename deepest-first.** A shallow `find -maxdepth 3` pass missed 222 nested directories on the
+   ancestors of the session cwd. That needs no rename at all.
+2. Before reading anything else, `Glob` the target for `**/.claude`, `**/.claude-plugin` and
+   `**/.agents` directories. None found: carry on. Any found while the tree sits inside a scanned
+   directory: print the list as the first line of the report, mark it WARN "discovery not
+   disabled", and name the exact rename for the caller to run (below). Reading the files with
+   `Read`/`Grep` stays safe, since discovery is what exposes the skills, not reading.
+3. The caller renames every `.claude`, `.claude-plugin` and `.agents` directory to `dot-claude`,
+   `dot-claude-plugin`, `dot-agents`. That stops discovery while leaving every byte readable.
+4. **Rename deepest-first.** A shallow `find -maxdepth 3` pass missed 222 nested directories on the
    first attempt at exactly this cleanup, which is a silent failure: the shallow pass looks like it
    worked.
-4. Re-check the available-skills listing afterwards. If foreign skill names are still in it, the
-   rename did not take.
+5. The caller re-checks the available-skills listing afterwards. If foreign skill names are still
+   in it, the rename did not take.
 
 Counterweight, worth keeping so this does not become paranoia: across all 32 repos in that harvest,
 **zero files attempted to instruct the reading agent.** The one instruction-shaped artifact was a
