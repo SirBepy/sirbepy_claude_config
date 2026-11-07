@@ -63,6 +63,13 @@ if GATE_CHAT.exists():
     # made a 13%-context chat spawn a gate chat on 2026-10-30.
     check("context-left.mjs" in gate_text and "30%" in gate_text, "gate-chat measures context and skips the hand-off under 30% used")
     check("30%" in commit_text.split("1c. ", 1)[-1].split("\n", 1)[0], "commit step 1c states the 30% threshold")
+    # A Subchats-mode chat hands the gate to a hidden gate sub whatever its context
+    # level, via spawn_chat's gate: true, and a chat with the mode off keeps today's behaviour.
+    step2 = gate_text.split("\n2. ", 1)[-1].split("\n3. ", 1)[0]
+    check("gate: true" in step2 and "Subchats mode is ON for this chat" in step2, "gate-chat step 2 adds gate: true in a Subchats-mode chat")
+    check("Subchats mode is now OFF" in step2, "gate-chat step 2 honours the later 'now OFF' note")
+    check("snippets/auto-commit.md" in step2, "gate-chat still pre-reads snippets/auto-commit.md for the push-read gate")
+    check("Subchats" in commit_text.split("1c. ", 1)[-1].split("\n", 1)[0], "commit step 1c exempts a Subchats-mode chat from the 30% threshold")
 
 check(len(labels) == len(set(labels)), "no duplicate step labels")
 
@@ -72,6 +79,8 @@ check(
     not any(("code-check" in ln or "e2e" in ln or "transcript" in ln) for ln in numbered),
     "release/SKILL.md does not restate the gate or transcript check as numbered steps",
 )
+gate_section = release_text.split("\n## Gate chat", 1)[-1].split("\n## ", 1)[0]
+check("Subchats" in gate_section, "release/SKILL.md Gate chat section names the Subchats-mode hand-off")
 check(
     "Push pipeline" in release_text and "skills/commit/SKILL.md" in release_text,
     "release/SKILL.md points at the commit skill's Push pipeline",

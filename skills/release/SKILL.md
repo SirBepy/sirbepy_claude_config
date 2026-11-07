@@ -24,7 +24,7 @@ The sequence is `skills/commit/SKILL.md`'s "Push pipeline" list, the only place 
 
 ## Gate chat
 
-An attended `/release` from a chat that has used 30% or more of its context hands the rest of the pipeline (from the todo sweep on, including 4b) to a fresh gate chat that ends with `/close`: after 1b, 1d and the Mode step 5 check, invoke `/gate-chat` with mode `release` and the resolved `release` value. If `/gate-chat` finds the chat under 30% it returns and the pipeline continues here; otherwise this chat stops. Unattended runs keep the gate in place.
+An attended `/release` from a chat that has used 30% or more of its context, or that is in Subchats mode (the gate then runs as a hidden gate sub, see `/gate-chat` step 2), hands the rest of the pipeline (from the todo sweep on, including 4b) to a fresh gate chat that ends with `/close`: after 1b, 1d and the Mode step 5 check, invoke `/gate-chat` with mode `release` and the resolved `release` value. If `/gate-chat` finds the chat under 30% with Subchats mode off it returns and the pipeline continues here; otherwise this chat stops. Unattended runs keep the gate in place.
 
 ## 1b. Kit sync
 

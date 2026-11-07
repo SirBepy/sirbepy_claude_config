@@ -29,3 +29,12 @@ Then check `skills/release/SKILL.md` for the same hand-off.
 ## Done when
 
 A `/commit push` from a mode-on chat in a Conductor build that has the feature runs its gate in a hidden sub, with no visible new chat, and a chat with the mode off behaves as today.
+
+## Decided
+
+- A Subchats-mode chat always hands the gate off (gate sub), at any context level, per the todo's approach 3. Mode detection is the system-prompt text, as the todo specified. `skills/release/test_pipeline_order.py` pins the wording in gate-chat step 2, commit step 1c and release's Gate chat section; the pre-read of `snippets/auto-commit.md` (c82bd5d) is kept and pinned.
+- Checked `skills/release/SKILL.md` for the same hand-off: its Gate chat section now names Subchats mode and defers to `/gate-chat` step 2.
+
+## Completion note
+
+Verify only: the final live check (a `/commit push` from a Subchats-mode chat in a Conductor build with `gate: true` runs a hidden gate sub and shows no new visible chat) needs a real Conductor subchats chat and was not run here.
