@@ -139,8 +139,8 @@ def closed_this_turn(transcript_path: str) -> bool:
 _DONT_TEST_RE = re.compile(
     # The phrase must open a clause, so "Should I skip tests?", "he said don't
     # test." and "never skip tests" (a negated skip) do not match.
-    r"(?:^|[.!?;,:\n]\s*|\b(?:and|but|please|just|ok|okay)\s+)"
-    r"(?:don'?t|do not|skip|no need to)\s+"
+    r"(?:^|[.!?;,:\n\-*]\s*|\b(?:and|but|please|just|ok|okay|also|now|then|so|hey|let'?s|feel free to|there'?s)\s+)"
+    r"(?:don'?t|do not|skip|no need to|never run)\s+"
     r"(?:(?:run|running|write|writing|do|doing)\s+)?(?:the\s+|any\s+|more\s+)?tests?"
     # The phrase must end there (optionally after a filler word), so a scoped
     # request like "don't test the CSS" never switches the floor off.
