@@ -542,6 +542,30 @@ def run_scripts_repo_check(root: Path, timeout: int, runner, paths):
     return ok_all, " | ".join(summaries)
 
 
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+# flutter's progress counter shows failures as "+93 -3:" (optionally "~2" skips).
+_FLUTTER_FAILED_COUNTER_RE = re.compile(r"\+\d+(?: ~\d+)? -\d+")
+
+
+def _flutter_verdict(returncode: int, output: str):
+    """(ok, note) for `fvm flutter test`. fvm exits 0 on a genuinely failing
+    run, so a non-zero exit fails but exit 0 is not proof of a pass: the
+    output must carry no failure marker. A green run whose output lacks the
+    exact "All tests passed!" line (seen 2026-10-13: a truncated or reworded
+    summary) used to read as "check failed (exit 0)"; with no failure marker
+    that is "not verified", the same fail-open stance as every other
+    environment gap in this module. `note` is None when the caller should use
+    its standard passed/failed summary."""
+    text = _ANSI_RE.sub("", output)
+    if returncode != 0:
+        return False, None
+    if "Some tests failed" in text or _FLUTTER_FAILED_COUNTER_RE.search(text):
+        return False, None
+    if "All tests passed!" in text:
+        return True, None
+    return True, "no pass or fail verdict line in the output (exit 0, no failure marker); not verified"
+
+
 def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner, paths=None, resolve_bash=resolve_git_bash):
     """Runs one detected stack's fast-check command. `runner` defaults to
     `subprocess.run` in production; tests inject a fake to stay deterministic.
@@ -609,7 +633,9 @@ def run_stack_check(label: str, argv: list, root: Path, timeout: int, runner, pa
         if hit:
             return True, f"{label}: check died from the environment ({hit}); not verified (could not verify, report that)"
     if label == "flutter":
-        ok = "All tests passed!" in output
+        ok, note = _flutter_verdict(proc.returncode, output)
+        if note:
+            return ok, f"{label}: {note}"
     else:
         ok = proc.returncode == 0
     tail = output.strip()[-800:]
