@@ -52,6 +52,10 @@ INVOCATION_CASES = [
     ("git --config-env a=b commit -m x", True, "--config-env takes a separate value"),
     ("git --super-prefix x commit -m x", True, "--super-prefix takes a separate value"),
     ("git --attr-source HEAD commit -m x", True, "--attr-source takes a separate value"),
+    # Bash drops a backslash before an ordinary letter, so these are still `git commit`.
+    ("g\\it commit -m x", True, "a backslash-escaped letter inside the program name"),
+    ("git comm\\it -m x", True, "a backslash-escaped letter inside the subcommand"),
+    ("git \\commit -m x", True, "a backslash before the subcommand"),
     ("C:\\Git\\git.exe status", False, "an unquoted Windows git path with a read-only subcommand"),
     ("echo 'C:\\Git\\git.exe commit'", False, "a quoted path with commit inside one token is not a call"),
 ]

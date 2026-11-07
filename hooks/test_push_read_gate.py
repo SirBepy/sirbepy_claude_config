@@ -40,6 +40,8 @@ INVOCATION_CASES = [
     (".\\git.exe push", True, "a relative .\\git.exe"),
     ("git \\\npush", True, "a bash continuation between git and push"),
     ("git `\r\npush", True, "a PowerShell backtick continuation (CRLF)"),
+    ("g\\it push", True, "a backslash-escaped letter inside the program name"),
+    ("git pu\\sh", True, "a backslash-escaped letter inside the subcommand"),
     ("C:\\Git\\cmd\\git.exe status", False, "an unquoted Windows git path with another subcommand"),
 ]
 

@@ -74,7 +74,7 @@ try:
     from _hooklib import (
         read_payload, deny, consume_fresh_marker, FRESHNESS_SECONDS,
         HEREDOC_BODY_RE, HERESTRING_BODY_RE, is_agent_call, is_command_position, is_program,
-        split_shell_words, join_line_continuations,
+        shell_word_variants, join_line_continuations,
     )
 except Exception as e:
     sys.stderr.write(f"[commit-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
@@ -120,19 +120,22 @@ def _mask_bodies(command: str) -> str:
 
 
 def _tokenize(command: str) -> list[str] | None:
-    # split_shell_words keeps the backslashes of `C:\Git\git.exe` and joins
-    # `git \<newline>commit`; plain posix shlex dropped the first (the program
-    # no longer read as git) and folded a newline into the word after the second.
-    try:
-        return split_shell_words(command)
-    except ValueError:
-        pass
-    try:
-        return split_shell_words(_mask_bodies(command))
-    except ValueError:
-        # Still unbalanced after masking: the caller falls back to
-        # `_unparsed_commit_landing` instead of reading None as "not a commit".
-        return None
+    # Two readings of an unquoted backslash: `C:\Git\git.exe` keeps it (plain posix
+    # shlex ate it, so the program no longer read as git) while bash's `g\it` drops
+    # it. Both token lists are scanned, joined by `;` so no invocation spans them.
+    # Line continuations are joined in both.
+    for text in (command, _mask_bodies(command)):
+        try:
+            variants = shell_word_variants(text)
+        except ValueError:
+            continue
+        tokens: list[str] = []
+        for words in variants:
+            tokens += ([";"] if tokens else []) + words
+        return tokens
+    # Still unbalanced after masking: the caller falls back to
+    # `_unparsed_commit_landing` instead of reading None as "not a commit".
+    return None
 
 
 # `git [global flags] commit|commit-tree`, or a branch-moving update-ref, found by
