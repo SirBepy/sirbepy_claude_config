@@ -42,6 +42,7 @@ VERB_CASES = [
     ("u.urlopen(u.Request(url1, method='GET')); u.urlopen(u.Request(url2, data=b))", {"POST"}, "a GET call elsewhere does not hide a body-carrying call"),
     ("u.urlopen(u.Request(url1, headers=h, method='GET')); u.urlopen(u.Request(url2, b'{}'))", {"POST"}, "a GET call elsewhere does not hide a positional body"),
     ("u.urlopen(u.Request(url1, data=b, method='GET'))", set(), "an explicit GET on the same call as the body stays a read"),
+    ("u.urlopen(u.Request(method='GET', url=u1, data=b))", set(), "a method kwarg written first still decides the call"),
     ("u.urlopen(u.Request(url1, data=b, method=m))", {"POST"}, "a non-literal method on a body-carrying call still reads as POST"),
     ("u.urlopen(u.Request(url1, data=b, method='DELETE')); u.urlopen(u.Request(url2, data=b))", {"DELETE", "POST"}, "an explicit verb on one call and a default POST on another"),
 ]

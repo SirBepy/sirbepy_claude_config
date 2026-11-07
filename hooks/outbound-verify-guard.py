@@ -58,7 +58,7 @@ try:
         uncovered,
     )
     from _outbound_window import window_denial
-    from _python_http_write import SHORTCUT_HINT_RE, has_bare_stories_path, python_write_verbs
+    from _python_http_write import SHORTCUT_HINT_RE, bulk_is_not_a_post, has_bare_stories_path, python_write_verbs
 except Exception as e:
     sys.stderr.write(f"[outbound-verify-guard] FATAL: cannot import a sibling hook module ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -486,9 +486,12 @@ def shortcut_requires_prose(command: str, match: re.Match) -> bool:
     if segments is None or segments[0] != "" or len(segments) < 2:
         return True
     ids = segments[1:]
-    # `/stories/bulk` creates (POST) or updates many stories from one body full of prose.
-    if not ids[0] or ids[0].lower() == "bulk":
+    if not ids[0]:
         return True
+    # `/stories/bulk` carries prose when POSTed (a create); a bulk PUT or DELETE is a state move
+    # or delete with no prose of its own, unless its body shows some.
+    if ids[0].lower() == "bulk":
+        return not bulk_is_not_a_post(command, match.start())
     tail = ids[1:]
     if any("$" in s or "`" in s for s in tail):
         return True
@@ -500,6 +503,12 @@ def shortcut_requires_prose(command: str, match: re.Match) -> bool:
 # it. Only a bare `/stories` or anything under `/comments` is known to carry prose; an id-only
 # write (`/stories/<id>` with a state id) stays ungated unless its text is found.
 PY_SHORTCUT_STORIES_RE = re.compile(r"(?<!search)/stories\b", re.IGNORECASE)
+
+
+def _is_bare_create(command: str, match: re.Match) -> bool:
+    """A `/stories` URL with no id after it, or `/stories/bulk` in a statement that POSTs."""
+    rest = match.group("rest").rstrip("/").lower()
+    return rest == "" or (rest == "/bulk" and not bulk_is_not_a_post(command, match.start()))
 
 
 def python_shortcut_write(command: str) -> bool:
@@ -523,11 +532,14 @@ def detect_rest(command: str, tokens: list, cwd: str | None, posix: bool = True)
     if not is_http_write(command, posix):
         return None
     if py_shortcut:
-        requires = has_bare_stories_path(command) or "/comments" in command.lower()
+        requires = has_bare_stories_path(command, bulk="POST" in python_write_verbs(command)) or "/comments" in command.lower()
         label = "Shortcut REST write (python)"
     elif shortcut:
-        # Every `/stories` URL counts: a read of one story ahead of a create must not hide it.
-        requires = any(shortcut_requires_prose(command, m) for m in SHORTCUT_URL_RE.finditer(command))
+        # A bare create after the first URL counts too: a read of one story ahead of it must not
+        # hide it. Later id or comment URLs do not, so a write followed by a comment read stays allowed.
+        requires = shortcut_requires_prose(command, shortcut) or any(
+            _is_bare_create(command, m) for m in SHORTCUT_URL_RE.finditer(command, shortcut.end())
+        )
         label = "Shortcut REST write"
     elif linear:
         if not LINEAR_GATED_RE.search(command):

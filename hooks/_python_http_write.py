@@ -49,9 +49,32 @@ _LIST_PARENT_RE = re.compile(
 )
 
 
-def has_bare_stories_path(command: str) -> bool:
-    """Whether `command` names the story-create path, not a story list under a parent resource."""
-    return any(not _LIST_PARENT_RE.search(command[:m.start()]) for m in BARE_STORIES_PATH_RE.finditer(command))
+# Where one shell statement ends: `;`, `&&`, `||`, `|` or a newline that is not a backslash
+# continuation. A quoted `;` inside a body also splits, which only narrows the segment.
+_STATEMENT_BREAK_RE = re.compile(r"(?<!\\)\r?\n|;|&&|\|\|?")
+# `-X PUT`, `--request DELETE`, `-Method Put`: a verb other than POST on a REST call.
+NON_POST_VERB_RE = re.compile(r"(?:-X\s*|--request\s+|-Method\s+[\"']?)(?:PUT|PATCH|DELETE|GET)\b", re.IGNORECASE)
+
+
+def bulk_is_not_a_post(command: str, pos: int) -> bool:
+    """Whether the `/stories/bulk` URL at `pos` sits in a statement that names a non-POST verb,
+    which makes it a bulk update or delete. Only that statement counts: a PUT elsewhere in the
+    command says nothing about this call."""
+    start = 0
+    for m in _STATEMENT_BREAK_RE.finditer(command, 0, pos):
+        start = m.end()
+    nxt = _STATEMENT_BREAK_RE.search(command, pos)
+    return bool(NON_POST_VERB_RE.search(command[start:nxt.start() if nxt else len(command)]))
+
+
+def has_bare_stories_path(command: str, bulk: bool = True) -> bool:
+    """Whether `command` names the story-create path, not a story list under a parent resource.
+    `bulk=False` leaves `/stories/bulk` out, for a caller that saw no POST: only a POST there
+    creates, a PUT or DELETE updates or deletes."""
+    return any(
+        not _LIST_PARENT_RE.search(command[:m.start()]) and (bulk or not m.group(0).lower().endswith("/bulk"))
+        for m in BARE_STORIES_PATH_RE.finditer(command)
+    )
 
 
 def _call_args(command: str, open_idx: int) -> list:
@@ -119,7 +142,8 @@ def _urllib_sends_data(command: str) -> bool:
         if k >= MAX_CALLS_SCANNED:
             break
         args = _call_args(command, m.end() - 1)
-        if _METHOD_RE.search(",".join(args[1:])):
+        # All args, not args[1:]: `Request(method='GET', url=u, data=b)` puts the method first.
+        if _METHOD_RE.search(",".join(args)):
             continue
         for pos, arg in enumerate(args[1:], start=1):
             if _DATA_ARG_RE.match(arg):
