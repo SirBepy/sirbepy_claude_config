@@ -1,0 +1,39 @@
+{
+  "_comment": "Local frontmatter lines that differ from upstream on purpose. Checked by ci/check_vendored_overrides.py; after any vendor update run `python ci/check_vendored_overrides.py --apply`. impeccable carries no override: its over-budget upstream description is exempted in ci/check_skill_frontmatter.py (LEGACY_OVER_BUDGET_DEBT).",
+  "skills/agents-sdk/SKILL.md": {
+    "disable-model-invocation": "true"
+  },
+  "skills/cloudflare/SKILL.md": {
+    "disable-model-invocation": "true"
+  },
+  "skills/cloudflare-email-service/SKILL.md": {
+    "disable-model-invocation": "true"
+  },
+  "skills/cloudflare-one/SKILL.md": {
+    "disable-model-invocation": "true"
+  },
+  "skills/cloudflare-one-migrations/SKILL.md": {
+    "disable-model-invocation": "true"
+  },
+  "skills/durable-objects/SKILL.md": {
+    "disable-model-invocation": "true"
+  },
+  "skills/sandbox-sdk/SKILL.md": {
+    "disable-model-invocation": "true"
+  },
+  "skills/turnstile-spin/SKILL.md": {
+    "disable-model-invocation": "true"
+  },
+  "skills/web-perf/SKILL.md": {
+    "disable-model-invocation": "true"
+  },
+  "skills/workers-best-practices/SKILL.md": {
+    "disable-model-invocation": "true"
+  },
+  "skills/wrangler/SKILL.md": {
+    "disable-model-invocation": "true"
+  },
+  "skills/asd-ste100/SKILL.md": {
+    "description": "\"Rewrites agent-facing text (tool docs, errors, prompts) in Simplified Technical English so agents cannot misread it.\""
+  }
+}
