@@ -29,7 +29,6 @@ bug in this file must never permanently block git push in every session.
 """
 
 import re
-import shlex
 import sys
 from pathlib import Path
 

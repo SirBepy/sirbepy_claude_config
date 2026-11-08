@@ -227,7 +227,7 @@ def run_cases(w):
 
     # --- degenerate inputs
     case("non-dict tool_input is ignored", mt.run_hook({"tool_name": "Read", "tool_input": "oops"}, roots=w.roots) == (0, "", ""))
-    bad = w.add("bad.md", "---\nname: [unterminated\n")
+    w.add("bad.md", "---\nname: [unterminated\n")
     r = w.call("Read", {"file_path": "C:/x/y.txt"}, "b1")
     case("a malformed memory file does not break matching", r[0] == 0)
 

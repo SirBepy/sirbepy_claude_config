@@ -238,10 +238,6 @@ def deny_commit_pathspec(filter_name: str) -> None:
     )
 
 
-def _quote_mask(text: str) -> list[bool]:
-    return _scan_quotes(text)[0]
-
-
 def _scan_quotes(text: str) -> tuple[list[bool], bool]:
     """(mask, balanced). mask is True for every character inside a single- or
     double-quoted span (the quote characters themselves count as quoted); a

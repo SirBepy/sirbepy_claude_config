@@ -1,9 +1,10 @@
 """Shared scaffold for the PreToolUse guard hooks (commit/pr/shell-content-
 write/package-manager/flutter-workdir guards).
 
-Only extracts pieces verified byte-identical across the guards. `deny()`
-takes an optional suffix so shell-content-write-guard's extra "use Write
-instead" tail is representable without duplicating the function.
+Holds what two or more guards share: payload I/O, deny/ask output, session
+markers, transcript helpers, and the shell-command parser. `deny()` takes an
+optional suffix so shell-content-write-guard's extra "use Write instead" tail
+is representable without duplicating the function.
 
 Callers import this via a loud try/except (see any guard's top few lines):
 a broken/missing _hooklib must block hard, not let every guard go quiet.
@@ -620,7 +621,6 @@ def split_gate_segments(command: str) -> list[str]:
 SHELL_WRAPPER_NAMES = {"bash", "sh", "zsh", "dash", "ksh", "pwsh", "powershell", "cmd"}
 # Shells that are not Bash: a command line they run is not read by Bash's PATH.
 NON_BASH_SHELL_NAMES = {"pwsh", "powershell", "cmd"}
-INLINE_COMMAND_FLAGS = {"-c", "-lc", "-command"}
 # `-c`, a combined short flag ending in c (`-lc`, `-ec`), every PowerShell
 # abbreviation of -Command, and cmd's /c and /k.
 _INLINE_FLAG_RE = re.compile(

@@ -120,7 +120,10 @@ with tempfile.TemporaryDirectory() as tmp:
     expect("allow --scope outbound succeeds", code == 0)
     expect("the outbound allow clears the same session", _outbound_window.window_denial(bash("x", client), "x") is None)
     expect("the outbound allow is per session", bool(_outbound_window.window_denial(bash("x", client, "sess-other"), "x")))
-    expect("an outbound allow does not clear a commit", not cw.is_allowed(SESSION + "-x", str(client), at(2, 0)) and cw.is_allowed(SESSION, str(client), at(2, 0), scope="outbound"))
+    # A session holding only an outbound allow: SESSION itself already has a commit allow above.
+    out_only = SESSION + "-out-only"
+    cw.cli(["allow", str(client), "--scope", "outbound", "--reason", "Joe: yes post it", "--session", out_only])
+    expect("an outbound allow does not clear a commit", not cw.is_allowed(out_only, str(client), at(2, 0)) and cw.is_allowed(out_only, str(client), at(2, 0), scope="outbound"))
     pin(at(11, 0))
     expect("the allow never outlives the window", bool(not cw.is_allowed(SESSION, str(client), at(11, 0), scope="outbound")))
 
