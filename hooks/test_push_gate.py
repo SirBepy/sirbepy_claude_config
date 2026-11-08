@@ -36,6 +36,11 @@ DASH_C_CASES = [
     # attributed to the push itself.
     ('git -C "C:/cleared" status && git push', None, "earlier unrelated git -C is not the push's own"),
     ('git -C "C:/cleared" status && git -C "C:/target" push', "C:/target", "push's own -C survives an earlier unrelated git -C"),
+    # A value-taking global flag before -C must not hide the push's own -C: push-read-gate
+    # already sees such a push, so the target must resolve to the same repo.
+    ("git --attr-source HEAD -C C:/other push", "C:/other", "--attr-source value does not hide -C"),
+    ("git --config-env a=B -C C:/other push origin", "C:/other", "--config-env value does not hide -C"),
+    ("git --super-prefix p/ -C C:/other push", "C:/other", "--super-prefix value does not hide -C"),
 ]
 
 
