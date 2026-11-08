@@ -54,6 +54,7 @@ check("not a known key" in problems({"_card": {"title": "x"}})[0], "unknown _car
 check("progress" in problems({"_card": {"progress": {"value": 1, "max": 0}}})[0], "progress max 0 rejected")
 check("progress" in problems({"_card": {"progress": {"value": "1", "max": 5}}})[0], "non-numeric progress rejected")
 check("overflows" in problems({"_card": {"segments": {"items": [{"label": "a", "value": 8}, {"label": "b", "value": 5}], "max": 10}}})[0], "segments summing past max rejected")
+check(problems({"_card": {"segments": {"items": [{"label": "a", "value": 0.1}, {"label": "b", "value": 0.2}], "max": 0.3}}}) == [], "float sum that equals max is not an overflow")
 check("segments.items" in problems({"_card": {"segments": {"items": [], "max": 10}}})[0], "empty segments rejected")
 check("note_tone" in problems({"_card": {"segments": {"items": [{"label": "a", "value": 1}], "max": 2, "note_tone": "bad"}}})[0], "bad note_tone rejected")
 

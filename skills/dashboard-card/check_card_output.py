@@ -108,7 +108,7 @@ def check_card(card) -> list:
                 problems.append(f"_card.segments.items[{bad[0]}] needs a label and a numeric value")
             elif any(it["value"] < 0 for it in items):
                 problems.append("_card.segments item values must not be negative")
-            elif sum(it["value"] for it in items) > seg["max"]:
+            elif sum(it["value"] for it in items) > seg["max"] + 1e-9:
                 problems.append("_card.segments item values add up to more than max, so the bar overflows")
         if isinstance(seg, dict) and seg.get("note_tone") not in (None, *TONES):
             problems.append(f"_card.segments.note_tone must be one of {', '.join(TONES)}")
