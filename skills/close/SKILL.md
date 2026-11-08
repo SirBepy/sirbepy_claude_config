@@ -162,7 +162,7 @@ Otherwise (a plain terminal session) print one line, always - this is the one th
 N memory writes . N todos written (M from review, K skill-improvement) . N screenshots written to <dir> . chain: <list of chained commands or "none"> . closing: yes/no
 ```
 
-`M from review` is the count of findings from Phase 2 (size + DRY + dead code); if Phase 2 was skipped, omit the parenthetical and say `review skipped`. `K skill-improvement` is the subset of this close's todos tagged `skill-improvement` in Phase 3 step 2; omit `, K skill-improvement` if zero. `N screenshots written to <dir>` is Phase 3 step 3's count plus the subfolder path; if the count is 0, print `0 screenshots` and drop the `to <dir>` clause. If step 3 flagged `mismatch`, never print `0 screenshots`: print `screenshots: id mismatch, this session captured some but <dir> is missing - check .for_bepy/screenshots/ for the real folder`.
+`M from review` is the N from `/code-check`'s summary line in Phase 2; if Phase 2 was skipped, omit the parenthetical and say `review skipped`. `K skill-improvement` is the subset of this close's todos tagged `skill-improvement` in Phase 3 step 2; omit `, K skill-improvement` if zero. `N screenshots written to <dir>` is Phase 3 step 3's count plus the subfolder path; if the count is 0, print `0 screenshots` and drop the `to <dir>` clause. If step 3 flagged `mismatch`, never print `0 screenshots`: print `screenshots: id mismatch, this session captured some but <dir> is missing - check .for_bepy/screenshots/ for the real folder`.
 
 ## Phase 5 - Run chained commands
 
