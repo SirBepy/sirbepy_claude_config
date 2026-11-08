@@ -28,3 +28,8 @@ Draft each diff, show the dev, then edit. Do not touch a deployed site's workflo
 - A returning visitor gets edited CSS/JS after a redeploy without a manual cache bump.
 - `react.yml`'s upload path matches what the project types `init-claude-md` assigns to `react` actually build.
 - `/deploy` can fire a workflow synced from any of the three templates.
+
+## Decided
+
+- [x] [ARCH] Hold: Joe (2026-11-08) asked whether the web-setup skills should be deleted in favour of one set of guidelines, and opened a skill-audit chat for it. Apply nothing here until that audit decides whether these templates survive.
+
