@@ -8,7 +8,7 @@ effort: medium
 
 # /release
 
-> Push pipeline plus three extra steps: 1b kit sync, 4a pre-bump checks and 4b version bump. A plain push ("push it", `/commit push`) never bumps a version.
+> Push pipeline plus four extra steps: 1b kit sync, 1d repo reports, 4a pre-bump checks and 4b version bump. A plain push ("push it", `/commit push`) never bumps a version.
 
 The sequence is `skills/commit/SKILL.md`'s "Push pipeline" list, the only place it is enumerated. This skill adds the mode decision and the release-only steps (1b, 1d, 4a, 4b), all defined below. "Unattended" means the same as in `/commit`: `/autopilot`, `/auto-do-todos`, `/mega-todos`, or any caller that cannot block on a question.
 
