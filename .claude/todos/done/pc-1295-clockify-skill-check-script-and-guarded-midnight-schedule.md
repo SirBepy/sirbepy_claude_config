@@ -30,9 +30,9 @@ Run the check script by hand with a marker present and absent for today's date (
 
 - 2026-11-07: steps 1, 2 and 4 are done. `skills/clockify-reconciliator/check-ran.py` reads `CC_SCHEDULE_DATE` (fallback: today in Europe/Zagreb), resolves the project from an optional first argument or from the cwd against every config's `repos:` list (exactly one match), and exits 0 printing `already ran for <date>` only when `.runs/<project>/<date>` is a file. Every error path exits 1 silently. `test_check_ran.py` (11 cases) passes. SKILL.md step 1a stays as the fallback and now mentions the script.
 - Not done: step 3, recreating schedule 131dfa6a. Creating a schedule is outbound and needs Joe's card approval of the exact command, so it is parked below.
+- check-ran.py landed (f6f5ba6, 872558c, d607f3e); schedule bbf29aef recreated with the guard and 131dfa6a cancelled on 2026-11-08.
 
-## Open questions
+## Decided
 
-Written by /auto-do-todos on 2026-11-07. The next run opens with these.
+- [x] [TOOLING] Recreate the weekday schedule with the guard - Joe approved 2026-11-08. Claude added schedule bbf29aef (weekdays 23:55, zng-app, same prompt, guard `python C:\Users\tecno\.claude\skills\clockify-reconciliator\check-ran.py zirtue`) and cancelled 131dfa6a. The new item runs on the scheduling session's model, not the old item's sonnet.
 
-- [ ] [TOOLING] Joe: recreate schedule 131dfa6a via the `schedule` MCP tool (`action: add`, `target: new_chat`, `repeat: weekdays`, same prompt as the old item, `guard: python C:\Users\tecno\.claude\skills\clockify-reconciliator\check-ran.py zirtue`; the project name is passed as the argument), approve the card showing that command, confirm the shield in the Schedule panel, then cancel the old item. Do it after this branch is merged, since the guard path points at the main `~/.claude`.
