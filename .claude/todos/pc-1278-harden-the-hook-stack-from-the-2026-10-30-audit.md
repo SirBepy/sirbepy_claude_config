@@ -61,7 +61,6 @@ Decided by the 2026-11-07 overnight run (loop-todos lane h5-hook-stack).
 Written by /auto-do-todos on 2026-11-07. The next run opens with these.
 
 - [ ] [TOOLING] Measure real wall-clock per Bash call (only the harness can: time a nested `claude -p` run with and without an `"if"` filter on the git/gh guards), then decide whether the saving justifies splitting those entries per tool. Needs a measurement run, not code.
-- [ ] [TOOLING] `CLAUDE.md:60` still says "Fall back to a plain shell run only if the supervisor is unreachable", which `dev-server-guard.py` denies. CLAUDE.md is over budget and off limits tonight, so Joe reviews it with the trim; suggested replacement: "If the supervisor is unreachable, stop and tell Joe (dev-server-guard denies a raw run)."
 
 ## Landed
 

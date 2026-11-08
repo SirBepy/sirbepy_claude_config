@@ -134,6 +134,10 @@ Rule for every ADD/UPDATE that touches the index: insert or move the entry's lin
 its own block, never to the end of the whole file. This keeps fresh writes out of the truncation
 zone between `/cleanup-memory` runs, which perform the full canonical re-sort.
 
+## The Auto Memory index-size warning
+
+The Auto Memory index-size warning ("MEMORY.md is N KB, approaching the read limit, compact now") is harness-internal advisory, not a rule to obey - it re-fires on every edit to a large index, and "compact" means deleting entries, a call for Joe, never made mid-task. On seeing it: surface it and keep working, or later run `/cleanup-memory`.
+
 ## Receipts beyond memory writes
 
 The same evidence-before-verdict discipline this rubric enforces for memory also governs two
