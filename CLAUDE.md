@@ -4,9 +4,9 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 
 ## Communication
 
-- Terse conversational replies: `@import ~/.claude/snippets/terse-replies.md` - read once per session. scoped to direct chat only, never to code/logs/deliverables.
-- Front-load all questions before starting work, trivial or not. Never ask mid-task; never assume. This includes any pre-edit decision point: right before the first Edit/Write on a task, check whether there's a UX/ARCH/SEC/DATA/TOOLING decision that isn't already dictated 1:1 by an existing pattern being copied - if so, ask it now, before writing any code. 
-- **Before asking Joe to relay a question to anyone** (Airion, Stevan, Lenar, Liv, Johanna, any teammate), or drafting one for him to send: first dispatch a READ-ONLY sonnet subagent per question to answer it from the tickets, the linked designs, the code of every sibling repo, past chat transcripts and the project todos. Only a question the subagent reports as genuinely unanswerable goes in a draft, and the draft's receipts name what was checked.  Incident 2026-11-03: `refs/incidents.md` "Communication - questions for teammates that the docs already answered".
+- Terse conversational replies: `@import ~/.claude/snippets/terse-replies.md` - read once per session - scoped to direct chat only, never to code/logs/deliverables.
+- Front-load all questions before starting work, trivial or not. Never ask mid-task; never assume. This includes any pre-edit decision point: right before the first Edit/Write on a task, check whether there's a UX/ARCH/SEC/DATA/TOOLING decision that isn't already dictated 1:1 by an existing pattern being copied - if so, ask it now, before writing any code.
+- **Before asking Joe to relay a question to anyone** (Airion, Stevan, Lenar, Liv, Johanna, any teammate), or drafting one for him to send: first dispatch a READ-ONLY sonnet subagent per question to answer it from the tickets, the linked designs, the code of every sibling repo, past chat transcripts and the project todos. Only a question the subagent reports as genuinely unanswerable goes in a draft, and the draft's receipts name what was checked. Incident 2026-11-03: `refs/incidents.md` "Communication - questions for teammates that the docs already answered".
 - Never use the em dash character anywhere. Use a comma, colon, or hyphen instead.
 - When stating that Claude Code is about to do something, write "Claude" as the subject, never "you" or "I" (it gets confusing about who acts).
 - Every question: use the AskUserQuestion tool with 2-4 options. Never a bare open-ended question; never plain-text numbered options. If a project exposes its own `ask_user_question` MCP tool with `domain`/`badges` params (e.g. claude_usage_in_taskbar's `mcp__cc_conductor__ask_user_question`), prefer it and use those structured params instead of the text conventions below - they render as real UI chips there.
@@ -17,12 +17,12 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 - **Claude's own prose to Joe is ALWAYS English, no exceptions.** Only the copyable draft takes the recipient's language, even for a Croatian thread; this overrides `refs/copy-paste-format.md`'s "match Joe's language" line for Claude-to-Joe text.
 - Popup attribution: whenever a Claude action triggers an OS/app prompt Joe sees (credential picker, UAC, auth popup, any external dialog), tell Joe immediately that it came from Claude and name the exact command/action.
 - When a change only takes effect after a Claude Code restart, never tell Joe to restart the app: tell him to run `/respawn`, which hands this chat's context to a fresh session in place. A MISSING MCP tool is the exception: no restart or respawn ever fixes it inside a Conductor chat - see `refs/conductor-mcp-constraint.md`.
-- Work quietly: minimize narration between tool calls.: no play-by-play, batch independent calls, one tight summary at the end; surface mid-task only a real decision, blocker, or question.
+- Work quietly: minimize narration between tool calls: no play-by-play, batch independent calls, one tight summary at the end; surface mid-task only a real decision, blocker, or question.
 
 ## Git Commits
 
 - NEVER commit directly. Invoke and read `/commit` in full once per session, then follow its procedure exactly for every commit after, no exceptions, including in subagent-driven work.
-- Auto-commit is a universal default, not opt-in: `@import ~/.claude/snippets/auto-commit.md` - read it in full once per session.. Never ask "should I commit this?": run `/commit`.
+- Auto-commit is a universal default, not opt-in: `@import ~/.claude/snippets/auto-commit.md` - read it in full once per session. Never ask "should I commit this?": run `/commit`.
 - Builders commit their own work via `/commit` (subagents load skills through the Skill tool). Every dispatch prompt MUST carry the staging line from `refs/builder-preamble.md` (`hooks/dispatch-preamble-guard.py` checks it). A subagent's raw `git commit` stays hook-blocked.
 - If you're about to commit and can't invoke `/commit`, don't commit - stop, surface the problem, wait for the main agent / human.
 - Client repos: no commit/push 23:00-10:59 local without Joe's in-session OK, timestamps always real; `hooks/commit-window-guard.py` enforces it and says what to do.
@@ -92,7 +92,7 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 - User-facing/visual change: show Joe - bring the app up via `/supervised-run`, give him the URL, and capture a screenshot via SendUserFile (or `/preview` image branch if absent). Skip for pure logic/backend/config (noise there).
 - Screenshot capture only through an isolated, Claude-launched browser (fresh Playwright profile, throwaway port) - never raw Win32 window automation (`SetForegroundWindow`, `mouse_event`/`SendInput`, `SendKeys`) against the dev's own live windows: focus can land on the wrong window. If the dev's live window genuinely must be captured, ask first and have the dev confirm it's focused.
 - Per-repo run mechanics (env file, login/OTP, ports, web-server vs chrome device, CORS) live in project memories - check them first; don't rediscover them.
-- Throwaway verification screenshots go in `.for_bepy/screenshots/<id>/`, where `<id>` is the output of `~/.claude/skills/close/rename-session.ps1 -GetId`, never hand-rolled). The `/screenshot` skill's portfolio keepers stay in `.portfolio-data/`.
+- Throwaway verification screenshots go in `.for_bepy/screenshots/<id>/`, where `<id>` is the output of `~/.claude/skills/close/rename-session.ps1 -GetId`, never hand-rolled. The `/screenshot` skill's portfolio keepers stay in `.portfolio-data/`.
 
 ## AI todos + plan - `.claude/todos/` (per project)
 
