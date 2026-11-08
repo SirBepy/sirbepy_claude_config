@@ -8,10 +8,9 @@
 // a rerun). A failure after Save was clicked is never retried, because the entry may already exist:
 // it reports ok:false with maybeSaved:true so the caller verifies through the activities API.
 const fs = require('fs');
-const { getArg, launchProfileContext, gotoWithRetry } = require('./hs_common.cjs');
+const { getArg, launchProfileContext, gotoWithRetry, defaultSleep } = require('./hs_common.cjs');
 
 const MAX_RETRIES = 2;
-const defaultSleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // attempt(entry, markSaveClicked) performs one full try and calls markSaveClicked() right before
 // it clicks Save. recover() resets the page between tries (closes a half-open dialog).

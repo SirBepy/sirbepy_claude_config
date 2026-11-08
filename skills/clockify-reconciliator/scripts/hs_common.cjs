@@ -36,4 +36,4 @@ async function gotoWithRetry(page, url, { retries = 1, timeout = NAV_TIMEOUT_MS,
   }
 }
 
-module.exports = { getChromium, getArg, launchProfileContext, gotoWithRetry, NAV_TIMEOUT_MS };
+module.exports = { getChromium, getArg, launchProfileContext, gotoWithRetry, defaultSleep, NAV_TIMEOUT_MS };
