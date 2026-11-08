@@ -34,14 +34,18 @@ Credential files are unreadable by tools, tracker mutations are gated as the rul
 - `python ci/run_all.py` passes with new guard tests.
 - Allow-list changes listed in the commit body with the dev's decision per broad rule.
 
+## Notes
+
+- Objective fixes landed in 98193b9 and f41865c, the errored-Skill exemption hole closed in 07af7f9, done-audit exemption documented in 9b1af43 per Joe 2026-11-08.
+
 ## Decided
 
 - Landed 2026-11-07 (objective fixes only, per the loop triage): `Read(**/.credentials.json)` added to the settings.json deny list next to the existing credentials rule; `hooks/sensitive-file-guard.py` now asks on the dotfile `.credentials.json` too; `hooks/shortcut-raw-write-guard.py` exempts a session only when `/zirtue-release-backfill` or `/shortcut-done-audit` was actually invoked (a user turn starting with the command, its command-name block, or a Skill tool call), not when the name appears anywhere in a user message; `hooks/linear-update-guard.py` asks on every `issueDelete` and on MCP delete_issue tools, since the ownership gate (creator == dev) cannot be proven from a command string. Tests are in the matching `hooks/test_*.py`.
 - Broad allows (`npx*`, `curl*`, `gh api*`, `find*`, `xargs*`) left alone, as decided in the triage. The dead/Mac/caveman allow-rule walk was not done.
 - Live proof of the credentials deny rule is UNVERIFIED: a nested `claude -p` canary run refused to attempt the reads (its own classifier), so nothing was proven either way. The rule has the same shape as the existing `Read(**/.env)` deny, and a settings.json deny only loads after `/respawn`.
 
-## Open questions
+## Decided
 
-- [ ] [SEC] `shortcut-done-audit` step 7 PUTs Complete on Joe's inline confirmation, but `skills/ticket/shortcut.md` State ladder says only `/zirtue-release-backfill` closes stories. The todo wants the ceiling check to run before the exemption, which would block done-audit's Complete PUTs. Which rule wins: keep done-audit exempt from the ceiling, or make it stop at Testing?
-- [ ] [TOOLING] `skills/ticket/shortcut.md:21-22` needs aligning with whatever the answer above is (off limits in this lane, so not edited).
-- [ ] [SEC] Walk the remaining allow list (about 45 dead, Mac, one-off or caveman rules) with Joe, per the todo's step 4.
+- [x] [SEC] done-audit vs the Testing ceiling - Joe decided 2026-11-08: keep shortcut-done-audit exempt (it PUTs Complete only on his per-ticket inline confirm). skills/ticket/shortcut.md now names it as the second exception (9b1af43).
+- [x] [SEC] Walking the remaining broad allow list - Joe chose objective fixes only on 2026-11-07; the broad allows stay.
+
