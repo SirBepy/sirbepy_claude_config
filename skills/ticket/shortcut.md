@@ -20,6 +20,8 @@ change - the one place this rule lives, no per-project copies.
 Testing (`500018257`) is the ceiling for Joe and Claude. Never PUT Ready for deploy (`500018659`)
 or Complete (`500018258`) by hand - QA promotes Testing to Ready for deploy, and
 `/zirtue-release-backfill` closes Ready for deploy to Complete. Won't do (`500019415`) is fine.
+The one other exception is `/shortcut-done-audit`, which may PUT Complete per ticket after Joe confirms it inline
+(Joe, 2026-11-08).
 "Mark sc-X done" means Testing at most - say why, don't ask.
 
 `hooks/shortcut-mutation-guard.py` checks the Shortcut MCP tools. `hooks/shortcut-raw-write-guard.py`
