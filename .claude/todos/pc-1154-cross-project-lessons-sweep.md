@@ -53,9 +53,10 @@ Written by /loop-todos sub on 2026-11-07.
 
 Written by /loop-todos sub on 2026-11-07. The next run opens with these.
 
-- [ ] [DATA] First real promotion: the dry run over 831 feedback memories found 7 cross-project clusters, all from only two project pairs, so there is little to promote today. Which, if any, should become global lessons? `feedback-auto-commit` (server-supervisor + claude_usage_in_taskbar; CLAUDE.md already covers auto-commit, so likely a no). `local-gpu-runs-gentle-limits` and `reveal-minimum-in-outreach-emails` (dashboard-a + rodge; plausibly general). `design-review-in-demo`, `push-always-allowed`, `tell-dane-means-write-the-for-dane-doc`, `web-build-check-against-demo-per-task` name dashboard-a files or people, so they look repo-specific, not lessons. Promote with `python ~/.claude/skills/cleanup-memory/lessons_sweep.py promote ...` after Joe picks; re-run `scan` first, the corpus moves.
 - [ ] [DATA] The corpus is 96 project dirs with only 7 text-level duplicates: most cross-project lessons were probably phrased differently each time and need a semantic pass, not token overlap. Wanted: a one-off panel read of the 831 feedback memory descriptions (a model call, so a spend decision for Joe) to find paraphrased duplicates, or accept the cheap scan as it is.
 
 ## Notes
+
+- 2026-11-08: Joe picked local-gpu-runs-gentle-limits as the first global lesson; promoted with lessons_sweep.py into lessons/ (the other six clusters stay project memories).
 
 - Deferred question (needs an attended session for its `hooks/`/`settings.json` writes) answered 2026-11-07: Joe said run it now, in the attended 2026-11-07 session; he approves each permission prompt as it appears.
