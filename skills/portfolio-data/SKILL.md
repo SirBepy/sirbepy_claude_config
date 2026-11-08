@@ -1,6 +1,6 @@
 ---
 name: portfolio-data
-description: Generates or updates portfolio metadata.json and PORTFOLIO.md for a repo. Feeds readme, meta-tags, favicon skills.
+description: Generates or updates portfolio metadata.json and PORTFOLIO.md for a repo. Feeds README, meta tags, favicon.
 ---
 
 # /portfolio-data

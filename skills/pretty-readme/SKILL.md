@@ -9,9 +9,10 @@ argument-hint: "[repo path]"
 > Turn a repo's README into a polished GitHub front page: a real banner, a tight badge row, a
 > tech-icon row, screenshots, and sections a stranger can scan in ten seconds.
 
-`/readme` writes a correct README for web projects from portfolio metadata. This skill is the
-visual layer: use it when the README already says the right things but looks like a wall of
-text, or when a repo is about to go public. It can run on top of a `/readme` result.
+`refs/web-project-setup.md` section 9 writes a correct README for web projects from portfolio
+metadata. This skill is the visual layer: use it when the README already says the right things
+but looks like a wall of text, or when a repo is about to go public. It can run on top of that
+README.
 
 No outside skill was adopted for this (searched 2026-10-17: the published "readme generator"
 skills only emit text sections, none handle banners, badges or screenshots). The visual pieces

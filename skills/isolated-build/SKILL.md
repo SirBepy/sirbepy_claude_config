@@ -2,6 +2,7 @@
 name: isolated-build
 description: Build in a scratch worktree with a dev server, then land onto main without losing files or worktree-removal trouble.
 argument-hint: "[start <name>|land]"
+disable-model-invocation: true
 ---
 
 # /isolated-build

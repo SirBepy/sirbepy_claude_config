@@ -29,6 +29,10 @@ Draft each diff, show the dev, then edit. Do not touch a deployed site's workflo
 - `react.yml`'s upload path matches what the project types `init-claude-md` assigns to `react` actually build.
 - `/deploy` can fire a workflow synced from any of the three templates.
 
+## Notes
+
+- Done 2026-11-08 with the skill audit: workflow_dispatch added to html/vite/react.yml; pwa sw.js is now network-first for pages, stale-while-revalidate for assets, with an activate cleanup; react means CRA only (refs/web-project-setup.md), so react.yml's build/ path is right and Vite+React routes to vite.yml.
+
 ## Decided
 
 - [x] [ARCH] Hold: Joe (2026-11-08) asked whether the web-setup skills should be deleted in favour of one set of guidelines, and opened a skill-audit chat for it. Apply nothing here until that audit decides whether these templates survive.
