@@ -2,6 +2,7 @@
 name: cleanup-memory
 description: Audits the current project's auto-memory files for staleness, dead references, and duplication; dedupes and archives, applying by default after one up-front question.
 disable-model-invocation: true
+argument-hint: "[--global]"
 ---
 
 # /cleanup-memory

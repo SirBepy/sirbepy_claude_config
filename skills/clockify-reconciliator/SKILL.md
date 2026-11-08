@@ -136,7 +136,7 @@ causes the next night's run to skip), at
 `~/.claude/skills/clockify-reconciliator/.runs/<project-name>/<YYYY-MM-DD>`. Contents: one line,
 `started LOCAL <HH:MM>, window <window as resolved>`. A `yesterday` run marks only yesterday; the
 Friday week run marks Mon to Fri. An existing marker is overwritten with the newer line. `.runs/` is
-gitignored machine-local state. Step 1a reads these markers; nothing else does.
+gitignored machine-local state. Step 1a and `check-ran.py` read these markers; nothing else does.
 
 ### 3a. Resolve mode
 

@@ -213,7 +213,6 @@ th{background:var(--code);font-weight:650}
 .sources{border-top:1px solid var(--line);padding-top:14px;color:var(--muted);font-size:13px}
 .sources h2{font-size:13px;border:0;margin:0 0 4px;text-transform:uppercase;letter-spacing:.08em}
 .sources a{color:var(--accent)}
-.stamp{margin-top:18px;font-size:12px;color:var(--muted)}
 /* Phone: a many-column table reads better as labelled cards than squeezed. */
 @media (max-width:640px){
 main{padding:20px 14px 56px}h1{font-size:23px}

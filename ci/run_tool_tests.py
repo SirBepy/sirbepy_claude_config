@@ -1,6 +1,6 @@
-"""Discovers and runs every tools/test_*.py self-test, one subprocess each.
+"""Discovers and runs every tools/test_*.py and ci/test_*.py self-test, one subprocess each.
 
-Twin of run_hook_tests.py for the scripts under tools/. Those scripts are not
+Twin of run_hook_tests.py for the scripts under tools/ and ci/. Those scripts are not
 hooks and never run in-session, but they carry real parsing logic, so they get
 the same mechanical floor. Only offline, money-free tests belong here: the
 harnesses under tools/ that spend tokens are exercised by hand, never by CI.
