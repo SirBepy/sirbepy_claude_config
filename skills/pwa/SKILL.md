@@ -104,7 +104,9 @@ Only include SVG icon entry if `assets/images/favicon.svg` exists.
 Create `sw.js` in the project root:
 
 ```javascript
-const CACHE_NAME = "v1";
+// Fixed name on purpose: pages are network-first and assets revalidate on every load, so a deploy
+// reaches returning users without bumping this. Change it only to purge every cache.
+const CACHE_NAME = "static";
 const ASSETS = [
   "./",
   "./index.html",
@@ -115,6 +117,7 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", (e) => {
+  self.skipWaiting();
   e.waitUntil(
     caches
       .open(CACHE_NAME)
@@ -122,9 +125,35 @@ self.addEventListener("install", (e) => {
   );
 });
 
+self.addEventListener("activate", (e) => {
+  e.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
+  );
+});
+
 self.addEventListener("fetch", (e) => {
+  if (e.request.method !== "GET") return;
+  const put = (res) => {
+    if (res.ok) {
+      const copy = res.clone();
+      caches.open(CACHE_NAME).then((c) => c.put(e.request, copy));
+    }
+    return res;
+  };
+  if (e.request.mode === "navigate") {
+    // Network-first: the HTML is the entry point to every other file.
+    e.respondWith(fetch(e.request).then(put).catch(() => caches.match(e.request).then((c) => c || caches.match("./index.html"))));
+    return;
+  }
+  // Stale-while-revalidate: instant from cache, refreshed in the background for the next load.
   e.respondWith(
-    caches.match(e.request).then((cached) => cached || fetch(e.request)),
+    caches.match(e.request).then((cached) => {
+      const refresh = fetch(e.request).then(put).catch(() => cached);
+      return cached || refresh;
+    }),
   );
 });
 ```
@@ -155,10 +184,10 @@ Add before `</body>` if missing:
 Tell the user what was created and remind them:
 
 - `theme_color` and `background_color` in `manifest.json` can be updated to match their preferred theme
-- The service worker is cache-first and precaches at install time. Returning users keep the cached
-  copy of every listed file until `CACHE_NAME` in `sw.js` changes, so after editing CSS/JS or
-  adding files, edit the `ASSETS` list and bump `CACHE_NAME` (`v1` -> `v2`) by hand. Running `/pwa`
-  again does not do this: Step 1 sees a complete setup and stops, and `/pwa skipVerification`
+- The service worker is network-first for pages and stale-while-revalidate for assets, so a
+  redeploy reaches returning users on their next visit (assets one load later) with no cache bump.
+  Adding a new file means adding it to the `ASSETS` list for offline precache. Running `/pwa` again
+  does not touch `sw.js`: Step 1 sees a complete setup and stops, and `/pwa skipVerification`
   regenerates `manifest.json` and `sw.js` from the template, overwriting any colors or names
   edited since.
 - PWA install prompt will appear in supported browsers once deployed to GitHub Pages

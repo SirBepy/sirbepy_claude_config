@@ -1,6 +1,6 @@
-# apply-styleguide - python stack (pywebview)
+# Styleguide for Python desktop projects (pywebview)
 
-Assumes `common.md` is already loaded. This file only adds python-specific steps.
+The token table, component classes and CDN URL are in `refs/web-project-setup.md` section 6; read it first. This file adds only the python-specific steps.
 
 For Python desktop projects, the styleguide is consumed by rendering real HTML inside a pywebview window. No CSS var porting, no re-encoding tokens - the HTML pulls the exact same CDN file a web project would.
 
@@ -28,10 +28,10 @@ Register the folder as package data in `pyproject.toml`:
 
 Each dialog HTML file must:
 
-- Link the styleguide CDN in `<head>` before any other stylesheet (see common.md).
+- Link the styleguide CDN in `<head>` before any other stylesheet (see `refs/web-project-setup.md` section 6).
 - Load Phosphor Icons via CDN.
-- Use the standard component classes from common.md - never hand-rolled component styles.
-- Use CSS vars from common.md for any custom CSS - never hardcoded hex/px for themeable values.
+- Use the standard component classes from `refs/web-project-setup.md` section 6 - never hand-rolled component styles.
+- Use CSS vars from `refs/web-project-setup.md` section 6 for any custom CSS - never hardcoded hex/px for themeable values.
 - Talk to Python via `window.pywebview.api.<method>()` and close itself by calling a `submit()` / `cancel()` API method (Python calls `window.destroy()`).
 - Bind Escape to cancel and Enter to the primary action.
 
@@ -88,7 +88,7 @@ Add to the PyInstaller command:
 
 ## 7. Confirm
 
-Follow the "Finish" section in `common.md`. Additionally note:
+Finish with a summary of what changed and what was ambiguous or skipped; do not commit. Additionally note:
 
 - Dialogs migrated (tkinter/Qt -> pywebview)
 - `requires-python` set (with reason, if constrained)

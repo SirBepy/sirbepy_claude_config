@@ -1,6 +1,7 @@
 ---
 name: sirbepy-mail
 description: Use when Joe asks to read or reply to his email/chat messages, or to open a draft in his sirbepy app.
+disable-model-invocation: true
 ---
 
 # /sirbepy-mail

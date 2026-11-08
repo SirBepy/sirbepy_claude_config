@@ -2,6 +2,7 @@
 name: dashboard-card
 description: Use when asked to show a metric on a project's dashboard. Tests then upserts a Conductor card.
 argument-hint: "<what to show, e.g. days since the last audit> [--action /skill]"
+disable-model-invocation: true
 ---
 
 # /dashboard-card
