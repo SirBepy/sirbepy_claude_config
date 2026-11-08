@@ -34,7 +34,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny
+    from _hooklib import read_payload, deny, is_agent_call
 except Exception as e:
     sys.stderr.write(f"[deferred-tool-blind-call-guard] FATAL: cannot import _hooklib ({e}); failing open.\n")
     sys.exit(0)
@@ -143,7 +143,7 @@ def main() -> None:
     tool_name = payload.get("tool_name") or ""
     if not matches_tool(tool_name):
         sys.exit(0)
-    if payload.get("agent_id"):
+    if is_agent_call(payload):
         # A dispatched subagent loads its own schemas in its own transcript,
         # which this payload's transcript_path may not be.
         sys.exit(0)

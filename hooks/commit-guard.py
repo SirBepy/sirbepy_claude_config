@@ -59,7 +59,6 @@ this guard's own allow/deny decision.
 
 import os
 import re
-import shlex
 import shutil
 import subprocess
 import sys
@@ -120,9 +119,9 @@ def _mask_bodies(command: str) -> str:
 
 
 def _tokenize(command: str) -> list[str] | None:
-    # Two readings of an unquoted backslash: `C:\Git\git.exe` keeps it (plain posix
-    # shlex ate it, so the program no longer read as git) while bash's `g\it` drops
-    # it. Both token lists are scanned, joined by `;` so no invocation spans them.
+    # Two readings of an unquoted backslash: `C:\Git\git.exe` must keep it to read as
+    # git, while bash's `g\it` drops it. Both token lists are scanned, joined by `;`
+    # so no invocation spans them.
     # Line continuations are joined in both.
     for text in (command, _mask_bodies(command)):
         try:
@@ -419,7 +418,8 @@ def _deny_prefilter_failure() -> None:
     )
 
 
-# Same two patterns commit-pathspec.sh refuses, for the by-hand `git commit -m` fallback.
+# The by-hand `git commit -m` fallback's AI-attribution patterns (commit-pathspec.sh
+# refuses the same trailers with its own, looser regexes).
 # git accepts `=` as well as `:` between a trailer token and its value.
 _AI_TRAILER_RE = re.compile(r"^co-authored-by\s*[:=].*(claude|anthropic)", re.IGNORECASE)
 # The footer line itself: it opens a line (an emoji may lead), or carries the markdown

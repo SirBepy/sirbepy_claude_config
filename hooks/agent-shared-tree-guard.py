@@ -13,9 +13,7 @@ Whether a PreToolUse hook can tell a subagent's call from the orchestrator's
 own is already settled, not re-probed here: `agent-todo-write-guard.py`
 (todo 404) proved `agent_id` is present on the payload if, and only if, the
 call comes from a dispatched agent, re-verified live 2026-09-11. `is_agent_call`
-below is the same test, copied rather than imported - importing it from that
-guard would couple two independently-owned hooks over a one-line predicate,
-for a function small enough that drift risk is lower than the coupling cost.
+is that same test, imported from `_hooklib` where every guard shares it.
 
 Scoping call (stated, not left implicit): this hook does NOT carve out a
 subagent's own linked worktree the way `git-workdir-guard.py` carves out a
@@ -41,7 +39,6 @@ the payload, so `is_agent_call` is false and this hook exits 0 before any
 command matching happens.
 """
 
-import re
 import shlex
 import sys
 from pathlib import Path
@@ -52,7 +49,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 try:
     import _hookboot  # retries a shared module another session is mid-way through writing
-    from _hooklib import read_payload, deny, basename, strip_quotes, split_gate_segments_deep
+    from _hooklib import read_payload, deny, basename, strip_quotes, split_gate_segments_deep, is_agent_call
 except Exception as e:
     sys.stderr.write(f"[agent-shared-tree-guard] FATAL: cannot import _hooklib ({e}); blocking to avoid silently disabling this guard.\n")
     sys.exit(2)
@@ -63,12 +60,6 @@ GIT_BASENAMES = {"git", "git.exe"}
 # git-workdir-guard.py uses for the same reason.
 VALUE_FLAGS = {"-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
 DANGEROUS_SUBCOMMANDS = {"stash", "reset"}
-
-
-def is_agent_call(payload: dict) -> bool:
-    """True when this PreToolUse call came from a dispatched agent, not the
-    top-level orchestrator session (see module docstring)."""
-    return bool(payload.get("agent_id"))
 
 
 def tokenize(segment: str) -> list[str]:

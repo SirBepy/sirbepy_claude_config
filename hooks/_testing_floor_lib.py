@@ -531,9 +531,8 @@ def _flutter_verdict(returncode: int, output: str):
     run, so a non-zero exit fails but exit 0 is not proof of a pass: the
     output must carry no failure marker. A green run whose output lacks the
     exact "All tests passed!" line (seen 2026-10-13: a truncated or reworded
-    summary) used to read as "check failed (exit 0)"; with no failure marker
-    that is "not verified", the same fail-open stance as every other
-    environment gap in this module. `note` is None when the caller should use
+    summary) is "not verified" when it has no failure marker, the same
+    fail-open stance as every other environment gap in this module. `note` is None when the caller should use
     its standard passed/failed summary."""
     text = _ANSI_RE.sub("", output)
     if returncode != 0:
