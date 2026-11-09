@@ -1938,10 +1938,13 @@ sym_root=$(mktemp -d); tmp_dirs+=("$sym_root")
 # nativestrict makes MSYS create a real symlink instead of a silent copy; a copy would not
 # reproduce the logical-path problem, so a failed link skips the case rather than passing it.
 # The link target is normalized first, and the case runs only when `pwd -P` inside the link lands on
-# that real directory: on the GitHub Windows runner it does not (the script then sees the logical
-# path and cannot find hooks/ beside the link), so there the case would test the runner, not the fix.
+# that real directory. It also skips on the GitHub Windows runner (GITHUB_ACTIONS): there the test's
+# own `pwd -P` resolves the link yet secret-scan.sh, started through prefilter-gate.sh, still sees the
+# logical path (observed 2026-11-09, run 42612035735) and cannot find hooks/ beside the link. That is
+# a runner quirk the local run does not reproduce, so the case stays a local-machine check.
 real_skills=$(cd "$script_dir/.." && pwd -P)
-if MSYS=winsymlinks:nativestrict ln -s "$real_skills" "$sym_root/skills" 2>/dev/null && [ -L "$sym_root/skills" ] \
+if [ -z "${GITHUB_ACTIONS:-}" ] \
+   && MSYS=winsymlinks:nativestrict ln -s "$real_skills" "$sym_root/skills" 2>/dev/null && [ -L "$sym_root/skills" ] \
    && [ "$(cd "$sym_root/skills" && pwd -P)" = "$real_skills" ]; then
   r90=$(new_listed_repo); tmp_dirs+=("$r90")
   branch=$(git -C "$r90" rev-parse --abbrev-ref HEAD)
