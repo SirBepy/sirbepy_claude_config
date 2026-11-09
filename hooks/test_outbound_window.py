@@ -15,6 +15,7 @@ from pathlib import Path
 
 import _testlib
 import _outbound_window
+from _hooklib import git_repo_root
 
 _HOOKS_DIR = Path(__file__).resolve().parent
 verify_guard = _testlib.load_module("verify_guard", _HOOKS_DIR / "outbound-verify-guard.py")
@@ -113,8 +114,11 @@ with tempfile.TemporaryDirectory() as tmp:
     expect("a SystemExit while loading the commit window fails open instead of ending the hook", result is None)
 
     # --- the approval is its own scope ---
+    # The allow files are keyed by the repo root git reports (a long path on CI, where TEMP is an
+    # 8.3 short path), so direct allow-file checks use it too, never the raw temp path.
+    client_root = git_repo_root(str(client))
     pin(at(2, 0))
-    cw.grant(SESSION, str(client), "Joe: yes commit", at(2, 0))
+    cw.grant(SESSION, client_root, "Joe: yes commit", at(2, 0))
     expect("a commit-window allow does not clear ticket posting", bool(_outbound_window.window_denial(bash("x", client), "x")))
     code = cw.cli(["allow", str(client), "--scope", "outbound", "--reason", "Joe: yes post it", "--session", SESSION])
     expect("allow --scope outbound succeeds", code == 0)
@@ -123,9 +127,9 @@ with tempfile.TemporaryDirectory() as tmp:
     # A session holding only an outbound allow: SESSION itself already has a commit allow above.
     out_only = SESSION + "-out-only"
     cw.cli(["allow", str(client), "--scope", "outbound", "--reason", "Joe: yes post it", "--session", out_only])
-    expect("an outbound allow does not clear a commit", not cw.is_allowed(out_only, str(client), at(2, 0)) and cw.is_allowed(out_only, str(client), at(2, 0), scope="outbound"))
+    expect("an outbound allow does not clear a commit", not cw.is_allowed(out_only, client_root, at(2, 0)) and cw.is_allowed(out_only, client_root, at(2, 0), scope="outbound"))
     pin(at(11, 0))
-    expect("the allow never outlives the window", bool(not cw.is_allowed(SESSION, str(client), at(11, 0), scope="outbound")))
+    expect("the allow never outlives the window", bool(not cw.is_allowed(SESSION, client_root, at(11, 0), scope="outbound")))
 
     # --- both callers ---
     comment = f"gh pr comment 12 --body \"{'The biller address field skips validation when the country is empty.'}\""
