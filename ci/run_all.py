@@ -209,10 +209,15 @@ def check_skill_tests(root: Path) -> tuple:
     details = []
     for test_path in tests:
         rel = test_path.relative_to(root)
+        ps_env = None
         if test_path.suffix == ".sh":
             runner = [_bash_exe(), rel.as_posix()]
         elif test_path.suffix == ".ps1":
             runner = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(rel)]
+            # Windows PowerShell 5.1 started from pwsh 7 inherits its PSModulePath and then cannot
+            # load Microsoft.PowerShell.Utility (Get-FileHash "not recognized"); unset it so 5.1
+            # computes its own default.
+            ps_env = {k: v for k, v in os.environ.items() if k.upper() != "PSMODULEPATH"}
         elif test_path.suffix in (".cjs", ".mjs"):
             runner = ["node", str(rel)]
         else:
@@ -220,7 +225,7 @@ def check_skill_tests(root: Path) -> tuple:
         try:
             proc = subprocess.run(
                 runner, cwd=str(root), capture_output=True,
-                text=True, encoding="utf-8", errors="replace", timeout=600,
+                text=True, encoding="utf-8", errors="replace", timeout=600, env=ps_env,
             )
             ok, out, err = proc.returncode == 0, proc.stdout, proc.stderr
         except (OSError, subprocess.TimeoutExpired) as e:

@@ -1937,7 +1937,11 @@ check "a partial --own-range still refuses a hunk outside it, with no whole-file
 sym_root=$(mktemp -d); tmp_dirs+=("$sym_root")
 # nativestrict makes MSYS create a real symlink instead of a silent copy; a copy would not
 # reproduce the logical-path problem, so a failed link skips the case rather than passing it.
-if MSYS=winsymlinks:nativestrict ln -s "$script_dir/.." "$sym_root/skills" 2>/dev/null && [ -L "$sym_root/skills" ]; then
+# The link target is normalized first: a native symlink whose target holds `..` is not resolved by
+# `pwd -P` under MSYS (GitHub Windows runner), so a raw "$script_dir/.." link tests nothing there.
+# The case still skips when `pwd -P` leaves the link unresolved.
+if MSYS=winsymlinks:nativestrict ln -s "$(cd "$script_dir/.." && pwd -P)" "$sym_root/skills" 2>/dev/null && [ -L "$sym_root/skills" ] \
+   && [ "$(cd "$sym_root/skills" && pwd -P)" != "$(cd "$sym_root/skills" && pwd)" ]; then
   r90=$(new_listed_repo); tmp_dirs+=("$r90")
   branch=$(git -C "$r90" rev-parse --abbrev-ref HEAD)
   sha=$(git -C "$r90" rev-parse HEAD)
@@ -1950,7 +1954,7 @@ if MSYS=winsymlinks:nativestrict ln -s "$script_dir/.." "$sym_root/skills" 2>/de
   check "a local-only-tests repo gets the same verdict when the script is called through a symlinked skills dir (todo 1309)" \
     0 'coverage-tests-check.*clean.*local-only-tests repo' 'REFUSED' "$out" "$rc"
 else
-  echo "SKIP: todo 1309 - cannot create a native symlink here"
+  echo "SKIP: todo 1309 - cannot create a native symlink that pwd -P resolves here"
 fi
 
 # --- a mode change only the index holds: with core.fileMode=false, `git commit -- <path>`
