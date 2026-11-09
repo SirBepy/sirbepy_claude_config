@@ -1937,11 +1937,12 @@ check "a partial --own-range still refuses a hunk outside it, with no whole-file
 sym_root=$(mktemp -d); tmp_dirs+=("$sym_root")
 # nativestrict makes MSYS create a real symlink instead of a silent copy; a copy would not
 # reproduce the logical-path problem, so a failed link skips the case rather than passing it.
-# The link target is normalized first: a native symlink whose target holds `..` is not resolved by
-# `pwd -P` under MSYS (GitHub Windows runner), so a raw "$script_dir/.." link tests nothing there.
-# The case still skips when `pwd -P` leaves the link unresolved.
-if MSYS=winsymlinks:nativestrict ln -s "$(cd "$script_dir/.." && pwd -P)" "$sym_root/skills" 2>/dev/null && [ -L "$sym_root/skills" ] \
-   && [ "$(cd "$sym_root/skills" && pwd -P)" != "$(cd "$sym_root/skills" && pwd)" ]; then
+# The link target is normalized first, and the case runs only when `pwd -P` inside the link lands on
+# that real directory: on the GitHub Windows runner it does not (the script then sees the logical
+# path and cannot find hooks/ beside the link), so there the case would test the runner, not the fix.
+real_skills=$(cd "$script_dir/.." && pwd -P)
+if MSYS=winsymlinks:nativestrict ln -s "$real_skills" "$sym_root/skills" 2>/dev/null && [ -L "$sym_root/skills" ] \
+   && [ "$(cd "$sym_root/skills" && pwd -P)" = "$real_skills" ]; then
   r90=$(new_listed_repo); tmp_dirs+=("$r90")
   branch=$(git -C "$r90" rev-parse --abbrev-ref HEAD)
   sha=$(git -C "$r90" rev-parse HEAD)
