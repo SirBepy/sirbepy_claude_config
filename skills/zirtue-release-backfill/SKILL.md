@@ -52,7 +52,7 @@ Never re-derive:
   - `Ready for deploy`: `500018659`
   - `Complete`: `500018258`
   - `Won't do`: `500019415`
-  - `Testing`: `500018257` (never read as "done", never written: see Gate D)
+  - `Testing`: `500018257` (Gate E's target, and the ceiling: a `Testing` ticket is never moved)
   - Terminal states excluded from scope entirely: `Complete`, `Won't do`. Every other state (`Backlog`, `To Do`, `In Progress`, `PR Review`, `Testing`, `Blocked`, `Ready for deploy`, `On hold`) is in scope for shipped-detection.
 - Sentinel Release values (treat as unset):
   - `Next release` - value_id `698b4bce-ecd7-44c3-b62a-2b49b2506c1d`
@@ -230,10 +230,10 @@ step 4, cross-reference separately:
 
 For every ticket that passed step 4 eligibility (including the Step 4b bucket):
 
-- Concrete release (matches `^(FE|Admin|API|Biller) \d+\.\d+\.\d+(\+\d+)?$`) - **already set**, but still check other fields (step 7). It moves to Complete only from `Ready for deploy` (Gate D); in any other state only the step 7 fills apply.
+- Concrete release (matches `^(FE|Admin|API|Biller) \d+\.\d+\.\d+(\+\d+)?$`) - **already set**, but still check other fields (step 7). It moves to Complete only from `Ready for deploy` (Gate D), or to Testing from Backlog / To Do / In Progress (Gate E); in any other state, `Testing` included, only the step 7 fills apply.
 - Empty / `Next release` / `TBD` / `Oneday` / `V1.x` - **needs Release backfill** (steps 6 + 7).
 
-The REJECTED flag from step 4.3 carries through unchanged - a REJECTED ticket gets no Release and no move (Gates A and D both skip it).
+The REJECTED flag from step 4.3 carries through unchanged - a REJECTED ticket gets no Release and no move (Gates A, D and E all skip it).
 
 ### 6. Resolve Release for unset tickets
 
@@ -279,7 +279,8 @@ Print a markdown table grouped by:
 
 1. Ready for deploy, commit names the ticket: Release to set, moves to Complete
 2. Ready for deploy, Release already set: moves to Complete
-3. Shipped, but in any state other than `Ready for deploy` (`Testing`, `Backlog`, `To Do`, `In Progress`, ...): reported only, no Release and no move. A later run closes it once QA moves it to `Ready for deploy`.
+3. Shipped, sitting in Backlog / To Do / In Progress: moves to Testing (Gate E)
+3b. Shipped, sitting in `Testing`: reported only, no Release and no move. A later run closes it once QA moves it to `Ready for deploy`.
 4. **Rejected** - QA (or another member) bounced this ticket backward with no subsequent QA forward move; untouched. Include rejection date + actor.
 5. Release already set and state fine, but missing other fields
 6. **Partially-shipped** - some but not all discovered SHAs are tagged. Release flagged "partial"; never proposed for Gate D.
@@ -319,17 +320,22 @@ the tags say (past incident 2026-08-03: closing QA-bounced tickets). The step 8 
 full set with "These will be moved to Complete (say 'don't move to completed' to skip)." The
 move-to-Complete opt-out (step 1) skips every move, no question asked.
 
-**`Ready for deploy` is the only state this skill ever moves a ticket out of, and `Complete` is the
-only state it ever moves one into.** A shipped ticket in `Testing` stays in `Testing`, even when its
-commit is in the release tag: QA hasn't approved it yet. The next run closes it once QA moves it to
-`Ready for deploy`. The same goes for `Backlog`, `To Do`, `In Progress`, `PR Review`, `Blocked` and
-`On hold`: report them, never move them (the dev, 2026-11-10: "always only moves the Ready for
-Deploy tickets, never the Testing tickets, Testing always stays behind").
+**Gate E - Testing for shipped work stuck earlier, default ON.** A shipped in-scope ticket sitting
+in `Backlog`, `To Do` or `In Progress`, not REJECTED, moves to `Testing` (`500018257`) with no
+Release set (the dev often forgets to move his own tickets forward). QA takes it from there, and a
+later run sets its Release and closes it once it reaches `Ready for deploy`. List them in the report
+with "These will be moved to Testing". A REJECTED ticket, and anything in `Blocked`, `On hold` or
+`PR Review`, stays untouched.
 
-- `partially-shipped` tickets (step 4.5) never enter Gate D - they aren't shipped yet.
-- Tickets in a never-deployed repo (any repo with zero version tags) never enter Gate D - they are reported only.
+**The line, never crossed (the dev, 2026-11-10):** `Testing` is the ceiling for every ticket that is
+not already in `Ready for deploy`. A shipped ticket in `Testing` stays in `Testing`, even when its
+commit is in the release tag: only QA (Lenar) moves `Testing -> Ready for deploy`, and the next run
+closes it once he has. Only a ticket already in `Ready for deploy` ever reaches `Complete`.
+
+- `partially-shipped` tickets (step 4.5) never enter Gate D or E - they aren't shipped yet.
+- Tickets in a never-deployed repo (any repo with zero version tags) never enter Gate D or E - they are reported only.
 - REJECTED tickets get no Release and no move: they are not in `Ready for deploy`.
-- This skill writes exactly one workflow state, `500018258` (`Complete`), and only on a ticket whose fresh GET still says `500018659` (`Ready for deploy`). It never writes `Ready for deploy` (QA's move alone) or `Testing`.
+- This skill writes exactly two workflow states: `500018258` (`Complete`), only on a ticket whose fresh GET still says `500018659` (`Ready for deploy`), and `500018257` (`Testing`), only on one whose fresh GET still says `Backlog`, `To Do` or `In Progress`. It never writes `Ready for deploy`, and never moves a `Testing` ticket.
 - A ticket QA moves into `Ready for deploy` after the report was shown is not in the approved set. Leave it for the next run, even when it shipped in the same tag.
 - Never silently skip moves because Gate A/B/C were answered. If the run ends with in-scope `Ready for deploy` tickets left open, the summary must say which ones and why (opt-out or apply error).
 
@@ -355,6 +361,8 @@ if estimate_to_set is not None:
     payload['estimate'] = estimate_to_set
 if sid in gate_d_ids and fresh['workflow_state_id'] == 500018659:  # fresh = GET right before this PUT
     payload['workflow_state_id'] = 500018258
+elif sid in gate_e_ids and fresh_state_name in ('Backlog', 'To Do', 'In Progress'):
+    payload['workflow_state_id'] = 500018257
 ```
 
 **Never** PUT a partial `custom_fields` array. **Never** PUT without first having read the existing story.
@@ -380,7 +388,8 @@ Report:
 - N Release fields updated
 - M other-field fills applied
 - K tickets moved to Complete (Gate D)
-- T tickets shipped but left in Testing or earlier - picked up by a later run once QA moves them to Ready for deploy
+- T tickets moved to Testing (Gate E)
+- Q tickets shipped but left in Testing - closed by a later run once QA moves them to Ready for deploy
 - R tickets REJECTED - untouched, no Release and no move
 - P tickets partially-shipped - reported only, no state move
 - B tickets from the Step 4b no-commit discovery pass - traced and reported, closed with the rest when in Ready for deploy

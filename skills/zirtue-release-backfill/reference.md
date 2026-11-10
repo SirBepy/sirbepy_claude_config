@@ -20,7 +20,7 @@ curl -s "https://api.app.shortcut.com/api/v3/search/stories?query=<urlencoded>&d
 # Update story
 curl -s -X PUT "https://api.app.shortcut.com/api/v3/stories/<id>" \
   -H "Shortcut-Token: $TOKEN" -H "Content-Type: application/json" \
-  -d '{"custom_fields":[...full merged array...],"workflow_state_id":500018258}'   # only on a ticket still in Ready for deploy
+  -d '{"custom_fields":[...full merged array...],"workflow_state_id":500018258}'   # Ready for deploy only; 500018257 for a Gate E move from Backlog/To Do/In Progress
 
 # Get Release enum (uncached — use this if MCP returns stale data)
 curl -s "https://api.app.shortcut.com/api/v3/custom-fields/68f8e559-4a18-4a6e-be1c-fa2f5aaa4fdb" \
@@ -44,5 +44,5 @@ curl -s "https://api.app.shortcut.com/api/v3/custom-fields/68f8e559-4a18-4a6e-be
 - Never applies field updates without explicit approval at gates A/B/C. (Gate D moves are default-on but always announced in the report first, and nothing is applied before the gates are answered.)
 - Never PUTs a partial `custom_fields` array (would wipe other fields).
 - Never overwrites already-set scope fields (Pri/Skill/Prod/Tech/Estimate). Insert-only.
-- Never moves a ticket anywhere except `Ready for deploy` -> `Complete` (Gate D). `Testing` and every earlier state stay put, even when the work shipped. Never moves anything when the dev opted out. The moves are announced in the report first, never hidden.
+- Never moves a ticket except `Ready for deploy` -> `Complete` (Gate D) and `Backlog` / `To Do` / `In Progress` -> `Testing` (Gate E). A `Testing` ticket never moves, even when the work shipped: only QA moves it on. Never moves anything when the dev opted out. Both moves are announced in the report first, never hidden.
 - Never touches another developer's ticket (a `BE:` ticket, Stevan's work), even one the dev owns on the card.
