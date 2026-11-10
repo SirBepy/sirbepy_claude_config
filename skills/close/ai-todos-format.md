@@ -161,6 +161,7 @@ anywhere in the new content.
 **Type:** task | skill-improvement
 **Origin:** ai | dev
 **Summary:** <one plain sentence: the outcome, readable by Joe at a glance>
+**Due:** <YYYY-MM-DD, OPTIONAL: only when the dev named a day for it>
 
 ## Why
 
@@ -215,6 +216,11 @@ next session.
   Conductor Backlog panel and any list view show instead of opening the file, so Goal and Summary
   are not the same text: Goal is the working statement for the executor, Summary is the headline.
   An older todo without one is read with Goal's first sentence as the fallback.
+- `**Due:**` is optional: a local calendar day, `YYYY-MM-DD`, never a time. Set it only when the dev
+  names a day for the todo ("do this Thursday"); never invent one. Absence means no due date. A
+  malformed value is ignored by readers (the Conductor dashboard's Due card reads it), never an
+  error. A scheduled prompt (the `schedule` MCP tool) is NOT linked to a todo; a todo's day lives
+  only in this line. Executors and `complete-todo.ps1` need no change: the line moves with the file.
 - `## Why` is optional and sits before `## Goal`: what Joe wants and why this exists, ideally his
   own words with a date ("Joe, 2026-10-28: ..."). Write it only when the reason is actually known
   from the session or the file; when it is not, omit the section. An invented reason is worse
