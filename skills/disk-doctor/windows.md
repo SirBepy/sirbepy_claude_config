@@ -227,6 +227,7 @@ At END of scan, append any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCA
 - `pagefile.sys`, `hiberfil.sys`, `swapfile.sys` - system-managed; never manual-delete (disable the feature instead if reclaiming).
 - `C:\Windows\System32`, `C:\Program Files*`, `C:\ProgramData` package installs - not cleanup targets.
 - Heroes of the Storm (`C:\Program Files (x86)\Heroes of the Storm`) - Joe plays it. 2026-10-30, after it had been offered twice in one run: "Stop asking this. Im playing this game".
+- Anything Minecraft or Minecraft-server: `sirbepys-minecraft-server` (repo, `AppData\Local\sirbepys-minecraft-server\map-cache` 6.2G), `mc_plugins_tag`, `AppData\Roaming\.minecraft`, ModrinthApp, the Minecraft UWP package. Joe, 2026-11-10: "let's not delete anything to do with Minecraft or the Minecraft server, because soon we will be hosting the server again somewhere".
 - `AppData\Roaming\PrismLauncher` - Joe no longer uses it, but its instances hold Minecraft worlds and screenshots he won't risk losing (2026-10-30).
 - `Desktop\Warcraft III Reign of Chaos & The Frozen Throne` - a game copy Joe keeps, even though it has been idle since 2025-12 (2026-10-30).
 - In `C:\tmp`: `salvage` (the only known copy of cueline-core, which has no commits in the cueline repo), `memory-backup-*` (the /cleanup-memory rollback snapshots) and the loose `*.java`/`*.java.bak` plugin sources (edited copies with no repo twin). Exclude all three from any age sweep there.
@@ -238,6 +239,7 @@ At END of scan, append any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCA
 - npm cache - `npm cache clean --force` (~4G). pnpm store - `pnpm store prune`. cargo registry `~/.cargo\registry` - re-downloads. pip cache - `pip cache purge`.
 - Docker: `docker system prune -a` (images/build cache; LocalAppData\Docker was ~15G here) - re-pulls. Confirm no needed images first.
 - `$env:TEMP\*` and `$env:LOCALAPPDATA\Temp\*` - temp files, regenerate. Age-filtered so items an app still has open are skipped by design, not just by `-ErrorAction SilentlyContinue`: `Get-ChildItem $env:TEMP -Force -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-2) } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue`.
+  Joe, 2026-11-10, asked whether 2 days might hit data still in use, so the delete card now offers 7 days (4.9G freed against 10.4G at 2 days) and excludes any dir with a file written today (`DiagOutputDir` held live RdClientAutoTrace .etl files despite an old dir mtime). Check the newest inner file, not the dir mtime.
   The age filter is not enough on its own: a Claude session can park state it still needs in a Temp dir and then not write to it for days. 2026-10-30: this sweep deleted `Temp\ovh-trial\`, which held the S3 keys for a dashboard-a OVH lock test and was read by a check scheduled for 2026-11-12. The dashboard-a session had to read the keys back from OVH. So, before the delete card, list each named top-level Temp dir the sweep would remove (skip the random-hex and `tmp*` installer ones). Grep the dev roots (`C:\Users\tecno\Desktop\Projects`, `~/.claude`), plus `list_peers scope:"all"` session names, for each name. Exclude every hit, and name it on the card. Never assume a descriptive name like `ovh-trial` is scratch.
 - Recycle Bin - `Clear-RecycleBin -Force`.
 - Browser caches under `$env:LOCALAPPDATA\<Browser>\User Data\*\Cache` - regenerate.
@@ -257,7 +259,6 @@ At END of scan, append any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCA
 
 Cap: 5 entries max. When at cap, drop the entry with the earliest date field before appending; if dates tie, drop the topmost entry. Never reorder remaining entries.
 
-- 2026-10-05: C: free 262.7/930.5G at start, 344.1G after. Deleted (each approved per item): revaire-mobile build + .dart_tool + 2 worktree builds 19.3G, C:\tmp Rust scratch targets 17.0G, LocalAppData\Temp items older than 2 days (incl. a 6G cueline-e2e-target), pip cache 9.85G, 20 C:\tmp\pw-* Playwright profiles 5.5G+, pnpm store prune, 499 stale .for_bepy screenshots. Root cause of Rust on C:: CARGO_TARGET_DIR overrides ~/.cargo/config.toml's D: target-dir, and cueline's e2e build defaulted to os.tmpdir() while builder-preamble told subagents to use $env:TEMP; both now point at D:\cargo-target\<name> (cueline 734fafb, ~/.claude 0adfa20). The Temp block here counts only top-level $env:TEMP files (0.4G) while LocalAppData\Temp was 14.5G recursively, so size it with Get-DirGB. Kept / judgment: Docker vhdx 27.5G, ~/.cache huggingface 19G + whisper 2.9G, Android AVDs 19.3G, idle venvs 10.9G, ollama 11G, games.
 - 2026-10-14: Quick pre-gaming scan. C: free 227.8/930.5G at start, 266.4G after. 2 sub-scans
   (stale-Temp-over-2-days breakdown, whole-profile build-artifact sweep) timed out past 5min and
   were not retried - this run optimized for a fast "free some space" ask, not a full audit. Deleted
@@ -346,3 +347,26 @@ Cap: 5 entries max. When at cap, drop the entry with the earliest date field bef
     so Claude cannot run -Apply when a build is live; it needs an allow rule or Joe running it.
   - A Bash/PowerShell command whose text contains `rd /s` (even inside a -match string) trips the system-path
     Remove-Item block; keep such strings out of read-only checks.
+- 2026-11-10: C: free 231.2/930.5G (24.9%) at start, 314.0G (33.7%) after, +82.8G. 4 read-only sonnet scouts
+  (system sweep, repo inventory, deep storage + Claude app footprint, wedding_dj footprint), then 3 independent
+  reviewers on the Ollama list. Deleted (each approved on a card): 7 Ollama models ~67G (EuroLLM 22B and 9B,
+  gpt-oss:20b, mistral-small3.2:24b, ministral-3:14b and 8b, qwen3:8b), Claude desktop app (Store MSIX, removed
+  with Remove-AppxPackage, plus Roaming\Claude 10.6G; nothing else depended on it) ~10.9G, Temp older than 7 days
+  4.9G, build dirs idle 21+ days in 7 repos ~4.6G (revaire-mobile build and .dart_tool, revaire-server and
+  dead_internet and video_script_assistant node_modules, 2 venvs), wedding_dj (2 unpushed commits pushed first,
+  verified equal to origin) plus its Mixxx AppData folders. Kept: qwen3.8:27b (rodge routes.ts:14 hard-codes it as
+  the local model, and all 3 reviewers said keep), gemma4:26b-a4b, gemma4:e4b and qwen3-embedding (reviewers
+  split), qwen3.5:9b, bge-m3. Joe's old todo said keep qwen3:8b, but the live n8n workflows name only qwen3.5:9b.
+  Not done: Blender, loopMIDI + teVirtualMIDI64 (msiexec exit 1603, no elevation) and the SYSTEM-owned 170M
+  `ProgramData\Claude\Logs\cowork-service.log` need an admin shell; Joe declined Twine and DeepCool (probably his
+  cooler display). Roblox, Clipchamp and the stt-sidecar .venv were not selected. Facts worth reusing:
+  - `msiexec /x ... /qn` from this shell fails with 1603 for per-machine installs; hand Joe an elevated
+    `Start-Process powershell -Verb RunAs` one-liner instead of retrying.
+  - A removed Store app can leave `chrome-native-host.exe` running from `Packages\<app>\LocalCache`; stop that
+    process before deleting the package folder.
+  - Repos and Downloads are not where the space is: 102 project entries total 68.5G (48.9G build output, nearly
+    all in active repos); Downloads was 0.53G. Stale whole-repo deletes free well under 1G.
+  - A push from a retiring repo needs `push-gate.py mark ... --skip-skill-check "<Joe's approval>"`, and the
+    first push of a session needs `snippets/auto-commit.md` read.
+  - The Rodge chat's first Ollama verdict wrongly said to delete qwen3.8:27b; the reviewers caught the hard-coded
+    default. Run independent reviewers on a delete list that rests on one chat's reading of the code.
