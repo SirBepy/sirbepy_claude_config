@@ -228,6 +228,8 @@ At END of scan, append any new KNOWN-SAFE spots, NEVER-TOUCH additions, or a SCA
 - `C:\Windows\System32`, `C:\Program Files*`, `C:\ProgramData` package installs - not cleanup targets.
 - Heroes of the Storm (`C:\Program Files (x86)\Heroes of the Storm`) - Joe plays it. 2026-10-30, after it had been offered twice in one run: "Stop asking this. Im playing this game".
 - Anything Minecraft or Minecraft-server: `sirbepys-minecraft-server` (repo, `AppData\Local\sirbepys-minecraft-server\map-cache` 6.2G), `mc_plugins_tag`, `AppData\Roaming\.minecraft`, ModrinthApp, the Minecraft UWP package. Joe, 2026-11-10: "let's not delete anything to do with Minecraft or the Minecraft server, because soon we will be hosting the server again somewhere".
+- `AppData\Local\Roblox` (Studio plus cache): Joe, 2026-11-11: "i will be doing roblox a lot soon". Never offered, whole or cache-only.
+- `C:\tmp\cc-target` and `C:\tmp\cargo-target-c` as a way to make room for a game: Joe, 2026-11-11: "itll just get to that size again". `cargo-target-c` is also the documented working build dir of `claude_usage_in_taskbar` (Conductor) while D: is full, last used 2026-11-07. A build dir that regrows to the same size is not a durable fix, so offer it only when it passes the 21-day idle rule.
 - `AppData\Roaming\PrismLauncher` - Joe no longer uses it, but its instances hold Minecraft worlds and screenshots he won't risk losing (2026-10-30).
 - `Desktop\Warcraft III Reign of Chaos & The Frozen Throne` - a game copy Joe keeps, even though it has been idle since 2025-12 (2026-10-30).
 - In `C:\tmp`: `salvage` (the only known copy of cueline-core, which has no commits in the cueline repo), `memory-backup-*` (the /cleanup-memory rollback snapshots) and the loose `*.java`/`*.java.bak` plugin sources (edited copies with no repo twin). Exclude all three from any age sweep there.
@@ -368,5 +370,12 @@ Cap: 5 entries max. When at cap, drop the entry with the earliest date field bef
     all in active repos); Downloads was 0.53G. Stale whole-repo deletes free well under 1G.
   - A push from a retiring repo needs `push-gate.py mark ... --skip-skill-check "<Joe's approval>"`, and the
     first push of a session needs `snippets/auto-commit.md` read.
+  - 2026-11-11 follow-up (Joe wants room for a 100 GB game on C:, about 379 GB free before for 30% after): D: scan
+    found D: an HDD at 157.6G free, with `D:\cargo-target` about 440G real that the auto sweep only keeps level.
+    Claude deleted cargo-scratch subchats-main + subcap and Clipchamp data (+20.7G); two reviewers then advised
+    against the proposed C:\tmp and D: delete block (cargo-target-c is a working dir, cueline builds into
+    cargo-target-cueline), and Joe kept Roblox, cc-target and the gemma4 models ("are we 100% sure about gemma?":
+    no, the reviewers split). Without those, C: ends near 23% after the game. Never put a whole folder on a card
+    unless Joe selected it: Roblox whole was offered as a card option, never approved.
   - The Rodge chat's first Ollama verdict wrongly said to delete qwen3.8:27b; the reviewers caught the hard-coded
     default. Run independent reviewers on a delete list that rests on one chat's reading of the code.
