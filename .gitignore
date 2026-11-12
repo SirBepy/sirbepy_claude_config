@@ -36,6 +36,9 @@ scripts/*
 !.claude/
 !.claude/todos/
 !.claude/todos/**
+# /grill run archives: the only committed artifact of each monthly run, read back by the next one
+!.claude/grill/
+!.claude/grill/**
 !favicon.svg
 !favicon.png
 !favicon.ico
