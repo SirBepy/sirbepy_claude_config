@@ -27,4 +27,4 @@ Run `/commit`. It runs `/test` itself (its step 6b), so this skill has no separa
 
 ## 5. End the chat
 
-When the task is done and no question is pending, call the `close_session` tool if it exists. In a plain terminal there is no such tool: nothing to do.
+When the task is done and no question is pending, call the `close_session` tool if it exists (never in a Conductor main chat or sub). In a plain terminal there is no such tool: nothing to do.

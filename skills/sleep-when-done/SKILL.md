@@ -23,6 +23,8 @@ rundll32.exe powrprof.dll,SetSuspendState 0,1,0
 ```
 Note: if hibernation is enabled, this hibernates instead of sleeps. That's fine - same end result for the dev.
 
+Before the sleep call, run the save step (`~/.claude/refs/save-step.md`), and call `close_session` when that tool exists and the chat is neither a Conductor main chat nor a sub: the session then ends when the turn completes. Nothing runs once the PC is asleep, so neither can come after it.
+
 Run the command via PowerShell as the absolute last action. No text after it.
 
 For the unattended-work contract (auto-answering, blocker logging, verification), this runs under `/autopilot` - see autopilot's `--sleep` flag.

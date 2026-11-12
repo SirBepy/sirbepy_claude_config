@@ -15,6 +15,11 @@ Read once per session, at the first checkpoint that calls for it.
 - In a Conductor main chat: at the end of each piece of work, and whenever the app asks for it
   before a compaction.
 
+A dispatched subagent (an `Agent` or `Task` builder) never runs it. It shares its orchestrator's
+session id, so its digest write would replace the orchestrator's open items, and it cannot write
+backlog files. It names what it learned in its report, and the orchestrator's own save step
+covers it.
+
 Writing as things happen comes first: a memory at the moment Joe confirms a fact, a todo at the
 moment work is deferred. The save step is the net under those two rules. It catches what live
 capture missed and never re-extracts what live capture already got.
@@ -35,8 +40,12 @@ where corrections go missing. Ground on the transcript first, per `refs/transcri
    `refs/memory-rubric.md` (ADD / UPDATE / DELETE / NONE) and write it to the store `CLAUDE.md`'s
    Global Knowledge Vault section names. A candidate already written live in this chat is NONE.
    NONE is the normal outcome; never write a memory to look productive.
-2. **Todos.** File each item through `skills/create-todo/SKILL.md` (duplicate guard, id
-   reservation, cross-repo filing), one file per item, per `refs/ai-todos-format.md`:
+2. **Todos.** Write one file per item yourself, per `refs/ai-todos-format.md`: its
+   content-duplicate guard first, then an id from `tools/reserve-todo-id.ps1`, then the template
+   with its `**Type:**`, `**Origin:**` and `**Summary:**` lines. An item whose fix lives in another
+   repo goes into that repo's backlog by the steps under "Cross-repo filing" in
+   `skills/create-todo/SKILL.md`. Read that section as a procedure only: the skill itself is
+   dev-invoked and always writes origin `dev`, which does not apply to the items below.
    - Work Joe asked for that is not done and will not be finished in this chat: `task`, origin
      `dev`.
    - An offer Claude made that was not taken up, was not declined, and that a cold session could
@@ -58,7 +67,8 @@ where corrections go missing. Ground on the transcript first, per `refs/transcri
 
    Pipe `## Done`, `## Decided`, `## Rejected` (the option plus the reason it lost) and `## Open`
    on stdin, with `none` under an empty section. `--merge` adds the new rows to an existing
-   digest instead of refusing. `<sessionId>` is `$CLAUDE_CODE_SESSION_ID`; when that is unset,
+   digest instead of refusing, except `## Open`, which replaces the stored list: send everything
+   that is open now, not only what changed. `<sessionId>` is `$CLAUDE_CODE_SESSION_ID`; when that is unset,
    resolve it with `refs/transcript-grounding.md` step 1. Skip this step in a Conductor sub (its
    `decided` and `ruled_out` rows become its digest) and in a Conductor main chat (the app writes
    that digest from the decisions log).
