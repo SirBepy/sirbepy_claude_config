@@ -1,13 +1,13 @@
 ---
 name: one-off
-description: "Triggers on /one-off <task> only: implements it immediately (no todo), then runs /code-check, /e2e, /commit (which runs /test), /close."
+description: "Triggers on /one-off <task> only: implements it immediately (no todo), then runs /code-check, /e2e, /commit (which runs /test and the save step), then ends the chat."
 disable-model-invocation: true
 argument-hint: "<task description>"
 ---
 
 # /one-off
 
-> Implement a described task immediately, then verify, commit, and close.
+> Implement a described task immediately, then verify, commit, and end the chat.
 
 ## 1. Implement
 
@@ -23,8 +23,8 @@ Run `/e2e`, unless this invocation explicitly said not to (e.g. "no e2e").
 
 ## 4. Commit
 
-Run `/commit`. It runs `/test` itself (its step 6b), so this skill has no separate test step: running it here too would repeat the same checks. If that run is red, or `/e2e` was, fix it and re-run the failing step before the commit lands.
+Run `/commit`. It runs `/test` itself (its step 6b), so this skill has no separate test step: running it here too would repeat the same checks. If that run is red, or `/e2e` was, fix it and re-run the failing step before the commit lands. Its last step is the save step, so nothing separate is needed to persist what was learned.
 
-## 5. Close
+## 5. End the chat
 
-Run `/close --skip-review`. Step 2 already was the code-health review of this task's changes, and `/close`'s Phase 2 would run `/code-check` over the same commits a second time.
+When the task is done and no question is pending, call the `close_session` tool if it exists. In a plain terminal there is no such tool: nothing to do.

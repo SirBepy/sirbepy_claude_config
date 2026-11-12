@@ -78,6 +78,7 @@ The marker is keyed to this session and never consumed, so every later commit in
 
    **Script unavailable, or you need the reasoning behind a check:** `by-hand.md` has the whole chain done manually (preconditions, `git commit -m "<message>" -- <files>`, per-check meaning).
 8b. **Post-commit index refresh, only if the repo runs `lint-staged` on pre-commit** (check `git config core.hooksPath` and read the `pre-commit` file for a `lint-staged` call). That hook rewrites the committed files in place, leaving their index entries stat-dirty though `git diff HEAD` is empty. Fix: `git add` the exact paths just committed and print which. Never `git reset` here (a shared checkout may have another session's work staged) and never `git update-index --refresh` (it only reports).
+9. **Save step.** After the commit lands, run the save step in `~/.claude/refs/save-step.md` (read it once per session) over what happened since this chat's last save step. It is skipped silently when nothing new was learned, it never blocks or delays the commit, and a commit that carries only the save step's own todo files does not run it again.
 
 If nothing to commit, say so and stop.
 

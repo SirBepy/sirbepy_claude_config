@@ -27,14 +27,16 @@ If there's no project (no repo root for `.claude/todos/` to live under), say so 
    to ask that peer directly rather than inferring status from the working tree, then fold the
    sweep - what was asked, what came back or "asked, no reply yet", and the sweep's own timestamp -
    into the todo's Notes.
-2. Read `ai-todos-format.md`'s "Handoff mode" section and follow it exactly - no mode detection
+2. Run the save step (`~/.claude/refs/save-step.md`) so memories and deferred todos are saved
+   before the chat is handed off.
+3. Read `ai-todos-format.md`'s "Handoff mode" section and follow it exactly - no mode detection
    needed here, this command IS handoff mode.
-3. If args were passed (a short note), fold them into Notes as the dev's own parting context per
+4. If args were passed (a short note), fold them into Notes as the dev's own parting context per
    that section's instructions - don't let them override the auto-derived Goal/Context.
 
 ## Anti-patterns
 
-- Treating this like `/close` - no retrospective, no code-health review, no terminal close, no
-  memory writes. Just the todo.
+- Treating this as more than a save and a todo - no code-health review, no chat closing. The save
+  step, then the handoff todo.
 - Overwriting or editing a previous handoff todo instead of writing a new one.
 - Asking clarifying questions - fill from context, like `/create-todo`'s handoff mode does.

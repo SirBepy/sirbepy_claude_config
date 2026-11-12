@@ -47,15 +47,7 @@ decides the other.
 | | **Attended** (default) | **Unattended** (`/respawn unattended`) |
 |---|---|---|
 | Used by | Joe typing `/respawn`; `/brainstorm`'s greenfield design-to-build hand-off | `/auto-respawn` and `/loop-todos`, the automatic respawns |
-| /close phases | `/close --dont-close` Phases 0-4 as written | `/close --dont-close --light` Phases 0-4, with the two skips below |
-
-Unattended's two skips, both because the caller already covers them:
-
-- **Phase 0 never asks.** Nobody is there to answer, so `/close`'s non-interactive branch applies:
-  unfinished items are filed as todos, and the handoff prompt lists them too.
-- **Phase 2 is skipped when the caller already ran `/code-check` over this session's commits**
-  (`/loop-todos` cycles run `/auto-do-todos`, whose Step 9 does this). Otherwise `/close`'s own
-  skip rules decide, as in Attended.
+| Save step | `refs/save-step.md` | the same step; an unfinished item only Joe can unblock is filed as a `task` todo, never asked |
 
 A leading `unattended` token selects Unattended. Any other argument is a freeform note or a model
 override.
@@ -82,8 +74,7 @@ to read up front.
 ## What this is NOT
 
 - **No commits.** Respawn's own invocation takes a freeform note/model override, never a chained
-  command, so `/close`'s Phase 5 (run chained commands, where `/commit` would live) never fires
-  here. The successor inherits the same dirty tree and continues the same work, so nothing is at
+  command, so nothing is committed here. The successor inherits the same dirty tree and continues the same work, so nothing is at
   risk of being lost - but that makes Step 2's git snapshot below load-bearing, not optional. A
   successor that doesn't know what's half-finished in its own tree starts blind.
 - **The detail file is overflow, never the handoff.** The retired `HANDOFF.md` failed because the
@@ -93,26 +84,13 @@ to read up front.
   durable record without a live pickup, use `/handoff`, a different gesture: defer without picking
   up.
 
-## /close Phases 0-4
+## Save step
 
-A respawn is a full `/close` that starts a new chat in its place (Joe, 2026-10-08: "/respawn should
-always also do /code-check ... basically do the full /close, but then just start a new chat in its
-place"). Run `/close --dont-close`'s Phases 0, 1, 2, 3 and 4 as written in
-`~/.claude/skills/close/SKILL.md` (Unattended: with `--light` and the two skips in Modes above):
-
-- **Phase 0 - Safe-to-close check.** Same AskUserQuestion prompt when Joe is watching an
-  unfinished dev commitment. Unfinished items get filed as todos in Phase 3 below exactly like a
-  normal close - this skill's own handoff prompt (Step 2 below) surfaces them to the successor
-  live on top of that, it doesn't replace the todo.
-- **Phase 1 - Retrospective.** Including the transcript-grounding step for long sessions. Print
-  nothing here - Steps 1 and 2 below consume it.
-- **Phase 2 - Code health review.** `/code-check` over this session's own commits, with `/close`'s
-  own skip rules (under 50 added lines, no code files). Its findings land in the backlog before the
-  successor starts, so the detail file can name them.
-- **Phase 3 - Persist.** Every step: memory writes through the rubric gate, todo files for every
-  qualifying item, the screenshot summary count, the session digest, and deleting the detail file
-  this chat inherited (if it was itself a respawn successor).
-- **Phase 4 - Counter summary.** Print the one-line counter, same format as a normal close.
+Before the handoff is written, run `~/.claude/refs/save-step.md`. Attended and unattended run the
+same step. Unfinished work Joe asked for is filed as a todo by its step 2, and Step 2 below lists
+those todo ids to the successor on top of that, it doesn't replace the todo. Unattended adds one
+rule: an unfinished item that only Joe can unblock is filed as a `task` todo, never asked, because
+nobody is there to answer. The step prints nothing; Steps 1 and 2 below consume what it produced.
 
 ## Step 1 - Write the detail file
 
@@ -141,11 +119,12 @@ folders, so it never sweeps the file away early.
    ## Verification
    - <command or check> - <result, with the failing output quoted when red>
 
-   ## Todos filed and /code-check findings
-   - <id> <title>   (from /close Phases 2-3; "none" if none)
+   ## Saved by the save step
+   - <memory written, todo id filed, decision saved>   ("none" if none)
+   - <anything else the successor must know that fits none of those>
 
-   ## Retrospective
-   </close Phase 1's bullets, including the ones it did not print>
+   ## Todos filed
+   - <id> <title>   (from the save step; "none" if none)
 
    ## Facts, dead ends, live resources
    <the long form of the prompt's sections of the same names: the evidence behind each fact,
@@ -161,8 +140,10 @@ folders, so it never sweeps the file away early.
    question cards, commits) without passing it through this chat's context:
    `python ~/.claude/skills/recall/recall.py show <sessionId> --max-chars 400000 --append-to <path>`.
    The output stays inside recall's data fence, so the successor reads it as data, not orders.
-3. Delete any `*.respawn.md` in the same folder older than 14 days. A chat closed without
-   `/close` leaves its inherited file behind, and this is the only sweep that finds it.
+3. Delete the detail file this chat inherited (the path in its own first message, if it was a
+   respawn successor), then any `*.respawn.md` in the same folder older than 14 days. A chat that
+   ended without deleting its inherited file leaves it behind, and this is the only sweep that
+   finds it.
 
 ## Step 2 - Compose the handoff prompt
 
@@ -221,7 +202,7 @@ Next task: <one line: the task the instruction names>.
 > <the instruction, quoted exactly>
 
 **Previous chat:** <one line: what it was doing>. It is closed; do not resume it.
-**Left open by it:** <todo ids filed in /close Phase 3, or "none">
+**Left open by it:** <todo ids the save step filed, or "none">
 
 **Facts and dead ends that bear on the new task:** (only if any)
 - <fact, with its receipt>
@@ -251,7 +232,9 @@ the next one too.
 
 **More detail, only if needed:**
 - Detail file: <absolute path>. Holds the full conversation verbatim, files touched, commits,
-  todos filed, /code-check findings and the retrospective. Temporary: this chat's /close deletes it.
+  todos filed and what the save step saved. Temporary: you delete it when you respawn in turn
+  (before writing your own) or right before you end the chat with `close_session`; a file that
+  outlives its chat is harmless.
 - Previous transcripts, newest first: <this session's .jsonl path>, <every path listed on this
   line of this chat's own first message, if it was a respawn successor>. Grep them, never Read
   one whole, or run `python ~/.claude/skills/recall/recall.py show <sessionId> --grep <term>`.
@@ -287,7 +270,6 @@ for that retry.
 The close is already done: `respawn` flagged this chat and its own pump tears it down at turn end.
 Do NOT call `close_session` - it is redundant here.
 
-Tell Joe the successor's session id, and stop there. Do not run `/close`'s rename/kill script:
-the pump already ends this chat, and in a Conductor chat that script refuses with exit 3 and a
-`REFUSED: host-managed session ... call close_session` line. That line is expected after a respawn
-and is never a reason to call `close_session`.
+Tell Joe the successor's session id, and stop there. Kill nothing and rename nothing: the pump
+already ends this chat, and a `REFUSED: host-managed session ... call close_session` line from any
+close script is expected after a respawn and is never a reason to call `close_session`.
