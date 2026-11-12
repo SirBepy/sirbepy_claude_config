@@ -92,6 +92,7 @@ Do not "improve" this by having the authoring session review its own diff before
 whole premise, in Joe's words, is that AI is very bad at reviewing its own code.
 
 Sequence after todo 427 if possible, so the source-file-edited signal is built once rather than twice.
+- 2026-11-12: closed as superseded by todo pc-1365 (Joe's question-card pick). /close is deleted, so the /close call is gone. The review this todo wanted now runs from a context that did not write the code at two moments: the push gate (skills/commit/push.md, /code-check in a fresh subagent) and a Conductor sub's fresh reviewer before finish_subchat. The Stop-hook trigger stays unbuilt: its design was rated 3/10 (see Status 2026-08-22).
 
 ## Status 2026-08-22 - split in two, half shipped
 

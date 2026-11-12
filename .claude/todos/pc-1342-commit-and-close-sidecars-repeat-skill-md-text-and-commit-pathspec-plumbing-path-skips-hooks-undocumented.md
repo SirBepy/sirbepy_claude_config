@@ -27,4 +27,8 @@ Per duplicated block pick the authoritative copy (SKILL.md keeps the rule, the s
 
 ## Acceptance
 
-`python ci/run_all.py` green; `grep -c "HARD ORDERING RULE" skills/close/*.md` shows one copy; SKILL.md step 8 names the hook-skipping paths.
+`python ci/run_all.py` green; SKILL.md step 8 names the hook-skipping paths.
+
+## Notes
+
+- 2026-11-12: `skills/close/` was deleted (todo pc-1365, commit b62c6c8), so every `/close` sidecar item above is moot and the "HARD ORDERING RULE" acceptance check went with it. Only the `/commit` items remain.

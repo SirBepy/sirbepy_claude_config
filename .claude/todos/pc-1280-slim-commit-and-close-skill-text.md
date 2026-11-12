@@ -40,6 +40,8 @@ Joe accepted this bundle from the 2026-10-30 `/global-claude-folder-audit` run. 
 
 ## Remaining (why this stays open)
 
+- 2026-11-12: the `/close` half is closed. The skill and its sidecars were deleted (todo pc-1365, commits b62c6c8 and 58c061a), so the two Phase 2 logic fixes and the `close/SKILL.md` word goal below no longer apply. Only the `/commit` items remain.
+
 - Behavior fixes the brief excluded: Phase 2's `git diff --shortstat` is 0 after commit; Phase 2 trusts `list_peers` = 0 while Phase 3 calls it weak; the session-marker preamble may be unnecessary on the `commit-pathspec.sh` route (verify against the commit-guard hook first); `commit-pathspec.sh` lines ~644/650 still quote the old "On exit 1, evaluate in this order" heading (kept verbatim in SKILL.md, so it still resolves).
 - `close/SKILL.md` is ~4,000 words, not the ~3,000 goal; further cuts need a rule-by-rule judgement (Trigger, Phase 0 branches).
 - The `/rate-it` old-vs-new comparison was replaced by a fresh-reviewer rule walk; no scratch-repo commit/close dry run was done.
