@@ -40,3 +40,4 @@ Nothing a chat learns or leaves behind depends on someone remembering to run /cl
 - Known gaps filed: pc-1366 (the screenshot reminder hook does not check that a frame reached Joe). Conductor backlog: pc-1732 (a UI close of an unfinished sub skips `end_sub`).
 - The compaction-time save step and retro for a forever main chat are a requirement added to `docs/forever-chat-plan.md` B1 on the branch, not built here.
 - pc-0450 closed as superseded; pc-1280 and pc-1342 keep only their /commit halves.
+- 2026-11-12 21:58: the Conductor branch close-removal was rebased onto master (after VERSION 0.2.150), re-verified (cargo module tests, tsc, 4103 vitest tests, css-vars, view-spec coverage) and fast-forwarded into Conductor master at f61067fe. Not pushed, not released: the app half takes effect with the next Conductor /release. The worktree, both branches and the scratch cargo target are removed.
