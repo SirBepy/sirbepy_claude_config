@@ -10,7 +10,7 @@ Usage:
     python recall.py update
     python recall.py search <term> [<term> ...] [--repo NAME] [--since DATE] [--until DATE] [--limit N]
     python recall.py show <session-id-prefix> [--grep TEXT] [--max-chars N]
-    python recall.py digest-save <session-id> [--replace]    (digest on stdin)
+    python recall.py digest-save <session-id> [--replace | --merge]    (digest on stdin)
     python recall.py decisions <term> [<term> ...] [--repo NAME] [--limit N]
     python recall.py activity --since DATE [--until DATE] [--repo NAME] [--json]
     python recall.py memory <term> [<term> ...] [--memdir DIR | --all-projects] [--all] [--limit N]
@@ -498,10 +498,13 @@ def _digest_path(archive: Path, session_id: str) -> Path:
     return archive / DIGESTS_DIR / f"{session_id}.md"
 
 
-def cmd_digest_save(index: Index, session, body: str, replace: bool) -> tuple:
+def cmd_digest_save(index: Index, session, body: str, replace: bool, merge: bool = False) -> tuple:
     """Stores one session's digest as digests/<sessionId>.md and returns (exit code, message).
     The file is one per session so concurrent sessions never contend, and it lives outside
-    index/ because a digest is the one recall output that cannot be rebuilt from transcripts."""
+    index/ because a digest is the one recall output that cannot be rebuilt from transcripts.
+    `merge` adds the body's items to an existing digest instead of refusing or overwriting."""
+    if merge and replace:
+        return 1, "Digest not saved: --merge and --replace are mutually exclusive."
     if SESSION_RE.match(session):
         session_id, header = session, next((h for h, _ in index.sessions() if h["session"] == session), None)
     else:
@@ -521,9 +524,13 @@ def cmd_digest_save(index: Index, session, body: str, replace: bool) -> tuple:
             f"- Repo: {h.get('repo') or 'unknown'}",
             f"- Scope: {h.get('scope') or 'unknown'}",
             f"- Session: {session_id}", ""]
-    text = "\n".join(head) + redact(body.strip()) + "\n"
     dest = _digest_path(index.archive, session_id)
     dest.parent.mkdir(parents=True, exist_ok=True)
+    body = redact(body.strip())
+    if merge and dest.exists():
+        body = _merge_digest_bodies(dest.read_text(encoding="utf-8"), body)
+        replace = True
+    text = "\n".join(head) + body + "\n"
     if dest.exists() and not replace:
         return 1, f"A digest for {session_id} already exists at {dest}; pass --replace to overwrite it."
     tmp = dest.with_name(f"{dest.name}.tmp-{os.getpid()}")
@@ -545,7 +552,7 @@ def cmd_digest_save(index: Index, session, body: str, replace: bool) -> tuple:
 
 def default_subchats_dir():
     """Where Claude Conductor's daemon leaves <sub id>.digest.md on every sub finish, or None when
-    APPDATA is unset (non-Windows). Subs never run /close, so nothing else feeds recall their digest."""
+    APPDATA is unset (non-Windows). A sub's digest comes from this file; nothing else writes it."""
     appdata = os.environ.get("APPDATA")
     return Path(appdata) / "claude-conductor" / "subchats" if appdata else None
 
@@ -573,26 +580,58 @@ def ingest_subchat_digests(index: Index, subchats) -> tuple:
     return saved, warnings
 
 
-def _decision_items(text: str) -> list:
-    """(section, item) pairs for the Decided and Rejected sections only. An item is one
-    bullet plus its continuation lines and deeper-indented sub-bullets, so a Rejected option
-    and its reason stay together."""
+def _digest_items(text: str, sections) -> list:
+    """(section, [raw lines]) per item in the named sections. An item is one bullet plus its
+    continuation lines and deeper-indented sub-bullets, so a Rejected option and its reason
+    stay together."""
     items, section, current, indent = [], None, None, 0
     for line in text.splitlines():
         m = re.match(r"^## (\w+)\s*$", line)
         if m:
             section, current = m.group(1), None
             continue
-        if section not in DECISION_SECTIONS or not line.strip():
+        if section not in sections or not line.strip():
             continue
         bullet = re.match(r"^(\s*)[-*] ", line)
         if current is None or (bullet and len(bullet.group(1)) <= indent):
-            current = [section, line.strip()]
+            current = (section, [line.rstrip()])
             indent = len(bullet.group(1)) if bullet else 0
             items.append(current)
         else:
-            current[1] += " " + line.strip()
-    return [(s, t) for s, t in items if t.lower().strip("-* ") != "none"]
+            current[1].append(line.rstrip())
+    return items
+
+
+def _item_text(lines) -> str:
+    """One item on one whitespace-normalised line: the unit compared and searched."""
+    return " ".join(" ".join(lines).split())
+
+
+def _is_none(lines) -> bool:
+    return _item_text(lines).lower().strip("-* ") == "none"
+
+
+def _decision_items(text: str) -> list:
+    """(section, item) pairs for the Decided and Rejected sections only."""
+    return [(s, _item_text(ls)) for s, ls in _digest_items(text, DECISION_SECTIONS) if not _is_none(ls)]
+
+
+def _merge_digest_bodies(stored: str, incoming: str) -> str:
+    """The stored sections plus the incoming items they lack. Open describes what is open now,
+    so the incoming Open replaces the stored one; a `none` line survives only in an empty section."""
+    old, new = _digest_items(stored, DIGEST_SECTIONS), _digest_items(incoming, DIGEST_SECTIONS)
+    out = []
+    for name in DIGEST_SECTIONS:
+        items = [ls for s, ls in (new if name == "Open" else old + new) if s == name]
+        kept, seen = [], set()
+        for ls in items:
+            if not _is_none(ls) and _item_text(ls) not in seen:
+                seen.add(_item_text(ls))
+                kept.append(ls)
+        out.append(f"## {name}")
+        for ls in kept or [["- none"]]:
+            out.extend(ls)
+    return "\n".join(out)
 
 
 def cmd_decisions(index: Index, terms, repo, limit) -> str:
@@ -1011,6 +1050,8 @@ def main(argv=None) -> int:
     ds = sub.add_parser("digest-save")
     ds.add_argument("session")
     ds.add_argument("--replace", action="store_true")
+    ds.add_argument("--merge", action="store_true",
+                    help="add the new items to an existing digest; the new Open section replaces the stored one")
     dc = sub.add_parser("decisions")
     dc.add_argument("terms", nargs="+")
     dc.add_argument("--repo")
@@ -1080,7 +1121,7 @@ def main(argv=None) -> int:
         else:
             print(shown)
     elif args.cmd == "digest-save":
-        code, msg = cmd_digest_save(index, args.session, sys.stdin.read(), args.replace)
+        code, msg = cmd_digest_save(index, args.session, sys.stdin.read(), args.replace, args.merge)
         print(msg)
         return code
     elif args.cmd == "decisions":

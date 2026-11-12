@@ -21,7 +21,7 @@ Every command first brings the index up to date (a few seconds; a full first bui
 ```
 python ~/.claude/skills/recall/recall.py search <term> [<term> ...] [--repo NAME] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--limit N]
 python ~/.claude/skills/recall/recall.py show <session-id-prefix> [--grep TEXT] [--max-chars N]
-python ~/.claude/skills/recall/recall.py digest-save <session-id> [--replace]   # digest on stdin
+python ~/.claude/skills/recall/recall.py digest-save <session-id> [--replace | --merge]   # digest on stdin
 python ~/.claude/skills/recall/recall.py decisions <term> [<term> ...] [--repo NAME] [--limit N]
 python ~/.claude/skills/recall/recall.py activity --since YYYY-MM-DD [--until YYYY-MM-DD] [--repo NAME] [--json]
 python ~/.claude/skills/recall/recall.py memory <term> [<term> ...] [--memdir DIR | --all-projects] [--all] [--limit N]
@@ -46,9 +46,14 @@ python ~/.claude/skills/recall/recall.py memory --stale-days N [--memdir DIR]
   `## Decided`, `## Rejected` (option plus the reason it lost), `## Open`, `none` under an empty
   one. `digest-save` refuses to overwrite without `--replace` (use it only to correct a wrong
   digest), redacts secrets, and stores one file per session in `~/.claude/memory-archive/digests/`.
+  `--merge` (exclusive with `--replace`) adds to an existing digest instead: new items go after the
+  stored ones, an item already stored is skipped, `none` drops once a section has real items, and
+  the new `## Open` replaces the stored one (Open is what is open now). With no digest yet it is a
+  plain save.
   Digests are the one recall output that cannot be rebuilt from transcripts, so they live outside
-  `index/`; deleting and rebuilding the index leaves them intact. `/close` writes its own session's.
-  Hidden Conductor sub chats never run `/close`: the app leaves each finished sub's digest at
+  `index/`; deleting and rebuilding the index leaves them intact. The save step
+  (`refs/save-step.md`) writes its own session's, with `--merge`.
+  A Conductor sub's digest comes from the daemon, not from the sub: the app leaves each finished sub's digest at
   `%APPDATA%\claude-conductor\subchats\<sub id>.digest.md`, and every index-backed command (not `memory` or `compress`) ingests those files
   (read-only; `--subchats DIR` overrides the folder) with a replace when a sub finishes again.
 - `decisions`: searches only the Decided and Rejected sections of saved digests (every term must

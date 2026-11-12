@@ -109,8 +109,8 @@ Only 1152 depends on phase 1; 1154 works best after 1153.
 
 **Digests and the decision ledger.** The first time a session reads an old chat through
 `recall.py show`, it writes a short digest of it: what was done, decisions taken, and options
-rejected with the reason. No extra model call: the session already read the chat. `/close`
-writes the same digest for its own session, since it already reads its own transcript.
+rejected with the reason. No extra model call: the session already read the chat. The save
+step (`refs/save-step.md`) writes the same digest for its own session, since it already read its own chat.
 `recall.py decisions <topic>` searches only the decisions sections. `/brainstorm` step 1 runs it
 next to its existing todo grep, so a rejected option surfaces before it gets re-proposed.
 

@@ -114,7 +114,7 @@ SUB_DIGEST_V2 = SUB_DIGEST.replace("behind a switch", "always on")
 
 
 def test_subchat_digests():
-    """Conductor subs never run /close; the daemon drops <sub id>.digest.md files that recall ingests."""
+    """A Conductor sub's digest comes from the daemon's <sub id>.digest.md file, which recall ingests."""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         projects, archive, subs = root / "projects", root / "memory-archive", root / "subchats"
@@ -166,6 +166,86 @@ def test_subchat_digests():
         shutil.rmtree(archive / "digests")
         rc = recall.main(["--projects", str(projects), "--archive", str(archive), "--subchats", str(subs), "update"])
         check(rc == 0 and dest.exists(), "the CLI ingests subchat digests when it refreshes the index")
+
+
+def test_digest_merge():
+    """digest-save --merge adds to an existing digest; Open is the one section that is replaced."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        projects, archive = root / "projects", root / "memory-archive"
+        write_session(projects, SID, transcript_lines(), sidecar=False)
+        index = recall.Index(projects, archive, scope_of=lambda cwd: "personal")
+        index.update()
+        dest = archive / "digests" / f"{SID}.md"
+
+        code, msg = recall.cmd_digest_save(index, SID, DIGEST_OLD, False, merge=True)
+        plain = dest.read_text(encoding="utf-8") if dest.exists() else ""
+        check(code == 0 and plain.count("- Use the vault design for cross-project memory") == 1 and plain.count("# Digest:") == 1,
+              f"--merge with no digest behaves like a plain save ({msg})")
+
+        incoming = """## Done
+- Wrote the vault loader
+- Compared the vault design   with the MCP server
+## Decided
+- Keep transcripts forever
+## Rejected
+- Nightly summarising model call
+    - reason: vault digests cost no extra call
+## Open
+- none
+"""
+        code, msg = recall.cmd_digest_save(index, SID, incoming, False, merge=True)
+        text = dest.read_text(encoding="utf-8")
+        check(code == 0 and "- Wrote the vault loader" in text and "- Keep transcripts forever" in text,
+              f"--merge adds the incoming items ({msg})")
+        check("- Use the vault design for cross-project memory" in text and "- MCP server for memory: needs a daemon and a second store" in text,
+              "--merge keeps the stored items")
+        check(text.index("Compared the vault design with") < text.index("Wrote the vault loader"),
+              "--merge appends incoming items after the stored ones")
+        check(text.count("Compared the vault design") == 1, "an incoming item already stored is not doubled (whitespace-insensitive)")
+        check("    - reason: vault digests cost no extra call" in text, "a merged item keeps its sub-bullets")
+        check("zorbquux" not in text and text.split("## Open")[1].strip() == "- none",
+              "--merge replaces the stored Open section with the incoming one")
+        check(text.count("# Digest:") == 1 and text.count("- Session:") == 1, "--merge keeps one fresh header")
+
+        code, _ = recall.cmd_digest_save(index, SID, incoming, False, merge=True)
+        check(code == 0 and dest.read_text(encoding="utf-8") == text, "merging the same body twice changes nothing")
+
+        sparse = "## Done\n- none\n## Decided\n- none\n## Rejected\n- none\n## Open\n- one more thing\n"
+        recall.cmd_digest_save(index, SID, sparse, False, merge=True)
+        after = dest.read_text(encoding="utf-8")
+        check("- none" not in after.split("## Open")[0] and "- one more thing" in after.split("## Open")[1],
+              "an incoming none adds nothing to a section that has items")
+
+        recall.cmd_digest_save(index, SID_NEW, "## Done\n- none\n## Decided\n- none\n## Rejected\n- none\n## Open\n- none\n", True)
+        stored_none = recall.cmd_digest_save(index, SID_NEW, DIGEST_NEW, False, merge=True)
+        text_new = (archive / "digests" / f"{SID_NEW}.md").read_text(encoding="utf-8")
+        check(stored_none[0] == 0 and "- none" not in text_new.split("## Open")[0] and "- Keep transcripts forever" in text_new,
+              "a stored none line is dropped once real items arrive")
+
+        before = dest.read_text(encoding="utf-8")
+        code, msg = recall.cmd_digest_save(index, SID, incoming, True, merge=True)
+        check(code == 1 and "--merge" in msg and "--replace" in msg and dest.read_text(encoding="utf-8") == before,
+              "--merge together with --replace is refused and changes nothing")
+        code, _ = recall.cmd_digest_save(index, SID, "## Done\n- x\n", False, merge=True)
+        check(code == 1 and dest.read_text(encoding="utf-8") == before, "--merge still requires all four headings")
+
+        leaky = "## Done\n- Stored key " + AKIA + "\n## Decided\n- none\n## Rejected\n- none\n## Open\n- none\n"
+        recall.cmd_digest_save(index, SID, leaky, False, merge=True)
+        check(AKIA not in dest.read_text(encoding="utf-8"), "a merged body is redacted")
+
+        sys.stdin = io.StringIO(incoming)
+        try:
+            rc = recall.main(["--projects", str(projects), "--archive", str(archive), "digest-save", SID, "--merge", "--replace"])
+        finally:
+            sys.stdin = sys.__stdin__
+        check(rc == 1, "the CLI refuses --merge with --replace")
+        sys.stdin = io.StringIO(DIGEST_NEW)
+        try:
+            rc = recall.main(["--projects", str(projects), "--archive", str(archive), "digest-save", SID, "--merge"])
+        finally:
+            sys.stdin = sys.__stdin__
+        check(rc == 0 and "- Keep transcripts forever" in dest.read_text(encoding="utf-8"), "the CLI accepts --merge")
 
 
 def test_digests():
@@ -565,6 +645,7 @@ def main():
         check(any("format may have changed" in w for w in index4.warnings), "a format change is flagged")
 
     test_digests()
+    test_digest_merge()
     test_subchat_digests()
     test_memory()
 
