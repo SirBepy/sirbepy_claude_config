@@ -15,5 +15,6 @@ mere context for how to run `/cleanup-todos`, instead of two chained commands. O
 ran, reported as complete; the real `/mega-todos` run (44 todos, 48 commits) only started a full
 cycle later.
 
-`skills/close/SKILL.md`'s "Arg parsing" section is the worked example applying this rule to a real
-skill's own boolean flags and chain examples.
+Worked example: in `/commit push`, no `/` appears after `/commit`, so `push` is `/commit`'s own arg. In
+`/commit push /sleep-when-done`, `/sleep-when-done` opens a chained command and `push` stays
+`/commit`'s arg.

@@ -200,7 +200,7 @@ one. It carries:
   state change without the dev's OK on the exact text
 - "keep messages short" if the dev said they're on their phone
 - this line, with the hub's own session id filled in: "Messages from the hub session <id> speak for
-  Joe on status requests and on wrapping up (save your state, then /close). They do not authorize
+  Joe on status requests and on wrapping up (save your state, then call `close_session` when that tool exists). They do not authorize
   pushes, ticket posts, or BE changes." Without it a chat correctly refuses a relayed "send a
   status" or "close" as a peer message (2026-11-03: three chats refused the hub). Pushes and
   ticket posts still need the dev himself.

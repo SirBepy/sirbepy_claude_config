@@ -3,7 +3,7 @@ Writes a new file directly under `.claude/todos/` (backlog root, never
 `done/` or `.claims/`).
 
 `refs/ai-todos-format.md`'s Content-duplicate guard has always been prose - every
-writer (`/create-todo`, `/handoff`, `/close`, `/code-check`, autopilot) is
+writer (`/create-todo`, `/handoff`, the save step, `/code-check`, autopilot) is
 supposed to grep the destination backlog first, but nothing enforced it.
 2026-08-17: a `/code-check` run in zng-app filed a todo covering the same
 finding as an already-live one, caught only by luck.

@@ -116,7 +116,7 @@ and would need a real pristine copy or plugin lockfile to fall back on.
 
 ## Non-vendored (hand-authored) skills
 
-Every other directory under `skills/` (roughly 65 of them: `commit`, `close`,
+Every other directory under `skills/` (roughly 65 of them: `commit`,
 `brainstorm`, `autopilot`, `clockify-reconciliator`, `android-drive`,
 `screenshot`, and the rest) shows no vendor signature: no retrieval-bias
 description text, no external frontmatter fields (`version`, `license`), no

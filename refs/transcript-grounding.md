@@ -2,7 +2,7 @@
 
 The recipe for resolving a session's transcript on disk. Used by `/commit`'s Pre-push transcript check, `/zng-kickoff` and the save step in `refs/save-step.md`.
 
-"The full session" means the raw transcript on disk, not just what's still in context. Claude Code auto-compacts as it approaches the context limit, so on a long session the early material is already summarized away by the time /close runs - exactly the window where corrections and hard-won facts live. Recalling from a compacted view systematically under-reports them.
+"The full session" means the raw transcript on disk, not just what's still in context. Claude Code auto-compacts as it approaches the context limit, so on a long session the early material is already summarized away by the time the save step runs - exactly the window where corrections and hard-won facts live. Recalling from a compacted view systematically under-reports them.
 
 Resolve this session's transcript:
 
@@ -12,4 +12,4 @@ Resolve this session's transcript:
 
 **Skip this entirely if the transcript is under ~500 lines** - the session was short, nothing compacted, in-context history is already complete and re-reading is wasted tokens.
 
-When it does run: `Grep` the file, never `Read` it whole (transcripts embed full tool payloads and run to megabytes). Target the dev's own turns - lines with `"type":"user"` whose content is text rather than a `tool_result` - since Phase 1 bullets 2 and 5 (in `SKILL.md` "What to compute") are about what Joe said. Pull only enough surrounding context to judge each hit.
+When it does run: `Grep` the file, never `Read` it whole (transcripts embed full tool payloads and run to megabytes). Target the dev's own turns - lines with `"type":"user"` whose content is text rather than a `tool_result` - since the corrections and unaddressed requests every caller looks for are about what Joe said. Pull only enough surrounding context to judge each hit.

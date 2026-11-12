@@ -248,8 +248,7 @@ def evaluate(
     # A session that already called close_session ends when this turn
     # completes, so a block here has no later turn to fix anything in: it only
     # leaves a chat open that was reported closed. Allowed without
-    # running checks or spending an attempt; the flag is left for /close's own
-    # verification record.
+    # running checks or spending an attempt; the flag is left in place.
     try:
         closing = bool(closed_fn(payload.get("transcript_path") or ""))
     except Exception:

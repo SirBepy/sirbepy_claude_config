@@ -133,10 +133,10 @@ for path in sorted(glob.glob(os.path.join(skills_dir, '*', 'SKILL.md'))):
     if not name:
         continue
 
-    # Slash required: bare-word names (close, review, pickup) collide with plain
+    # Slash required: bare-word names (review, pickup) collide with plain
     # English and fired on ambient text, not real invocation intent. Position
     # in the prompt is not checked (todo 891): mid-line mentions on later
-    # lines are real invocations too, e.g. "and then /close up".
+    # lines are real invocations too, e.g. "and then /handoff up".
     _name_pattern = r'(?<![\w/-])/' + re.escape(name) + r'(?![\w-])'
     if not re.search(_name_pattern, _match_text, re.IGNORECASE):
         continue

@@ -170,7 +170,7 @@ One `ask_user_question` call; no question count limit, 2-4 options per question.
 ### Todos
 
 Each pick becomes a todo in the repo it changes (often `C:\Users\tecno\.claude` for TOOLING), per
-`C:\Users\tecno\.claude\skills\close\ai-todos-format.md`:
+`C:\Users\tecno\.claude\refs\ai-todos-format.md`:
 
 - `Origin: dev` (written after Joe's pick, so it is his decision);
 - a Context section with a receipt per cause sentence;
@@ -239,4 +239,4 @@ essay with no action per finding; AI taste verdicts on UI; a rigid pipeline endi
 file; a Sonnet row-per-agent pipeline that manufactures judgment; embeddings; free-text cause
 labels; `expect:` trailers in digests; refuting only a top slice; subagents writing their own
 files; an `archive` subcommand; extending recall.py for this. Hotspots stay evidence, never a
-primary source; a /close-time or daily checker never replaces this run.
+primary source; an end-of-chat or daily checker never replaces this run.

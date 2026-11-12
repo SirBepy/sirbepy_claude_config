@@ -92,13 +92,14 @@ against a 393pt design frame - see the logical-width step below.
 - [ ] Diff mode: capture gotchas (semantics/scroll, CTA flash, wheel-scroll) checked before trusting
       a screenshot that showed a surprising delta
 
-## Note for /close's visual-work check
+## Showing a captured frame to Joe
 
 Screenshots this skill (or its delegates) write to `.for_bepy/screenshots/<id>/` during a run are
-not automatically shown to Joe. `/close` Phase 0's visual-work check only clears on a frame actually
-reaching Joe this session (`SendUserFile`, `/preview`'s image branch, or equivalent) - files existing
-on disk from an automated run do not satisfy it (todo 1027). If a run here is meant to double as the
-visual proof for a CSS/layout change, follow it with that SendUserFile/`/preview` call naming the
+not automatically shown to Joe. The Stop hook `hooks/ui-screenshot-reminder.py` only compares file
+times: it stays quiet once any `.png` under the repo's `.for_bepy/screenshots/` is newer than the turn's
+newest UI edit, so PNGs an automated run wrote satisfy it without Joe seeing one (todo 1027).
+CLAUDE.md's UI section is what requires a frame to reach him. If a run here is meant to double as the
+visual proof for a CSS/layout change, follow it with a SendUserFile or `/preview` image call naming the
 frame.
 
 ## Related

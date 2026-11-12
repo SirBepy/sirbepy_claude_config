@@ -20,7 +20,7 @@ session transcripts on this machine, per the hook doctrine in
   regardless of any change).
 - **586** were not real free-typed invocation candidates either way:
   - **455** were Claude Code's own `<command-message>/<command-name>` slash
-    dispatch template - literal `/close` etc. typed via the CLI's native
+    dispatch template - literal `/handoff` etc. typed via the CLI's native
     command autocomplete, which Claude Code executes directly; this hook
     firing or not on these is moot.
   - **131** were `<task-notification>`/`<auq-answer/>` wrapped bodies (task

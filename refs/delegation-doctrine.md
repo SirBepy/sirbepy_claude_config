@@ -167,9 +167,9 @@ and the out-of-scope-findings channel below are the only guards.
 - If the dispatch captures screenshots: the already-resolved `.for_bepy/screenshots/<pid>-<start-ticks>/`
   path. Resolve it ONCE per session via `~/.claude/tools/rename-session.ps1 -GetId`
   (`.sh --get-id` on Unix) and reuse that id for every dispatch this session makes. Never derive
-  it from a process-tree walk and never hand-pick a folder name: `/close` can only delete its own
-  authoritative subfolder, so a wrong id is permanently un-cleanable and may collide with a live
-  session's folder.
+  it from a process-tree walk and never hand-pick a folder name: the id is how a folder is attributed
+  to the session that wrote it, so a wrong id leaves a folder no session owns and may collide with a
+  live session's folder.
 - The orphan-check final step from `~/.claude/refs/process-hygiene.md`, unconditionally. It used to
   be gated on "if it runs Node commands", which let a subagent's whole-drive `find` escape it twice
   (todo 357); `refs/builder-preamble.md` now carries it as static body text, not a placeholder.

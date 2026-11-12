@@ -1,7 +1,7 @@
 // Shared helper: resolves and creates this session's throwaway-screenshot subfolder, so callers
 // never hand-build the <pid>-<start-ticks> id/path themselves (todo 287). Wraps
 // tools/rename-session.ps1 -GetId (Windows) / rename-session.sh --get-id (POSIX) - the exact same
-// script/cache `/close` Phase 0 calls, so both resolvers agree on Windows by construction (843).
+// script/cache every other caller of -GetId uses, so all resolvers agree on Windows by construction (843).
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');

@@ -1,7 +1,7 @@
 # .claude/todos/ - backlog, plan, and claims contract
 
 Single source of truth for the per-project todo system. Every skill that reads or writes todos
-(`/close`, `/create-todo`, `/code-check`, `/batch-todos`, `/plan-todos`, `/pickup`, autopilot,
+(the save step, `/create-todo`, `/code-check`, `/batch-todos`, `/plan-todos`, `/pickup`, autopilot,
 ad-hoc "do todo pc-0007" runs) follows this file instead of restating its rules.
 
 ## Layout
@@ -119,7 +119,7 @@ mutex exists to prevent (three such files hit this during the 2026-08-19 run). S
 per todo 393: the scripts tolerate it, the contract calls it malformed, and neither pretends the
 file is well-formed.
 
-**Content-duplicate guard.** Applies to every writer (`/create-todo`, `/handoff`, `/close` Phase 3,
+**Content-duplicate guard.** Applies to every writer (`/create-todo`, `/handoff`, the save step,
 `/code-check`, autopilot) AND to `/cleanup-todos` relocation - moving a todo into another repo's
 backlog is still a write into that backlog and gets the same check against the DESTINATION, not
 just the source. The race guard above only catches two sessions grabbing the same id, not a second
@@ -204,7 +204,7 @@ next session.
 - `**Type:**` values: `task` (default; absence means task) - code/config/analysis Claude can
   execute later. `skill-improvement` - skill gaps, "did this differently than the skill said",
   "this keeps coming up, maybe a skill" observations; its Approach names the skill file involved.
-- `**Origin:**` values: `ai` - Claude noticed this on its own (a `/close` sweep, `/code-check`, an
+- `**Origin:**` values: `ai` - Claude noticed this on its own (a save-step sweep, `/code-check`, an
   autopilot observation, a "this keeps coming up" note); the dev never asked for it in these
   words. `dev` - the dev asked for it directly, or it captures a decision he made; includes
   handoff todos, since those record his own in-flight work. Absent field on an older todo means
@@ -231,7 +231,7 @@ next session.
   release decision, and only a later DOM dump settled which of two contradictory versions had
   been right. A cold session trusts a todo file more than any other artifact and has no transcript
   to sanity-check it against, which is exactly why this is a template rule and not a reminder to
-  remember: `/create-todo`, `/code-check`, and `/close` Phase 3 write every Context section through
+  remember: `/create-todo`, `/code-check`, and the save step write every Context section through
   this file rather than restating the rule, so fixing it once here fixes it for all three.
 - Skip a section only if it genuinely doesn't apply. Never just a title and a one-liner.
 - The bar: a future cold AI session must execute from the file alone. Handoff todos ("continue

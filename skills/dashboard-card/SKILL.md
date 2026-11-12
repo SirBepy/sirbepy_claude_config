@@ -60,8 +60,7 @@ chat about a broken Clockify dashboard card; `dashboard_card` itself was not sho
    every `stats` value real, none `-`. Fix and `test` again until it is.
 7. **`upsert`.** An enabled card runs once on save and returns its `result`; check it again, it
    is the first thing the dashboard shows. Then say what the card shows and where.
-8. **`pin`** only when Joe asks for quick-action chips: a list of slash commands (max 20, never
-   `/close`); `[]` clears them.
+8. **`pin`** only when Joe asks for quick-action chips: a list of slash commands (max 20); `[]` clears them.
 
 ## The card object
 

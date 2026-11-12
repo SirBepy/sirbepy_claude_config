@@ -197,8 +197,8 @@ def check_skill_tests(root: Path) -> tuple:
     """Runs every discover_skill_tests() suite (todo 991). A no-op pass today
     (see discover_skill_tests' population note) - its job is making sure the
     next sibling test someone writes under skills/ is not silently inert,
-    which is exactly what todo 991 found already happened once (skills/close's
-    safe-remove-worktree.ps1 had no discovery path for weeks).
+    which is exactly what todo 991 found already happened once (safe-remove-worktree.ps1,
+    then under skills/, had no discovery path for weeks).
     """
     print("\n=== skill-script self-tests (skills/**/test_*.{sh,py,ps1,cjs,mjs}, excl. commit) ===", flush=True)
     tests = discover_skill_tests(root)

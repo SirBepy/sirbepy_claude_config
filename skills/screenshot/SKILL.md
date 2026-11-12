@@ -11,7 +11,7 @@ description: Triggers on /screenshot, or to shoot a matrix of frames/states of a
 
 `mcp__playwright__browser_take_screenshot` writes to the working directory or `.playwright-mcp/`,
 never to this session's `.for_bepy/screenshots/<id>/` - it has no folder-resolution logic, unlike
-`screenshot-helper.cjs`. Anything that must survive `/close`'s purge or stay out of `git status`
+`screenshot-helper.cjs`. Anything that must land in the per-session folder or stay out of `git status`
 goes through `screenshot-helper.cjs` instead. If the MCP is genuinely needed for interaction the
 helper's `--plan` can't express (e.g. a login flow), move the captured file into the session
 subfolder immediately (id from `tools/rename-session.ps1 -GetId`) and confirm `git status` is
@@ -33,8 +33,8 @@ $b.Save("$dir/strip.png", [Drawing.Imaging.ImageFormat]::Png)
 
 `session-shot-dir.cjs` creates the folder if missing and prints its path - it is the single place
 the `<pid>-<start-ticks>` id gets resolved (wraps `tools/rename-session.ps1 -GetId`), so no caller
-hand-builds `.for_bepy/screenshots/...` itself and no capture lands at the root, where `/close`
-treats it as unowned legacy and never deletes it (past incident, 2026-08-01: 25 loose captures
+hand-builds `.for_bepy/screenshots/...` itself and no capture lands at the root, where it belongs to
+no session and only `/disk-doctor`'s age-out ever clears it (past incident, 2026-08-01: 25 loose captures
 from one Tauri icon session had to be cleared by hand).
 
 ## Step 1 - Verify helper script
@@ -72,7 +72,7 @@ Plan 1-5 screenshots showing distinct views. Do not plan multiple shots of the s
 
 Write a JSON plan to `.portfolio-data/screenshot-plan.json`. The plan is an ordered list of steps executed in one browser session.
 
-**Output path.** Portfolio-quality keepers (this skill's normal output, never purged by `/close`) go under `.portfolio-data/` - use that path in `out` directly. A throwaway verification shot instead: set `out` to a bare filename (e.g. `"check-1.png"`, no directory) and `screenshot-helper.cjs` auto-resolves it into this session's `.for_bepy/screenshots/<pid>-<start-ticks>/` via `session-shot-dir.cjs`, matching `/close`'s Phase 0/3 purge scheme - no id to hand-build. The script refuses any `out` that names `.for_bepy/screenshots/` directly at the root.
+**Output path.** Portfolio-quality keepers (this skill's normal output, kept) go under `.portfolio-data/` - use that path in `out` directly. A throwaway verification shot instead: set `out` to a bare filename (e.g. `"check-1.png"`, no directory) and `screenshot-helper.cjs` auto-resolves it into this session's `.for_bepy/screenshots/<pid>-<start-ticks>/` via `session-shot-dir.cjs`, the per-session folder scheme - no id to hand-build. The script refuses any `out` that names `.for_bepy/screenshots/` directly at the root.
 
 Supported step types:
 
