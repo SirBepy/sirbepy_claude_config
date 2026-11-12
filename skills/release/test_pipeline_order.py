@@ -66,7 +66,13 @@ if GATE_CHAT.exists():
     transcript_at = gate_text.find("Pre-push transcript check")
     spawn_at = gate_text.find("spawn_chat")
     check(0 <= transcript_at < spawn_at, "hand-off runs the transcript check before spawn_chat")
-    check("`/close` as the prompt's last word" in gate_text, "the gate chat closes itself with a trailing /close")
+    spawn_prompt = gate_text.split("\n2. ", 1)[-1].split("\n3. ", 1)[0]
+    check(
+        "As the prompt's last sentence: \"Call the `close_session` tool once the gate is finished" in spawn_prompt
+        and "do not end the chat" in spawn_prompt,
+        "the gate chat's prompt ends with a close_session instruction that a red gate waiting on Joe never triggers",
+    )
+    check("/close`" not in gate_text and "ending in /close" not in gate_text, "the gate chat no longer names the deleted /close skill")
     check("/then-close" not in gate_text, "the gate chat no longer names the retired /then-close")
     # Joe's 2026-10-27 rule: a light chat runs the gate in place. Dropping the threshold
     # made a 13%-context chat spawn a gate chat on 2026-10-30.
@@ -82,6 +88,17 @@ if GATE_CHAT.exists():
     check("Subchats" in commit_text.split("1c. ", 1)[-1].split("\n", 1)[0], "commit step 1c exempts a Subchats-mode chat from the 30% threshold")
 
 check(len(labels) == len(set(labels)), "no duplicate step labels")
+
+# The dead test-selector check is part of the Pre-push gate, and the pipeline list names it.
+gate_section_commit = commit_text.split("\n## Pre-push gate", 1)[-1].split("\n## ", 1)[0]
+check(
+    "dead-probe-check.py" in gate_section_commit and "'@{u}..HEAD'" in gate_section_commit,
+    "Pre-push gate runs dead-probe-check.py over @{u}..HEAD",
+)
+check(
+    "dead test-selector check" in commit_text.split("4. **Pre-push gate**", 1)[-1].split("\n", 1)[0],
+    "the Push pipeline list's gate step names the dead test-selector check",
+)
 
 release_text = RELEASE.read_text(encoding="utf-8").replace("\r\n", "\n")
 numbered = [ln for ln in release_text.splitlines() if re.match(r"\s*\d+[a-z]?[.)] ", ln)]

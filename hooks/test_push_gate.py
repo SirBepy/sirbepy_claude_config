@@ -310,9 +310,13 @@ with tempfile.TemporaryDirectory() as tmp:
 
     expect("a repo with no fast-check stack needs no skills", run_mark(docs, "notes repo: no code", [user_prompt("x")])[::2], (0, True))
 
-    gate_prompt = "Run /commit's Push pipeline from step 2 (skip step 1c). Read snippets/auto-commit.md. /close"
+    gate_prompt = "Run /commit's Push pipeline from step 2 (skip step 1c). Read snippets/auto-commit.md. Call the `close_session` tool once the gate is finished."
+    # A gate chat spawned before the close_session ending existed ends its prompt in "/close"; the
+    # hook keys on the pipeline instruction, so both endings are recognised.
+    old_gate_prompt = "Run /commit's Push pipeline from step 2 (skip step 1c). Read snippets/auto-commit.md. /close"
     expect("a gate chat is not asked for /test", run_mark(node, reason, [user_prompt(gate_prompt)] + skill("t2", "e2e"))[::2], (0, True))
     expect("a gate chat still needs /e2e", run_mark(node, reason, [user_prompt(gate_prompt)])[::2], (2, False))
+    expect("a gate chat with the old /close ending is not asked for /test", run_mark(node, reason, [user_prompt(old_gate_prompt)] + skill("t2", "e2e"))[::2], (0, True))
 
     code, err, marked = run_mark(node, "pushing past a red e2e", [user_prompt("x")], "--skip-skill-check", "Joe said yes to pushing past the red e2e")
     expect("--skip-skill-check with his approval marks", (code, marked), (0, True))

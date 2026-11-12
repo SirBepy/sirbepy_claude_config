@@ -1,11 +1,11 @@
 ---
 name: gate-chat
-description: Hands a push's gate (code-check, e2e, push) to a fresh chat ending in /close. Called by /commit and /release.
+description: Hands a push's gate (code-check, e2e, push) to a fresh self-closing chat. Called by /commit and /release.
 ---
 
 # /gate-chat
 
-> The gate is the heaviest part of a push. A fresh chat runs it on an empty context, with its one job being to ship and then close. Called from `/commit`'s Push pipeline step 1c, for an attended push or `/release` from a chat that has used 30% or more of its context, or from any chat in Subchats mode (see step 2).
+> The gate is the heaviest part of a push. A fresh chat runs it on an empty context, with its one job being to ship and then close itself. Called from `/commit`'s Push pipeline step 1c, for an attended push or `/release` from a chat that has used 30% or more of its context, or from any chat in Subchats mode (see step 2).
 
 Runs after step 1 (and 1b and 1d under `/release`), once `git rev-list --count '@{u}..HEAD'` says there is something to push. If `@{u}` does not resolve (a branch with no upstream), say so, offer `git push -u origin <branch>` instead, and stop: there is no range to hand over. It does not apply to:
 
@@ -22,7 +22,7 @@ Runs after step 1 (and 1b and 1d under `/release`), once `git rev-list --count '
    - "The transcript check ran in the parent chat and passed; skip step 3." Plus any in-session client commit-window OK Joe gave here, quoted.
    - The instruction: run `/commit`'s Push pipeline from step 2 (4a and 4b only under `/release`: tell the child to read `skills/release/SKILL.md` sections 4a and 4b, which have the `release.py pre-bump` and `release.py bump` exit-code handling and the `--reason "version bump after gate"` mark; it does not load `/release` itself), skipping step 1c. On a red gate or any question, ask Joe in that chat.
    - "Read `snippets/auto-commit.md` before the push." `hooks/push-read-gate.py` denies a session's first `git push` until the file was read in that session, and a fresh gate chat has read nothing, so the pre-read costs one call instead of a denied push and a retry.
-   - The literal token `/close` as the prompt's last word. `/close` finishes the open work first, keeps the chat open on an unanswered question, and closes it only once the work is pushed, so a red gate never closes behind Joe's back. Because the token ends the prompt rather than starting it, Conductor does not mark the chat Closing while the gate runs.
+   - As the prompt's last sentence: "Call the `close_session` tool once the gate is finished: the push landed, or Joe answered a red check and nothing is left to do. While a red gate is waiting on Joe, do not end the chat." The chat then closes only once the work is pushed or Joe has settled a red check, so a red gate never closes behind Joe's back.
 3. Tell Joe the gate moved, and stop. In Subchats mode the gate runs as a hidden sub: its questions show in this chat and its card says whether it pushed. Otherwise it moved to the new chat. This chat does not push and makes no further commits in that repo until the gate chat reports pushed (its HEAD guard would refuse anyway).
 
 A gate chat spawned this way carries the parent's push ask, per `snippets/auto-commit.md`.
