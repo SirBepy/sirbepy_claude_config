@@ -33,7 +33,7 @@ PATH_CASES = [
     (r"C:\Users\tecno\.claude\.claude\todos\done\307-x.md", False, "done/ subfolder is not a new-write target", False),
     (r"C:\Users\tecno\.claude\.claude\todos\.claims\363-x.claim", False, ".claims/ subfolder excluded", False),
     (r"C:\Users\tecno\.claude\.claude\todos\PLAN.md", False, "filename without digit prefix", False),
-    (r"C:\Users\tecno\.claude\skills\close\ai-todos-format.md", False, "unrelated skill file", False),
+    (r"C:\Users\tecno\.claude\refs\ai-todos-format.md", False, "unrelated skill file", False),
     ("", False, "empty path", False),
 ]
 

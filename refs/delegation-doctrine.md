@@ -165,7 +165,7 @@ and the out-of-scope-findings channel below are the only guards.
   rules instead of pointing at `flutter-e2e`'s files, because the skill can't invoke itself inside
   a subagent.)
 - If the dispatch captures screenshots: the already-resolved `.for_bepy/screenshots/<pid>-<start-ticks>/`
-  path. Resolve it ONCE per session via `~/.claude/skills/close/rename-session.ps1 -GetId`
+  path. Resolve it ONCE per session via `~/.claude/tools/rename-session.ps1 -GetId`
   (`.sh --get-id` on Unix) and reuse that id for every dispatch this session makes. Never derive
   it from a process-tree walk and never hand-pick a folder name: `/close` can only delete its own
   authoritative subfolder, so a wrong id is permanently un-cleanable and may collide with a live

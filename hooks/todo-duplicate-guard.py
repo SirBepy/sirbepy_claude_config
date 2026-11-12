@@ -2,7 +2,7 @@
 Writes a new file directly under `.claude/todos/` (backlog root, never
 `done/` or `.claims/`).
 
-`ai-todos-format.md`'s Content-duplicate guard has always been prose - every
+`refs/ai-todos-format.md`'s Content-duplicate guard has always been prose - every
 writer (`/create-todo`, `/handoff`, `/close`, `/code-check`, autopilot) is
 supposed to grep the destination backlog first, but nothing enforced it.
 2026-08-17: a `/code-check` run in zng-app filed a todo covering the same
@@ -146,7 +146,7 @@ def outside_repo_names(content: str, repo_root: Path) -> set[str]:
 def allocation_warning(content: str, repo_root: Path) -> str | None:
     """Advisory text (todo 481) when `content`'s own paths point mostly
     outside `repo_root`: the incident this guards against is a mis-filed
-    todo getting EXECUTED from the wrong session. Per ai-todos-format.md's
+    todo getting EXECUTED from the wrong session. Per refs/ai-todos-format.md's
     allocation rule, not a reason to block on its own.
     """
     if not content or not repo_root.name:
@@ -159,7 +159,7 @@ def allocation_warning(content: str, repo_root: Path) -> str | None:
         return None
     return (
         f"[todo-duplicate-guard] This todo's own paths point mostly outside "
-        f"{repo_root.name} ({', '.join(sorted(outside))}). Per ai-todos-format.md's "
+        f"{repo_root.name} ({', '.join(sorted(outside))}). Per refs/ai-todos-format.md's "
         "allocation rule, a todo belongs in the backlog of the repo it changes - "
         "consider filing it there instead."
     )
@@ -344,7 +344,7 @@ def main() -> None:
             deny(
                 f"[todo-duplicate-guard] Id {shown_id} is already claimed by "
                 f"{collision.name}. Ids must be unique across .claude/todos/, done/, "
-                f"and *-.reserved markers - run `skills/close/reserve-todo-id.ps1 "
+                f"and *-.reserved markers - run `tools/reserve-todo-id.ps1 "
                 f"-RepoRoot {repo_root}` to reserve a free one instead of picking by hand."
             )
 
@@ -371,12 +371,12 @@ def main() -> None:
             f"`<!-- {MALFORMED_MARKER_HINT}` and closed with `-->` on the same or a later line, "
             f"e.g. `<!-- {MALFORMED_MARKER_HINT}: the two hits are different surfaces -->`. "
             f"Possible duplicate of existing todo(s): {hit_lines}. Fix the marker's HTML-comment "
-            "syntax to proceed, or if it is not actually distinct, resolve per ai-todos-format.md's "
+            "syntax to proceed, or if it is not actually distinct, resolve per refs/ai-todos-format.md's "
             "Content-duplicate guard instead."
         )
     deny(
         f"[todo-duplicate-guard] Possible duplicate of existing todo(s): {hit_lines}. "
-        "Per ai-todos-format.md's Content-duplicate guard, read the hit(s) in full and "
+        "Per refs/ai-todos-format.md's Content-duplicate guard, read the hit(s) in full and "
         "resolve to fold-in / drop-as-stale / drop-as-declined instead of filing this. "
         f"If it is genuinely distinct and only shares vocabulary, add {OVERRIDE_MARKER} "
         "anywhere in the new file's content to proceed - a reason can go inside the same "

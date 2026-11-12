@@ -95,7 +95,7 @@ Repeat until a Phase 3 stop condition fires. Per cycle:
 1. Record `CYCLE_START_SHA` (`git rev-parse HEAD`).
 2. **Claim before anything else runs.** Every todo id still in the backlog, minus the skip list, in
    one batch call, printed as the cycle's first action, before `/auto-do-todos` touches a file:
-   `~/.claude/skills/close/claim-todo.ps1 -Id "<id1>,<id2>,..."`. Drop any id the call reports lost
+   `~/.claude/tools/claim-todo.ps1 -Id "<id1>,<id2>,..."`. Drop any id the call reports lost
    to a live session or hitting a genuine error and continue with what's left, the same tolerance
    Step 6's own batch-claim already used before this skill suppressed it (see Precedence). This is
    what closes todo 1147: a tiny backlog collapses `/auto-do-todos` Steps 3-5 to nothing, so without
@@ -174,7 +174,7 @@ read it there rather than copying the number here.
 **Release this session's claims before the handoff spawns.** Phase 1 step 2 claims the whole
 backlog, and a todo this cycle left open still carries that claim; the successor is a new session
 whose own Phase 1 step 2 would read it as a live peer's and drop the todo. Run
-`~/.claude/skills/close/claim-todo.ps1 -Release -AllMine` first. It deletes only claims this
+`~/.claude/tools/claim-todo.ps1 -Release -AllMine` first. It deletes only claims this
 session wrote (todo 1323), and the successor re-claims what it takes.
 
 **The handoff prompt's FIRST characters must be the literal re-invocation**, because a slash
@@ -205,7 +205,7 @@ over.
 
 ## Phase 5 - Final report
 
-Before writing it, run `~/.claude/skills/close/claim-todo.ps1 -Release -AllMine`: only
+Before writing it, run `~/.claude/tools/claim-todo.ps1 -Release -AllMine`: only
 `complete-todo.ps1` removes a claim, so every todo the loop left open (skipped, parked, still
 waiting on the dev) would otherwise keep a claim that blocks a peer chat until it goes stale. It
 releases this session's claims only (todo 1323).
@@ -223,7 +223,7 @@ listed with the reason it stayed open (card timed out, dev chose skip).
 - It never commits directly - `/auto-do-todos` owns that. It does claim, once per cycle (Phase 1
   step 2), since todo 1147; `/auto-do-todos` Step 6 relies on that claim instead of making its own
   inside a loop.
-- Backlog source of truth: `.claude/todos/` per `close/ai-todos-format.md`, resolved from the repo
+- Backlog source of truth: `.claude/todos/` per `refs/ai-todos-format.md`, resolved from the repo
   root of the session's own cwd.
 - Reporting cadence (a chat bubble only for a blocker, a decision, or the final summary; every
   other update goes to `write_plan`) follows `/autopilot`'s own Reporting section.

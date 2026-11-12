@@ -547,7 +547,7 @@ nothing. Recover reports from it before reconstructing from the tree alone.
 
 Archival is **main-thread only**, because `complete-todo.ps1` prunes the shared `PLAN.md`:
 
-1. At each barrier, for every todo that passed: decide its ending per `close/ai-todos-format.md`'s
+1. At each barrier, for every todo that passed: decide its ending per `refs/ai-todos-format.md`'s
    "Two endings" first. For the Completed ones, call
    `~/.claude/skills/mega-todos/archive-batch.ps1 -Items "<id>|<what happened>", ... -PathspecFile
    <path>` once for the whole batch (`-PathspecFile` writes `.Pathspec` as a clean LF list for
@@ -595,4 +595,4 @@ the verification result.
   workflow's return shape rather than ending the run.
 - Never invoke `/autopilot` or `/auto-do-todos` as literal slash commands. Their contracts are adopted
   by reference.
-- Source of truth for the backlog: `.claude/todos/` per `~/.claude/skills/close/ai-todos-format.md`.
+- Source of truth for the backlog: `.claude/todos/` per `~/.claude/refs/ai-todos-format.md`.

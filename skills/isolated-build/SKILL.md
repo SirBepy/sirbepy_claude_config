@@ -66,7 +66,7 @@ incident and the 2026-09-07 half-removal were both caused by getting wrong:
    branch is reported and left alone, never force-merged or rebased.
 3. Stops the supervised dev-server entry (`-SupervisorId`), best-effort - an open handle on the
    worktree directory is the most likely cause of a step-4 removal failure.
-4. Removes the worktree by calling `~/.claude/skills/close/safe-remove-worktree.ps1` - never
+4. Removes the worktree by calling `~/.claude/tools/safe-remove-worktree.ps1` - never
    reimplemented here. Read that script's own header for why a naive remove is dangerous. **That
    script's plain `git worktree remove` call throws a terminating error on ANY stderr under PS
    5.1 (confirmed 2026-09-10) and never reaches its own --force/rmdir+prune fallback if the

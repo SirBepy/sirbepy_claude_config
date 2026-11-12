@@ -160,7 +160,7 @@ powershell -File adb-drive.ps1 record-motion -Serial <id> -Steps "wait:1500;tap:
 ## Screenshot output location
 
 Default output (when `-Out` is omitted) goes to `.for_bepy/screenshots/<session-id>/`, matching
-`/close`'s per-session purge scheme - derived via `close/rename-session.ps1 -GetId`, never a
+`/close`'s per-session purge scheme - derived via `tools/rename-session.ps1 -GetId`, never a
 hand-rolled process-tree walk. Never point `-Out` at the folder root.
 
 ## Not in scope

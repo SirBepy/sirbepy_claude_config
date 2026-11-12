@@ -10,7 +10,7 @@ argument-hint: "[show | free-text ordering like 'do pc-0007 then pc-0003, pc-000
 > Order the backlog: which todos to pull next, in what sequence.
 
 All format rules (PLAN.md schema, pointer-only lines, `[P]` markers, phases, CAS edit
-discipline, pruning, git policy) live in `~/.claude/skills/close/ai-todos-format.md` - follow
+discipline, pruning, git policy) live in `~/.claude/refs/ai-todos-format.md` - follow
 that contract. This skill only edits ordering; it never executes todos (that's `/pickup`) and
 never creates backlog content (that's `/create-todo` and friends).
 

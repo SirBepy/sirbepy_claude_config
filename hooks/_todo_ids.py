@@ -1,5 +1,5 @@
 """Todo id parsing/formatting shared by every Python consumer (hooks, tools, the bash
-commit scripts via this module's CLI). Twin of skills/close/_shared.ps1; the two must
+commit scripts via this module's CLI). Twin of tools/_shared.ps1; the two must
 stay in step and no other script may carry its own id regex.
 
 An id is `<label>-<NNNN>`: the device label (`pc`, `mac`, `pc2`; ~/.claude/device-label)

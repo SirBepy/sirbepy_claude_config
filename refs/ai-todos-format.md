@@ -84,7 +84,7 @@ then writing has a race window between two concurrent sessions - observed three 
 on 2026-08-14 in this exact backlog (see [[pc-0336-todo-id-allocation-races-between-concurrent-sessions]]).
 The id is claimed the same way execution is claimed:
 
-1. Run `~/.claude/skills/close/reserve-todo-id.ps1 -RepoRoot <repo root>`. It scans
+1. Run `~/.claude/tools/reserve-todo-id.ps1 -RepoRoot <repo root>`. It scans
    `.claude/todos/*.md`, `done/*.md`, and any live `*-.reserved` markers for the current max
    number carrying THIS device's label (other labels' ids never move this device's counter),
    then atomically claims `max+1` by renaming a private temp file onto
@@ -155,7 +155,7 @@ anywhere in the new content.
 ## Backlog file: content
 
 ```md
-<!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- Claim before executing: .claude/todos/.claims/ per refs/ai-todos-format.md -->
 # <one-line task title>
 
 **Type:** task | skill-improvement
@@ -359,7 +359,7 @@ place that says "remember to claim".
      lost race. Retry once after ~2s before concluding anything.
 4. Clean up your temp file if the rename lost.
 
-Scripted mechanism for the whole sequence above: `~/.claude/skills/close/claim-todo.ps1 -Id <id>
+Scripted mechanism for the whole sequence above: `~/.claude/tools/claim-todo.ps1 -Id <id>
 [-Slug <slug>] [-RepoRoot <path>]`. Implements steps 1-4 verbatim, including the retry and the
 staleness rule below. When the id matches more than one backlog file (a known collision case -
 see below), pass `-Slug <slug>` or the full filename stem as `-Id`; the claim is then named
@@ -404,7 +404,7 @@ script the id instead of globbing `done/<id>-*.md` and checking `git ls-files` f
 hand before every call.
 
 Preferred mechanism for the completion sequence (append a Notes bullet + move to `done/` +
-release claim + prune PLAN.md line, all four): `~/.claude/skills/close/complete-todo.ps1 -Id <id>
+release claim + prune PLAN.md line, all four): `~/.claude/tools/complete-todo.ps1 -Id <id>
 [-Slug <slug>] [-RepoRoot <path>] [-Note "<text>"]`. It finds `.claude/todos/<id>-*.md` (errors on
 >1 match unless `-Slug` or a full filename stem as `-Id` disambiguates it, naming both candidate
 files so the caller can retry; 0 matches is an error unless already in `done/`, in which case it

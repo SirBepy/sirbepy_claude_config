@@ -4,7 +4,7 @@ Run directly: python hooks/test_approve_rename.py
 Exits 0 on all-pass, 1 on any failure, printing a PASS/FAIL line per case.
 
 approve-rename.py auto-allows a PowerShell call only when EVERY statement in it
-is an invocation of skills/close/rename-session.ps1. The old PowerShell hook
+is an invocation of tools/rename-session.ps1. The old PowerShell hook
 allowed any command that merely contained the file name, e.g. one ending in
 `# rename-session.ps1` or `Remove-Item x; rename-session.ps1`.
 
@@ -27,12 +27,12 @@ fails = []
 
 HOME_WIN = str(Path.home())
 HOME_FWD = Path.home().as_posix()
-R_WIN = HOME_WIN + "\\.claude\\skills\\close\\rename-session.ps1"
-R_FWD = HOME_FWD + "/.claude/skills/close/rename-session.ps1"
+R_WIN = HOME_WIN + "\\.claude\\tools\\rename-session.ps1"
+R_FWD = HOME_FWD + "/.claude/tools/rename-session.ps1"
 
 ALLOW_CASES = [
     (f'& "{R_WIN}" -Close', True, "the /close -Close call"),
-    ("~/.claude/skills/close/rename-session.ps1 -GetId", True, "the -GetId call by tilde path"),
+    ("~/.claude/tools/rename-session.ps1 -GetId", True, "the -GetId call by tilde path"),
     (f'$id = & "{R_WIN}" -GetId', True, "a -GetId result assigned to a variable"),
     (f'powershell -NoProfile -File "{R_FWD}" -Name "my chat"', True, "-File form with a quoted -Name"),
     (f'& "{R_WIN}" -GetId; & "{R_WIN}" -Close', True, "two rename calls in one command"),
@@ -40,14 +40,14 @@ ALLOW_CASES = [
     ("echo rename-session.ps1", False, "the file name as an argument of another command"),
     (f"Remove-Item -Recurse C:\\x; & {R_WIN} -Close", False, "a destructive statement chained before a rename call"),
     (f"& {R_WIN} -Close; Remove-Item -Recurse C:\\x", False, "a destructive statement chained after a rename call"),
-    ('& "C:\\somewhere\\else\\rename-session.ps1" -Close', False, "a same-named script outside skills/close"),
+    ('& "C:\\somewhere\\else\\rename-session.ps1" -Close', False, "a same-named script outside tools/"),
     (f'& "{R_WIN}" -Name "$(Remove-Item x)"', False, "a subexpression inside an argument"),
     (f'& "{R_WIN}" -Close > out.txt', False, "a redirect"),
     ("", False, "an empty command"),
     # Review findings: an unanchored tail, argument expressions, and -Command.
-    ("C:/evil/skills/close/rename-session.ps1 -Close", False, "an attacker-chosen directory ending in skills/close"),
-    ("cmd/skills/close/rename-session.ps1 -Close", False, "a relative path ending in the right tail"),
-    (f"powershell -File C:/evil/skills/close/rename-session.ps1", False, "-File pointing outside the home skills dir"),
+    ("C:/evil/tools/rename-session.ps1 -Close", False, "an attacker-chosen directory ending in tools"),
+    ("cmd/tools/rename-session.ps1 -Close", False, "a relative path ending in the right tail"),
+    (f"powershell -File C:/evil/tools/rename-session.ps1", False, "-File pointing outside the home skills dir"),
     (f"& {R_WIN} -Title x -Foo (Remove-Item C:/x)", False, "a parenthesised expression evaluated as an argument"),
     (f"& {R_WIN} -Foo @(Remove-Item C:/x)", False, "an array expression as an argument"),
     (f"& {R_WIN} -Foo {{Remove-Item C:/x}}", False, "a script block as an argument"),

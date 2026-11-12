@@ -1,7 +1,7 @@
 """PreToolUse hook (PowerShell): auto-approve /close's rename helper.
 
 Allows a PowerShell call only when EVERY statement in it invokes
-`skills/close/rename-session.ps1` in one strict shape: the script itself
+`tools/rename-session.ps1` in one strict shape: the script itself
 (directly, via the `&` call operator, or as the right side of a `$var = ...`
 assignment), or `powershell|pwsh [-NoProfile] [-NonInteractive] [-NoLogo]
 [-ExecutionPolicy Bypass] -File <script>`. After the script come only named
@@ -45,7 +45,7 @@ except Exception as e:
 HOME = Path.home().as_posix().lower()
 # Only the real script under this user's home counts: a same-named script in
 # any other directory is attacker-chosen code.
-CANONICAL_SCRIPT = HOME + "/.claude/skills/close/rename-session.ps1"
+CANONICAL_SCRIPT = HOME + "/.claude/tools/rename-session.ps1"
 HOME_SPELLINGS = ("~", "$env:userprofile", "$home", "%userprofile%")
 POWERSHELL_EXES = {"powershell", "powershell.exe", "pwsh", "pwsh.exe"}
 # Switches that may precede -File. Anything else there (-Command, -f, a bare

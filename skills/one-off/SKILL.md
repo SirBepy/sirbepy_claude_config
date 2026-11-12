@@ -15,7 +15,7 @@ Treat the text after `/one-off` as the task to build right now, in this project.
 
 ## 2. Code-check
 
-Run `/code-check` with `files:<the paths this task edited or wrote>`. It files its findings as todos by default and applies only the mechanical ones, but immediate execution is this skill's whole point, not a backlog: do each finding about code this task wrote now. Claim its todo with `~/.claude/skills/close/claim-todo.ps1 -Id <id>`, make the fix, then close it with `complete-todo.ps1 -Id <id>` (same folder). A finding about code this task did not touch stays filed.
+Run `/code-check` with `files:<the paths this task edited or wrote>`. It files its findings as todos by default and applies only the mechanical ones, but immediate execution is this skill's whole point, not a backlog: do each finding about code this task wrote now. Claim its todo with `~/.claude/tools/claim-todo.ps1 -Id <id>`, make the fix, then close it with `complete-todo.ps1 -Id <id>` (same folder). A finding about code this task did not touch stays filed.
 
 ## 3. E2E
 

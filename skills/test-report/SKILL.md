@@ -37,7 +37,7 @@ Installs a pinned Kokoro voice into `%LOCALAPPDATA%\claude-test-report` (350MB, 
 
 ## Step 2 - Set up the run
 
-- Work folder: `.for_bepy/screenshots/<id>/report` (any folder name), where `<id>` comes from `~/.claude/skills/close/rename-session.ps1 -GetId`. Use the same folder for `REPORT_WORK`, the build and the check. Deck: `.for_bepy/presentation/<name>.html`. Scripts: `.for_bepy/presentation/<name>-src/`.
+- Work folder: `.for_bepy/screenshots/<id>/report` (any folder name), where `<id>` comes from `~/.claude/tools/rename-session.ps1 -GetId`. Use the same folder for `REPORT_WORK`, the build and the check. Deck: `.for_bepy/presentation/<name>.html`. Scripts: `.for_bepy/presentation/<name>-src/`.
 - Local backend only, never a deployed one. Backend and bundles must be up before a take. Serve bundles through `/supervised-run` with `-Kind ephemeral`.
 - Coordinate the e2e slot with peers (`list_peers`, `read_messages`).
 

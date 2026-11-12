@@ -54,7 +54,7 @@ and the last run date. The rubric points every auditor at `lens.md` and the ledg
 
 Every dispatch: `model: 'sonnet'`, the canonical preamble from `refs/builder-preamble.md` with the
 "Leave all changes unstaged" staging line, the screenshot-id line filled in (from
-`skills/close/rename-session.ps1 -GetId`) instead of the read-only marker line, and an OFF LIMITS
+`tools/rename-session.ps1 -GetId`) instead of the read-only marker line, and an OFF LIMITS
 line naming every file except the agent's own `<run folder>/reports/<slice>.md`. Each auditor
 writes its full report to that file and returns only a 15-line summary, so twenty reports never
 land in this session's context; the read-only marker would make that Write fail (see the preamble's
@@ -103,7 +103,7 @@ Written by this session itself to `<run folder>/REPORT.md`, shaped like `/audit`
 2. Question cards: lead with the coarse option ("file every safe one", "accept all deletes"), then
    per-item cards only for the judgment calls the dev wants to go through one by one.
 3. Accepted findings become todos in `C:\Users\tecno\.claude\.claude\todos\` per
-   `skills/close/ai-todos-format.md`, `Origin: dev` (the dev accepted them in these words).
+   `refs/ai-todos-format.md`, `Origin: dev` (the dev accepted them in these words).
 4. Append to `ledger.md`: one `## Runs` line (`- <date> <N findings, N accepted, N declined>`) and one
    `## Declined` line per rejected finding with the dev's reason. Then `/commit` the ledger.
 

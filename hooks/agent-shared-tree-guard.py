@@ -135,7 +135,7 @@ def main() -> None:
         "uncommitted work on this shared tree (incident: 2026-09-11, countoff). "
         "Take a baseline with `git worktree add` instead, compare against clean "
         "state with `git show HEAD:<file>`, and remove the worktree afterward "
-        "with `~/.claude/skills/close/safe-remove-worktree.ps1`. If you "
+        "with `~/.claude/tools/safe-remove-worktree.ps1`. If you "
         "genuinely need this exact command, report the need in your dispatch "
         "report-back instead of running it yourself."
     )

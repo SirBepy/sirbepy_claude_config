@@ -5,9 +5,9 @@
 
 .DESCRIPTION
   For each "<id>|<note>" item: resolves the id to exactly ONE live backlog file via
-  close/_shared.ps1's Resolve-TodoFile (never a done/ glob, which is what broke twice -
+  tools/_shared.ps1's Resolve-TodoFile (never a done/ glob, which is what broke twice -
   done/ accumulates every id ever used, so an id-prefix glob there can match a stale
-  unrelated file), then runs close/complete-todo.ps1 -Id <id> -Note <note> on it.
+  unrelated file), then runs tools/complete-todo.ps1 -Id <id> -Note <note> on it.
 
   After each archive, names both halves of the move for the commit pathspec - the source
   under .claude/todos/ and the destination under done/ - per ai-todos-format.md's "Archiving
@@ -68,14 +68,14 @@ function Write-Info($msg) { Write-Host "[$RepoRoot] $msg" }
 $todosDir = Join-Path $RepoRoot '.claude\todos'
 $doneDir = Join-Path $todosDir 'done'
 $planPath = Join-Path $todosDir 'PLAN.md'
-$completeScript = Join-Path $PSScriptRoot '..\close\complete-todo.ps1'
+$completeScript = Join-Path $PSScriptRoot '..\..\tools\complete-todo.ps1'
 
 if (-not (Test-Path $todosDir)) {
     Write-Error "[$RepoRoot] No .claude\todos found (looked for '$todosDir')."
     exit 1
 }
 
-. (Join-Path $PSScriptRoot '..\close\_shared.ps1')
+. (Join-Path $PSScriptRoot '..\..\tools\_shared.ps1')
 
 # Normalises an -Items id for the defence-in-depth check at the bottom, via the shared
 # parser so no second copy of the id shape lives here. A labelled id compares as its

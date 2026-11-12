@@ -2,7 +2,7 @@
 
 Read on demand from `skills/close/SKILL.md` Phase 0. Full wording and incident history; SKILL.md carries the rule in one line each.
 
-Resolve this session's screenshot-subfolder id now: run `rename-session.ps1 -GetId` (or `.sh
+Resolve this session's screenshot-subfolder id now: run `tools/rename-session.ps1 -GetId` (or `.sh
 --get-id`), which prints `<pid>-<procStart-ticks>` - resolved via `$env:CLAUDE_CODE_SESSION_ID`
 matched against `~/.claude/sessions/*.json`, not a process-tree walk (todo 60: the walk resolved
 to two different PIDs at two points in the SAME session; the sessionId match is stable). The

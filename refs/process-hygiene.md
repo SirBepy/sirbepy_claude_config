@@ -83,7 +83,7 @@ an orphaned `flutter run`).
 ## Red-checking a new test (prove it fails against pre-fix code)
 
 Never `git stash` a fix to prove its test is non-vacuous, a shared checkout may hold a peer
-session's own uncommitted work in the same tree. Use `skills/close/red-check.ps1 -FixPaths
+session's own uncommitted work in the same tree. Use `tools/red-check.ps1 -FixPaths
 <paths> -TestCommand "<cmd>"` instead: it checks out HEAD into a detached worktree (the same
 trick `/commit` step 6 uses for its baseline comparison), overlays every other dirty file
 (the new test included) on top, and runs the test there. The live tree is only ever read.

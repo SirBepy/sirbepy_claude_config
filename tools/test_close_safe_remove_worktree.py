@@ -35,7 +35,7 @@ sys.path.insert(0, str(ROOT / "hooks"))
 import _testlib  # noqa: E402
 
 SCRIPT = Path(os.environ.get(
-    "CLOSE_SAFE_REMOVE_SCRIPT", str(ROOT / "skills" / "close" / "safe-remove-worktree.ps1")
+    "CLOSE_SAFE_REMOVE_SCRIPT", str(ROOT / "tools" / "safe-remove-worktree.ps1")
 ))
 TIMEOUT_SECONDS = 60
 

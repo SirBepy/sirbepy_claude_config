@@ -133,7 +133,7 @@ Three sections the report must have:
 
 **Do not write todos yet.** Walk the dev through the findings and let them accept or reject each
 one. Only accepted findings become `.claude/todos/` entries, per
-`~/.claude/skills/close/ai-todos-format.md`. A rejected finding is worth one line in the report
+`~/.claude/refs/ai-todos-format.md`. A rejected finding is worth one line in the report
 saying the dev declined it and why, so a future audit does not re-file it.
 
 Fixes are a separate, explicitly requested step. `/audit` reads; it does not edit.

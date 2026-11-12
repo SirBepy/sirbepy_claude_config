@@ -8,7 +8,7 @@ description: Scores todos for staleness/complexity/worth; archives dead ai-origi
 > Dedupe, audit, and triage the todos backlog - everything confirm-gated before anything moves.
 
 Backlog rules (location, format, claims, done/, PLAN.md) live in
-`~/.claude/skills/close/ai-todos-format.md` - follow that contract for every file operation here.
+`~/.claude/refs/ai-todos-format.md` - follow that contract for every file operation here.
 Structural conventions (dry-run-confirm report style, EASY/HARD criteria) mirror
 `~/.claude/skills/batch-todos/SKILL.md` - referenced below instead of restated.
 
@@ -388,7 +388,7 @@ skip only that id, do not abort the batch, continue processing the remaining con
 one line per skipped id to the turn's closing message: "`<id>` - skipped, claimed by another
 session mid-run; re-run /cleanup-todos to retry."
 
-Otherwise: run `~/.claude/skills/close/complete-todo.ps1 -Id <id> -Note "<line per origin below>"`,
+Otherwise: run `~/.claude/tools/complete-todo.ps1 -Id <id> -Note "<line per origin below>"`,
 which records the Notes line, archives it to `done/`, prunes its PLAN.md line, and releases any
 claim in one call (fall back to doing those four steps by hand if the helper is unavailable -
 non-Windows, or missing):
@@ -408,7 +408,7 @@ Never plain-delete, per the contract.
 every member is `ai`/absent-origin, or in Pass B after the dev's reply for a group containing a
 `dev`-origin member:
 
-1. Reserve this backlog's next id: `~/.claude/skills/close/reserve-todo-id.ps1 -RepoRoot <this
+1. Reserve this backlog's next id: `~/.claude/tools/reserve-todo-id.ps1 -RepoRoot <this
    repo>` - never hand-scan for max+1, the same concurrent-writer race `ai-todos-format.md`
    already forbids elsewhere in this contract.
 2. Write the merged todo under that id via Edit/Write, in the shape `/pickup --merge`'s Step M3
@@ -443,7 +443,7 @@ skipped, not force-merged, and named in the closing message like any other skipp
      this is the branch that stops a repeat filing on sight.
    - **No match:** continue to step 2.
 2. Reserve the destination's next id atomically:
-   `~/.claude/skills/close/reserve-todo-id.ps1 -RepoRoot <dest-repo>`. Never hand-scan for max+1
+   `~/.claude/tools/reserve-todo-id.ps1 -RepoRoot <dest-repo>`. Never hand-scan for max+1
    here - relocating into another repo's backlog is a second concurrent writer, which is the race
    `ai-todos-format.md` now forbids. Delete the `<id>-.reserved` marker once step 3 has written the
    real file.

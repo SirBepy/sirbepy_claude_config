@@ -267,8 +267,8 @@ Per todo:
    the todo's context weight warrants it (reading material - wide greps, large files - that gets
    discarded once you have the answer), even for a one-file edit. When a subagent does run, it
    follows the adopted contracts above. Heartbeat the claim at checkpoints.
-2. End it per `close/ai-todos-format.md`'s "Two endings" - only a genuinely Completed todo gets
-   `~/.claude/skills/close/complete-todo.ps1 -Id <id> -Note "<what happened>"`, which in one call
+2. End it per `refs/ai-todos-format.md`'s "Two endings" - only a genuinely Completed todo gets
+   `~/.claude/tools/complete-todo.ps1 -Id <id> -Note "<what happened>"`, which in one call
    records the Notes line, archives it, prunes its PLAN.md line, and releases the claim. One that
    advanced but did not finish is NOT archived; follow the contract's other ending instead.
 3. `/commit` - invoke and read the skill in full only for this run's first commit; every commit
@@ -345,7 +345,7 @@ Rules:
   never carries a `Recommended:` line - there is nothing to recommend.
 - Refresh an existing block of either kind rather than stacking a second one; drop an item from
   `## Open questions` once it moves to `## Decided` or gets answered.
-- Both sections are this skill's own addition to `close/ai-todos-format.md`'s shape. `## Open
+- Both sections are this skill's own addition to `refs/ai-todos-format.md`'s shape. `## Open
   questions` is greppable on purpose - Step 4's scan and Step 5's trigger both read it back on the
   next run. `## Decided` is a record, not a trigger - nothing re-reads it to fire a question round.
 - Never write git instructions into a todo, per the contract's off-limits rule.
@@ -380,7 +380,7 @@ test/e2e pass-fail).
   reference (see above) and layers the backlog-specific flow on top, the same way `/delegate` does.
 - Never commit directly. `/commit` is invoked and read in full once per run; every completed todo's
   commit after that follows its procedure directly, same cadence as `/batch-todos`.
-- Source of truth for the backlog: `.claude/todos/` per `close/ai-todos-format.md`.
+- Source of truth for the backlog: `.claude/todos/` per `refs/ai-todos-format.md`.
 - Thresholds live in Step 6 (`HARD_STOP_AT = 40%`) and Step 7 (`SLOW_AT = 30%`) - tune there.
 - This file has twice stated an absolute that a real run correctly deviated from (todos 347, 358,
   369). When adding a new step, point at an existing gate rather than restating a rule as unconditional.

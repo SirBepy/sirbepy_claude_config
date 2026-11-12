@@ -53,7 +53,7 @@ REMINDER_TEXT = (
     "browser via SendUserFile, or /preview's image branch if this session has "
     "no SendUserFile - never raw window automation against Joe's own windows. "
     "Save it under .for_bepy/screenshots/<id>/, where <id> is the "
-    "output of ~/.claude/skills/close/rename-session.ps1 -GetId. Skip this "
+    "output of ~/.claude/tools/rename-session.ps1 -GetId. Skip this "
     "only if the change is pure logic/backend/config with no visual surface."
 )
 

@@ -51,7 +51,7 @@ explicit timeout up to 600000 and wait it out, never hand the build off.
 If this review needs a clean-tree baseline (prettier --check, knip, a rerun of a repo-wide
 command), use `git worktree add` to a scratch path rather than touching the shared tree, and never
 copy a `node_modules` containing `link:`/`workspace:` entries into it. Remove that worktree with
-`~/.claude/skills/close/safe-remove-worktree.ps1 -WorktreePath <path> -RepoRoot <repo root>`, never
+`~/.claude/tools/safe-remove-worktree.ps1 -WorktreePath <path> -RepoRoot <repo root>`, never
 `git worktree remove --force` or `rm -rf` - both follow a reparse point or junction inside the
 worktree into whatever it targets, including a `node_modules` junction back to the main checkout,
 and delete that target too, even though it lives outside the worktree (fibo, 2026-10-07: a
@@ -124,7 +124,7 @@ If both the prose-artifact and code groups are empty: print
 from `skills/bepy-skill-creator/SKILL.md`'s FAIL/WARN checklist is violated - missing frontmatter,
 no `argument-hint` despite taking args, an un-pinned `model:` on a dispatch, a step telling a
 subagent to write into a doc section that the doc it names never defines (the class of bug fixed in
-commit `2aa34b2`: a skill instructed writing to a `## Decisions` heading `close/ai-todos-format.md`
+commit `2aa34b2`: a skill instructed writing to a `## Decisions` heading `refs/ai-todos-format.md`
 never has) - or a breach of a `CLAUDE.md`/`RULE.md` rule the skill's own instructions would commit if
 followed. It does NOT mean sentence-level wording, tone, redundancy the checklist doesn't call out,
 or "this paragraph could be tighter" - those stay unwritten-rule observations per Step 4 item 5,
@@ -307,10 +307,10 @@ than vanishing silently.
 
 Merge findings from Steps 1-4 (3b included), minus anything Step 4a applied or dropped.
 
-**If the project has a repo root for `.claude/todos/`:** write each finding as a `.md` file there, per `~/.claude/skills/close/ai-todos-format.md` (filename/id rules, git-policy self-heal; create the folder if missing). A finding whose fix lives in a DIFFERENT repo, typically one about the global `~/.claude` tree hit from a project session, is filed into THAT repo's backlog instead, per root `CLAUDE.md`'s allocation rule: use `skills/create-todo/SKILL.md`'s "Cross-repo filing" flow, which carries the destination-side duplicate guard, id reservation and exclude self-heal. Format:
+**If the project has a repo root for `.claude/todos/`:** write each finding as a `.md` file there, per `~/.claude/refs/ai-todos-format.md` (filename/id rules, git-policy self-heal; create the folder if missing). A finding whose fix lives in a DIFFERENT repo, typically one about the global `~/.claude` tree hit from a project session, is filed into THAT repo's backlog instead, per root `CLAUDE.md`'s allocation rule: use `skills/create-todo/SKILL.md`'s "Cross-repo filing" flow, which carries the destination-side duplicate guard, id reservation and exclude self-heal. Format:
 
 ```markdown
-<!-- Claim before executing: .claude/todos/.claims/ per close/ai-todos-format.md -->
+<!-- Claim before executing: .claude/todos/.claims/ per refs/ai-todos-format.md -->
 # [title]
 
 **Type:** task

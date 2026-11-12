@@ -10,7 +10,7 @@ argument-hint: "[--unattended] [--merge [<id>,<id>,...]] [<id> to pick a specifi
 > Pull the next planned todo off the lane, claim it, and do it.
 
 All mechanics (PLAN.md schema, claim protocol, heartbeat, staleness, done/, pruning, git policy)
-live in `~/.claude/skills/close/ai-todos-format.md` - follow that contract exactly.
+live in `~/.claude/refs/ai-todos-format.md` - follow that contract exactly.
 
 ## Mode
 
@@ -89,7 +89,7 @@ Do the task per the todo's Approach/Acceptance. Touch the claim file's mtime aft
 
 ## Step 7 - Complete
 
-Decide which of the two endings applies per `close/ai-todos-format.md`'s "Two endings, and the tell
+Decide which of the two endings applies per `refs/ai-todos-format.md`'s "Two endings, and the tell
 that picks between them" - Completed versus Advanced but not finished, decided against the todo
 file rather than against how the session felt. That contract owns the rule and every executor obeys
 it; it is not restated here.
@@ -166,9 +166,9 @@ convention (newest next).
 
 ### Step M4 - Archive the sources
 
-For each merged id, run `~/.claude/skills/close/complete-todo.ps1 -Id <id> -Note "folded into
+For each merged id, run `~/.claude/tools/complete-todo.ps1 -Id <id> -Note "folded into
 <new-id>"` - never a hand-rolled `Move-Item` loop. This is the existing Completed ending
-(`close/ai-todos-format.md`'s "Two endings"), not a new third one: the dev's 2026-09-04 decision
+(`refs/ai-todos-format.md`'s "Two endings"), not a new third one: the dev's 2026-09-04 decision
 settled the source todo's one open question as move-to-`done/`, matching every other executor,
 rather than a genuine delete. The helper's `-Note` records the audit trail in the same call that
 moves the file, prunes its PLAN.md line, and releases its claim.

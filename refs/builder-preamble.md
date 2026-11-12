@@ -19,7 +19,7 @@ Taking a baseline (pnpm audit, test counts, bundle size, a test proven RED again
 file): take it FIRST, before you edit anything - default, costs nothing, needs no git surgery. Only
 if you're already mid-edit and genuinely need a clean tree, use `git worktree add` to a scratch
 path instead - never a stash or reset on the shared tree. Remove that worktree with
-`~/.claude/skills/close/safe-remove-worktree.ps1 -WorktreePath <path> -RepoRoot <repo root>`, never
+`~/.claude/tools/safe-remove-worktree.ps1 -WorktreePath <path> -RepoRoot <repo root>`, never
 `git worktree remove --force` or `rm -rf` - both follow a reparse point or symlink inside the
 worktree into whatever it targets (a linked submodule, a node_modules holding `link:`/`workspace:`
 entries) and delete that target too, even though it lives in the main checkout. Never copy a

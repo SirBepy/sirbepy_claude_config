@@ -11,7 +11,7 @@ argument-hint: "[what to defer - empty = hand off this session]"
 > handoff, `/handoff` is the dedicated alias for this same mode - same file, same steps.
 
 All file rules (location `.claude/todos/`, filename/id, template, git-policy self-heal) live in
-`~/.claude/skills/close/ai-todos-format.md` - follow it exactly.
+`~/.claude/refs/ai-todos-format.md` - follow it exactly.
 
 If there's no project (no repo root for `.claude/todos/` to live under), say so and stop.
 
@@ -95,7 +95,7 @@ here by reference, never restated:
    "Content-duplicate guard" against the target repo's `.claude/todos/` and `done/`, not the
    current repo's - grep the destination, read hits in full, resolve via its three outcomes.
 2. **Id reservation against the DESTINATION.**
-   `~/.claude/skills/close/reserve-todo-id.ps1 -RepoRoot <target repo root>`. It already takes
+   `~/.claude/tools/reserve-todo-id.ps1 -RepoRoot <target repo root>`. It already takes
    an explicit root and creates `<target>/.claude/todos/` if missing - a real side effect,
    state it in the confirm line below rather than doing it silently.
 3. **Git-policy exclude self-heal against the DESTINATION.** Apply `ai-todos-format.md`'s

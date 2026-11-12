@@ -25,7 +25,7 @@ theyll report to you"):
   line and the auto-background paragraph (or an instruction to read `builder-preamble.md`
   VERBATIM).
 - **Reading a spawned chat's transcript** to relay or draft from it: `Grep` on the `.jsonl` found
-  with the "Transcript grounding" recipe in `~/.claude/skills/close/SKILL.md`, never `Read`
+  with the "Transcript grounding" recipe in `~/.claude/refs/transcript-grounding.md`, never `Read`
   (transcripts run to megabytes).
 
 Anything else the dev asks for that needs code, git or a script is a spawn, not an action here.

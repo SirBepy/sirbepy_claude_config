@@ -4,7 +4,7 @@ A /loop-todos run claims the whole backlog up front and only complete-todo.ps1 r
 so every todo the loop left open kept a claim that blocked peers. -Release deletes only claims
 whose recorded session id is the current session's; a peer's claim must survive.
 
-Run directly: python skills/close/test_claim_release.py (exit 0 on all-pass). Drives the real
+Run directly: python tools/test_claim_release.py (exit 0 on all-pass). Drives the real
 script via powershell.exe against scratch backlogs under tempfile, with a throwaway device-label
 file, so it never touches the real .claude/todos/ or ~/.claude/device-label.
 """

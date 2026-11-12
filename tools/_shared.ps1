@@ -111,7 +111,7 @@ function Select-TodoNameMatches {
 # A bare number resolves to THIS device's label first; failing that, a unique match on
 # another label; several labels matching is an error naming every candidate. A text that
 # is not an id at all falls back to an exact "<stem>.md" match (a prefix-less filename:
-# malformed per ai-todos-format.md but still archivable).
+# malformed per refs/ai-todos-format.md but still archivable).
 #
 # Returns Id (canonical "pc-1407", or the stem for a fallback), Label, Number, Slug,
 # Matches (slug-filtered), SiblingCount (matches before the slug filter), FellBack, and

@@ -22,12 +22,12 @@ Otherwise (a plain terminal), run for your OS (literal paths hardcoded - dynamic
 
 **Mac/Linux:**
 ```sh
-sh /Users/josipmuzic/.claude/skills/close/rename-session.sh --close
+sh /Users/josipmuzic/.claude/tools/rename-session.sh --close
 ```
 
 **Windows:**
 ```powershell
-& "C:\Users\tecno\.claude\skills\close\rename-session.ps1" -Close
+& "C:\Users\tecno\.claude\tools\rename-session.ps1" -Close
 ```
 
 The script kills the claude ancestor process after an 800ms delay so this final response flushes first. In VS Code terminals this closes the tab; in Terminal.app it returns to the shell prompt.

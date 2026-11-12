@@ -149,6 +149,7 @@ try {
     # READ - the old script dot-sources/calls them by relative path, so an unmodified
     # copy has to sit next to the replayed script for that resolution to work at all.
     # The replayed script must meet the helpers it shipped with, so those come from the same ref.
+    # The pre-fix ref predates the move to tools/, so the helpers sit under skills/close/ there.
     foreach ($helper in 'close/_shared.ps1', 'close/complete-todo.ps1') {
         $helperContent = (git -C $repoRoot show "${preFixRef}:skills/$helper" | Out-String)
         if (-not $helperContent.Trim()) { throw "could not read ${preFixRef}:skills/$helper" }

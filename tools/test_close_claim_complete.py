@@ -55,8 +55,8 @@ import _testlib  # noqa: E402
 # Override hooks exist solely so this same suite can be pointed at a baseline
 # checkout to demonstrate RED-before-GREEN; CI and normal runs never set these,
 # so they default to the real scripts under test.
-CLAIM_SCRIPT = Path(os.environ.get("CLOSE_CLAIM_SCRIPT", str(ROOT / "skills" / "close" / "claim-todo.ps1")))
-COMPLETE_SCRIPT = Path(os.environ.get("CLOSE_COMPLETE_SCRIPT", str(ROOT / "skills" / "close" / "complete-todo.ps1")))
+CLAIM_SCRIPT = Path(os.environ.get("CLOSE_CLAIM_SCRIPT", str(ROOT / "tools" / "claim-todo.ps1")))
+COMPLETE_SCRIPT = Path(os.environ.get("CLOSE_COMPLETE_SCRIPT", str(ROOT / "tools" / "complete-todo.ps1")))
 TIMEOUT_SECONDS = 60
 
 _LABEL_DIR = tempfile.TemporaryDirectory()

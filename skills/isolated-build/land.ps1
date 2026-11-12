@@ -234,7 +234,7 @@ elseif ($DryRun) {
     $removed = $true
 }
 else {
-    $removeScript = Join-Path (Split-Path $PSScriptRoot -Parent) 'close\safe-remove-worktree.ps1'
+    $removeScript = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'tools\safe-remove-worktree.ps1'
     try {
         & $removeScript -WorktreePath $resolvedWorktree -RepoRoot $resolvedRoot
         $removed = -not (Test-Path $resolvedWorktree)

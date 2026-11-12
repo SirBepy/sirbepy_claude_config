@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Atomically reserve the next free .claude/todos/ backlog id, per ai-todos-format.md's
+  Atomically reserve the next free .claude/todos/ backlog id, per refs/ai-todos-format.md's
   "Picking the next id" section.
 
 .DESCRIPTION
@@ -59,7 +59,7 @@
   defaults a label, since a second machine defaulting to "pc" would collide.
 
 .EXAMPLE
-  $id = & ~/.claude/skills/close/reserve-todo-id.ps1 -RepoRoot C:\Users\joe\Projects\my-app
+  $id = & ~/.claude/tools/reserve-todo-id.ps1 -RepoRoot C:\Users\joe\Projects\my-app
   # ... write .claude/todos/$id-my-slug.md ...
   Remove-Item (Join-Path $todosDir "$id-.reserved") -Force
 #>

@@ -8,7 +8,7 @@ argument-hint: "[task text] [--now] [--dont-close] [--skip-review] [--light] [/c
 
 > Retrospect, review, persist, close terminal.
 
-Sidecars, read on demand from the phase that names them: `phase0-checks.md`, `grounding.md`, `review-scope.md`, `persist.md`, `finish.md`, `light.md` (`--light`), `ai-todos-format.md` (todo files).
+Sidecars, read on demand from the phase that names them: `phase0-checks.md`, `refs/transcript-grounding.md`, `review-scope.md`, `persist.md`, `finish.md`, `light.md` (`--light`), `refs/ai-todos-format.md` (todo files).
 
 ## Usage
 
@@ -69,7 +69,7 @@ If the `close_session` tool isn't available (a plain terminal session), skip it;
 
 Runs first, before Phase 1, every time - no flag skips it.
 
-Resolve this session's screenshot-subfolder id now (`rename-session.ps1 -GetId`, or `.sh --get-id`, which prints `<pid>-<procStart-ticks>`; never hand-roll it) and note two separate flags that must never collapse into one: whether this session captured any screenshots at all (the **zero-writes flag**) and whether any capture was actually put in front of Joe (the **shown-to-Joe flag**, true only if the transcript shows a frame reaching Joe, e.g. a `SendUserFile` call or `/preview`'s image branch, naming a screenshot tied to this change; PNGs merely existing under `.for_bepy/screenshots/<id>/` do not count). Why and how: `phase0-checks.md`.
+Resolve this session's screenshot-subfolder id now (`tools/rename-session.ps1 -GetId`, or `.sh --get-id`, which prints `<pid>-<procStart-ticks>`; never hand-roll it) and note two separate flags that must never collapse into one: whether this session captured any screenshots at all (the **zero-writes flag**) and whether any capture was actually put in front of Joe (the **shown-to-Joe flag**, true only if the transcript shows a frame reaching Joe, e.g. a `SendUserFile` call or `/preview`'s image branch, naming a screenshot tied to this change; PNGs merely existing under `.for_bepy/screenshots/<id>/` do not count). Why and how: `phase0-checks.md`.
 
 **Visual-work check.** A `.css`/`.scss`/`.less` file, or any other user-facing visual/layout change, with the shown-to-Joe flag false: add "show Joe a live screenshot of the visual change" to the unfinished-commitments list below. A green headless/e2e pass is not a substitute (`phase0-checks.md`).
 
@@ -105,7 +105,7 @@ Scan the full session. Compute all bullets below internally every time - Phase 3
 
 ### Transcript grounding (long sessions only)
 
-"The full session" means the raw transcript on disk, not just what is still in context: auto-compaction summarises early material away, exactly where corrections and hard-won facts live. Skip this entirely if the transcript is under ~500 lines. Otherwise resolve it and `Grep` it (never `Read` it whole) for the dev's own turns, per `skills/close/grounding.md` (also the recipe `/commit`'s Pre-push transcript check and `/zng-kickoff` use for the session's transcript path and `sessionId`).
+"The full session" means the raw transcript on disk, not just what is still in context: auto-compaction summarises early material away, exactly where corrections and hard-won facts live. Skip this entirely if the transcript is under ~500 lines. Otherwise resolve it and `Grep` it (never `Read` it whole) for the dev's own turns, per `refs/transcript-grounding.md` (also the recipe `/commit`'s Pre-push transcript check and `/zng-kickoff` use for the session's transcript path and `sessionId`).
 
 ### What to compute
 
@@ -145,9 +145,9 @@ Run in this order:
 1. **Memory writes.** Read `~/.claude/refs/memory-rubric.md` first if it hasn't been read this session - it defines the ADD/UPDATE/DELETE/NONE gate, the bar for writing at all, and the evidence requirement. Then for each correction or non-obvious confirmation from Phase 1, route it through that gate and write to the store CLAUDE.md's Global Knowledge Vault section says it belongs in (vault for cross-project facts and people, native per-project Auto Memory for project-local ones), updating the relevant index. Skip if nothing qualifies; NONE is a normal outcome. Never invent memories to look productive.
 
    **Dedup against this session's own writes.** Memories written live earlier in this session are already covered - list them before evaluating, and treat a Phase 1 candidate matching one as NONE rather than writing a near-duplicate. The transcript sweep exists to catch what live capture MISSED, not to re-extract what it already got.
-2. **`.claude/todos/`.** Peer sweep first: call `list_peers` once (the one unconditional call) before writing any `task` todo, since a live peer may already have picked the item up. Zero peers is a weak signal, never worded as "confirmed unstarted"; one or more: also `read_messages`, and where a peer's session name or message names the same ticket/file/feature, `post_message` to ask and fold the answer (or "asked, no reply yet") plus the sweep timestamp into that todo's Notes. An item whose fix lives in a DIFFERENT repo (most often a global `~/.claude` finding from a project session) is filed into THAT repo's backlog per `skills/create-todo/SKILL.md`'s "Cross-repo filing" flow. One `.md` file per item, from: Phase 0 unfinished items filed instead of finished (`**Type:** task`, `**Origin:** dev`); Phase 1 step 5 offers (`task`, `ai`); Phase 1 steps 3-4 (`skill-improvement`, `ai`, Approach names the skill file). Follow `ai-todos-format.md` for template (one-sentence `**Summary:**`), ids (`reserve-todo-id.ps1`, `pc-NNNN`) and git-policy self-heal; a future cold session must be able to execute the task from the file alone. Skip if no items; Phase 2 findings are written by `/code-check` directly, never re-written here. Full wording: `persist.md`.
+2. **`.claude/todos/`.** Peer sweep first: call `list_peers` once (the one unconditional call) before writing any `task` todo, since a live peer may already have picked the item up. Zero peers is a weak signal, never worded as "confirmed unstarted"; one or more: also `read_messages`, and where a peer's session name or message names the same ticket/file/feature, `post_message` to ask and fold the answer (or "asked, no reply yet") plus the sweep timestamp into that todo's Notes. An item whose fix lives in a DIFFERENT repo (most often a global `~/.claude` finding from a project session) is filed into THAT repo's backlog per `skills/create-todo/SKILL.md`'s "Cross-repo filing" flow. One `.md` file per item, from: Phase 0 unfinished items filed instead of finished (`**Type:** task`, `**Origin:** dev`); Phase 1 step 5 offers (`task`, `ai`); Phase 1 steps 3-4 (`skill-improvement`, `ai`, Approach names the skill file). Follow `refs/ai-todos-format.md` for template (one-sentence `**Summary:**`), ids (`reserve-todo-id.ps1`, `pc-NNNN`) and git-policy self-heal; a future cold session must be able to execute the task from the file alone. Skip if no items; Phase 2 findings are written by `/code-check` directly, never re-written here. Full wording: `persist.md`.
 3. **Screenshot summary.** `/close` never deletes screenshots (`/disk-doctor` ages them out). Count the files under this session's own `.for_bepy/screenshots/<pid>-<start-ticks>/` (the Phase 0 id) for Phase 4's counter: 0 if the zero-writes flag was true; if it was false but that subfolder is missing or empty, record `mismatch` instead of 0, and never substitute an mtime-matched folder. If the session used the Playwright MCP screenshot tool, also report (never delete) stray `.png` files in the repo root and `.playwright-mcp/`. `.for_bepy/mockups/` is `/mockup` step 7's. Details: `persist.md`.
-4. **Session digest.** Skip a session with no decision or rejected option worth keeping. Otherwise pipe `## Done`, `## Decided`, `## Rejected` (option plus why it lost) and `## Open` sections (`none` under an empty one) to `python ~/.claude/skills/recall/recall.py digest-save <sessionId>` (resolve `<sessionId>` via `grounding.md` step 1 even if grounding was skipped; never pass `--replace`; no extra model call). Details: `persist.md`.
+4. **Session digest.** Skip a session with no decision or rejected option worth keeping. Otherwise pipe `## Done`, `## Decided`, `## Rejected` (option plus why it lost) and `## Open` sections (`none` under an empty one) to `python ~/.claude/skills/recall/recall.py digest-save <sessionId>` (resolve `<sessionId>` via `refs/transcript-grounding.md` step 1 even if grounding was skipped; never pass `--replace`; no extra model call). Details: `persist.md`.
 5. **Inherited respawn detail file.** If this session's first user message is a `/respawn` handoff naming a `Detail file: <path>.respawn.md`, delete that file; skip silently when there is none. Applies under `/respawn` too.
 
 There is no implicit /commit step: if the dev wants a commit, they chain `/commit` (with whatever subcommand) into the /close call.
@@ -186,12 +186,12 @@ Otherwise (a plain terminal), run for your OS (literal paths; dynamic `$env:` ex
 
 **Mac/Linux:**
 ```sh
-sh /Users/josipmuzic/.claude/skills/close/rename-session.sh --close
+sh /Users/josipmuzic/.claude/tools/rename-session.sh --close
 ```
 
 **Windows:**
 ```powershell
-& "C:\Users\tecno\.claude\skills\close\rename-session.ps1" -Close
+& "C:\Users\tecno\.claude\tools\rename-session.ps1" -Close
 ```
 
 The script kills the claude ancestor process after an 800ms delay so this final response flushes first. If kill was skipped, print on its own line: `Terminal kept open. Run /clear or close manually.` for `--dont-close`, else `Exit skipped: <reason>. Run /clear or close manually.`

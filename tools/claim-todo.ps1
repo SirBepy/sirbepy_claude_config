@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Claim one or more .claude/todos/ backlog items per ai-todos-format.md's Claims contract.
+  Claim one or more .claude/todos/ backlog items per refs/ai-todos-format.md's Claims contract.
 
 .DESCRIPTION
   Implements the documented protocol: write claim content to a private temp file,
@@ -18,7 +18,7 @@
   Batch form: -Id accepts a comma-separated list, either as separate PowerShell
   arguments (-Id pc-0003,pc-0004) or as one quoted string (-Id "03,04,05") - both bind
   and claim every one of them in this single call. Handling N todos together this way
-  costs one remembered claim call, the same as handling one - see close/ai-todos-format.md's
+  costs one remembered claim call, the same as handling one - see refs/ai-todos-format.md's
   Claims section for the incident (todo 484) this closes: a claim call that has to be
   remembered once per todo gets skipped exactly when several todos move at once.
 
@@ -61,10 +61,10 @@
   Project root containing .claude/todos/. Defaults to the current directory.
 
 .EXAMPLE
-  ~/.claude/skills/close/claim-todo.ps1 -Id pc-0286
-  ~/.claude/skills/close/claim-todo.ps1 -Id 286
-  ~/.claude/skills/close/claim-todo.ps1 -Id pc-0434 -Slug chat-row-style-decide-and-delete-loser
-  ~/.claude/skills/close/claim-todo.ps1 -Id "pc-0003,pc-0004,pc-0005"
+  ~/.claude/tools/claim-todo.ps1 -Id pc-0286
+  ~/.claude/tools/claim-todo.ps1 -Id 286
+  ~/.claude/tools/claim-todo.ps1 -Id pc-0434 -Slug chat-row-style-decide-and-delete-loser
+  ~/.claude/tools/claim-todo.ps1 -Id "pc-0003,pc-0004,pc-0005"
 #>
 param(
     # Mandatory in claim mode, and in -Release mode unless -AllMine is given; checked below
@@ -273,7 +273,7 @@ function Claim-One {
     }
 
     if ($resolved.FellBack) {
-        Write-Info "WARNING: todo '$RawId' has no device-prefixed id, which ai-todos-format.md treats as malformed. Claiming it anyway; rename it via reserve-todo-id.ps1 so it can be referenced by id."
+        Write-Info "WARNING: todo '$RawId' has no device-prefixed id, which refs/ai-todos-format.md treats as malformed. Claiming it anyway; rename it via reserve-todo-id.ps1 so it can be referenced by id."
     }
 
     if ($backlogMatches.Count -eq 0) {

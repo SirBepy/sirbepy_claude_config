@@ -98,7 +98,7 @@ Once every slice reports, split its findings into:
   hooks. Fix it, recommit through `/commit`'s fold rules (the target commit is still unpushed, so
   folding is available), then rerun the fast-check floor.
 - **Backlog** - a real finding not worth blocking this push for (low severity, a large rewrite, or
-  a commit already superseded by a later one in range). File it per `close/ai-todos-format.md`,
+  a commit already superseded by a later one in range). File it per `refs/ai-todos-format.md`,
   `**Origin:** ai`.
 
 Zero findings across every slice is success, not a sign the review did not run - say so explicitly

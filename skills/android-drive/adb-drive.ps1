@@ -57,7 +57,7 @@ function Get-PngSize {
 }
 
 function Get-DefaultScreenshotPath {
-    $renameScript = Join-Path $PSScriptRoot '..\close\rename-session.ps1'
+    $renameScript = Join-Path $PSScriptRoot '..\..\tools\rename-session.ps1'
     $id = & $renameScript -GetId
     $dir = ".for_bepy/screenshots/$id"
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
@@ -66,7 +66,7 @@ function Get-DefaultScreenshotPath {
 
 function Get-DefaultRecordingPath {
     param([string]$Ext)
-    $renameScript = Join-Path $PSScriptRoot '..\close\rename-session.ps1'
+    $renameScript = Join-Path $PSScriptRoot '..\..\tools\rename-session.ps1'
     $id = & $renameScript -GetId
     $dir = ".for_bepy/screenshots/$id"
     New-Item -ItemType Directory -Force -Path $dir | Out-Null

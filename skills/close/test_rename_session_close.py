@@ -14,7 +14,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-SCRIPT = Path(__file__).resolve().parent / "rename-session.ps1"
+SCRIPT = Path(__file__).resolve().parents[2] / "tools" / "rename-session.ps1"
 
 
 def run_close(entrypoint):
@@ -49,7 +49,7 @@ def test_any_sdk_entrypoint_refuses():
     assert "Scheduled kill" not in out, out
 
 
-SH_SCRIPT = Path(__file__).resolve().parent / "rename-session.sh"
+SH_SCRIPT = Path(__file__).resolve().parents[2] / "tools" / "rename-session.sh"
 SKIP = "skip"
 
 

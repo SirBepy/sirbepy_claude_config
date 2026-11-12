@@ -38,8 +38,8 @@
   Report the reparse points found and the actions that would run, without removing anything.
 
 .EXAMPLE
-  ~/.claude/skills/close/safe-remove-worktree.ps1 -WorktreePath C:\work\myrepo-wt1
-  ~/.claude/skills/close/safe-remove-worktree.ps1 -WorktreePath C:\work\myrepo-wt1 -DryRun
+  ~/.claude/tools/safe-remove-worktree.ps1 -WorktreePath C:\work\myrepo-wt1
+  ~/.claude/tools/safe-remove-worktree.ps1 -WorktreePath C:\work\myrepo-wt1 -DryRun
 #>
 param(
     [Parameter(Mandatory = $true)]

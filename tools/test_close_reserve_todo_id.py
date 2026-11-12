@@ -38,7 +38,7 @@ LABEL_FILE = Path(_LABEL_DIR.name) / "device-label"
 LABEL_FILE.write_text("pc\n", encoding="utf-8")
 
 SCRIPT = Path(os.environ.get(
-    "CLOSE_RESERVE_SCRIPT", str(ROOT / "skills" / "close" / "reserve-todo-id.ps1")
+    "CLOSE_RESERVE_SCRIPT", str(ROOT / "tools" / "reserve-todo-id.ps1")
 ))
 TIMEOUT_SECONDS = 60
 

@@ -1,6 +1,6 @@
-# /close: Transcript grounding (long sessions only)
+# Transcript grounding (long sessions only)
 
-Read on demand from `skills/close/SKILL.md` Phase 1. Also cited by `/commit`'s Pre-push transcript check and `skills/zng-kickoff/SKILL.md` as the recipe for resolving this session's transcript.
+The recipe for resolving a session's transcript on disk. Used by `/commit`'s Pre-push transcript check, `/zng-kickoff` and the save step in `refs/save-step.md`.
 
 "The full session" means the raw transcript on disk, not just what's still in context. Claude Code auto-compacts as it approaches the context limit, so on a long session the early material is already summarized away by the time /close runs - exactly the window where corrections and hard-won facts live. Recalling from a compacted view systematically under-reports them.
 

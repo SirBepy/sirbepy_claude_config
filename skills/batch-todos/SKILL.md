@@ -14,7 +14,7 @@ tool: `disable-model-invocation: true` keeps it out of the skill listing, so a S
 cannot reach it. A dev typing `/batch-todos` still loads it.
 
 Backlog rules (location, format, claims, done/, PLAN.md) live in
-`~/.claude/skills/close/ai-todos-format.md` - follow that contract for every file operation here.
+`~/.claude/refs/ai-todos-format.md` - follow that contract for every file operation here.
 
 ## Step 1 - Read todos
 
@@ -26,7 +26,7 @@ If empty: output "No todos found." and stop.
 
 Read every file's title + Goal section. Flag pairs that describe the same underlying task or the same skill-improvement observation (near-identical titles, overlapping file/target references, same skill pointer for `skill-improvement` type).
 
-For each duplicate pair: keep the one with the more complete Context/Approach (or the lower id if tied), archive the other to `done/` via `~/.claude/skills/close/complete-todo.ps1 -Id <id>` (never plain-delete, per the contract's Release rule). List every archive: `archived <id>-<slug>.md - duplicate of <id>-<slug>.md`. If none found, say "No duplicates found."
+For each duplicate pair: keep the one with the more complete Context/Approach (or the lower id if tied), archive the other to `done/` via `~/.claude/tools/complete-todo.ps1 -Id <id>` (never plain-delete, per the contract's Release rule). List every archive: `archived <id>-<slug>.md - duplicate of <id>-<slug>.md`. If none found, say "No duplicates found."
 
 ## Step 3 - Classify
 
@@ -121,7 +121,7 @@ For each remaining **DO**-verdict EASY todo, in id order:
 
 1. Read the full file. Announce which todo is starting (id + title).
 2. Execute the task fully. Touch the claim file's mtime after major steps (heartbeat).
-3. Run `~/.claude/skills/close/complete-todo.ps1 -Id <id> -Note "completed, commit <sha>"` to
+3. Run `~/.claude/tools/complete-todo.ps1 -Id <id> -Note "completed, commit <sha>"` to
    append the Notes line, move the todo to `done/`, prune its PLAN.md line, and release the claim
    in one call. Fall back to doing those steps by hand per the contract if the helper is
    unavailable (non-Windows, or missing).

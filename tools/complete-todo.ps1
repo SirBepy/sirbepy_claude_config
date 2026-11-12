@@ -3,7 +3,7 @@
   Completion bookkeeping for one .claude/todos/ backlog item.
 
 .DESCRIPTION
-  Per ai-todos-format.md's "Release" contract, completing a todo means:
+  Per refs/ai-todos-format.md's "Release" contract, completing a todo means:
     1. Move .claude/todos/<id>-*.md to .claude/todos/done/ (creating done/ if missing).
     2. Delete .claude/todos/.claims/<id>.claim if present.
     3. Prune any "- [ ] <id> ..." line from .claude/todos/PLAN.md, re-reading the file
@@ -39,11 +39,11 @@
   after ## Acceptance (and before any ## Open questions block) when absent. Written BOM-less.
 
 .EXAMPLE
-  ~/.claude/skills/close/complete-todo.ps1 -Id pc-0286
-  ~/.claude/skills/close/complete-todo.ps1 -Id 07 -RepoRoot C:\Users\joe\Projects\my-app
-  ~/.claude/skills/close/complete-todo.ps1 -Id pc-0434 -Slug chat-row-style-decide-and-delete-loser
-  ~/.claude/skills/close/complete-todo.ps1 -Id pc-0434-chat-row-style-decide-and-delete-loser
-  ~/.claude/skills/close/complete-todo.ps1 -Id pc-0286 -Note "completed, commit abc1234"
+  ~/.claude/tools/complete-todo.ps1 -Id pc-0286
+  ~/.claude/tools/complete-todo.ps1 -Id 07 -RepoRoot C:\Users\joe\Projects\my-app
+  ~/.claude/tools/complete-todo.ps1 -Id pc-0434 -Slug chat-row-style-decide-and-delete-loser
+  ~/.claude/tools/complete-todo.ps1 -Id pc-0434-chat-row-style-decide-and-delete-loser
+  ~/.claude/tools/complete-todo.ps1 -Id pc-0286 -Note "completed, commit abc1234"
 #>
 param(
     [Parameter(Mandatory = $true)]
@@ -152,7 +152,7 @@ $Slug = $resolved.Slug
 $backlogMatches = @($resolved.Matches)
 
 if ($resolved.FellBack) {
-    Write-Warning "[$RepoRoot] Todo '$Id' has no device-prefixed id, which ai-todos-format.md treats as malformed. Archiving it anyway; future files should get an id from reserve-todo-id.ps1."
+    Write-Warning "[$RepoRoot] Todo '$Id' has no device-prefixed id, which refs/ai-todos-format.md treats as malformed. Archiving it anyway; future files should get an id from reserve-todo-id.ps1."
 }
 
 if ($backlogMatches.Count -gt 1) {
@@ -232,14 +232,14 @@ else {
     # Can't distinguish never-claimed from already-released - no artifact records
     # release history. Warn anyway: per CLAUDE.md, claiming is non-negotiable, so
     # an absent claim at completion time is worth a reviewer's eyes either way.
-    Write-Info "WARNING: todo $todoId is being completed with no claim on record - either it was executed without claiming, or the claim was released early (see close/ai-todos-format.md). Not blocking."
+    Write-Info "WARNING: todo $todoId is being completed with no claim on record - either it was executed without claiming, or the claim was released early (see refs/ai-todos-format.md). Not blocking."
 }
 
 # --- Step 3: prune the PLAN.md line, CAS-style (fresh read immediately before write) ---
 
 if (Test-Path $planPath) {
     $lines = Get-Content -Path $planPath
-    # Canonical form is plain "- [ ] <id>" (ai-todos-format.md); tolerate bold/
+    # Canonical form is plain "- [ ] <id>" (refs/ai-todos-format.md); tolerate bold/
     # underscore/backtick wrapping and "[P]" too, since hand-edits use them and
     # a stale line in any style still needs pruning. Step 1 already resolved a
     # single file for this id, so every matching line here is that same file's.

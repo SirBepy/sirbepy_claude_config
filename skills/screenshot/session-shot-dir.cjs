@@ -1,6 +1,6 @@
 // Shared helper: resolves and creates this session's throwaway-screenshot subfolder, so callers
 // never hand-build the <pid>-<start-ticks> id/path themselves (todo 287). Wraps
-// close/rename-session.ps1 -GetId (Windows) / rename-session.sh --get-id (POSIX) - the exact same
+// tools/rename-session.ps1 -GetId (Windows) / rename-session.sh --get-id (POSIX) - the exact same
 // script/cache `/close` Phase 0 calls, so both resolvers agree on Windows by construction (843).
 const { execFileSync } = require('child_process');
 const fs = require('fs');
@@ -15,10 +15,10 @@ const CLAUDE_ROOT = path.join(os.homedir(), '.claude');
 function getSessionId() {
   try {
     if (process.platform === 'win32') {
-      const script = path.join(CLAUDE_ROOT, 'skills', 'close', 'rename-session.ps1');
+      const script = path.join(CLAUDE_ROOT, 'tools', 'rename-session.ps1');
       return execFileSync('powershell', ['-NoProfile', '-File', script, '-GetId'], { encoding: 'utf8' }).trim();
     }
-    const script = path.join(CLAUDE_ROOT, 'skills', 'close', 'rename-session.sh');
+    const script = path.join(CLAUDE_ROOT, 'tools', 'rename-session.sh');
     return execFileSync(script, ['--get-id'], { encoding: 'utf8' }).trim();
   } catch (e) {
     const detail = (e.stderr || e.message || '').toString().trim();

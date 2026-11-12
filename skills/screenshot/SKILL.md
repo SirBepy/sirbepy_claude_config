@@ -14,7 +14,7 @@ never to this session's `.for_bepy/screenshots/<id>/` - it has no folder-resolut
 `screenshot-helper.cjs`. Anything that must survive `/close`'s purge or stay out of `git status`
 goes through `screenshot-helper.cjs` instead. If the MCP is genuinely needed for interaction the
 helper's `--plan` can't express (e.g. a login flow), move the captured file into the session
-subfolder immediately (id from `close/rename-session.ps1 -GetId`) and confirm `git status` is
+subfolder immediately (id from `tools/rename-session.ps1 -GetId`) and confirm `git status` is
 clean of stray `.png` files before finishing.
 
 ## Native windows - the Playwright flow does not apply
@@ -32,7 +32,7 @@ $b.Save("$dir/strip.png", [Drawing.Imaging.ImageFormat]::Png)
 ```
 
 `session-shot-dir.cjs` creates the folder if missing and prints its path - it is the single place
-the `<pid>-<start-ticks>` id gets resolved (wraps `close/rename-session.ps1 -GetId`), so no caller
+the `<pid>-<start-ticks>` id gets resolved (wraps `tools/rename-session.ps1 -GetId`), so no caller
 hand-builds `.for_bepy/screenshots/...` itself and no capture lands at the root, where `/close`
 treats it as unowned legacy and never deletes it (past incident, 2026-08-01: 25 loose captures
 from one Tauri icon session had to be cleared by hand).

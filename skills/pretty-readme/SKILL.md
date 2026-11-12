@@ -213,7 +213,7 @@ lines you deliberately rewrote, and you list them.
      `pre[lang="mermaid"]` with a `div.mermaid`, `await mermaid.run()`, then setting a flag the
      Playwright script waits on before the screenshot.
    - Screenshot with an isolated Playwright browser (`fullPage: true`, viewport about 1100 wide)
-     into `.for_bepy/screenshots/<id>/` (id from `~/.claude/skills/close/rename-session.ps1 -GetId`).
+     into `.for_bepy/screenshots/<id>/` (id from `~/.claude/tools/rename-session.ps1 -GetId`).
 3. Show it to the dev. A full-page PNG is too large to post, so convert it to a JPEG through
    `/preview`'s gallery builder
    (`python "C:\Users\tecno\.claude\skills\preview\build_gallery.py" <image...> --title "<text>"`,

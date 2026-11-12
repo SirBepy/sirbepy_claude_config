@@ -81,7 +81,7 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 - Before claiming done or handing to Joe: run every FAST check the project HAS (typecheck, unit, lint, build) - all must pass, no size exemption.
 - If a project has no tests, or the change is genuinely untestable by Claude (native UI, hardware, visual judgment), say so explicitly instead of skipping quietly.
 - An explicit "don't test" from Joe stands for the rest of the session, not one turn; a new task doesn't re-arm it. While in force, name what wasn't run; keep running cheap checks (typecheck, lint, analyze) unless named.
-- Every repo: each behavior change ships with a test that fails without it, written alongside the change (prove it red with `skills/close/red-check.ps1`, never by reverting files in the live tree); one Claude cannot test says why in the commit report. Every commit runs `/test`, every push the pipeline in `/commit`'s "Push pipeline" section (`hooks/push-gate.py` blocks a push until it is done).
+- Every repo: each behavior change ships with a test that fails without it, written alongside the change (prove it red with `tools/red-check.ps1`, never by reverting files in the live tree); one Claude cannot test says why in the commit report. Every commit runs `/test`, every push the pipeline in `/commit`'s "Push pipeline" section (`hooks/push-gate.py` blocks a push until it is done).
 - Client repos (origin listed in `refs/client-repos.txt`) keep two extras on top: `~/.claude/snippets/client-repo.md` - read once per session when working in one.
 - Browser feature test, repo in `refs/test-report-repos.txt`: use `/test-report` from the start.
 - Slow end-to-end suites (Playwright, etc.) are NOT part of the per-change floor: they run once per push via that pipeline, plus per handover in a project that imports `~/.claude/snippets/test-e2e.md`. Never unprompted otherwise.
@@ -92,11 +92,11 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 - User-facing/visual change: show Joe - bring the app up via `/supervised-run`, give him the URL, and capture a screenshot via SendUserFile (or `/preview` image branch if absent). Skip for pure logic/backend/config (noise there).
 - Screenshot capture only through an isolated, Claude-launched browser (fresh Playwright profile, throwaway port) - never raw Win32 window automation (`SetForegroundWindow`, `mouse_event`/`SendInput`, `SendKeys`) against the dev's own live windows: focus can land on the wrong window. If the dev's live window genuinely must be captured, ask first and have the dev confirm it's focused.
 - Per-repo run mechanics (env file, login/OTP, ports, web-server vs chrome device, CORS) live in project memories - check them first; don't rediscover them.
-- Throwaway verification screenshots go in `.for_bepy/screenshots/<id>/`, where `<id>` is the output of `~/.claude/skills/close/rename-session.ps1 -GetId`, never hand-rolled. The `/screenshot` skill's portfolio keepers stay in `.portfolio-data/`.
+- Throwaway verification screenshots go in `.for_bepy/screenshots/<id>/`, where `<id>` is the output of `~/.claude/tools/rename-session.ps1 -GetId`, never hand-rolled. The `/screenshot` skill's portfolio keepers stay in `.portfolio-data/`.
 
 ## AI todos + plan - `.claude/todos/` (per project)
 
-- Full contract (backlog format, ids, PLAN.md lane, done/, git policy): `~/.claude/skills/close/ai-todos-format.md`. Claude never auto-acts on the folder.
+- Full contract (backlog format, ids, PLAN.md lane, done/, git policy): `~/.claude/refs/ai-todos-format.md`. Claude never auto-acts on the folder.
 - **Claim rule (non-negotiable): before EXECUTING any todo, claim it via `.claude/todos/.claims/<id>.claim` per the contract - every path, including ad-hoc "do todo pc-0007". Release on completion or abort.**
 - Items needing Joe's physical action (browser login, cloud console, credentials, hardware) have no persistent home - try it yourself first (if the project has any test setup, write and run the test rather than handing off), and only if genuinely blocked, surface it directly in the response instead of writing a file.
 - **A todo belongs in the backlog of the repo it changes.** A finding about the global `~/.claude` tree (a skill, a global rule, a hook, `CLAUDE.md` itself) goes in the `~/.claude` repo's own backlog at `C:\Users\tecno\.claude\.claude\todos\`, NEVER in the surfacing project's `.claude/todos/`. Never queue it locally "for later".
