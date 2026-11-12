@@ -16,7 +16,7 @@ freshness window, so age alone can never prove one is safe to delete (a
 long-running session must not lose its marker just for being slow). Their
 pruning is liveness-based and lives in `write-session-marker.ps1` instead,
 keyed off `~/.claude/sessions/*.json` (the same pid registry
-`tools/rename-session.ps1 -Close` already trusts, per todo 60: a raw
+`tools/rename-session.ps1 -GetId` already trusts, per todo 60: a raw
 process-tree walk is not trustworthy here, only a sessionId->pid lookup is).
 `exclude_prefix` below exists so a caller can protect the legacy session-
 marker prefix (`.commit-marker-session-`), which shares this directory and

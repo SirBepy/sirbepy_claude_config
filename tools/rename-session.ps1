@@ -1,9 +1,7 @@
 param(
     [Parameter(Mandatory=$false)]
     [string]$Name = "",
-    [switch]$Close,
-    [switch]$GetId,
-    [switch]$Force
+    [switch]$GetId
 )
 
 # Resolve the current session by matching $env:CLAUDE_CODE_SESSION_ID against
@@ -12,7 +10,7 @@ param(
 # old walk only when the env var is unset (older harness / plain terminal).
 #
 # -GetId prints "<pid>-<procStart-ticks>" for the current session and exits - the canonical
-# screenshot-subfolder id other skills (/close Phase 0, /screenshot, /mockup) should call instead
+# screenshot-subfolder id other skills (/screenshot, /mockup) should call instead
 # of hand-rolling their own walk. The result is cached per sessionId (todo 459) so a Conductor
 # respawn mid-session, which gives the same sessionId a new pid, cannot change the answer.
 # Todo 355 (2026-08-19): measured from an actual Task-tool subagent dispatch - its pid,
@@ -202,34 +200,4 @@ if ($Name) {
 
     Write-Host "Renamed session $sessionId (pid $($record.pid)) to '$Name'"
     Write-Host "  jsonl: $jsonlPath"
-}
-
-if ($Close) {
-    # An SDK-hosted session (CLAUDE_CODE_ENTRYPOINT "sdk-*"; a Conductor chat reports "sdk-cli")
-    # is respawned by its host on the next turn, so killing the process never ends the chat -
-    # only the host's close_session tool does. Refusing here, loudly, is what catches a /close
-    # that skipped that call; the prose ordering rule alone was skipped in practice. -Force is
-    # the escape for an SDK host that has no close_session tool.
-    if (-not $Force -and "$env:CLAUDE_CODE_ENTRYPOINT" -like 'sdk-*') {
-        Write-Host "REFUSED: host-managed session (CLAUDE_CODE_ENTRYPOINT=$env:CLAUDE_CODE_ENTRYPOINT). Killing the process does not close this chat; the host respawns it. Call close_session instead - if it already returned, nothing more is needed. Pass -Force only for an SDK host that has no close_session tool."
-        exit 3
-    }
-    $record = Resolve-SessionRecord
-    if (-not $record) {
-        Write-Warning "Close requested but session record could not be resolved. Skipping kill."
-        exit 0
-    }
-    $claudePid = [int]$record.pid
-    # Todo 776: a resolved pid can already be dead, which used to print a false "scheduled
-    # kill" success. Verify liveness first and fail loudly instead.
-    if (-not (Get-Process -Id $claudePid -ErrorAction SilentlyContinue)) {
-        Write-Error "Close requested but resolved pid $claudePid is already dead (stale sessions/*.json record). Nothing to kill; this terminal did not close. Consider mcp__cc_conductor__close_session, which closes by session id and needs no pid."
-        exit 1
-    }
-    # Kill claude.exe directly. VS Code closes the terminal tab when its hosted process exits.
-    $killCmd = "Start-Sleep -Milliseconds 800; try { Stop-Process -Id $claudePid -Force -ErrorAction Stop } catch {}"
-    Start-Process -FilePath 'powershell.exe' `
-        -ArgumentList '-NoProfile','-NonInteractive','-WindowStyle','Hidden','-Command',$killCmd `
-        -WindowStyle Hidden | Out-Null
-    Write-Host "Scheduled kill of claude pid $claudePid in 800ms."
 }

@@ -1,4 +1,4 @@
-"""PreToolUse hook (PowerShell): auto-approve /close's rename helper.
+"""PreToolUse hook (PowerShell): auto-approve the session rename helper.
 
 Allows a PowerShell call only when EVERY statement in it invokes
 `tools/rename-session.ps1` in one strict shape: the script itself
@@ -6,7 +6,7 @@ Allows a PowerShell call only when EVERY statement in it invokes
 assignment), or `powershell|pwsh [-NoProfile] [-NonInteractive] [-NoLogo]
 [-ExecutionPolicy Bypass] -File <script>`. After the script come only named
 arguments (`-Name`) with plain quoted or bare values.
-The hook it replaces (skills/close/approve-rename.ps1) allowed any command
+The PowerShell hook it replaced allowed any command
 whose text merely contained the file name, so `Remove-Item x; rename-session.ps1`
 and a trailing `# rename-session.ps1` comment both rode the approval, and it
 cold-started a PowerShell process on every PowerShell call.
@@ -136,7 +136,7 @@ def main() -> None:
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
                 "permissionDecision": "allow",
-                "permissionDecisionReason": "Auto-approved: /close rename helper",
+                "permissionDecisionReason": "Auto-approved: session rename helper",
             }
         }))
     sys.exit(0)

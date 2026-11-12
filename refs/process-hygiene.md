@@ -68,10 +68,13 @@ after 9 hours with zero connections.
   Stop bullet already requires. A Gradle daemon a busy peer owns stays up: killing it fails that
   peer's next build.
 - **The chat itself.** When the task is fully done (verified, committed, nothing left for Joe to
-  answer), run `/close` without being asked. Exceptions: a turn that ends on a question card for
-  Joe never self-closes, since the answer has nowhere to land; a long run (`/loop-todos`,
-  `/autopilot`, `/auto-do-todos`) closes only after its final report, never between cycles; and a
-  chat Joe is actively talking to stays open until the conversation is clearly finished.
+  answer), run the save step (`refs/save-step.md`) without being asked, then call `close_session`
+  when that tool exists. A plain terminal has no such tool, so Joe closes it. Exceptions: a
+  Conductor main chat (subchats mode) and a sub never call `close_session`; a turn that ends on a
+  question card for Joe never self-closes, since the answer has nowhere to land; a long run
+  (`/loop-todos`, `/autopilot`, `/auto-do-todos`) closes only after its final report, never between
+  cycles; and a chat Joe is actively talking to stays open until the conversation is clearly
+  finished.
 
 ## Secrets on the command line
 

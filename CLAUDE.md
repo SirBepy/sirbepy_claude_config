@@ -55,7 +55,7 @@ Every rule here has an incident behind it. The stories, dates and quotes are in 
 - **Running servers - always via `/supervised-run`.** If the supervisor is unreachable, stop and tell Joe (dev-server-guard denies a raw run). Does NOT apply to one-off commands that exit (tests, builds, git, scripts).
 - **Never leave orphan child processes.** Run the orphan check in `refs/process-hygiene.md` after test/build/dev commands and kill leftovers before claiming done.
 - **Cap concurrency at 5** for all Node commands: flags per tool in `refs/process-hygiene.md`. Never `pnpm dev --parallel` outside explicit dress-rehearsal.
-- Stop servers you started once unneeded (shared: only if `list_peers` shows no user). Task done, no question pending: run `/close` yourself.
+- Stop servers you started once unneeded (shared: only if `list_peers` shows no user). Task done, no question pending: run the save step (`refs/save-step.md`), then call `close_session` if that tool exists (never in a Conductor main chat or sub).
 - Non-negotiable. Full doctrine: `~/.claude/refs/process-hygiene.md`.
 
 ## Code Style

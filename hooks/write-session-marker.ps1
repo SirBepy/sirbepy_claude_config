@@ -24,7 +24,7 @@
 
   Liveness source: `~/.claude/sessions/*.json`, one record per currently
   running session (sessionId + pid), the same registry
-  `tools/rename-session.ps1 -Close`/`-GetId` already trusts as
+  `tools/rename-session.ps1 -GetId` already trusts as
   authoritative for "is this pid alive". Per todo 60, a raw process-tree
   walk is NOT trustworthy on a machine running many concurrent `claude`
   processes - only a sessionId->pid lookup, verified with `Get-Process -Id`,

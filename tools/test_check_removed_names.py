@@ -59,6 +59,17 @@ with tempfile.TemporaryDirectory() as tmp:
     check(crn.find_hits(root, ["skills/x/.claude/todos/1-old.md"]) == [], "todo history is skipped")
     check(crn.find_hits(root, ["skills/missing.md"]) == [], "a missing path is skipped")
 
+    GONE = "/" + "close"
+    write(root, "skills/e/SKILL.md", f"intro\nrun {GONE} when done\n{GONE}\nlast: (see {GONE}.)\n")
+    hits = crn.find_hits(root, ["skills/e/SKILL.md"])
+    check(len(hits) == 3 and hits[0].startswith("skills/e/SKILL.md:2:"), "a standalone deleted-skill token is reported mid-line, alone and in parentheses")
+
+    write(root, "skills/f/SKILL.md", f"> Removed: `{GONE}` (the save step and close_session replace it).\n")
+    check(crn.find_hits(root, ["skills/f/SKILL.md"]) == [], "the deleted-skill name on a '> Removed: ' tombstone line is exempt")
+
+    write(root, "skills/g/SKILL.md", f"call close_session; mcp__x__close_session; see skills{GONE}/old.md; {GONE}_x; {GONE}r; a{GONE}\n")
+    check(crn.find_hits(root, ["skills/g/SKILL.md"]) == [], "close_session, a path segment and longer words do not match")
+
 if failures:
     print(f"FAIL: {len(failures)} case(s) failed")
     sys.exit(1)
