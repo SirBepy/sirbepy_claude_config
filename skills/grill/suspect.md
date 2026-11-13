@@ -12,6 +12,11 @@
   kind (L1), commits (L4), complaints (L5), the cluster's `revisits`, an L3 measurement.
 - **A reversed decision is evidence, never a candidate.** Its `revisits` count is what the first
   call cost. It is listed as a pattern with no verdict.
+- **A fresh call is judged on its reasoning, not its outcome.** Under 7 days old with no later
+  round (`basis_hint: reasoning`), nothing has happened yet: ask whether the call was sound on
+  what was knowable then, and say "no outcome yet" wherever it shows. Never rank it as a failure.
+- **Who decided matters.** Card answers are Joe's. A decision doc may mark a call `(Dane)` or
+  `Claude's call`: carry that as `decided_by`; a Claude's call is EXECUTION, not PRODUCT.
 - **UI: show the real screen, never a taste verdict.** A UI candidate carries a screenshot of the
   actual surface; whether it looks good is Joe's call alone.
 - **Every candidate carries one tag:**
@@ -25,7 +30,8 @@
 {"file": "<absolute path>", "line": <1-based physical line>, "quote": "<8+ chars, exact substring of that raw line>"}
 ```
 
-- `file` is a repo file, a transcript, a decisions log, a digest, or a run-dir JSONL file.
+- `file` is a repo file, an app log, a transcript, a decisions log, a digest, or a run-dir JSONL
+  file. A log rotates: a receipt into one is checked when the row is written, so check it then.
 - Lines are counted by splitting the UTF-8 file on `\n` only. In JSONL the quote is the escaped
   text as stored: a path reads `C:\\Users`, with doubled backslashes.
 - Numbers cite the run-dir JSONL line they came from (`summary.md` prints each row's `file:line`).
@@ -42,32 +48,41 @@ No receipt, no row.
 **L2 row** (`l2_rows.jsonl`, one per examined cluster, written by the main chat):
 
 ```
-{slug, cluster, scope, surface, decision, alternative, alt_receipt?, receipt, verdict, why_fails?}
+{slug, cluster, scope, surface, decision, alternative, alt_receipt?, receipt, verdict, basis, why_fails?}
 ```
 
 - `cluster`: the cluster `id`, copied exactly from `clusters.jsonl`.
 - `decision`: the first entry's `question + " -> " + answer`, cut to 300 chars.
 - `alternative` and `alt_receipt`: the devil's, copied unedited.
-- `receipt`: the ruling's own outcome evidence.
+- `receipt`: the ruling's own evidence.
 - `verdict`: `KEEP` or `CHANGE-CANDIDATE`.
-- `why_fails`: required on KEEP, 20+ chars, one line on why the alternative loses, unique per row.
+- `basis`: `outcome` when `receipt` is something that happened after the call (a later round, a
+  complaint, a commit, a measurement), which needs a real file:line; else `reasoning`. Start
+  from the cluster's `basis_hint`; a fresh call with a real outcome (a same-day complaint) is
+  `outcome`. A thread's later round counts only when it revisits the first call; a sub simply
+  asking its next question is no outcome, so that thread stays `reasoning`.
+- `why_fails`: required on KEEP, 20+ chars, one line on why the alternative loses. The gate
+  fails it when it shares no word with the row's own `alternative`, or when two rows' reasons
+  match once ids, paths and numbers are taken out (a template filled in per row).
 
 **Candidate** (`candidates.jsonl`):
 
 ```
-{slug, scope, rank, lane: L1|L2|L3|L4|L5|open, tag: PRODUCT|EXECUTION|TOOLING, surface, claim, receipt, anchor?, cluster?, proposed_change}
+{slug, scope, rank, lane: L1|L2|L3|L4|L5|open, tag: PRODUCT|EXECUTION|TOOLING, surface, claim, receipt, basis?, decided_by?, anchor?, cluster?, proposed_change}
 ```
 
 An L2 CHANGE-CANDIDATE row becomes a candidate with `lane: L2`, `tag: PRODUCT`, `cluster` = its id,
-`claim` = the decision, `proposed_change` = the devil's alternative, `receipt` = the strongest
-outcome receipt for the ruling. L3 rows carry `anchor` (an L2 cluster id or a goal clause).
+`claim` = the decision, `proposed_change` = the devil's alternative, `basis` = the row's basis
+(`check-receipts` requires it on L2), `receipt` = the strongest receipt for the ruling. L3 rows
+carry `anchor` (an L2 cluster id or a goal clause); a row from a decision doc carries
+`decided_by` (`Joe`, a person's name, `Claude's call`, or `unmarked`).
 
 **Subagent replies** (one JSONL line per item, inside one fenced block):
 
 | Reply | Fields |
 |---|---|
 | devil | `{cluster, alternative, alt_receipt?}` |
-| scout (`l3_<n>.jsonl`) | `{measurement, anchor, value, unit, receipt, note}` |
+| scout (`l3_<n>.jsonl`, at most 3 lines) | `{measurement, anchor, value, unit, receipt, note, decided_by?}` |
 | refuter (`refute.jsonl`) | `{slug, verdict: survives\|refuted\|keep\|reopen, knowable_then, looks_bad_but_fine, reason, receipt?}` |
 
 **Slug:** kebab-case of the surface plus the decision, at most 6 words. Reuse a prior slug from
@@ -76,7 +91,7 @@ Phase 0 when the surface and decision match; Phase 0 matches rows across runs by
 ## Dispatch rules
 
 - `model: 'sonnet'` and `run_in_background: false` on every dispatch. No haiku, no Opus subagent.
-- At most 17 per full run: 4 devils, 5 scouts, 8 refuters.
+- At most 18 per full run: 4 devils, 6 scouts (at least 2 of them free scouts), 8 refuters.
 - Subagents return text only. The main chat writes each returned fenced block into the run dir
   with the Write tool, never through the shell.
 - Every prompt opens with the preamble below, verbatim (`hooks/dispatch-preamble-guard.py` checks it).
@@ -123,7 +138,7 @@ Decisions (id | date | question -> answer):
 ...
 ```
 
-### Scout prompt (L3 and the open lane, at most 5, one measurement each)
+### Measuring scout prompt (L3 and the open lane, one measurement each)
 
 ```
 <preamble>
@@ -142,6 +157,34 @@ Rules:
 - If the data cannot answer the question, say so in "note" and set "value" to null.
 ```
 
+### Free scout prompt (L3, at least 2, up to 3 measurements each)
+
+The main chat fills `<sources>` with the `sources.jsonl` rows of ONE source kind (logs, decision
+docs and plans, or the code root), and nothing about what earlier runs or the pilot found.
+
+```
+<preamble>
+
+You are a scout with free rein. Joe's goal for this project: <Card 2 goal for this scope>
+Pick up to 3 things worth measuring in the sources below that would show whether Joe's product
+calls are serving that goal: what keeps failing, what costs time or memory, what waits, what a
+rule promises but the code or logs do not do, a call a doc records that later evidence undercuts.
+A count, a rate, a duration or a concrete gap; never an opinion about how something looks.
+
+Sources (absolute paths; for a decision doc, `marks` says who decided what):
+<sources>
+
+Rules:
+- Read only what you need. Logs can be large: grep or stream them, never load one whole.
+- Reply with up to 3 lines: {"measurement", "anchor", "value", "unit", "receipt", "note", "decided_by"?}.
+- "anchor": the goal clause or decision the number bears on, in a few words.
+- "receipt" is {"file", "line", "quote"}: absolute path, 1-based line, 8+ char exact quote of the
+  evidence line. Every line must have one; a claim without it is dropped. Never invent one.
+- "decided_by" only for a call read from a decision doc: that doc's own mark for it (Joe, a
+  person's name, "Claude's call"), or "unmarked".
+- "note": how you computed the value and what it misses.
+```
+
 ### Refuter prompt (at most 8, about 12 items each)
 
 ```
@@ -155,6 +198,8 @@ For each CANDIDATE (a proposed change to a past decision):
   never empty.
 - "verdict": "survives" if the change still holds after both, else "refuted".
 - "reason": one or two sentences.
+- An item marked "basis: reasoning" has no outcome yet: judge only whether the call was sound on
+  what was knowable then. Its lack of results is neither for nor against it.
 
 For each KEEP item (a decision the main chat chose to keep), argue FOR changing it:
 - "verdict": "reopen" if the case for change is stronger than the keep reason, else "keep".
@@ -164,7 +209,7 @@ Reply with one line per item:
 {"slug", "verdict", "knowable_then", "looks_bad_but_fine", "reason", "receipt"?}
 
 Items:
-<candidate rows with their receipts, then KEEP rows with decision, alternative, why_fails, receipt>
+<candidate rows with their basis and receipts, then KEEP rows with decision, alternative, basis, why_fails, receipt>
 ```
 
 ## L3 fallback menu

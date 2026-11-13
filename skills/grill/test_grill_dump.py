@@ -261,8 +261,8 @@ def test_dump_scope_kind_window():
         assert chats[MAIN]["kind"] == "main"
         assert chats[SUBCARD]["kind"] == "sub-with-card"       # also a decisions-log stem
         assert chats[SUBFIN]["kind"] == "sub-without-card"
-        assert chats[UNLOGGED]["kind"] == "main"
-        assert chats[WORKTREE]["kind"] == "main"
+        assert chats[UNLOGGED]["kind"] == "other"         # owns no decisions log and is no logged sub
+        assert chats[WORKTREE]["kind"] == "other"
         assert all(c["scope"] == str(w["scope"]) for c in chats.values())
         # Subagent usage summed into the parent, message.id deduped (last record wins).
         assert chats[MAIN]["input"] == 108 and chats[MAIN]["output"] == 64
@@ -290,7 +290,7 @@ def test_dump_scope_kind_window():
         assert "`Sub:` uuids with no transcript: 1" in summary
         assert "1 decisions log(s) whose main chat transcript is gone" in summary and GONE in summary
 
-        for name in ("chats", "clusters", "complaints", "git", "phase0"):
+        for name in ("chats", "clusters", "complaints", "git", "phase0", "sources"):
             raw = (out / f"{name}.jsonl").read_bytes()
             assert raw, f"{name}.jsonl is empty"
             assert all(b < 128 for b in raw), f"{name}.jsonl is not ASCII"
@@ -305,10 +305,11 @@ def test_dump_scope_kind_window():
 
 
 def test_chat_kind():
-    card, finish = {SUBCARD}, {SUBFIN, SUBCARD}
-    assert grill_dump.chat_kind(SUBCARD, card, finish) == "sub-with-card"
-    assert grill_dump.chat_kind(SUBFIN, card, finish) == "sub-without-card"
-    assert grill_dump.chat_kind(MAIN, card, finish) == "main"
+    card, finish, stems = {SUBCARD}, {SUBFIN, SUBCARD}, {MAIN, SUBCARD}
+    assert grill_dump.chat_kind(SUBCARD, card, finish, stems) == "sub-with-card"
+    assert grill_dump.chat_kind(SUBFIN, card, finish, stems) == "sub-without-card"
+    assert grill_dump.chat_kind(MAIN, card, finish, stems) == "main"
+    assert grill_dump.chat_kind(UNLOGGED, card, finish, stems) == "other"
 
 
 # ---------------------------------------------------------------- 3. sum_usage
@@ -346,18 +347,19 @@ def test_cluster_on_dump():
         clusters = {c["id"]: c for c in read_jsonl(out / "clusters.jsonl")}
         assert len(clusters) == 7
         rel = clusters[f"{dec}#D2"]
-        assert [e["ref"] for e in rel["entries"]] == [f"{dec}#D2", f"{dec}#D3"]   # labels differ, finish D5 excluded
+        assert [e["ref"] for e in rel["entries"]] == [f"{dec}#D2", f"{dec}#D3"]   # one sub's thread, finish D5 excluded
         assert rel["size"] == 2 and rel["revisits"] == 1 and rel["reversed"] is False
+        assert rel["thread"] == "alpha-sub"
         assert f"{dec}#D4" in clusters and f"{dec}#D1" in clusters               # dissimilar stays apart
         backup = clusters[f"{dec}#D6"]
-        assert backup["revisits"] == 2 and backup["reversed"] is True and backup["examined"] is False
-        assert backup["rank"] == 1 and rel["rank"] == 2
+        assert backup["revisits"] == 1 and backup["reversed"] is True and backup["examined"] is False
+        assert rel["rank"] == 1 and backup["rank"] == 2                           # equal rounds: older first
         assert sum(c["examined"] for c in clusters.values()) == 6
         assert sorted(c["rank"] for c in clusters.values()) == list(range(1, 8))
 
         summary = (out / "summary.md").read_text(encoding="utf-8")
         reversed_part = summary.split("### Reversed, not examined")[1].split("## ")[0]
-        assert "revisits 2: Should the backup job retry uploads overnight?" in reversed_part
+        assert "revisits 1: Should the backup job retry uploads overnight?" in reversed_part
 
         out2 = root / "run2"
         dump_world(w, out2, "--include-refs", f"{MAIN}#D6,{MAIN}#D9")
@@ -415,15 +417,24 @@ def test_cluster_cap_and_rank():
     assert lowest["examined"] is False
 
 
-def test_cluster_cap_is_global():
-    es = []
-    for scope in ("S1", "S2"):
-        for i in range(30):
-            es.append(entry(f"{scope}#{i:02d}", "2026-10-05", f"{scope}q{i:02d}a {scope}q{i:02d}b", scope=scope))
-    cs = grill_dump.cluster(es)
-    assert len(cs) == 60
-    assert sum(c["examined"] for c in cs) == 40
-    assert sorted(c["rank"] for c in cs) == list(range(1, 61))
+def test_cluster_cap_is_shared_per_scope():
+    def world(n1, n2):
+        es = []
+        for scope, n in (("S1", n1), ("S2", n2)):
+            for i in range(n):
+                es.append(entry(f"{scope}#{i:02d}", "2026-10-05", f"{scope}q{i:02d}a {scope}q{i:02d}b", scope=scope))
+        return grill_dump.cluster(es)
+
+    def examined(cs, scope):
+        return sum(c["examined"] for c in cs if c["scope"] == scope)
+
+    cs = world(30, 30)
+    assert len(cs) == 60 and sorted(c["rank"] for c in cs) == list(range(1, 61))
+    assert (examined(cs, "S1"), examined(cs, "S2")) == (20, 20)      # neither scope takes every slot
+    cs = world(30, 5)
+    assert (examined(cs, "S1"), examined(cs, "S2")) == (30, 5)
+    cs = world(50, 5)
+    assert (examined(cs, "S1"), examined(cs, "S2")) == (35, 5)       # an unused share goes to the other
 
 
 # ---------------------------------------------------------------- 5. complaints
@@ -435,21 +446,22 @@ def test_complaint_hits():
         end = datetime.fromisoformat(NOW)
         main_path = w["proj"] / f"{MAIN}.jsonl"
         hits = grill_dump.complaint_hits(str(main_path), "S", start, end, True)
-        got = sorted((h["category"], h["line"]) for h in hits)
+        assert all(len(h["categories"]) == 1 for h in hits)
+        got = sorted((h["categories"][0], h["line"]) for h in hits)
         assert got == [(1, 3), (1, 17), (2, 7), (3, 8), (4, 9), (5, 10), (6, 11), (7, 12)]
         assert all(h["session"] == MAIN and h["scope"] == "S" and h["file"] == str(main_path) for h in hits)
         # Not a decisions-log stem: the first qualifying turn (a possible sub brief) is dropped.
         brief = grill_dump.complaint_hits(str(w["proj"] / f"{UNLOGGED}.jsonl"), "S", start, end, False)
         assert brief == []
         wt = grill_dump.complaint_hits(str(w["proj"] / f"{WORKTREE}.jsonl"), "S", start, end, False)
-        assert [(h["category"], h["line"]) for h in wt] == [(5, 2)]
+        assert [(h["categories"], h["line"]) for h in wt] == [([5], 2)]
         # The first turn is consumed as the possible brief even when it falls outside the window.
         late = root / "late.jsonl"
         write_lines(late, [joe("old brief, this is wrong", "2026-09-01T09:00:00Z"),
                            joe("this is useless", "2026-10-20T09:00:00Z"),
                            joe("i do not read that", "2026-10-20T09:01:00Z")])
         got = grill_dump.complaint_hits(str(late), "S", start, end, False)
-        assert [(h["category"], h["line"]) for h in got] == [(5, 2), (7, 3)]
+        assert [(h["categories"], h["line"]) for h in got] == [([5], 2), ([7], 3)]
 
         out = root / "run"
         dump_world(w, out)
@@ -539,9 +551,14 @@ def test_phase0():
         rows = grill_dump.phase0(str(archive), [str(demo), str(tool2)])
         got = {(r["scope"], r["slug"]): r for r in rows}
         d = str(demo)
+        # Every archive is read, not just the newest: slugs only an older run raised stay known.
         assert set(got) == {(d, s) for s in ("a-picked-open", "b-picked-closed", "c-picked-missing",
                                              "d-unknown-repo", "e-declined-once", "f-declined-twice",
-                                             "g-not-shown")} | {(str(tool2), "t-new")}
+                                             "g-not-shown", "z-old-only", "y-declined-twice-earlier")} | {
+            (str(tool2), "t-new"), (str(tool2), "t-old")}
+        y = got[(d, "y-declined-twice-earlier")]
+        assert (y["declined"], y["never_raise"], y["last_archive"]) == (2, True, "2026-09-15")
+        assert got[(d, "e-declined-once")]["last_archive"] == "2026-10-15"     # the newer row wins
         assert got[(d, "a-picked-open")]["state"] == "open"
         assert got[(d, "a-picked-open")]["surface"] == "sidebar"
         assert got[(d, "a-picked-open")]["todo"] == f"{demo}:pc-0001"
@@ -615,7 +632,8 @@ def test_summary_caps():
         summary = (out / "summary.md").read_text(encoding="utf-8")
         assert len(read_jsonl(out / "chats.jsonl")) == 25
         assert len(read_jsonl(out / "complaints.jsonl")) == 26        # the stem's first turn counts too
-        assert f"| {scope} | main | 25 |" in summary                   # totals cover the cut chats
+        assert f"| {scope} | main | 1 |" in summary                    # only the log owner is a main chat
+        assert f"| {scope} | other | 24 |" in summary                  # totals cover the cut chats
         chat_section = summary.split("## L1")[1].split("## ")[0]
         assert chat_section.count("chats.jsonl:") == 20 and "5 more not shown" in chat_section
         cluster_section = summary.split("## L2")[1].split("## ")[0]
@@ -669,6 +687,15 @@ def test_check_receipts():
 
 # ---------------------------------------------------------------- 10. gate
 
+def _word(i, j):
+    return "".join(chr(97 + k % 26) for k in (i, j, i + j + 3, 7))
+
+
+def reason(i):
+    """A KEEP reason of its own per row: it names the alternative's sidebar, the rest is distinct."""
+    return "a collapsible sidebar loses " + " ".join(_word(i, j) for j in range(6))
+
+
 class GateWorld:
     def __init__(self, root):
         self.root = root
@@ -704,8 +731,7 @@ class GateWorld:
     def row(self, i, verdict="KEEP", **kw):
         r = {"slug": f"slug-{i}", "cluster": self.ids[i], "scope": str(self.scope), "surface": "sidebar",
              "decision": f"keep the sidebar wide number {i}", "alternative": f"make the sidebar collapsible {i}",
-             "receipt": self.ev(), "verdict": verdict,
-             "why_fails": f"collapsing hides the cost column that Joe reads daily, case {i}"}
+             "receipt": self.ev(), "verdict": verdict, "basis": "outcome", "why_fails": reason(i)}
         if verdict != "KEEP":
             r.pop("why_fails")
         r.update(kw)
@@ -714,7 +740,7 @@ class GateWorld:
     def valid(self):
         return [
             self.row(0, alt_receipt={"file": str(self.dec), "line": 4, "quote": "keep the sidebar wide"}),
-            self.row(1, receipt={"none_searched": "searched git log and todos for revisits"}),
+            self.row(1, receipt={"none_searched": "searched git log and todos for revisits"}, basis="reasoning"),
             self.row(2, verdict="CHANGE-CANDIDATE"),
         ]
 
@@ -758,7 +784,7 @@ def test_gate_rule1_row_set():
         g = GateWorld(root)
         rows = g.valid()
         red(g, [rows[0], rows[2]], 1)                                      # missing examined cluster
-        dup = g.row(0, why_fails="a second distinct reason that is long enough")
+        dup = g.row(0, why_fails="the sidebar row repeats, " + reason(7))
         red(g, rows + [dup], 1)                                            # duplicate cluster
 
 
@@ -838,13 +864,65 @@ def test_gate_rule6_keep_reason():
         rows = g.valid()
         rows[1]["why_fails"] = rows[0]["why_fails"]
         red(g, rows, 6)
+        # The 2026-11-12 template: unique only by its own cluster id and date.
+        template = ": decided 2026-11-1{}, no outcome in the window says the collapsible sidebar call failed"
+        rows = g.valid()
+        rows[0]["why_fails"] = rows[0]["cluster"] + template.format(1)
+        rows[1]["why_fails"] = rows[1]["cluster"] + template.format(2)
+        red(g, rows, 6)
+        rows = g.valid()
+        rows[1]["why_fails"] = rows[0]["why_fails"] + " and also that"          # a near copy
+        red(g, rows, 6)
+        rows = g.valid()
+        rows[0]["why_fails"] = "it would cost too much to build right now"   # never names the alternative
+        red(g, rows, 6)
+        # A short slug is never cut out of other words ("ui" inside "guidance").
+        rows = g.valid()
+        rows[0]["slug"], rows[1]["slug"] = "ui", "uj"
+        rows[0]["why_fails"] = "the collapsible sidebar guidance built for wide screens loses"
+        rows[1]["why_fails"] = "a collapsible sidebar hides the cost column readers want daily"
+        code, out = g.gate(rows)
+        assert code == 0, out
+        assert grill_dump._reason_core("ui guidance word2 at 12:30", {"slug": "ui"}) == "ui guidance word at"
+        # "switching" names the alternative "switch to server sessions" through its stem.
+        rows = g.valid()
+        rows[0]["alternative"] = "switch to server sessions"
+        rows[0]["why_fails"] = "switching loses the offline mode Joe relies on"
+        code, out = g.gate(rows)
+        assert code == 0, out
+        assert grill_dump._shares_word("interface costs", "internal tooling") is False   # a prefix only
+        assert grill_dump._shares_word("understand it", "underlying data") is False
+        assert grill_dump._shares_word("a switchboard", "switch servers") is False       # not an inflection
+        assert grill_dump._shares_word("the porter", "port number") is False
+        assert grill_dump._shares_word("the station", "state machine") is False
+        for a, b in (("switching", "switch"), ("retries", "retry"), ("sharing", "share")):
+            assert grill_dump._shares_word(a, b) is True, (a, b)
+
+
+def test_gate_basis():
+    with tmpdir() as root:
+        g = GateWorld(root)
+        rows = g.valid()
+        del rows[0]["basis"]
+        red(g, rows, 2)
+        rows = g.valid()
+        rows[0]["basis"] = "vibes"
+        red(g, rows, 3)
+        rows = g.valid()
+        rows[1]["basis"] = "outcome"                                         # outcome with none_searched
+        red(g, rows, 4)
+        rows = g.valid()
+        rows[2]["basis"] = "reasoning"                                       # a fresh call may still change
+        code, out = g.gate(rows)
+        assert code == 0, out
 
 
 def test_gate_rule7_rubber_stamp():
     with tmpdir() as root:
         g = GateWorld(root)
         g.write_clusters(20)
-        rows = [g.row(i, receipt={"none_searched": f"searched everything for case {i}"}) for i in range(19)]
+        rows = [g.row(i, receipt={"none_searched": f"searched everything for case {i}"}, basis="reasoning")
+                for i in range(19)]
         rows.append(g.row(19, verdict="CHANGE-CANDIDATE"))
         assert math.ceil(0.1 * 20) == 2
         red(g, rows, 7)
@@ -892,6 +970,272 @@ def test_cost():
         code, out = run_cli(["cost", "--session", "44444444-0000-0000-0000-000000000000",
                              "--projects-dir", str(projects)])
         assert code == 1 and out.strip()
+
+
+# ---------------------------------------------------------------- 12. round 1 fixes (2026-11-13 judge)
+
+def test_cards_rank_before_digests():
+    # The 2026-11-12 failure: 45 newer digest lines whose path sorts first took all 40 slots.
+    es = [entry(f"C:\\u\\.claude\\memory-archive\\digests\\d{i:02d}.md#0", "2026-11-11",
+                f"dg{i:02d}a dg{i:02d}b dg{i:02d}c", source="digest") for i in range(45)]
+    es += [entry(f"C:\\u\\AppData\\log.decisions.md#D{n}", "2026-10-20", f"cd{n}a cd{n}b cd{n}c")
+           for n in (2, 10, 9)]
+    cs = grill_dump.cluster(es, today=datetime(2026, 11, 12).date())
+    cards = [c for c in cs if c["source"] == "card"]
+    assert len(cards) == 3 and all(c["examined"] for c in cards)
+    assert [c["rank"] for c in sorted(cs, key=lambda c: c["rank"])[:3]] == [1, 2, 3]
+    assert [c["id"].rpartition("#")[2] for c in sorted(cards, key=lambda c: c["rank"])] == ["D2", "D9", "D10"]
+    assert sum(c["examined"] for c in cs) == 40
+    # A Joe: digest line that groups with a later card answer keeps the cluster a card cluster.
+    mixed = grill_dump.cluster([entry("d#0", "2026-10-01", "mx1 mx2 mx3", source="digest"),
+                                entry("c#D1", "2026-10-02", "mx1 mx2 mx3")])
+    assert len(mixed) == 1 and mixed[0]["source"] == "card"
+
+
+def test_cluster_sub_threads_and_noise():
+    es = [
+        dict(entry("L#D1", "2026-10-01", "Which resting height for the card?", "180px"), sub="S1", label="answers-design"),
+        dict(entry("L#D2", "2026-10-01", "Which entrance animation?", "Fade"), sub="S1", label="answers-design"),
+        dict(entry("L#D3", "2026-10-02", "Where should Read more sit?", "Bottom row"), sub="S1", label="answers-design"),
+        dict(entry("L#D4", "2026-10-03", "Body.\nMay Claude edit that one file?", "Allow it"), sub="S1",
+             label="answers-design", noise="permission"),
+        entry("L#D5", "2026-10-04", "Ship the phone app first?", "No"),
+        entry("L#D6", "2026-10-05", "Which colour for the tray icon?", "Green"),
+    ]
+    cs = {c["id"]: c for c in grill_dump.cluster(es, today=datetime(2026, 11, 12).date())}
+    thread = cs["L#D1"]
+    # Dissimilar words, one sub: one thread whose later rounds are its revisits.
+    assert [e["ref"] for e in thread["entries"]] == ["L#D1", "L#D2", "L#D3"]
+    assert thread["revisits"] == 2 and thread["thread"] == "answers-design" and thread["rank"] == 1
+    assert "L#D5" in cs and "L#D6" in cs                        # main-chat cards still group by words
+    noise = cs["L#D4"]
+    assert noise["noise"] == "permission" and noise["rank"] == len(cs)    # logistics rank last
+    assert noise["examined"] is True                             # a free slot still reaches it
+    tight = {c["id"]: c for c in grill_dump.cluster(es, cap=3, today=datetime(2026, 11, 12).date())}
+    assert tight["L#D4"]["examined"] is False and tight["L#D1"]["examined"] is True
+    assert grill_dump.card_noise("Body text.\nMay Claude edit that one file?") == "permission"
+    assert grill_dump.card_noise("Which of these lifts should Claude apply? Nothing ticked means ignore.") == "lift"
+    assert grill_dump.card_noise("May Claude edit files?\n\nShould the main chat answer inline?") is None
+    assert grill_dump.card_noise("May Claude auto-commit by default?") is None    # a policy call, kept
+    assert grill_dump.card_noise("May Claude add a retry policy for failed pushes?") is None
+    assert grill_dump.card_noise("May this sub add the wrapper to those two files?") == "permission"
+    assert grill_dump.card_noise("May Claude edit them?") == "permission"
+    assert grill_dump.card_noise("May Claude push that dry-run branch?") == "permission"
+    assert grill_dump.card_noise("May Claude edit tests/chat-dashboard-*.test.mjs too?") == "permission"
+    for product in ("May Claude remove the legacy login flow?", "May Claude run nightly by default?",
+                    "May Claude use a branch-per-feature policy by default?",
+                    "May Claude add a branch protection rule?", "May Claude use and/or semantics in search?",
+                    "May Claude remove the legacy file upload feature?",
+                    "May Claude change the default path for new users?"):
+        assert grill_dump.card_noise(product) is None, product
+
+
+def test_cluster_age_and_basis():
+    today = datetime(2026, 11, 12).date()
+    es = [entry("a#1", "2026-11-11", "fresh aaa bbb"), entry("b#1", "2026-11-01", "old ccc ddd"),
+          dict(entry("c#1", "2026-11-10", "thread eee"), sub="S", label="t"),
+          dict(entry("c#2", "2026-11-11", "thread fff"), sub="S", label="t")]
+    cs = {c["id"]: c for c in grill_dump.cluster(es, today=today)}
+    assert (cs["a#1"]["age_days"], cs["a#1"]["basis_hint"]) == (1, "reasoning")   # kept, labelled
+    assert cs["a#1"]["examined"] is True
+    assert (cs["b#1"]["age_days"], cs["b#1"]["basis_hint"]) == (11, "outcome")
+    assert cs["c#1"]["basis_hint"] == "outcome"                  # a later round is an outcome
+
+
+def test_dump_joe_digest_lines_and_noise_counts():
+    with tmpdir() as root:
+        w = build_world(root)
+        (w["digests"] / "77777777-0000-0000-0000-000000000001.md").write_text(
+            "# Digest: Claude notes\n- Date: 2026-10-28 09:00 -> 10:00\n- Repo: demo-repo\n"
+            f"- Session: {MAIN}\n## Decided\n- Claude's call: split the parser into two files\n"
+            "- Joe: keep the parser in one place\n- joe: lowercase marks count too\n", encoding="utf-8")
+        log = w["decisions"] / f"{MAIN}.decisions.md"
+        log.write_text(log.read_text(encoding="utf-8") + "\n## D10 - card - 2026-10-29 - main chat\n"
+                       "Question: The file is outside the list.\n  May Claude edit that one file?\nAnswer: Allow it\n",
+                       encoding="utf-8")
+        out = root / "run"
+        dump_world(w, out)
+        clusters = read_jsonl(out / "clusters.jsonl")
+        answers = [e["answer"] for c in clusters for e in c["entries"]]
+        assert "Joe: keep the parser in one place" in answers
+        assert "joe: lowercase marks count too" in answers
+        assert not any("split the parser" in a for a in answers)
+        d10 = [c for c in clusters if c["id"].endswith("#D10")][0]
+        assert d10["noise"] == "permission" and d10["rank"] == max(c["rank"] for c in clusters)
+        summary = (out / "summary.md").read_text(encoding="utf-8")
+        assert "left out as Claude's calls: 1." in summary
+        # With no slot free, the logistics card is listed by name, not just counted.
+        out2 = root / "run2"
+        saved = grill_dump.EXAMINE_CAP
+        grill_dump.EXAMINE_CAP = 2
+        try:
+            dump_world(w, out2)
+        finally:
+            grill_dump.EXAMINE_CAP = saved
+        summary2 = (out2 / "summary.md").read_text(encoding="utf-8")
+        assert "not examined: 1." in summary2 and "permission: The file is outside the list." in summary2
+        assert "| other |" in summary
+
+
+def test_complaints_one_hit_per_message_and_claude_text():
+    with tmpdir() as root:
+        start = datetime(2026, 10, 13, tzinfo=timezone.utc)
+        end = datetime.fromisoformat(NOW)
+        sched = "Fallback check on the build chain: run subchat list, and if it is still broken, nudge it"
+        brief = "We are continuing the design. Done so far: the old menu was wrong and got replaced by tabs"
+        older = root / "older.jsonl"
+        write_lines(older, [json.dumps({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "name": "mcp__cc_conductor__respawn", "input": {"brief": brief}}]}})])
+        path = root / "main.jsonl"
+        write_lines(path, [
+            joe(brief, "2026-10-20T09:00:00Z"),                                           # 1: respawn brief
+            json.dumps({"type": "assistant", "message": {"content": [
+                {"type": "tool_use", "name": "mcp__cc_conductor__schedule", "input": {"prompt": sched}}]}}),
+            joe("this is wrong and you keep doing it", "2026-10-20T09:01:00Z"),           # 3: cats 1 and 4
+            joe(sched, "2026-10-20T09:02:00Z"),                                           # 4: scheduled prompt
+            joe("i see you scheduled this msg\n\n" + sched, "2026-10-20T09:03:00Z"),       # 5: quoted, no own complaint
+            joe("why did you do this?\n\n" + sched, "2026-10-20T09:04:00Z"),              # 6: own words hit
+            joe("\u200b[daemon-meta]\u200b[schedule] this is broken again", "2026-10-20T09:05:00Z"),
+        ])
+        index = grill_dump.claude_written_texts([older, path])
+        hits = grill_dump.complaint_hits(str(path), "S", start, end, True, index)
+        assert [(h["line"], h["categories"]) for h in hits] == [(3, [1, 4]), (6, [3])]
+        assert hits[1]["text"] == "why did you do this?"
+        # A paste that lost its formatting is still Claude's; a sentence Claude wrote only AFTER
+        # Joe's turn (quoting him) stays Joe's.
+        later = root / "later.jsonl"
+        write_lines(later, [
+            joe("why did you do this? the `subchat` list is still broken again", "2026-10-20T09:00:00Z"),
+            json.dumps({"type": "assistant", "timestamp": "2026-10-20T09:10:00Z", "message": {"content": [
+                {"type": "tool_use", "name": "mcp__cc_conductor__send_message",
+                 "input": {"text": "Joe said: the subchat list is still broken again"}}]}}),
+            joe("i pasted it: **the subchat list is still broken again**", "2026-10-20T09:20:00Z"),
+            joe("​<auq-answer id=\"x\"/>User answered: this is wrong", "2026-10-20T09:30:00Z"),
+        ])
+        late_hits = grill_dump.complaint_hits(str(later), "S", start, end, True,
+                                              grill_dump.claude_written_texts([later]))
+        assert [(h["line"], h["categories"]) for h in late_hits] == [(1, [1, 3])], late_hits
+        # Without the index the Claude-written turns are read as Joe's, which was the bug.
+        raw = grill_dump.complaint_hits(str(path), "S", start, end, True)
+        assert {h["line"] for h in raw} >= {1, 4, 5}
+
+
+def test_git_skips_dot_claude_and_counts_past_ten():
+    with tmpdir() as root:
+        repo = root / "r"
+        repo.mkdir()
+        git(repo, "init", "-q")
+        for i in range(12):
+            put(repo, f"src/app/f{i:02d}.py")
+        put(repo, ".claude/todos/pc-0001-x.md")
+        put(repo, "apps/web/.claude/todos/pc-0002-y.md")
+        commit(repo, "FEAT: add twelve files", "2026-10-01T12:00:00+00:00")
+        put(repo, ".claude/todos/pc-0001-x.md", "y\n")
+        put(repo, "apps/web/.claude/todos/pc-0002-y.md", "y\n")
+        commit(repo, "FIX: todo churn", "2026-10-02T12:00:00+00:00")
+        rows = {r["group"]: r for r in grill_dump.git_outcome(str(repo), "2026-09-25T00:00:00")}
+        assert not any(".claude" in g for g in rows), rows.keys()
+        app = rows["src/app"]
+        assert app["never_touched_count"] == 12 and len(app["never_touched"]) == 10
+        out = root / "run"
+        run_cli(["dump", "--scope", str(repo), "--now", NOW, "--days", "60", "--out", str(out),
+                 "--projects-dir", str(root / "none"), "--decisions-dir", str(root / "none"),
+                 "--digests-dir", str(root / "none"), "--archive-dir", str(root / "none")])
+        git_part = (out / "summary.md").read_text(encoding="utf-8").split("## L4")[1].split("## ")[0]
+        assert "| src/app | 1 | 1 | 0 | 0 | 0 | 0 | 12 |" in git_part
+
+
+def test_decisions_format_rot_warns():
+    with tmpdir() as root:
+        w = build_world(root)
+        (w["decisions"] / "rot.decisions.md").write_text(
+            "# Decisions log\n\n## D1 | card | 2026-10-30 | main chat\nQuestion: q?\nAnswer: a\n\n"
+            "## D2 - poll - 2026-10-30 - main chat\nQuestion: q?\n", encoding="utf-8")
+        out = root / "run"
+        dump_world(w, out)
+        summary = (out / "summary.md").read_text(encoding="utf-8")
+        assert "rot.decisions.md: 1 entry header(s) not in the" in summary
+        assert "rot.decisions.md: unknown entry kind(s) poll" in summary
+        # Logs changed in the window but nothing parses: said, never a quiet month.
+        quiet = root / "quiet"
+        quiet.mkdir()
+        (quiet / f"{MAIN}.decisions.md").write_text("# Decisions log\n\n## D1 | card | 2026-10-30\n",
+                                                    encoding="utf-8")
+        out2 = root / "run2"
+        dump_world(w, out2, "--decisions-dir", str(quiet))
+        assert "no entry in the window parsed" in (out2 / "summary.md").read_text(encoding="utf-8")
+        # A finish-only log changed in the window is not format rot.
+        (quiet / f"{MAIN}.decisions.md").write_text(
+            "# Decisions log\n\n## D1 - finish - 2026-11-01 - a-sub\nDecided: shipped it\n", encoding="utf-8")
+        out3 = root / "run3"
+        dump_world(w, out3, "--decisions-dir", str(quiet))
+        assert "no entry in the window parsed" not in (out3 / "summary.md").read_text(encoding="utf-8")
+
+
+def test_sources_for_scouts():
+    with tmpdir() as root:
+        scope = root / "app"
+        put(scope, "docs/context/04-next-steps.md",
+            "## Decision (Joe)\n- ship slice 1 (Joe, 2026-10-25)\n- host it (Dane)\n- Claude's call: sqlite\n"
+            "- a field (Optional)\n")
+        put(scope, ".claude/todos/PLAN.md", "# Plan\n")
+        put(scope, "logs/app.log", "boot\n")
+        put(scope, "node_modules/pkg/x.log", "noise\n")
+        ext = root / "appdata"
+        put(ext, "daemon.log", "restart: wdio kill\n")
+        rows = grill_dump.find_sources(str(scope))
+        extra = grill_dump.extra_log_rows(str(scope), [str(ext), str(scope / "logs")], rows)
+        # A --logs folder inside the scope adds nothing twice; one outside adds its logs.
+        assert [Path(r["path"]).name for r in extra] == ["daemon.log"]
+        by_path = {Path(r["path"]).name: r for r in rows + extra}
+        assert by_path["04-next-steps.md"]["kind"] == "decision-doc"
+        assert by_path["04-next-steps.md"]["marks"] == {"Joe": 2, "Dane": 1, "Claude's call": 1}
+        assert by_path["PLAN.md"]["kind"] == "plan"
+        assert by_path["app.log"]["kind"] == "log" and by_path["daemon.log"]["kind"] == "log"
+        assert "x.log" not in by_path
+        assert rows[-1] == {"scope": str(scope), "kind": "code", "path": str(scope)}
+        # Repo build logs past the cap never crowd out a folder Joe named with --logs.
+        for i in range(35):
+            put(scope, f"var/run/{i:02d}.log")
+        rows = grill_dump.find_sources(str(scope))
+        assert sum(r["kind"] == "log" for r in rows) == 30
+        extra = grill_dump.extra_log_rows(str(scope), [str(ext)], rows)
+        assert [Path(r["path"]).name for r in extra] == ["daemon.log"]
+        # A scope folder that does not exist still gets the --logs rows from cmd_dump.
+        out = root / "run"
+        run_cli(["dump", "--scope", f"{root / 'gone'},{scope}", "--now", NOW, "--out", str(out),
+                 "--logs", str(ext), "--projects-dir", str(root / "none"), "--decisions-dir", str(root / "none"),
+                 "--digests-dir", str(root / "none"), "--archive-dir", str(root / "none")])
+        assert sum(Path(r["path"]).name == "daemon.log" for r in read_jsonl(out / "sources.jsonl")) == 1
+        assert "log files found" not in (out / "summary.md").read_text(encoding="utf-8")
+        for i in range(31):
+            put(ext, f"svc{i:02d}.log")
+        out2 = root / "run2"
+        run_cli(["dump", "--scope", str(scope), "--now", NOW, "--out", str(out2), "--logs", str(ext),
+                 "--projects-dir", str(root / "none"), "--decisions-dir", str(root / "none"),
+                 "--digests-dir", str(root / "none"), "--archive-dir", str(root / "none")])
+        assert "--logs: 32 log files found, only the newest 30 are listed" in (out2 / "summary.md").read_text(
+            encoding="utf-8")
+
+
+def test_check_receipts_scout_files_and_basis():
+    with tmpdir() as root:
+        ev = root / "ev.txt"
+        ev.write_text("daemon restarted: wdio kill\n", encoding="utf-8")
+        good = {"measurement": "daemon restarts by cause", "value": 3, "unit": "restarts",
+                "receipt": {"file": str(ev), "line": 1, "quote": "daemon restarted"}}
+        write_lines(root / "l3_1.jsonl", [json.dumps(good)])
+        write_lines(root / "l3_2.jsonl", [json.dumps(dict(good, receipt={"file": str(ev), "line": 1,
+                                                                          "quote": "never said this"}))])
+        code, out = run_cli(["check-receipts", str(root / "l3_*.jsonl")])
+        assert code == 1, out
+        assert out.splitlines() == [f"# {root / 'l3_1.jsonl'}", "OK daemon-restarts-by-cause",
+                                    f"# {root / 'l3_2.jsonl'}",
+                                    "BAD daemon-restarts-by-cause receipt: quote not on line 1"]
+        cand = {"slug": "s", "lane": "L2", "receipt": good["receipt"]}
+        write_lines(root / "c.jsonl", [json.dumps(cand), json.dumps(dict(cand, slug="t", basis="reasoning"))])
+        code, out = run_cli(["check-receipts", str(root / "c.jsonl")])
+        assert code == 1 and out.splitlines()[0].startswith("BAD s basis") and out.splitlines()[1] == "OK t"
 
 
 # ---------------------------------------------------------------- runner
