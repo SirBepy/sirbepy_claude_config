@@ -51,6 +51,8 @@ already finished:
 
 Never edit these files by hand. Use `handle`, `answered`, `todo-verdict` and `ticket-dismiss`.
 
+Shortcut writes (the script reads the token, Claude never reads `.env`): `kickoff.py comment <id> --body-file <absolute path> [--parent <comment-id>]`, `kickoff.py describe <id> --body-file <absolute path>` (both need the 3/3 verified text first, `refs/outbound-verify.md`), `kickoff.py move <id>... --state <state id or exact name>`.
+
 ### Answered outside Shortcut
 
 Claude cannot see Slack, so "answered" has two sources, and the report never lists answered items

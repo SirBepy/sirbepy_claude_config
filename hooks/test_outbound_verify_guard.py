@@ -391,8 +391,96 @@ def check_mcp_e2e() -> bool:
     return _testlib.report(blocked and cleared, "MCP comment blocks, then clears after 3 PASS")
 
 
+def check_kickoff_e2e() -> bool:
+    """`kickoff.py comment|describe` read the token themselves, so the gate is the --body-file text."""
+    with tempfile.TemporaryDirectory() as tmp:
+        body = Path(tmp) / "reply.md"
+        body.write_text(CLAIM + "\n", encoding="utf-8")
+        script = "python -I C:/Users/tecno/.claude/skills/zng-kickoff/scripts/kickoff.py"
+        path = body.as_posix()
+        results = []
+        for sub, extra in (("comment", ""), ("comment", " --parent 12345"), ("describe", "")):
+            cmd = {"command": f"{script} {sub} 56709 --body-file {path}{extra}"}
+            results.append((f"{sub}{extra}: unverified is blocked", run_hook(cmd, []) == 2))
+            results.append((f"{sub}{extra}: 3 PASS clears", run_hook(cmd, three_inline(CLAIM)) == 0))
+            results.append((f"{sub}{extra}: another text verified still blocks", run_hook(cmd, three_inline(OTHER)) == 2))
+            results.append((f"{sub}{extra}: one FAIL blocks", run_hook(cmd, three_inline(CLAIM, ("PASS", "PASS", "FAIL"))) == 2))
+        ps = {"command": f"python -I {script.split(' ')[-1].replace('/', chr(92))} comment 56709 --body-file '{body}'"}
+        results.append(("PowerShell backslash paths: unverified is blocked", run_hook(ps, [], tool_name="PowerShell") == 2))
+        results.append(("PowerShell backslash paths: 3 PASS clears", run_hook(ps, three_inline(CLAIM), tool_name="PowerShell") == 0))
+        body.write_text(CLAIM.replace("skips", "skip") + "\n", encoding="utf-8")
+        results.append(("an edit of the body file after verification blocks", run_hook({"command": f"{script} comment 1 --body-file {path}"}, three_inline(CLAIM)) == 2))
+        results.append(("no --body-file blocks", run_hook({"command": f"{script} comment 56709"}, three_inline(CLAIM)) == 2))
+        results.append(("an abbreviated flag the hook cannot read blocks", run_hook({"command": f"{script} comment 56709 --body {path}"}, three_inline(CLAIM)) == 2))
+        results.append(("a missing body file blocks", run_hook({"command": f"{script} comment 56709 --body-file {tmp}/nope.md"}, []) == 2))
+        results.append(("a second ungated-looking call cannot hide behind a verified one", run_hook(
+            {"command": f"{script} comment 1 --body-file {path} && {script} describe 2"}, three_inline(CLAIM.replace("skips", "skip"))) == 2))
+        verified = three_inline(CLAIM.replace("skips", "skip"))
+        results.append(("a trailing ; after the path is not part of the path", run_hook({"command": f"{script} comment 1 --body-file {path}; echo done"}, verified) == 0))
+        results.append(("--body-file=PATH form is read", run_hook({"command": f"{script} comment 1 --body-file={path}"}, []) == 2))
+        results.append(("a real --body-file cannot hide an abbreviated second flag", run_hook(
+            {"command": f"{script} comment 1 --body-file {path} --body {tmp}/evil.md"}, verified) == 2))
+        results.append(("a relative body path is refused (the script reads it from its own cwd)", run_hook(
+            {"command": f"cd {tmp}/.. && {script} comment 1 --body-file reply.md"}, verified) == 2))
+        results.append(("a variable in the subcommand slot is gated", run_hook({"command": f"c=comment; {script} $c 1 --body-file {path}"}, []) == 2))
+        results.append(("a variable subcommand with verified text clears", run_hook({"command": f"c=comment; {script} $c 1 --body-file {path}"}, verified) == 0))
+        results.append(("bash -c wrapping is read", run_hook({"command": f"bash -c '{script} comment 1 --body-file {path}'"}, []) == 2))
+        results.append(("bash -c wrapping clears with verified text", run_hook({"command": f"bash -c '{script} comment 1 --body-file {path}'"}, verified) == 0))
+        results.append(("a kickoff hit does not mask a curl write in the same command", run_hook(
+            {"command": f"{script} comment 1 --body-file {path} ; curl -X POST {SC}/1/comments -d '{{\"text\": \"{OTHER}\"}}'"}, verified) == 2))
+        results.append(("the same command clears when both texts are verified", run_hook(
+            {"command": f"{script} comment 1 --body-file {path} ; curl -X POST {SC}/1/comments -d '{{\"text\": \"{OTHER}\"}}'"},
+            verified + three_inline(OTHER, start=10)) == 0))
+        gh_ok = {"command": f"gh pr comment 1 --body \"{OTHER}\" && {script} comment 1 --body-file {path}"}
+        results.append(("a verified gh hit does not hide an unverified kickoff call", run_hook(gh_ok, three_inline(OTHER)) == 2))
+        results.append(("both clear when both texts are verified", run_hook(gh_ok, three_inline(OTHER) + three_inline(CLAIM.replace("skips", "skip"), start=10)) == 0))
+        planted = Path(tmp) / "reply.md,"
+        planted.write_text("A planted file with different unverified claims about the loan screen.", encoding="utf-8")
+        results.append(("a glued comma reads the real name too, so a planted file cannot hide", run_hook(
+            {"command": f"{script} comment 1 --body-file '{path},'"}, verified) == 2))
+        results.append(("a ~ path is refused", run_hook({"command": f"{script} comment 1 --body-file ~/reply.md"}, verified) == 2))
+        for label, command in (
+            ("git add of the script and its test", f"git add skills/zng-kickoff/scripts/kickoff.py skills/zng-kickoff/scripts/test_kickoff.py"),
+            ("a glued pipe after a read", f"{script} story|cat"),
+            ("a glued semicolon after a read", f"{script} leftovers;echo hi"),
+            ("--help", f"{script} --help"),
+        ):
+            results.append((f"{label} passes", run_hook({"command": command}, []) == 0))
+        results.append(("`--` before the subcommand is still gated", run_hook({"command": f"{script} -- comment 1 --body-file {path}"}, []) == 2))
+        results.append(("a glued redirect after the body path is read", run_hook({"command": f"{script} comment 1 --body-file {path}>/dev/null"}, verified) == 0))
+        for label, command in (
+            ("a commit message naming the command", 'git commit -m "ADD: kickoff.py comment and describe commands"'),
+            ("a grep pattern naming the command", 'grep -rn "kickoff.py comment" skills'),
+            ("an echo naming the command", 'echo "run kickoff.py comment 1 --body-file x.md"'),
+            ("a gh PR body naming the command and a REST write", f'gh pr create --title Fix --body "see kickoff.py comment and curl -X POST {SC}/1/comments -d x"'),
+        ):
+            results.append((f"{label} is not a call", run_hook({"command": command}, three_inline('see kickoff.py comment and curl -X POST ' + SC + '/1/comments -d x')) == 0))
+        inner = f"{script} comment 1 --body-file {path}"
+        for label, command in (
+            ("bash -ec", f'bash -ec "{inner}"'),
+            ("eval", f'eval "{inner}"'),
+            ("an echo piped into bash", f'echo "{inner}" | bash'),
+            ("a command substitution assigned to a variable", f'r="$({inner})"'),
+            ("a command substitution inside a commit message", f'git commit -m "$({inner})"'),
+            ("a command substitution inside an echo", f'echo "$({inner})"'),
+        ):
+            results.append((f"{label} is gated", run_hook({"command": command}, []) == 2))
+        results.append(("a nested call clears with verified text", run_hook({"command": f'eval "{inner}"'}, verified) == 0))
+        results.append(("--help on a gated subcommand sends nothing", run_hook({"command": f"{script} comment --help"}, []) == 0))
+        results.append(("a glued redirect cannot hide the subcommand", run_hook({"command": f"{script} comment>/dev/null 1 --body-file {path}"}, []) == 2))
+        results.append(("move passes untouched", run_hook({"command": f"{script} move 56709 56710 --state 500018257"}, []) == 0))
+        results.append(("move by state name passes untouched", run_hook({"command": f"{script} move 56709 --state Testing"}, []) == 0))
+        results.append(("story read passes untouched", run_hook({"command": f"{script} story 56709"}, []) == 0))
+    ok = True
+    for label, passed in results:
+        ok = _testlib.report(passed, f"kickoff e2e: {label}") and ok
+    return ok
+
+
 def main() -> int:
     fails = _testlib.run_cases(DETECT_CASES, check_detect)
+    if not check_kickoff_e2e():
+        fails.append("kickoff e2e")
     fails += _testlib.run_cases(REST_CASES, check_rest)
     fails += _testlib.run_cases(REQUIRES_CASES, check_requires)
     fails += _testlib.run_cases(E2E_CASES, check_e2e)

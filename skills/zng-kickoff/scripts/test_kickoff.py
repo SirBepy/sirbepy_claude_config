@@ -407,6 +407,143 @@ class StoryCommand(unittest.TestCase):
         self.assertEqual(fn.call_args[0][0].story_ids, ['1', '2'])
 
 
+class WriteCommands(unittest.TestCase):
+    """comment / describe / move, with urlopen mocked: nothing here reaches Shortcut."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.sent = []
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def body_file(self, raw, name='body.md'):
+        path = os.path.join(self.tmp.name, name)
+        with open(path, 'wb') as f:
+            f.write(raw)
+        return path
+
+    def call(self, fn, responses=None, gets=None, **kw):
+        """Runs fn(**kw); returns (stdout or 'EXIT n: stdout'). Writes land in self.sent as (method, path, json)."""
+        responses = responses or {}
+
+        def urlopen(req, timeout=None):
+            self.sent.append((req.get_method(), req.full_url.replace(kickoff.API, ''),
+                              json.loads(req.data.decode('utf-8')), req.get_header('Shortcut-token'),
+                              req.get_header('Content-type')))
+            return FakeResponse(json.dumps(responses.get(req.get_method(), {})).encode())
+
+        def api_get(path, token):
+            if path == '/workflows':
+                return [{'states': [{'id': 1, 'name': 'To Do '}, {'id': 2, 'name': 'Testing'}]},
+                        {'states': [{'id': 3, 'name': 'Testing'}, {'id': 4, 'name': 'Done'}]}]
+            return {'workflow_state_id': (gets or {}).get(path.split('/')[2], 1)}
+        buf = io.StringIO()
+        with mock.patch.object(kickoff.urllib.request, 'urlopen', urlopen), \
+                mock.patch.object(kickoff, 'api_get', api_get), \
+                mock.patch.object(kickoff, 'env', lambda: {'SHORTCUT_API_TOKEN': 'sekrit-token'}), \
+                contextlib.redirect_stdout(buf):
+            try:
+                fn(types.SimpleNamespace(**kw))
+            except SystemExit as e:
+                return f'EXIT {e.code}: {buf.getvalue()}'
+        return buf.getvalue()
+
+    def test_comment_posts_the_file_text_exactly_and_prints_the_id(self):
+        text = 'Pozdrav → emoji \U0001f600\n\n  indented line\n'
+        out = self.call(kickoff.cmd_comment, {'POST': {'id': 777}}, story_id='56709', parent=None,
+                        body_file=self.body_file(text.encode('utf-8')))
+        self.assertEqual(self.sent, [('POST', '/stories/56709/comments', {'text': text}, 'sekrit-token',
+                                      'application/json; charset=utf-8')])
+        self.assertIn('comment 777 on #56709', out)
+        self.assertNotIn('sekrit-token', out)
+
+    def test_comment_reply_sends_the_parent_id_as_an_int(self):
+        self.call(kickoff.cmd_comment, {'POST': {'id': 1}}, story_id='5', parent='999',
+                  body_file=self.body_file(b'a reply that is long enough'))
+        self.assertEqual(self.sent[0][2], {'text': 'a reply that is long enough', 'parent_id': 999})
+
+    def test_a_utf8_bom_is_not_sent(self):
+        self.call(kickoff.cmd_comment, {'POST': {'id': 1}}, story_id='5', parent=None,
+                  body_file=self.body_file(b'\xef\xbb\xbfhello there'))
+        self.assertEqual(self.sent[0][2]['text'], 'hello there')
+
+    def test_empty_missing_and_non_digit_inputs_fail_before_any_request(self):
+        for kw in ({'story_id': '5', 'body_file': self.body_file(b' \n', 'empty.md')},
+                   {'story_id': '5', 'body_file': os.path.join(self.tmp.name, 'nope.md')},
+                   {'story_id': '../members', 'body_file': self.body_file(b'text')},
+                   {'story_id': '5', 'parent': 'x', 'body_file': self.body_file(b'text')}):
+            kw.setdefault('parent', None)
+            self.assertIn('EXIT 1', self.call(kickoff.cmd_comment, **kw))
+        self.assertEqual(self.sent, [])
+
+    def test_http_error_exits_nonzero_with_the_status(self):
+        def urlopen(req, timeout=None):
+            raise http_error(403)
+        with mock.patch.object(kickoff.urllib.request, 'urlopen', urlopen), \
+                mock.patch.object(kickoff, 'env', lambda: {'SHORTCUT_API_TOKEN': 't'}), \
+                contextlib.redirect_stdout(io.StringIO()) as buf, self.assertRaises(SystemExit):
+            kickoff.cmd_describe(types.SimpleNamespace(story_id='5', body_file=self.body_file(b'text')))
+        self.assertIn('HTTP 403', buf.getvalue())
+
+    def test_describe_puts_only_the_description(self):
+        out = self.call(kickoff.cmd_describe, {'PUT': {'id': 56709, 'updated_at': '2026-11-16T10:00:00Z'}},
+                        story_id='56709', body_file=self.body_file('Opis č\n'.encode('utf-8')))
+        self.assertEqual(self.sent[0][:3], ('PUT', '/stories/56709', {'description': 'Opis č\n'}))
+        self.assertIn('#56709 description updated, updated_at 2026-11-16T10:00:00Z', out)
+
+    def test_move_by_id_prints_old_and_new_state_names(self):
+        out = self.call(kickoff.cmd_move, story_ids=['11', '12'], state='2', gets={'12': 4})
+        self.assertEqual([s[:3] for s in self.sent], [('PUT', '/stories/11', {'workflow_state_id': 2}),
+                                                      ('PUT', '/stories/12', {'workflow_state_id': 2})])
+        self.assertIn('#11: To Do -> Testing', out)
+        self.assertIn('#12: Done -> Testing', out)
+
+    def test_move_by_exact_name_and_a_story_already_there_is_left_alone(self):
+        out = self.call(kickoff.cmd_move, story_ids=['11', '12'], state='To Do', gets={'12': 2})
+        self.assertEqual([s[1] for s in self.sent], ['/stories/12'])
+        self.assertIn('#11: already To Do, left alone', out)
+
+    def test_move_refuses_an_ambiguous_or_unknown_state_without_writing(self):
+        for state in ('Testing', 'Nowhere', '999', 'testing'):
+            self.assertIn('EXIT 1', self.call(kickoff.cmd_move, story_ids=['11'], state=state))
+        self.assertEqual(self.sent, [])
+
+    def test_move_rejects_non_digit_ids(self):
+        self.assertIn('EXIT 1', self.call(kickoff.cmd_move, story_ids=['11', 'x'], state='4'))
+        self.assertEqual(self.sent, [])
+
+    def test_an_abbreviated_body_flag_is_rejected_so_the_hook_sees_every_text(self):
+        for sub in ('comment', 'describe'):
+            with mock.patch.object(sys, 'argv', ['kickoff.py', sub, '5', '--body', 'b.md']), \
+                    contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                kickoff.main()
+
+    def test_non_ascii_digits_are_not_ids(self):
+        self.assertIn('EXIT 1', self.call(kickoff.cmd_comment, story_id='5', parent='²', body_file=self.body_file(b'text')))
+        self.assertIn('EXIT 1', self.call(kickoff.cmd_move, story_ids=['٥'], state='4'))
+        self.assertEqual(self.sent, [])
+
+    def test_a_timeout_warns_that_the_write_may_have_landed(self):
+        def urlopen(req, timeout=None):
+            raise TimeoutError('timed out')
+        with mock.patch.object(kickoff.urllib.request, 'urlopen', urlopen), \
+                mock.patch.object(kickoff, 'env', lambda: {'SHORTCUT_API_TOKEN': 't'}), \
+                contextlib.redirect_stdout(io.StringIO()) as buf, self.assertRaises(SystemExit):
+            kickoff.cmd_comment(types.SimpleNamespace(story_id='5', parent=None, body_file=self.body_file(b'text')))
+        self.assertIn('may have gone through', buf.getvalue())
+
+    def test_cli_registers_the_three_commands(self):
+        for argv, fn, attrs in (
+                (['comment', '5', '--body-file', 'b.md', '--parent', '9'], 'cmd_comment', {'story_id': '5', 'parent': '9'}),
+                (['describe', '5', '--body-file', 'b.md'], 'cmd_describe', {'story_id': '5', 'body_file': 'b.md'}),
+                (['move', '5', '6', '--state', 'Testing'], 'cmd_move', {'story_ids': ['5', '6'], 'state': 'Testing'})):
+            with mock.patch.object(sys, 'argv', ['kickoff.py'] + argv), mock.patch.object(kickoff, fn) as called:
+                kickoff.main()
+            for k, v in attrs.items():
+                self.assertEqual(getattr(called.call_args[0][0], k), v)
+
+
 class Leftovers(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

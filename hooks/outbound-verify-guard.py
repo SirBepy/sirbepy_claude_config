@@ -1,8 +1,9 @@
 """PreToolUse hook: block outbound prose until 3 fresh subagents verified that exact text.
 
 Covers ticket writes (Shortcut, Linear: create, text-rewriting update, comment) and GitHub
-PR writes (create, title/body edit, comment, review with a body). The procedure that
-satisfies it lives in `refs/outbound-verify.md`.
+PR writes (create, title/body edit, comment, review with a body), plus `kickoff.py comment`
+and `kickoff.py describe`, which post a --body-file to Shortcut with a token the script reads
+itself. The procedure that satisfies it lives in `refs/outbound-verify.md`.
 
 No marker file on purpose: a marker is something Claude can write without dispatching
 anyone. The proof is read from the session transcript (`transcript_path` in the payload)
@@ -69,9 +70,18 @@ PROSE_KEYS = ("name", "description", "text", "title", "body")
 # Cheap gate so the ~every-shell-call matcher costs a regex, not a tokenize.
 # The Shortcut token names are there for python scripts that build their URL from a base.
 SHELL_PREFILTER_RE = re.compile(
-    r"shortcut\.com|linear\.app|github\.com|\bgh(?:\.exe)?\b|SHORTCUT_API_TOKEN|kickoff\.env|Shortcut-Token",
+    r"shortcut\.com|linear\.app|github\.com|\bgh(?:\.exe)?\b|SHORTCUT_API_TOKEN|kickoff\.env|Shortcut-Token|kickoff\.py",
     re.IGNORECASE,
 )
+# zng-kickoff subcommands (skills/zng-kickoff/scripts/kickoff.py) that send no prose; any other one is gated.
+KICKOFF_PROSE_COMMANDS = {"comment", "describe"}
+# What precedes a string that a shell then runs: `bash -c`, `-ec`, `/c`, eval, iex, -ArgumentList.
+SHELL_STRING_PREV_RE = re.compile(r"-[a-z]*c|-command|-encodedcommand|-argumentlist|/c|/k|eval|iex|invoke-expression")
+PIPE_TO_SHELL_RE = re.compile(r"\|\s*&?\s*(?:\S*[\\/])?(?:bash|sh|zsh|pwsh|powershell|iex|invoke-expression)(?:\.exe)?\b", re.IGNORECASE)
+KICKOFF_PROSE_FREE_COMMANDS = {
+    "leftovers", "drafts", "feed", "handle", "answered", "todos", "todo-verdict", "tickets",
+    "ticket-dismiss", "story", "move",
+}
 
 SHORTCUT_TOOL_RE = re.compile(r"^mcp__shortcut__stories-(create|update|create-comment|create-subtask|add-task|update-task)$")
 LINEAR_TOOL_RE = re.compile(r"^mcp__.*linear.*__.*(create_issue|issue.?create|update_issue|issue.?update|create_comment|comment.?create|save_issue|save_comment).*$", re.IGNORECASE)
@@ -554,10 +564,117 @@ def detect_rest(command: str, tokens: list, cwd: str | None, posix: bool = True)
     return Outbound(label, values, requires, found)
 
 
+def is_shell_string(tokens: list, i: int, shell_fed: bool) -> bool:
+    """Whether the whitespace-holding token tokens[i] is run as a command rather than being prose
+    (a commit message, a grep pattern) that happens to name kickoff.py."""
+    prev = tokens[i - 1].lower() if i else ""
+    return shell_fed or bool(SHELL_STRING_PREV_RE.fullmatch(prev)) or bool(re.search(r"\$\(|`", tokens[i]))
+
+
+def kickoff_calls(tokens: list, posix: bool, shell_fed: bool = False, substitutions_only: bool = False):
+    """Yield (subcommand, args) for each `kickoff.py <sub> ...`, args stopping at a separator.
+    A token that is itself a shell string (`bash -c '... kickoff.py ...'`, `eval "..."`, a `$(...)`,
+    or any string when the command pipes into a shell) is read too. `substitutions_only` reads
+    just the `$(...)` / backtick tokens: a display-only statement such as `echo "$(...)"` still
+    runs the substitution."""
+    for i, tok in enumerate(tokens):
+        if re.search(r"\s", tok) and "kickoff.py" in tok.lower():
+            if substitutions_only:
+                run = bool(re.search(r"\$\(|`", tok))
+            else:
+                run = is_shell_string(tokens, i, shell_fed)
+            if run:
+                yield from kickoff_calls(split_tokens(tok, posix), posix)
+        elif substitutions_only:
+            continue
+        elif basename(tok) == "kickoff.py":
+            j = i + 1
+            while j < len(tokens) and tokens[j].startswith("-"):  # `--` ends the options, `-h` sends nothing
+                j += 1
+            if j >= len(tokens):
+                continue
+            args = []
+            for t in tokens[j + 1:]:
+                if t in SEPARATORS:
+                    break
+                args.append(t)
+            yield tokens[j], args
+
+
+def kickoff_body_texts(path: str, cwd: str | None) -> list:
+    """The script opens a relative path from its own cwd, which a `cd` earlier in the same
+    command changes, so only an absolute path is something this hook can read the same way."""
+    if path.startswith("~") or not (Path(path).is_absolute() or MSYS_DRIVE_RE.match(path)):
+        raise Unverifiable(f"the kickoff.py --body-file path {path} is not absolute (no ~ or relative form)")
+    # Statement punctuation or a redirect can stay glued to an unquoted path, and the token no longer
+    # says whether it was quoted, so each reading that names a file is read and every text must be verified.
+    glued = [path.rstrip(";,)"), re.split(r"[;|&<>]", path)[0]]
+    texts = []
+    for candidate in dict.fromkeys([path, *glued]):
+        try:
+            texts.append(read_file(candidate, cwd))
+        except Unverifiable:
+            pass
+    if not texts:
+        raise Unverifiable(f"cannot read the body file {path}")
+    return texts
+
+
+def detect_kickoff(tokens: list, cwd: str | None, posix: bool = True, shell_fed: bool = False,
+                   raw_tokens: list | None = None) -> Outbound | None:
+    """`kickoff.py comment|describe <id> --body-file P` posts P to Shortcut with a token the
+    script reads itself, so no URL or header shows up in the command. Only the subcommands that
+    are known to carry no prose (reads, `move`) pass; anything else, a variable or a glob in
+    the subcommand slot included, is gated. A gated call without a readable --body-file (a
+    missing one, or an abbreviation of the flag) is flagged as prose the hook cannot see, which
+    denies it; kickoff.py itself rejects abbreviations."""
+    values: list = []
+    labels: list = []
+    every_call_has_a_file = True
+    calls = list(kickoff_calls(tokens, posix, shell_fed))
+    if raw_tokens is not None:
+        calls += list(kickoff_calls(raw_tokens, posix, substitutions_only=True))
+    for sub, args in calls:
+        # A shell operator can sit glued to the subcommand (`comment>log`, `story|cat`).
+        sub = re.split(r"[;|&()<>]", sub)[0]
+        # A path (`git add .../kickoff.py .../test_kickoff.py`) or an option (`--help`) is not a
+        # subcommand; a variable or glob in that slot could be one, so it is gated.
+        if sub in KICKOFF_PROSE_FREE_COMMANDS or not (sub in KICKOFF_PROSE_COMMANDS or re.search(r"[$`*?\[{]", sub)):
+            continue
+        if "-h" in args or "--help" in args:
+            continue  # argparse prints help and sends nothing
+        labels.append(f"kickoff.py {sub}")
+        files = flag_values(args, ("--body-file",))
+        abbreviated = any(
+            a.startswith("--b") and a.split("=", 1)[0] != "--body-file" and "--body-file".startswith(a.split("=", 1)[0])
+            for a in args
+        )
+        values += [t for p in files for t in kickoff_body_texts(p, cwd)]
+        every_call_has_a_file = every_call_has_a_file and bool(files) and not abbreviated
+    if not labels:
+        return None
+    return Outbound(" + ".join(labels), values, True, every_call_has_a_file)
+
+
+def merge_outbound(hits: list) -> Outbound | None:
+    """One call that holds several writes is checked for all of them: a gated hit must not mask
+    a second one in the same command."""
+    hits = [h for h in hits if h]
+    if len(hits) < 2:
+        return hits[0] if hits else None
+    return Outbound(
+        " + ".join(h.label for h in hits),
+        [v for h in hits for v in h.values],
+        any(h.requires_prose for h in hits),
+        all(h.found_any or not h.requires_prose for h in hits),
+    )
+
+
 def detect_shell(command: str, cwd: str | None, posix: bool) -> Outbound | None:
     if not SHELL_PREFILTER_RE.search(command):
         return None
     tokens = split_tokens(command, posix)
+    gh_hits: list = []
     for sub, args in gh_calls(tokens):
         if sub == "pr":
             hit = detect_gh_pr(args, cwd)
@@ -565,9 +682,16 @@ def detect_shell(command: str, cwd: str | None, posix: bool) -> Outbound | None:
             hit = detect_gh_api(args, cwd)
         else:
             hit = None
-        if hit:
-            return hit
-    return detect_rest(command, tokens, cwd, posix)
+        gh_hits.append(hit)
+    # A gh hit ends the search for REST writes, as it always has: a PR body that quotes a REST
+    # URL and a curl flag is prose about one, not a second write.
+    kickoff = detect_kickoff(
+        split_tokens(without_display_segments(command), posix), cwd, posix,
+        shell_fed=bool(PIPE_TO_SHELL_RE.search(command)), raw_tokens=tokens,
+    )
+    if any(gh_hits):
+        return merge_outbound(gh_hits + [kickoff])
+    return merge_outbound([kickoff, detect_rest(command, tokens, cwd, posix)])
 
 
 def detect(tool_name: str, tool_input: dict, cwd: str | None) -> Outbound | None:

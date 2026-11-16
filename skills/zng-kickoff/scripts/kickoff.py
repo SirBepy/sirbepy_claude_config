@@ -16,6 +16,12 @@ Subcommands:
   ticket-dismiss <story_id>... --reason T
   story <story_id>...               read-only: print each ticket with named state, owners, requester,
                                     epic, links, description and every comment with author and date
+  comment <story_id> --body-file P [--parent <comment_id>]
+                                    post P (UTF-8, sent as is) as a comment; prints the new comment id
+  describe <story_id> --body-file P replace the description with P; prints the story id and updated_at
+  move <story_id>... --state <id|exact name>
+                                    set the workflow state; prints old -> new per story
+  The token is read inside the script. comment and describe are gated by the outbound-verify hook.
 
 State lives in ~/.claude/state/zng-kickoff/ (gitignored, machine-local).
 """
@@ -643,6 +649,111 @@ def cmd_story(args):
         sys.exit(1)
 
 
+# ---------------------------------------------------------------- writes
+
+# The token is read here, never by Claude: a permission rule denies Claude reading ~/.claude/.env.
+# `comment` and `describe` send prose, so hooks/outbound-verify-guard.py gates them on the
+# --body-file content (it must match a 3/3-verified draft); `move` carries no prose and passes.
+
+def api_write(method, path, token, payload):
+    req = urllib.request.Request(
+        API + path, data=json.dumps(payload, ensure_ascii=False).encode('utf-8'), method=method,
+        headers={'Shortcut-Token': token, 'Content-Type': 'application/json; charset=utf-8'})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.load(r)
+
+
+def fail(msg):
+    print(msg)
+    sys.exit(1)
+
+
+def require_digits(ids, what='story ids'):
+    # isdigit() also accepts characters like a superscript two, which int() then rejects.
+    bad = [i for i in ids if not (str(i).isascii() and str(i).isdecimal())]
+    if bad:
+        fail(f'{what} are digits only, got: {", ".join(bad)}')
+
+
+def read_body(path):
+    # utf-8-sig matches how the outbound hook reads the same file, so the text sent is the text verified.
+    try:
+        with open(path, encoding='utf-8-sig') as f:
+            text = f.read()
+    except OSError as e:
+        fail(f'cannot read the body file {path}: {e}')
+    if not text.strip():
+        fail(f'the body file {path} is empty')
+    return text
+
+
+def write_or_fail(method, path, token, payload):
+    try:
+        return api_write(method, path, token, payload)
+    except urllib.error.HTTPError as e:
+        fail(f'{method} {path}: HTTP {e.code}: {e.read().decode(errors="replace")[:300]}')
+    except OSError as e:
+        # A timeout can land after Shortcut accepted the write, so a blind retry may duplicate it.
+        fail(f'{method} {path}: no answer ({e}); check the story before retrying, the write may have gone through')
+
+
+def cmd_comment(args):
+    require_digits([args.story_id])
+    if args.parent is not None:
+        require_digits([args.parent], 'comment ids')
+    text = read_body(args.body_file)
+    payload = {'text': text}
+    if args.parent is not None:
+        payload['parent_id'] = int(args.parent)
+    c = write_or_fail('POST', f'/stories/{args.story_id}/comments', env()['SHORTCUT_API_TOKEN'], payload)
+    print(f"comment {c['id']} on #{args.story_id}")
+
+
+def cmd_describe(args):
+    require_digits([args.story_id])
+    text = read_body(args.body_file)
+    s = write_or_fail('PUT', f'/stories/{args.story_id}', env()['SHORTCUT_API_TOKEN'], {'description': text})
+    print(f"#{s['id']} description updated, updated_at {s.get('updated_at')}")
+
+
+def resolve_state(wanted, names):
+    if wanted.isascii() and wanted.isdecimal():
+        if int(wanted) not in names:
+            fail(f'no workflow state with id {wanted}')
+        return int(wanted)
+    hits = [i for i, n in names.items() if n == wanted]
+    if len(hits) != 1:
+        known = ', '.join(sorted({n for n in names.values()}))
+        fail(f'state name {wanted!r} matches {len(hits)} states ({hits}); pass the id. Known names: {known}')
+    return hits[0]
+
+
+def cmd_move(args):
+    require_digits(args.story_ids)
+    token = env()['SHORTCUT_API_TOKEN']
+    names = state_names(token)
+    new = resolve_state(args.state, names)
+    failed = False
+    for sid_ in args.story_ids:
+        try:
+            old = api_get(f'/stories/{sid_}', token)['workflow_state_id']
+            if old == new:
+                print(f'#{sid_}: already {names.get(new, new)}, left alone')
+                continue
+            api_write('PUT', f'/stories/{sid_}', token, {'workflow_state_id': new})
+        except urllib.error.HTTPError as e:
+            print(f'#{sid_}: HTTP {e.code}: {e.read().decode(errors="replace")[:300]}')
+            failed = True
+            continue
+        except OSError as e:
+            print(f'#{sid_}: no answer ({e}); check its state before retrying')
+            failed = True
+            continue
+        print(f'#{sid_}: {names.get(old, old)} -> {names.get(new, new)}')
+    if failed:
+        sys.exit(1)
+
+
 def utf8_stdout(stream):
     # `python -I` ignores PYTHONIOENCODING, and a piped Windows stdout is cp1250 here, so one
     # arrow or emoji in a comment or ticket title would crash the whole run mid-print.
@@ -651,7 +762,7 @@ def utf8_stdout(stream):
 
 def main():
     utf8_stdout(sys.stdout)
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(allow_abbrev=False)
     sub = p.add_subparsers(dest='cmd', required=True)
     sub.add_parser('leftovers').set_defaults(fn=cmd_leftovers)
     sub.add_parser('drafts').set_defaults(fn=cmd_drafts)
@@ -679,6 +790,20 @@ def main():
     st = sub.add_parser('story')
     st.add_argument('story_ids', nargs='+')
     st.set_defaults(fn=cmd_story)
+    # allow_abbrev=False: the outbound hook only sees the exact `--body-file`, so `--body` must not alias it.
+    c = sub.add_parser('comment', allow_abbrev=False)
+    c.add_argument('story_id')
+    c.add_argument('--body-file', required=True)
+    c.add_argument('--parent', help='id of the comment to reply under')
+    c.set_defaults(fn=cmd_comment)
+    de = sub.add_parser('describe', allow_abbrev=False)
+    de.add_argument('story_id')
+    de.add_argument('--body-file', required=True)
+    de.set_defaults(fn=cmd_describe)
+    mv = sub.add_parser('move', allow_abbrev=False)
+    mv.add_argument('story_ids', nargs='+')
+    mv.add_argument('--state', required=True, help='workflow state id or exact state name')
+    mv.set_defaults(fn=cmd_move)
     d =sub.add_parser('ticket-dismiss')
     d.add_argument('story_ids', nargs='+')
     d.add_argument('--reason', required=True)

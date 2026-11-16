@@ -7,7 +7,11 @@
 Covers everything Claude itself posts to a tracker or a PR:
 
 - **Tickets** (Shortcut and Linear, MCP or REST/GraphQL): creation, title or description rewrites,
-  comments. A state move or self-assign carries no prose and passes untouched.
+  comments. A state move or self-assign carries no prose and passes untouched. Includes
+  `kickoff.py comment|describe <id> --body-file <path>` (token read inside the script): the
+  `--body-file` text (absolute path only) is what must match a verified draft; `kickoff.py move` passes.
+  Not caught, like any script: a renamed or globbed copy of it, a `python -c` that imports it or runs it through `subprocess`,
+  a body file swapped after the hook read it.
 - **GitHub PRs** (`gh pr create`, `gh pr edit` with a title/body, `gh pr comment`, `gh pr review`
   with a body, `gh api` writes to `pulls`/`issues/<n>/comments`, the GitHub MCP equivalents).
   `gh api .../issues/<n>/comments` is the PR conversation endpoint too, so a plain issue comment
