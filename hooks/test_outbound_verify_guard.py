@@ -414,6 +414,10 @@ def check_kickoff_approval_record() -> bool:
         cmd = {"command": f"python -I C:/Users/tecno/.claude/skills/zng-kickoff/scripts/kickoff.py comment 56709 --body-file {body.as_posix()}"}
         record = state / "approvals" / (hashlib.sha256(guard.normalize(CLAIM).encode("utf-8")).hexdigest() + ".json")
         t = ["2026-11-17T08:00:00.000Z", "2026-11-17T08:00:01.000Z", "2026-11-17T08:00:02.000Z"]
+        # kickoff.py's body_key must agree with the hook's key, or every record silently stops matching.
+        kick = _testlib.load_module("kick", Path(__file__).resolve().parent.parent / "skills" / "zng-kickoff" / "scripts" / "kickoff.py")
+        results.append(("the hook and kickoff.py hash a text to the same key",
+                        kick.body_key("  " + CLAIM + "\r\n") == hashlib.sha256(guard.normalize(CLAIM).encode("utf-8")).hexdigest()))
         results.append(("a passing post exits 0", run_hook(cmd, stamped(three_inline(CLAIM), t), env) == 0))
         results.append(("the record holds the third-latest verifier dispatch time",
                         record.is_file() and json.loads(record.read_text(encoding="utf-8")) == {"approved_at": t[0]}))

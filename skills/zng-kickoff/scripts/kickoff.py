@@ -805,7 +805,8 @@ def refuse_if_stale(story_id, approved, token):
         lines = '\n'.join(f'   {line}' for _, line in found)
         fail(f"REFUSED: #{story_id} changed after this text was approved ({approved.strftime('%Y-%m-%d %H:%M')} UTC):\n{lines}\n"
              'Re-read the ticket with `story`, fix the text if it is now wrong or redundant, then run a new verifier '
-             'round (refs/outbound-verify.md); a later approval lets the post through. Nothing posted.')
+             'round (refs/outbound-verify.md); the hook then records a later approval time and the post goes through. '
+             '--approved-at does not override an existing record. Nothing posted.')
 
 
 def cmd_comment(args):

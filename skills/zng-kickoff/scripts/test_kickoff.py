@@ -784,6 +784,27 @@ class StaleGuard(unittest.TestCase):
         self.assertIn('To Do -> Testing', out)
         self.assertEqual(self.sent, [])
 
+    def test_a_description_edit_by_someone_else_refuses_and_a_memberless_event_counts_as_automation(self):
+        # Shape read live from /stories/56709/history on 2026-11-17: story/update with changes.description.
+        self.approve(self.APPROVED)
+        self.history = [{'changed_at': '2026-11-17T09:00:00Z', 'member_id': self.BOB, 'actions': [
+            {'entity_type': 'story', 'action': 'update', 'changes': {'description': {'old': 'a', 'new': 'b'}}}]}]
+        self.assertIn('description edit by lenar', self.call(kickoff.cmd_comment))
+        self.history[0].pop('member_id')
+        self.assertIn('description edit by automation', self.call(kickoff.cmd_comment))
+        self.assertEqual(self.sent, [])
+
+    def test_a_follower_or_link_change_does_not_refuse(self):
+        self.approve(self.APPROVED)
+        self.history = [{'changed_at': '2026-11-17T09:00:00Z', 'member_id': self.BOB, 'actions': [
+            {'entity_type': 'story', 'action': 'update', 'changes': {'follower_ids': {'adds': ['x']}}}]}]
+        self.assertIn('comment 99001', self.call(kickoff.cmd_comment))
+
+    def test_the_hash_matches_the_one_the_outbound_hook_computes(self):
+        import hashlib
+        text = '  Merged,\r\n  ready   to test.\n'
+        self.assertEqual(kickoff.body_key(text), hashlib.sha256(b'Merged, ready to test.').hexdigest())
+
     def test_a_state_move_by_the_dev_does_not_count(self):
         self.approve(self.APPROVED)
         self.history = [{'changed_at': '2026-11-17T09:00:00Z', 'member_id': kickoff.DEV_UUID, 'actions': [
