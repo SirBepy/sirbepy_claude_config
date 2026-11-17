@@ -30,7 +30,8 @@ Before sending a `send_message`, delete:
 1. The first sentence, if it announces what is about to happen rather than what happened.
 2. The last sentence, if it recaps the bubble or asks whether anything else is needed.
 3. Any "by the way" sidebar. It is either its own bubble or it is nothing.
-4. Any hedging adverb carrying no information (perhaps, might, possibly). Keep a hedge that carries real uncertainty, since deleting that one manufactures confidence.
-5. Any idiom or figurative phrase (circle back, on the same page, get the ball rolling). Use the literal action instead.
+4. Anything the user already knows: what they just picked or said, what a card will ask them, what a sub's own card already shows. The same cut applies to drafts they will send: drop every sentence the recipient can infer.
+5. Any hedging adverb carrying no information (perhaps, might, possibly). Keep a hedge that carries real uncertainty, since deleting that one manufactures confidence.
+6. Any idiom or figurative phrase (circle back, on the same page, get the ball rolling). Use the literal action instead.
 
 Then check: reading only the first line and the last line, does the user know what happened and what, if anything, to do next? If yes, send.
