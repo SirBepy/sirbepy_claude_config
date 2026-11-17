@@ -501,6 +501,43 @@ def check_kickoff_e2e() -> bool:
         results.append(("move passes untouched", run_hook({"command": f"{script} move 56709 56710 --state 500018257"}, []) == 0))
         results.append(("move by state name passes untouched", run_hook({"command": f"{script} move 56709 --state Testing"}, []) == 0))
         results.append(("story read passes untouched", run_hook({"command": f"{script} story 56709"}, []) == 0))
+        # create: the title and the body file must sit inside ONE verified draft.
+        body.write_text(CLAIM + "\n", encoding="utf-8")
+        both = f"Title: {TITLE}\n\n{CLAIM}"
+        create = f'{script} create --title "{TITLE}" --body-file {path} --owner josipmui --label fe --relates 56709'
+        results.append(("create: unverified is blocked", run_hook({"command": create}, []) == 2))
+        results.append(("create: title and body in one verified draft clears", run_hook({"command": create}, three_inline(both)) == 0))
+        results.append(("create: the body verified alone does not cover the title", run_hook({"command": create}, three_inline(CLAIM)) == 2))
+        results.append(("create: title and body in two separate verified drafts is blocked", run_hook(
+            {"command": create}, three_inline(TITLE) + three_inline(CLAIM, start=10)) == 2))
+        results.append(("create: one FAIL on the shared draft blocks", run_hook({"command": create}, three_inline(both, ("PASS", "PASS", "FAIL"))) == 2))
+        results.append(("create: a different title than the verified one blocks", run_hook(
+            {"command": create.replace(TITLE, TITLE + " now")}, three_inline(both)) == 2))
+        results.append(("create: a short title is still checked against the draft", run_hook(
+            {"command": f'{script} create --title "WIP" --body-file {path}'}, three_inline(CLAIM)) == 2))
+        results.append(("create: a short title inside the verified draft clears", run_hook(
+            {"command": f'{script} create --title "WIP" --body-file {path}'}, three_inline(f"WIP\n\n{CLAIM}")) == 0))
+        results.append(("create: --title=VALUE form is read", run_hook(
+            {"command": f'{script} create --title="{TITLE}" --body-file {path}'}, three_inline(both)) == 0))
+        results.append(("create: no --title blocks", run_hook({"command": f"{script} create --body-file {path}"}, three_inline(both)) == 2))
+        results.append(("create: no --body-file blocks", run_hook({"command": f'{script} create --title "{TITLE}"'}, three_inline(both)) == 2))
+        results.append(("create: an abbreviated --title blocks", run_hook(
+            {"command": f'{script} create --ti "{TITLE}" --body-file {path}'}, three_inline(both)) == 2))
+        results.append(("create: a short title in a variable is not found in the draft", run_hook(
+            {"command": f"T=x; {script} create --title $T --body-file {path}"}, three_inline(both)) == 2))
+        results.append(("create: a relative body path is refused", run_hook(
+            {"command": f'{script} create --title "{TITLE}" --body-file reply.md'}, three_inline(both)) == 2))
+        for label, command, tool in (
+            ("a trailing variable that could override --title", f'A="--title EVIL"; {create} $A', "Bash"),
+            ("a trailing array expansion", f'A=(--title EVIL); {create} "${{A[@]}}"', "Bash"),
+            ("a trailing substitution", f'{create} $(echo --title EVIL)', "Bash"),
+            ("a PowerShell splat in the subcommand slot", f"$a=@('create','--title','EVIL','--body-file','{path}'); python -I {script.split(' ')[-1]} @a", "PowerShell"),
+            ("a PowerShell splat after the flags", f"{create} @extra", "PowerShell"),
+        ):
+            results.append((f"create: {label} is blocked even with the real text verified", run_hook({"command": command}, three_inline(both), tool_name=tool) == 2))
+        results.append(("create --help sends nothing", run_hook({"command": f"{script} create --help"}, []) == 0))
+        results.append(("create: a second create cannot hide behind a verified one", run_hook(
+            {"command": f'{create} && {script} create --title "{TITLE}" --body-file {tmp}/nope.md'}, three_inline(both)) == 2))
     ok = True
     for label, passed in results:
         ok = _testlib.report(passed, f"kickoff e2e: {label}") and ok

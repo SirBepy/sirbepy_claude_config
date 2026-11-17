@@ -545,6 +545,114 @@ class WriteCommands(unittest.TestCase):
                 self.assertEqual(getattr(called.call_args[0][0], k), v)
 
 
+class CreateCommand(unittest.TestCase):
+    """create, with urlopen mocked: no story is ever created for real."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.sent = []
+        self.body = os.path.join(self.tmp.name, 'body.md')
+        with open(self.body, 'wb') as f:
+            f.write('Opis → č\n'.encode('utf-8'))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def run_create(self, fail_on=None, **kw):
+        """Returns stdout, or 'EXIT n: stdout'. Writes land in self.sent as (method, path, json)."""
+        def urlopen(req, timeout=None):
+            path = req.full_url.replace(kickoff.API, '')
+            self.sent.append((req.get_method(), path, json.loads(req.data.decode('utf-8')), req.get_header('Shortcut-token')))
+            if path == fail_on:
+                raise http_error(422)
+            reply = {'id': 99001, 'app_url': 'https://app.shortcut.com/zirtue/story/99001'} if path == '/stories' else {}
+            return FakeResponse(json.dumps(reply).encode())
+
+        def api_get(path, token):
+            if path == '/workflows':
+                return [{'states': [{'id': 7, 'name': 'Backlog'}, {'id': 8, 'name': 'Testing'}]},
+                        {'states': [{'id': 9, 'name': 'Testing'}]}]
+            return [{'id': 'uuid-dev', 'profile': {'mention_name': 'josipmui'}}, {'id': 'uuid-p', 'profile': {'mention_name': 'peter'}}]
+        args = dict(title='FE: Add the thing', body_file=self.body, owner=None, state=None, epic=None,
+                    type='feature', label=[], relates=[])
+        args.update(kw)
+        buf = io.StringIO()
+        with mock.patch.object(kickoff.urllib.request, 'urlopen', urlopen), \
+                mock.patch.object(kickoff, 'api_get', api_get), \
+                mock.patch.object(kickoff, 'env', lambda: {'SHORTCUT_API_TOKEN': 'sekrit-token'}), \
+                contextlib.redirect_stdout(buf):
+            try:
+                kickoff.cmd_create(types.SimpleNamespace(**args))
+            except SystemExit as e:
+                return f'EXIT {e.code}: {buf.getvalue()}'
+        return buf.getvalue()
+
+    def test_minimal_create_posts_the_pinned_team_and_default_state_and_prints_id_and_url(self):
+        out = self.run_create()
+        self.assertEqual(self.sent, [('POST', '/stories', {
+            'name': 'FE: Add the thing', 'description': 'Opis → č\n', 'story_type': 'feature',
+            'group_id': kickoff.ENG_TEAM_ID, 'workflow_state_id': kickoff.ENG_TODO_STATE_ID}, 'sekrit-token')])
+        self.assertIn('#99001 created: https://app.shortcut.com/zirtue/story/99001', out)
+        self.assertNotIn('sekrit-token', out)
+
+    def test_every_option_lands_in_the_payload_and_each_relates_becomes_a_link(self):
+        out = self.run_create(owner='josipmui', state='Backlog', epic='53696', type='bug',
+                              label=['fe', 'urgent'], relates=['56709', '56710'])
+        story = self.sent[0][2]
+        self.assertEqual((story['owner_ids'], story['workflow_state_id'], story['epic_id'], story['story_type'], story['labels']),
+                         (['uuid-dev'], 7, 53696, 'bug', [{'name': 'fe'}, {'name': 'urgent'}]))
+        self.assertEqual([s[:3] for s in self.sent[1:]], [
+            ('POST', '/story-links', {'subject_id': 99001, 'object_id': 56709, 'verb': 'relates to'}),
+            ('POST', '/story-links', {'subject_id': 99001, 'object_id': 56710, 'verb': 'relates to'})])
+        self.assertIn('#99001 relates to #56710', out)
+
+    def test_bad_input_fails_before_any_request(self):
+        for kw in ({'title': '  '}, {'title': 'two\nlines'}, {'relates': ['x']}, {'epic': '5a'},
+                   {'state': 'Testing'}, {'state': 'Nowhere'}, {'owner': 'nobody'},
+                   {'body_file': os.path.join(self.tmp.name, 'nope.md')}):
+            self.assertIn('EXIT 1', self.run_create(**kw), kw)
+        self.assertEqual(self.sent, [])
+
+    def test_duplicate_relates_ids_link_once(self):
+        self.run_create(relates=['56709', '56709'])
+        self.assertEqual([s[1] for s in self.sent], ['/stories', '/story-links'])
+
+    def test_an_unreachable_relates_story_stops_everything_before_the_post(self):
+        def api_get(path, token):
+            raise http_error(404)
+        with mock.patch.object(kickoff, 'api_get', api_get), mock.patch.object(kickoff, 'env', lambda: {'SHORTCUT_API_TOKEN': 't'}), \
+                mock.patch.object(kickoff.urllib.request, 'urlopen', side_effect=AssertionError('posted')), \
+                contextlib.redirect_stdout(io.StringIO()) as buf, self.assertRaises(SystemExit):
+            kickoff.cmd_create(types.SimpleNamespace(title='T', body_file=self.body, owner=None, state=None, epic=None,
+                                                     type='feature', label=[], relates=['5']))
+        self.assertIn('nothing created', buf.getvalue())
+
+    def test_a_failed_story_post_exits_nonzero_and_links_nothing(self):
+        out = self.run_create(fail_on='/stories', relates=['56709'])
+        self.assertIn('HTTP 422', out)
+        self.assertEqual([s[1] for s in self.sent], ['/stories'])
+
+    def test_a_failed_link_keeps_the_created_id_in_the_output(self):
+        out = self.run_create(fail_on='/story-links', relates=['56709'])
+        self.assertIn('#99001 created', out)
+        self.assertIn('EXIT 1', out)
+
+    def test_cli_registers_create_and_rejects_an_abbreviated_flag(self):
+        argv = ['kickoff.py', 'create', '--title', 'T', '--body-file', 'b.md', '--label', 'a', '--label', 'b',
+                '--relates', '5', '--relates', '6', '--epic', '9', '--type', 'chore', '--owner', 'peter', '--state', 'Backlog']
+        with mock.patch.object(sys, 'argv', argv), mock.patch.object(kickoff, 'cmd_create') as called:
+            kickoff.main()
+        a = called.call_args[0][0]
+        self.assertEqual((a.title, a.label, a.relates, a.epic, a.type, a.owner, a.state),
+                         ('T', ['a', 'b'], ['5', '6'], '9', 'chore', 'peter', 'Backlog'))
+        with mock.patch.object(sys, 'argv', ['kickoff.py', 'create', '--ti', 'T', '--body-file', 'b.md']), \
+                contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            kickoff.main()
+        with mock.patch.object(sys, 'argv', ['kickoff.py', 'create', '--title', 'T', '--body-file', 'b.md', '--type', 'epic']), \
+                contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            kickoff.main()
+
+
 class Leftovers(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

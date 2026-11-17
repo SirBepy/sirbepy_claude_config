@@ -21,7 +21,11 @@ Subcommands:
   describe <story_id> --body-file P replace the description with P; prints the story id and updated_at
   move <story_id>... --state <id|exact name>
                                     set the workflow state; prints old -> new per story
-  The token is read inside the script. comment and describe are gated by the outbound-verify hook.
+  create --title T --body-file P [--owner MENTION] [--state <id|exact name>] [--epic ID]
+         [--type feature|bug|chore] [--label NAME]... [--relates STORY_ID]...
+                                    create a story in the ZNG ENG team (default state To Do, type feature);
+                                    prints the new id and its app URL, then links each --relates
+  The token is read inside the script. comment, describe and create are gated by the outbound-verify hook.
 
 State lives in ~/.claude/state/zng-kickoff/ (gitignored, machine-local).
 """
@@ -45,6 +49,9 @@ ENV_PATH = os.path.expanduser('~/.claude/.env')
 # Identity and state ids: ~/.claude/refs/shortcut-api.md
 DEV_UUID = '699c76fe-9076-4424-ba22-2bb3534f417e'
 DEV_MENTION = 'josipmui'
+# Pinned in skills/ticket/shortcut.md ("Pinned identity and defaults").
+ENG_TEAM_ID = '6880fd7c-2327-429c-9483-f1490a6cfed3'
+ENG_TODO_STATE_ID = 500018254
 PICKUP_OWNERS = [DEV_MENTION, 'peter']
 UNSTARTED_STATES = {'Backlog', 'To Do'}
 OFF_PLATE_STATES = {'Complete', "Won't do", 'Ready for deploy'}
@@ -652,8 +659,8 @@ def cmd_story(args):
 # ---------------------------------------------------------------- writes
 
 # The token is read here, never by Claude: a permission rule denies Claude reading ~/.claude/.env.
-# `comment` and `describe` send prose, so hooks/outbound-verify-guard.py gates them on the
-# --body-file content (it must match a 3/3-verified draft); `move` carries no prose and passes.
+# `comment`, `describe` and `create` send prose, so hooks/outbound-verify-guard.py gates them on the
+# --body-file content (and, for `create`, the --title) matching a 3/3-verified draft; `move` carries no prose and passes.
 
 def api_write(method, path, token, payload):
     req = urllib.request.Request(
@@ -757,6 +764,57 @@ def cmd_move(args):
         sys.exit(1)
 
 
+def resolve_owner(mention, token):
+    try:
+        members = member_names(token)
+    except (urllib.error.HTTPError, OSError) as e:
+        fail(f'cannot read the members: {e}')
+    hits = [i for i, m in members.items() if m == mention]
+    if len(hits) != 1:
+        known = ', '.join(sorted(m for m in members.values() if m))
+        fail(f'owner {mention!r} matches {len(hits)} members; pass a mention name. Known: {known}')
+    return hits[0]
+
+
+def cmd_create(args):
+    title = args.title.strip()
+    if not title or '\n' in title or '\r' in title:
+        fail('--title must be one non-empty line')
+    require_digits(args.relates, 'story ids')
+    args.relates = list(dict.fromkeys(args.relates))
+    if args.epic is not None:
+        require_digits([args.epic], 'epic ids')
+    text = read_body(args.body_file)
+    token = env()['SHORTCUT_API_TOKEN']
+    state = ENG_TODO_STATE_ID
+    if args.state is not None:
+        try:
+            state = resolve_state(args.state, state_names(token))
+        except (urllib.error.HTTPError, OSError) as e:
+            fail(f'cannot read the workflow states: {e}')
+    for rel in args.relates:
+        # A bad id found after the POST would leave the story created and only partly linked.
+        try:
+            api_get(f'/stories/{rel}', token)
+        except urllib.error.HTTPError as e:
+            fail(f'--relates #{rel}: HTTP {e.code}, nothing created')
+        except OSError as e:
+            fail(f'--relates #{rel}: no answer ({e}), nothing created')
+    payload = {'name': title, 'description': text, 'story_type': args.type, 'group_id': ENG_TEAM_ID,
+               'workflow_state_id': state}
+    if args.owner:
+        payload['owner_ids'] = [resolve_owner(args.owner, token)]
+    if args.epic is not None:
+        payload['epic_id'] = int(args.epic)
+    if args.label:
+        payload['labels'] = [{'name': n} for n in args.label]
+    s = write_or_fail('POST', '/stories', token, payload)
+    print(f"#{s['id']} created: {s.get('app_url')}")
+    for rel in args.relates:
+        write_or_fail('POST', '/story-links', token, {'subject_id': s['id'], 'object_id': int(rel), 'verb': 'relates to'})
+        print(f"#{s['id']} relates to #{rel}")
+
+
 def utf8_stdout(stream):
     # `python -I` ignores PYTHONIOENCODING, and a piped Windows stdout is cp1250 here, so one
     # arrow or emoji in a comment or ticket title would crash the whole run mid-print.
@@ -807,6 +865,16 @@ def main():
     mv.add_argument('story_ids', nargs='+')
     mv.add_argument('--state', required=True, help='workflow state id or exact state name')
     mv.set_defaults(fn=cmd_move)
+    cr = sub.add_parser('create', allow_abbrev=False)
+    cr.add_argument('--title', required=True)
+    cr.add_argument('--body-file', required=True)
+    cr.add_argument('--owner', help='mention name, e.g. josipmui')
+    cr.add_argument('--state', help='workflow state id or exact state name (default: ENG To Do)')
+    cr.add_argument('--epic', help='epic id')
+    cr.add_argument('--type', choices=['feature', 'bug', 'chore'], default='feature')
+    cr.add_argument('--label', action='append', default=[], help='label name, repeatable')
+    cr.add_argument('--relates', action='append', default=[], help='story id to link with "relates to", repeatable')
+    cr.set_defaults(fn=cmd_create)
     d =sub.add_parser('ticket-dismiss')
     d.add_argument('story_ids', nargs='+')
     d.add_argument('--reason', required=True)

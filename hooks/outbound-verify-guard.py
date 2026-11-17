@@ -1,9 +1,9 @@
 """PreToolUse hook: block outbound prose until 3 fresh subagents verified that exact text.
 
 Covers ticket writes (Shortcut, Linear: create, text-rewriting update, comment) and GitHub
-PR writes (create, title/body edit, comment, review with a body), plus `kickoff.py comment`
-and `kickoff.py describe`, which post a --body-file to Shortcut with a token the script reads
-itself. The procedure that satisfies it lives in `refs/outbound-verify.md`.
+PR writes (create, title/body edit, comment, review with a body), plus `kickoff.py comment`,
+`describe` and `create`, which post a --body-file (and `create` a --title) to Shortcut with a
+token the script reads itself. The procedure that satisfies it lives in `refs/outbound-verify.md`.
 
 No marker file on purpose: a marker is something Claude can write without dispatching
 anyone. The proof is read from the session transcript (`transcript_path` in the payload)
@@ -74,7 +74,7 @@ SHELL_PREFILTER_RE = re.compile(
     re.IGNORECASE,
 )
 # zng-kickoff subcommands (skills/zng-kickoff/scripts/kickoff.py) that send no prose; any other one is gated.
-KICKOFF_PROSE_COMMANDS = {"comment", "describe"}
+KICKOFF_PROSE_COMMANDS = {"comment", "describe", "create"}
 # What precedes a string that a shell then runs: `bash -c`, `-ec`, `/c`, eval, iex, -ArgumentList.
 INTERPRETERS_RE = re.compile(r"python[\d.]*w?|py|uv|pipx")
 VARIABLE_REF_RE = re.compile(r"[\"']?\$(?:\w+|\{\w+\})[\"']?")
@@ -154,11 +154,14 @@ class Unverifiable(Exception):
 
 
 class Outbound:
-    def __init__(self, label: str, values: list, requires_prose: bool, found_any: bool):
+    def __init__(self, label: str, values: list, requires_prose: bool, found_any: bool, groups: list | None = None):
         self.label = label
         self.values = values
         self.requires_prose = requires_prose
         self.found_any = found_any
+        # Each group is the texts of ONE posting (a story's title and body): all of them, of any
+        # length, must sit inside the same cleared draft, not each in some draft.
+        self.groups = groups or []
 
 
 def collect_prose(obj, out: list) -> bool:
@@ -656,6 +659,20 @@ def kickoff_body_texts(path: str, cwd: str | None) -> list:
     return texts
 
 
+def reject_opaque_args(args: list) -> None:
+    """argparse takes the LAST `--title`/`--body-file`, so a variable, array or splat that expands
+    to one after the literal flags would override what this hook read. Only the values of the two
+    flags it reads are exempt (a variable there never matches a verified draft anyway)."""
+    skip = False
+    for t in args:
+        if skip:
+            skip = False
+        elif t in ("--title", "--body-file"):
+            skip = True
+        elif re.search(r"[$`]", t) or t.startswith("@"):
+            raise Unverifiable(f"the kickoff.py argument {t} is a variable, substitution or splat the hook cannot expand")
+
+
 def detect_kickoff(tokens: list, cwd: str | None, posix: bool = True, shell_fed: bool = False,
                    raw_tokens: list | None = None) -> Outbound | None:
     """`kickoff.py comment|describe <id> --body-file P` posts P to Shortcut with a token the
@@ -666,6 +683,7 @@ def detect_kickoff(tokens: list, cwd: str | None, posix: bool = True, shell_fed:
     denies it; kickoff.py itself rejects abbreviations."""
     values: list = []
     labels: list = []
+    groups: list = []
     every_call_has_a_file = True
     calls = list(kickoff_calls(tokens, posix, shell_fed))
     if raw_tokens is not None:
@@ -675,21 +693,34 @@ def detect_kickoff(tokens: list, cwd: str | None, posix: bool = True, shell_fed:
         sub = re.split(r"[;|&()<>]", sub)[0]
         # A path (`git add .../kickoff.py .../test_kickoff.py`) or an option (`--help`) is not a
         # subcommand; a variable or glob in that slot could be one, so it is gated.
-        if sub in KICKOFF_PROSE_FREE_COMMANDS or not (sub in KICKOFF_PROSE_COMMANDS or re.search(r"[$`*?\[{]", sub)):
+        if sub in KICKOFF_PROSE_FREE_COMMANDS or not (sub in KICKOFF_PROSE_COMMANDS or re.search(r"[$`*?\[{@]", sub)):
             continue
         if args and args[0] in ("-h", "--help"):
             continue  # argparse prints help and exits; a later -h belongs to some other statement
         labels.append(f"kickoff.py {sub}")
+        reject_opaque_args(args)
         files = flag_values(args, ("--body-file",))
         abbreviated = any(
             a.startswith("--b") and a.split("=", 1)[0] != "--body-file" and "--body-file".startswith(a.split("=", 1)[0])
             for a in args
         )
-        values += [t for p in files for t in kickoff_body_texts(p, cwd)]
+        bodies = [t for p in files for t in kickoff_body_texts(p, cwd)]
+        values += bodies
         every_call_has_a_file = every_call_has_a_file and bool(files) and not abbreviated
+        if sub == "create" or re.search(r"[$`*?\[{]", sub):
+            # `create` carries a title as well; a variable subcommand could be it, so it needs one too.
+            titles = flag_values(args, ("--title",))
+            title_abbreviated = any(
+                a.startswith("--t") and a.split("=", 1)[0] != "--title" and "--title".startswith(a.split("=", 1)[0])
+                for a in args
+            )
+            values += titles
+            every_call_has_a_file = every_call_has_a_file and (bool(titles) or sub != "create") and not title_abbreviated
+            if titles:
+                groups.append(titles + bodies)
     if not labels:
         return None
-    return Outbound(" + ".join(labels), values, True, every_call_has_a_file)
+    return Outbound(" + ".join(labels), values, True, every_call_has_a_file, groups)
 
 
 def merge_outbound(hits: list) -> Outbound | None:
@@ -703,6 +734,7 @@ def merge_outbound(hits: list) -> Outbound | None:
         [v for h in hits for v in h.values],
         any(h.requires_prose for h in hits),
         all(h.found_any or not h.requires_prose for h in hits),
+        [g for h in hits for g in h.groups],
     )
 
 
@@ -743,6 +775,19 @@ def detect(tool_name: str, tool_input: dict, cwd: str | None) -> Outbound | None
     return None
 
 
+def uncovered_together(groups: list, tally: dict) -> list:
+    """(snippet, reason) for each group no single cleared draft holds whole."""
+    cleared = [d for d, c in tally.items() if c["PASS"] >= REQUIRED_PASSES and c["FAIL"] == 0]
+    misses = []
+    for group in groups:
+        norms = [normalize(v) for v in group]
+        if all(norms) and any(all(n in d for n in norms) for d in cleared):
+            continue
+        misses.append((" | ".join(n if len(n) <= 40 else n[:37] + "..." for n in norms),
+                       "the title and the body must sit inside one draft verified 3/3 with zero FAIL"))
+    return misses
+
+
 def main() -> None:
     payload = read_payload()
     tool_name = payload.get("tool_name", "") or ""
@@ -773,7 +818,7 @@ def main() -> None:
         )
 
     checked = [v for v in outbound.values if len(normalize(v)) >= MIN_PROSE_CHARS]
-    if not checked:
+    if not checked and not outbound.groups:
         sys.exit(0)
 
     transcript_path = payload.get("transcript_path") or ""
@@ -781,7 +826,8 @@ def main() -> None:
         sys.stderr.write("[outbound-verify-guard] no readable transcript_path in payload, failing open.\n")
         sys.exit(0)
 
-    misses = uncovered(checked, load_verdicts(transcript_path))
+    tally = load_verdicts(transcript_path)
+    misses = uncovered(checked, tally) + uncovered_together(outbound.groups, tally)
     if not misses:
         sys.exit(0)
 
