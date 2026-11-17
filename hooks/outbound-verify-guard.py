@@ -636,10 +636,11 @@ def kickoff_args(tokens: list, j: int):
     rest = tokens[j + 1:]
     for k, t in enumerate(rest):
         if t in SEPARATORS:
-            # A quoted `';'` is the same token as a real one, and argparse reads the flags after it.
-            # A real separator is never followed by a flag, so one that is must have been quoted.
-            if k + 1 < len(rest) and rest[k + 1].startswith("-"):
-                raise Unverifiable(f"a {t!r} argument is followed by {rest[k + 1]}, which could hide a flag from the hook")
+            # A quoted `';'` is the same token as a real one, and argparse reads everything after it.
+            # A real separator never follows a flag (`--label ';'`) or precedes one (`; --title`),
+            # so either neighbour means it was a quoted flag value.
+            if (k and rest[k - 1].startswith("-")) or (k + 1 < len(rest) and rest[k + 1].startswith("-")):
+                raise Unverifiable(f"a {t!r} argument sits next to a flag, which could hide later flags from the hook")
             break
         args.append(t)
     yield tokens[j], args
@@ -664,7 +665,7 @@ def kickoff_body_texts(path: str, cwd: str | None) -> list:
     return texts
 
 
-REDIRECT_RE = re.compile(r"^(?:\d|\*|&)?>>?")
+REDIRECT_RE = re.compile(r"^(?:\d|\*|&)?(?:>>?|<)")
 
 
 def reject_opaque_args(sub: str, args: list) -> None:
@@ -672,18 +673,21 @@ def reject_opaque_args(sub: str, args: list) -> None:
     to one after the literal flags would override what this hook read. A redirect target and a
     variable story id (`comment $id ...`) cannot, so they pass; a title value is the one place an
     `@` is fine, but a `$` or backtick there would still be expanded by the shell."""
-    after_title = after_redirect = False
+    after_title = after_redirect = after_flag = False
     for k, t in enumerate(args):
         at_ok, after_title = after_title, t == "--title"
+        value_of_flag, after_flag = after_flag, t.startswith("-")
         if after_redirect:
             after_redirect = False
             continue
-        if REDIRECT_RE.match(t) and not at_ok:
+        # A quoted `'>'` is the same token as a redirect: right after a flag it is that flag's value.
+        if REDIRECT_RE.match(t) and not value_of_flag:
             after_redirect = t == REDIRECT_RE.match(t).group(0)
             continue
         if k == 0 and sub != "create" and VARIABLE_REF_RE.fullmatch(t):
             continue
-        if re.search(r"[$`]", t) or (t.startswith("@") and not at_ok):
+        # Brace and glob patterns expand to extra flags too; a title value must match a draft anyway.
+        if re.search(r"[$`]", t) or (not at_ok and (t.startswith("@") or re.search(r"[{*?\[]", t))):
             raise Unverifiable(f"the kickoff.py argument {t} is a variable, substitution or splat the hook cannot expand")
 
 
@@ -756,6 +760,9 @@ def detect_shell(command: str, cwd: str | None, posix: bool) -> Outbound | None:
     if not SHELL_PREFILTER_RE.search(command):
         return None
     tokens = split_tokens(command, posix)
+    # The shell deletes a backslash (backtick in PowerShell) before a newline, which can split a flag
+    # name across lines; shlex keeps the pieces apart.
+    joined = re.sub(r"\\\r?\n" if posix else r"`\r?\n", "", command)
     gh_hits: list = []
     for sub, args in gh_calls(tokens):
         if sub == "pr":
@@ -768,7 +775,7 @@ def detect_shell(command: str, cwd: str | None, posix: bool) -> Outbound | None:
     # A gh hit ends the search for REST writes, as it always has: a PR body that quotes a REST
     # URL and a curl flag is prose about one, not a second write.
     kickoff = detect_kickoff(
-        split_tokens(without_display_segments(command), posix), cwd, posix,
+        split_tokens(without_display_segments(joined), posix), cwd, posix,
         shell_fed=bool(PIPE_TO_SHELL_RE.search(command)), raw_tokens=tokens,
     )
     if any(gh_hits):

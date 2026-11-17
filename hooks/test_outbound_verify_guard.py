@@ -539,6 +539,22 @@ def check_kickoff_e2e() -> bool:
         for sep in (";", "&&", "|", "&"):
             results.append((f"create: a quoted {sep} cannot hide a later --title from the hook", run_hook(
                 {"command": evil.replace('";"', f'"{sep}"')}, three_inline(both)) == 2))
+        for label, command in (
+            ("a quoted ; then a variable that holds flags", f'A="--title EVIL --body-file {tmp}/evil.md"; {create} --label ";" $A'),
+            ("a quoted ; then a substitution", f'{create} --label ";" $(echo --title EVIL --body-file {tmp}/evil.md)'),
+            ("a quoted > skips nothing", f'A="--title EVIL --body-file {tmp}/evil.md"; {create} --label ">" $A'),
+            ("a quoted 2> skips nothing", f'A="--title EVIL --body-file {tmp}/evil.md"; {create} --label "2>" $A'),
+            ("a brace expansion that adds flags", f'{create} {{--title,EVIL}} {{--body-file,{tmp}/evil.md}}'),
+            ("a glob in an argument", f'{create} --label x* --body-file {tmp}/e*.md'),
+            ("a flag name split by a backslash-newline", f'{create} --ti\\\ntle EVIL --body-fi\\\nle {tmp}/evil.md'),
+        ):
+            results.append((f"create: {label} is blocked even with the real text verified", run_hook({"command": command}, three_inline(both)) == 2))
+        results.append(("create: a backslash-newline between flags is still read and clears", run_hook(
+            {"command": f'{script} create \\\n  --title "{TITLE}" \\\n  --body-file {path}'}, three_inline(both)) == 0))
+        results.append(("create: a trailing real statement after the call still clears", run_hook(
+            {"command": f'{create}; echo done $HOME'}, three_inline(both)) == 0))
+        results.append(("comment: a < input redirect with a variable clears", run_hook(
+            {"command": f"{script} comment 1 --body-file {path} < $IN"}, three_inline(CLAIM)) == 0))
         results.append(("comment: a quoted ; cannot hide a later --body-file", run_hook(
             {"command": f'{script} comment 1 --body-file {path} --parent ";" --body-file {tmp}/evil.md'}, three_inline(CLAIM)) == 2))
         results.append(("create: a $ in a double-quoted title is not verified as literal text", run_hook(
