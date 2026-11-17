@@ -588,6 +588,8 @@ def cmd_mine(args):
     token = env()['SHORTCUT_API_TOKEN']
     states = state_names(token)
     wanted = args.state.strip()
+    if wanted not in states.values():
+        fail(f'no workflow state named {wanted!r}. Known names: {", ".join(sorted(set(states.values())))}')
     # state: is a fuzzy server-side filter, so the state name and owner are re-checked locally.
     hits = [s for s in search(token, f'owner:{DEV_MENTION} !is:archived state:"{wanted}"', cap=500)
             if states.get(s['workflow_state_id']) == wanted and DEV_UUID in s['owner_ids']]

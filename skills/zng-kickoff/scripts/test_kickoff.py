@@ -328,6 +328,10 @@ class MineCommand(unittest.TestCase):
         self.assertIn('owner:josipmui', queries[0])
         self.assertIn('state:"In Progress"', queries[0])
 
+    def test_an_unknown_state_name_fails_instead_of_printing_a_false_zero(self):
+        with self.assertRaises(SystemExit):
+            self.run_mine([self.story(1, 1)], state='in progress')
+
     def test_prints_a_zero_count_when_nothing_matches(self):
         out, _ = self.run_mine([])
         self.assertEqual(out.strip(), '0 stories owned by josipmui in In Progress')
