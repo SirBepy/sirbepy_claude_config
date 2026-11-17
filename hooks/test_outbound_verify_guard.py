@@ -553,6 +553,25 @@ def check_kickoff_e2e() -> bool:
             {"command": f'{script} create \\\n  --title "{TITLE}" \\\n  --body-file {path}'}, three_inline(both)) == 0))
         results.append(("create: a trailing real statement after the call still clears", run_hook(
             {"command": f'{create}; echo done $HOME'}, three_inline(both)) == 0))
+        ps_script = f"python -I {script.split(' ')[-1]}"
+        for label, command in (
+            ("a flag name spliced with empty quotes", f'{ps_script} create --title "{TITLE}" --body-file {path} --ti""tle EVIL'),
+            ("a body flag spliced with empty quotes", f"{ps_script} create --title \"{TITLE}\" --body-file {path} --body-fi''le {tmp}/evil.md"),
+            ("a parenthesised expression that builds a flag", f"{ps_script} create --title \"{TITLE}\" --body-file {path} ('--ti'+'tle') EVIL"),
+        ):
+            results.append((f"PowerShell create: {label} is blocked even with the real text verified", run_hook(
+                {"command": command}, three_inline(both), tool_name="PowerShell") == 2))
+        results.append(("PowerShell comment: a parenthesised flag is blocked", run_hook(
+            {"command": f"{ps_script} comment 1 --body-file {path} ('--body'+'-file') {tmp}/evil.md"}, three_inline(CLAIM), tool_name="PowerShell") == 2))
+        for label, command in (
+            ("a boolean flag before a pipe on a read", f"{script} feed --show-answered | head -5"),
+            ("a boolean flag before && on a read", f"{script} feed --show-answered && echo ok"),
+            ("git diff naming the script before a flag and a pipe", "git diff HEAD -- a/kickoff.py b/other.py --stat | head"),
+        ):
+            results.append((f"{label} is not denied", run_hook({"command": command}, []) == 0))
+        for title in ("Why does it fail?", "[FE] Fix x"):
+            results.append((f"create: --title=\"{title}\" (the = form) with a glob character clears", run_hook(
+                {"command": f'{script} create --title="{title}" --body-file {path}'}, three_inline(f"{title}\n\n{CLAIM}")) == 0))
         results.append(("comment: a < input redirect with a variable clears", run_hook(
             {"command": f"{script} comment 1 --body-file {path} < $IN"}, three_inline(CLAIM)) == 0))
         results.append(("comment: a quoted ; cannot hide a later --body-file", run_hook(

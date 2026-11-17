@@ -614,7 +614,7 @@ class CreateCommand(unittest.TestCase):
         self.assertEqual(self.sent, [])
 
     def test_duplicate_relates_ids_link_once(self):
-        self.run_create(relates=['56709', '56709'])
+        self.run_create(relates=['56709', '56709', '056709'])
         self.assertEqual([s[1] for s in self.sent], ['/stories', '/story-links'])
 
     def test_an_unreachable_relates_story_stops_everything_before_the_post(self):

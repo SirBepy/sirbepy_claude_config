@@ -639,7 +639,10 @@ def kickoff_args(tokens: list, j: int):
             # A quoted `';'` is the same token as a real one, and argparse reads everything after it.
             # A real separator never follows a flag (`--label ';'`) or precedes one (`; --title`),
             # so either neighbour means it was a quoted flag value.
-            if (k and rest[k - 1].startswith("-")) or (k + 1 < len(rest) and rest[k + 1].startswith("-")):
+            # Only for a call that could carry prose: `feed --show-answered | head` is a plain read.
+            head = re.split(r"[;|&()<>]", tokens[j])[0]
+            gated = head in KICKOFF_PROSE_COMMANDS or bool(re.search(r"[$`*?\[{@]", head))
+            if gated and ((k and rest[k - 1].startswith("-")) or (k + 1 < len(rest) and rest[k + 1].startswith("-"))):
                 raise Unverifiable(f"a {t!r} argument sits next to a flag, which could hide later flags from the hook")
             break
         args.append(t)
@@ -686,6 +689,16 @@ def reject_opaque_args(sub: str, args: list) -> None:
             continue
         if k == 0 and sub != "create" and VARIABLE_REF_RE.fullmatch(t):
             continue
+        # A flag name that is not plain (`--ti""tle`, `--ti''tle`) is spliced into a real one by the shell.
+        if t.startswith("-") and not at_ok and not re.fullmatch(r"-{1,2}[A-Za-z][A-Za-z0-9-]*(?:=.*)?", t, re.DOTALL):
+            raise Unverifiable(f"the kickoff.py argument {t} is not a plain flag the hook can read")
+        if t.startswith("--title="):
+            # The `=` form is a title value: exempt from the glob and `@` checks like the spaced form.
+            if re.search(r"[$`]", t):
+                raise Unverifiable(f"the kickoff.py title {t} holds a variable or substitution")
+            continue
+        if t.startswith("("):
+            raise Unverifiable(f"the kickoff.py argument {t} is an expression the hook cannot evaluate")
         # Brace and glob patterns expand to extra flags too; a title value must match a draft anyway.
         if re.search(r"[$`]", t) or (not at_ok and (t.startswith("@") or re.search(r"[{*?\[]", t))):
             raise Unverifiable(f"the kickoff.py argument {t} is a variable, substitution or splat the hook cannot expand")

@@ -781,7 +781,7 @@ def cmd_create(args):
     if not title or '\n' in title or '\r' in title:
         fail('--title must be one non-empty line')
     require_digits(args.relates, 'story ids')
-    args.relates = list(dict.fromkeys(args.relates))
+    args.relates = list(dict.fromkeys(str(int(r)) for r in args.relates))
     if args.epic is not None:
         require_digits([args.epic], 'epic ids')
     text = read_body(args.body_file)
