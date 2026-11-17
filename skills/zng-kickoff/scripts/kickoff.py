@@ -583,6 +583,19 @@ def cmd_tickets(_):
     print(f'{shown} to review, {hidden} hidden as dismissed and unchanged')
 
 
+def cmd_mine(args):
+    """Read-only: the dev's own stories in one workflow state, oldest update first."""
+    token = env()['SHORTCUT_API_TOKEN']
+    states = state_names(token)
+    wanted = args.state.strip()
+    # state: is a fuzzy server-side filter, so the state name and owner are re-checked locally.
+    hits = [s for s in search(token, f'owner:{DEV_MENTION} !is:archived state:"{wanted}"', cap=500)
+            if states.get(s['workflow_state_id']) == wanted and DEV_UUID in s['owner_ids']]
+    for s in sorted(hits, key=lambda s: s['updated_at']):
+        print(f"#{s['id']} {s['updated_at'][:10]} | {s['name']}")
+    print(f'{len(hits)} stories owned by {DEV_MENTION} in {wanted}')
+
+
 def cmd_ticket_dismiss(args):
     token = env()['SHORTCUT_API_TOKEN']
     dismissed = load('tickets.json', {})
@@ -848,6 +861,9 @@ def main():
     v.add_argument('--reason')
     v.set_defaults(fn=cmd_todo_verdict)
     sub.add_parser('tickets').set_defaults(fn=cmd_tickets)
+    mi = sub.add_parser('mine')
+    mi.add_argument('--state', required=True, help='exact workflow state name, e.g. "In Progress"')
+    mi.set_defaults(fn=cmd_mine)
     st = sub.add_parser('story')
     st.add_argument('story_ids', nargs='+')
     st.set_defaults(fn=cmd_story)

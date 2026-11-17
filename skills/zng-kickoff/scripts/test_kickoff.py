@@ -305,6 +305,34 @@ class PickableTickets(StateDirCase):
         self.assertNotIn('#1 ', out)
 
 
+class MineCommand(unittest.TestCase):
+    def story(self, sid, state, owners=(kickoff.DEV_UUID,), updated='2026-11-10T09:00:00Z'):
+        return {'id': sid, 'name': f'Title {sid}', 'workflow_state_id': state, 'owner_ids': list(owners), 'updated_at': updated}
+
+    def run_mine(self, hits, state='In Progress'):
+        queries = []
+
+        def api_get(path, token):
+            if path == '/workflows':
+                return [{'states': [{'id': 1, 'name': 'In Progress'}, {'id': 2, 'name': 'In Progress Review '}]}]
+            queries.append(urllib.parse.parse_qs(urllib.parse.urlparse(path).query)['query'][0])
+            return {'data': hits, 'next': None}
+        with mock.patch.object(kickoff, 'api_get', api_get), mock.patch.object(kickoff, 'env', lambda: {'SHORTCUT_API_TOKEN': 't'}):
+            return run(kickoff.cmd_mine, state=state), queries
+
+    def test_lists_only_the_devs_stories_in_exactly_that_state_oldest_first(self):
+        out, queries = self.run_mine([self.story(1, 1, updated='2026-11-12T00:00:00Z'), self.story(2, 2),
+                                      self.story(3, 1, owners=('someone-else',)), self.story(4, 1)])
+        self.assertEqual(out.splitlines(), ['#4 2026-11-10 | Title 4', '#1 2026-11-12 | Title 1',
+                                            '2 stories owned by josipmui in In Progress'])
+        self.assertIn('owner:josipmui', queries[0])
+        self.assertIn('state:"In Progress"', queries[0])
+
+    def test_prints_a_zero_count_when_nothing_matches(self):
+        out, _ = self.run_mine([])
+        self.assertEqual(out.strip(), '0 stories owned by josipmui in In Progress')
+
+
 class StoryCommand(unittest.TestCase):
     ALICE, BOB = 'uuid-alice', 'uuid-bob'
 
