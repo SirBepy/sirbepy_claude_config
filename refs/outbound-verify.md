@@ -10,7 +10,7 @@ Covers everything Claude itself posts to a tracker or a PR:
   comments. A state move or self-assign carries no prose and passes untouched. Includes
   `kickoff.py comment|describe <id> --body-file <path>` (token read inside the script): the
   `--body-file` text (absolute path only) is what must match a verified draft; `kickoff.py move` passes.
-  `kickoff.py create --title T --body-file <path>` needs T and the file text inside the SAME verified draft.
+  `kickoff.py create --title T --body-file <path>` needs T and the file text inside the SAME verified draft; a `$`, backtick or `@` argument (other than a redirect or the story id) is denied.
   Not caught, like any script: a renamed or globbed copy of it, a `python -c` that imports it or runs it through `subprocess`,
   a body file swapped after the hook read it, a whole command or the subcommand held in a variable.
   A commit message or PR body that names `kickoff.py comment` as a path or after the word python,

@@ -633,8 +633,13 @@ def kickoff_calls(tokens: list, posix: bool, shell_fed: bool = False, substituti
 def kickoff_args(tokens: list, j: int):
     """Yield (subcommand, args) for the subcommand at tokens[j], args stopping at a separator."""
     args = []
-    for t in tokens[j + 1:]:
+    rest = tokens[j + 1:]
+    for k, t in enumerate(rest):
         if t in SEPARATORS:
+            # A quoted `';'` is the same token as a real one, and argparse reads the flags after it.
+            # A real separator is never followed by a flag, so one that is must have been quoted.
+            if k + 1 < len(rest) and rest[k + 1].startswith("-"):
+                raise Unverifiable(f"a {t!r} argument is followed by {rest[k + 1]}, which could hide a flag from the hook")
             break
         args.append(t)
     yield tokens[j], args
@@ -659,17 +664,26 @@ def kickoff_body_texts(path: str, cwd: str | None) -> list:
     return texts
 
 
-def reject_opaque_args(args: list) -> None:
+REDIRECT_RE = re.compile(r"^(?:\d|\*|&)?>>?")
+
+
+def reject_opaque_args(sub: str, args: list) -> None:
     """argparse takes the LAST `--title`/`--body-file`, so a variable, array or splat that expands
-    to one after the literal flags would override what this hook read. Only the values of the two
-    flags it reads are exempt (a variable there never matches a verified draft anyway)."""
-    skip = False
-    for t in args:
-        if skip:
-            skip = False
-        elif t in ("--title", "--body-file"):
-            skip = True
-        elif re.search(r"[$`]", t) or t.startswith("@"):
+    to one after the literal flags would override what this hook read. A redirect target and a
+    variable story id (`comment $id ...`) cannot, so they pass; a title value is the one place an
+    `@` is fine, but a `$` or backtick there would still be expanded by the shell."""
+    after_title = after_redirect = False
+    for k, t in enumerate(args):
+        at_ok, after_title = after_title, t == "--title"
+        if after_redirect:
+            after_redirect = False
+            continue
+        if REDIRECT_RE.match(t) and not at_ok:
+            after_redirect = t == REDIRECT_RE.match(t).group(0)
+            continue
+        if k == 0 and sub != "create" and VARIABLE_REF_RE.fullmatch(t):
+            continue
+        if re.search(r"[$`]", t) or (t.startswith("@") and not at_ok):
             raise Unverifiable(f"the kickoff.py argument {t} is a variable, substitution or splat the hook cannot expand")
 
 
@@ -698,7 +712,7 @@ def detect_kickoff(tokens: list, cwd: str | None, posix: bool = True, shell_fed:
         if args and args[0] in ("-h", "--help"):
             continue  # argparse prints help and exits; a later -h belongs to some other statement
         labels.append(f"kickoff.py {sub}")
-        reject_opaque_args(args)
+        reject_opaque_args(sub, args)
         files = flag_values(args, ("--body-file",))
         abbreviated = any(
             a.startswith("--b") and a.split("=", 1)[0] != "--body-file" and "--body-file".startswith(a.split("=", 1)[0])

@@ -535,6 +535,24 @@ def check_kickoff_e2e() -> bool:
             ("a PowerShell splat after the flags", f"{create} @extra", "PowerShell"),
         ):
             results.append((f"create: {label} is blocked even with the real text verified", run_hook({"command": command}, three_inline(both), tool_name=tool) == 2))
+        evil = f'{create} --label ";" --title EVIL --body-file {tmp}/evil.md'
+        for sep in (";", "&&", "|", "&"):
+            results.append((f"create: a quoted {sep} cannot hide a later --title from the hook", run_hook(
+                {"command": evil.replace('";"', f'"{sep}"')}, three_inline(both)) == 2))
+        results.append(("comment: a quoted ; cannot hide a later --body-file", run_hook(
+            {"command": f'{script} comment 1 --body-file {path} --parent ";" --body-file {tmp}/evil.md'}, three_inline(CLAIM)) == 2))
+        results.append(("create: a $ in a double-quoted title is not verified as literal text", run_hook(
+            {"command": f'{script} create --title "Fix $HOME path" --body-file {path}'}, three_inline(f"Fix $HOME path\n\n{CLAIM}")) == 2))
+        results.append(("create: an @ in the title value is fine", run_hook(
+            {"command": f'{script} create --title "@josipmui check this" --body-file {path}'}, three_inline(f"@josipmui check this\n\n{CLAIM}")) == 0))
+        for label, command, tool in (
+            ("a bash redirect to /dev/null", f"{script} comment 1 --body-file {path} 2>&1 >/dev/null", "Bash"),
+            ("a bash redirect to a variable", f"{script} comment 1 --body-file {path} > $LOG", "Bash"),
+            ("a PowerShell redirect", f"python -I {script.split(' ')[-1]} comment 1 --body-file {path} 2>$null", "PowerShell"),
+            ("a PowerShell spaced redirect", f"python -I {script.split(' ')[-1]} comment 1 --body-file {path} *> $null", "PowerShell"),
+            ("a variable story id", f"{script} describe $id --body-file {path}", "Bash"),
+        ):
+            results.append((f"comment/describe still clear with {label}", run_hook({"command": command}, three_inline(CLAIM), tool_name=tool) == 0))
         results.append(("create --help sends nothing", run_hook({"command": f"{script} create --help"}, []) == 0))
         results.append(("create: a second create cannot hide behind a verified one", run_hook(
             {"command": f'{create} && {script} create --title "{TITLE}" --body-file {tmp}/nope.md'}, three_inline(both)) == 2))
