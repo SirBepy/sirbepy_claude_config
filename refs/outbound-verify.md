@@ -195,9 +195,10 @@ deleted it.
   whenever it passes a kickoff.py call: `approved_at` is the transcript time of the dispatch that
   began the text's latest 3-verifier round. The script then refuses, exit 1, listing the newer
   comment, state move or description edit, when anyone but the dev did one after that time. A new
-  verifier round (a later `approved_at`) is the only way past. A text with no record (under 25
-  characters, a bypassed or failed-open hook, a transcript without timestamps) needs
-  `--approved-at <ISO>` with the real verification time instead.
+  verifier round (fresh dispatches, all reported; no record is written while one is still pending)
+  is the way past. A text with no record (under 25 characters, a bypassed or failed-open hook, a
+  transcript without timestamps) needs `--approved-at <ISO>` with the real verification time; that
+  flag is honor-system and never accepts a future time.
 
 ## Keeping the verify loop short
 

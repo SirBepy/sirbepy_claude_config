@@ -791,13 +791,38 @@ class StaleGuard(unittest.TestCase):
         self.assertIn('description updated', self.call(kickoff.cmd_describe))
 
     def test_no_record_and_no_flag_refuses_and_the_flag_supplies_the_time(self):
-        self.story['comments'] = [self.comment(self.BOB, '2026-11-17T09:30:00Z')]
+        self.story['comments'] = [self.comment(self.BOB, '2026-11-10T09:30:00Z')]
         out = self.call(kickoff.cmd_comment)
         self.assertIn('EXIT 1', out)
         self.assertIn('--approved-at', out)
-        self.assertIn('EXIT 1', self.call(kickoff.cmd_comment, approved_at='2026-11-17T08:00:00Z'))
+        self.assertIn('EXIT 1', self.call(kickoff.cmd_comment, approved_at='2026-11-10T08:00:00Z'))
         self.assertIn('EXIT 1', self.call(kickoff.cmd_comment, approved_at='not a time'))
-        self.assertIn('comment 99001', self.call(kickoff.cmd_comment, approved_at='2026-11-17T10:00:00Z'))
+        self.assertIn('comment 99001', self.call(kickoff.cmd_comment, approved_at='2026-11-11T00:00:00Z'))
+        self.assertEqual(len(self.sent), 1)
+
+    def test_a_future_approved_at_cannot_skip_the_check(self):
+        self.story['comments'] = [self.comment(self.BOB, '2026-11-10T09:30:00Z')]
+        out = self.call(kickoff.cmd_comment, approved_at='2099-01-01T00:00:00Z')
+        self.assertIn('future', out)
+        self.assertEqual(self.sent, [])
+
+    def test_a_history_in_an_unexpected_shape_refuses_instead_of_assuming_no_activity(self):
+        self.approve(self.APPROVED)
+        self.history = {'message': 'oops'}
+        self.assertIn('EXIT 1', self.call(kickoff.cmd_comment))
+        self.assertEqual(self.sent, [])
+
+    def test_a_comment_edited_after_approval_counts_by_its_updated_at(self):
+        self.approve(self.APPROVED)
+        c = self.comment(self.BOB, '2026-11-17T07:00:00Z')
+        c['updated_at'] = '2026-11-17T09:00:00Z'
+        self.story['comments'] = [c]
+        self.assertIn('REFUSED', self.call(kickoff.cmd_comment))
+
+    def test_create_without_relates_checks_nothing(self):
+        self.story['comments'] = [self.comment(self.BOB, '2026-11-17T09:30:00Z')]
+        out = self.call(kickoff.cmd_create, title='T', owner=None, state=None, epic=None, type='feature', label=[], relates=[])
+        self.assertIn('#99001 created', out)
 
     def test_an_unreadable_ticket_refuses_instead_of_posting_blind(self):
         self.approve(self.APPROVED)

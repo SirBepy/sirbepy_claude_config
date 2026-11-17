@@ -422,6 +422,9 @@ def check_kickoff_approval_record() -> bool:
         results.append(("a second round of the same text moves the time forward", run_hook(cmd, rerun, env) == 0
                         and json.loads(record.read_text(encoding="utf-8")) == {"approved_at": later[0]}))
         record.unlink()
+        pending = stamped(three_inline(CLAIM), t) + stamped([dispatch(4, CLAIM), launched_result(4)], later[:1])
+        results.append(("a fresh round still without a verdict passes on the old one and writes no record",
+                        run_hook(cmd, pending, env) == 0 and not record.exists()))
         results.append(("a transcript without timestamps passes and writes no record", run_hook(cmd, three_inline(CLAIM), env) == 0 and not record.exists()))
         results.append(("a blocked post writes no record", run_hook(cmd, stamped(three_inline(CLAIM, ("PASS", "PASS", "FAIL")), t), env) == 2 and not record.exists()))
         short = Path(tmp) / "short.md"

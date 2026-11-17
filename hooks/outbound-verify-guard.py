@@ -842,7 +842,12 @@ def approval_time(transcript_path: str, tally: dict, text: str) -> str | None:
     The dispatch time, not the report time: the verifiers read the ticket from that moment on, so
     anything newer than it may be something they never saw. A re-run round moves it forward."""
     norm = normalize(text)
-    cleared = {d for d, c in tally.items() if c["PASS"] >= REQUIRED_PASSES and c["FAIL"] == 0 and norm in d}
+    holders = {d: c for d, c in tally.items() if c["PASS"] >= REQUIRED_PASSES and c["FAIL"] == 0 and norm in d}
+    # A dispatch still without a verdict would move the time forward while the old round clears the
+    # text, hiding a comment that landed between the two rounds; no record, so kickoff.py keeps the old one.
+    if any(c["PENDING"] for c in holders.values()):
+        return None
+    cleared = set(holders)
     stamps = []
     with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
         for line in f:

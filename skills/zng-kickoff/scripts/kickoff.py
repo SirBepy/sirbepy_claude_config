@@ -23,7 +23,8 @@ Subcommands:
                                     comment, describe and create (per --relates story) refuse, exit 1, when anyone but the
                                     dev commented, moved or re-described the story after the text was approved.
                                     The approval time is the outbound-verify hook's record for the text;
-                                    --approved-at only fills in when there is none. No bypass: verify again.
+                                    --approved-at (never a future time) only fills in when there is no record,
+                                    and must be the real verification time. Otherwise verify again.
   move <story_id>... --state <id|exact name>
                                     set the workflow state; prints old -> new per story
   create --title T --body-file P [--owner MENTION] [--state <id|exact name>] [--epic ID]
@@ -752,9 +753,12 @@ def approval_time(text, flag):
         fail('no record of when this text was approved (the outbound-verify hook writes one when it passes the text). '
              'Pass --approved-at <ISO time> with the moment the text was verified, or verify it again; nothing posted.')
     try:
-        return parse_ts(raw)
+        approved = parse_ts(raw)
     except ValueError:
         fail(f'--approved-at {raw!r} is not an ISO time, nothing posted')
+    if approved > now_utc():
+        fail(f'--approved-at {raw} is in the future; it must be the real time the text was verified, nothing posted')
+    return approved
 
 
 def newer_activity(story, history, approved, members, states):
@@ -763,11 +767,15 @@ def newer_activity(story, history, approved, members, states):
     for c in story.get('comments') or []:
         if c.get('deleted') or c.get('author_id') == DEV_UUID:
             continue
-        when_ = max(c.get('created_at') or '', c.get('updated_at') or '')
+        # Parsed, not string-compared: Shortcut times have no fractional part, so '...00Z' would outrank '...00.5Z'.
+        stamps = [x for x in (c.get('created_at'), c.get('updated_at')) if x]
+        when_ = max(stamps, key=parse_ts, default='')
         if when_ and parse_ts(when_) > approved:
             who = members.get(c.get('author_id')) or '?'
             found.append((when_, f"comment by {who} at {when_[:16].replace('T', ' ')}: {clip(c.get('text'), 300)!r}"))
-    for e in history if isinstance(history, list) else []:
+    if not isinstance(history, list):
+        fail('the ticket history came back in an unexpected shape, so state moves cannot be checked; nothing posted')
+    for e in history:
         when_ = e.get('changed_at') or ''
         if e.get('member_id') == DEV_UUID or not when_ or parse_ts(when_) <= approved:
             continue
