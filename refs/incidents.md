@@ -153,3 +153,20 @@ English.
 A conclusion stored without the conditions that produced it is the failure mode that misleads future
 sessions (cut from the CLAUDE.md gist bullet 2026-11-07 to pay for the tier-exception clause; the
 rubric in `refs/memory-rubric.md` carries the same rule).
+
+## UI & visual changes - the UI polish bar
+
+2026-11-17, Conductor: the chat heads and the Done card passed every test and review, and Joe
+said "the quality is just not there anymore... I hardly ever see any animations or polish". Every
+link in the chain did only what it was asked to do:
+- The briefs listed functions only, and the chat heads brief said nothing about motion.
+- The design doc had no motion section.
+- Joe's motion preferences lived in project memory, which subs never read.
+- View specs assert the DOM, and the reviewers judged correctness.
+- Joe saw stills, never motion, before merge.
+- A deferred design item ("drag the stack, later") sat in a doc Joe never reads, so he found it
+  by its absence.
+- The installed `impeccable` skill was never named in a brief.
+
+`refs/ui-polish.md` is the fix. Joe set its motion line in the same talk: even an action done 100+
+times a day animates, just faster.
