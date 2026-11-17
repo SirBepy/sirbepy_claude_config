@@ -677,8 +677,8 @@ def detect_kickoff(tokens: list, cwd: str | None, posix: bool = True, shell_fed:
         # subcommand; a variable or glob in that slot could be one, so it is gated.
         if sub in KICKOFF_PROSE_FREE_COMMANDS or not (sub in KICKOFF_PROSE_COMMANDS or re.search(r"[$`*?\[{]", sub)):
             continue
-        if "-h" in args or "--help" in args:
-            continue  # argparse prints help and sends nothing
+        if args and args[0] in ("-h", "--help"):
+            continue  # argparse prints help and exits; a later -h belongs to some other statement
         labels.append(f"kickoff.py {sub}")
         files = flag_values(args, ("--body-file",))
         abbreviated = any(

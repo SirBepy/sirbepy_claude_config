@@ -471,6 +471,7 @@ class WriteCommands(unittest.TestCase):
     def test_empty_missing_and_non_digit_inputs_fail_before_any_request(self):
         for kw in ({'story_id': '5', 'body_file': self.body_file(b' \n', 'empty.md')},
                    {'story_id': '5', 'body_file': os.path.join(self.tmp.name, 'nope.md')},
+                   {'story_id': '5', 'body_file': self.body_file(b'\xff\xfe not utf-8 \x80', 'latin.md')},
                    {'story_id': '../members', 'body_file': self.body_file(b'text')},
                    {'story_id': '5', 'parent': 'x', 'body_file': self.body_file(b'text')}):
             kw.setdefault('parent', None)

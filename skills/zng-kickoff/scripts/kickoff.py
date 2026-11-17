@@ -680,7 +680,7 @@ def read_body(path):
     try:
         with open(path, encoding='utf-8-sig') as f:
             text = f.read()
-    except OSError as e:
+    except (OSError, UnicodeDecodeError) as e:
         fail(f'cannot read the body file {path}: {e}')
     if not text.strip():
         fail(f'the body file {path} is empty')

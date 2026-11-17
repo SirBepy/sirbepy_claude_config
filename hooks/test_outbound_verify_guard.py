@@ -492,6 +492,10 @@ def check_kickoff_e2e() -> bool:
         ):
             results.append((f"{label} is gated", run_hook({"command": command}, []) == 2))
         results.append(("a $ in the body path is refused", run_hook({"command": f"{script} comment 1 --body-file {tmp}/$X.md"}, verified) == 2))
+        results.append(("a later -h in another statement does not un-gate the post", run_hook(
+            {"command": f"{script} comment 123 --body-file {path}; ls -h"}, []) == 2))
+        results.append(("a later -h on the next line does not un-gate the post", run_hook(
+            {"command": f"{script} comment 123 --body-file {path}\ndf -h"}, []) == 2))
         results.append(("--help on a gated subcommand sends nothing", run_hook({"command": f"{script} comment --help"}, []) == 0))
         results.append(("a glued redirect cannot hide the subcommand", run_hook({"command": f"{script} comment>/dev/null 1 --body-file {path}"}, []) == 2))
         results.append(("move passes untouched", run_hook({"command": f"{script} move 56709 56710 --state 500018257"}, []) == 0))
