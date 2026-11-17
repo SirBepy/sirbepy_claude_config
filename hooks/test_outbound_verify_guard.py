@@ -670,7 +670,7 @@ def main() -> int:
         fails.append("kickoff e2e")
     if not check_kickoff_approval_record():
         fails.append("kickoff approval record")
-    fails +=_testlib.run_cases(REST_CASES, check_rest)
+    fails += _testlib.run_cases(REST_CASES, check_rest)
     fails += _testlib.run_cases(REQUIRES_CASES, check_requires)
     fails += _testlib.run_cases(E2E_CASES, check_e2e)
     if not check_body_file():

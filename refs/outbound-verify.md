@@ -198,7 +198,9 @@ deleted it.
   verifier round (fresh dispatches, all reported; no record is written while one is still pending)
   is the way past. A text with no record (under 25 characters, a bypassed or failed-open hook, a
   transcript without timestamps) needs `--approved-at <ISO>` with the real verification time; that
-  flag is honor-system and never accepts a future time.
+  flag is honor-system and never accepts a future time. A verifier of the same text that never
+  reported keeps blocking the record, so reword the text (a new draft) after a lost verifier.
+  `ZNG_KICKOFF_STATE_DIR` relocates the records and exists for the tests; never set it for a real post.
 
 ## Keeping the verify loop short
 
