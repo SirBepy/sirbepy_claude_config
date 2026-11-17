@@ -31,9 +31,9 @@ platform equivalents.
    - Structural changes: 200-350ms. Examples: enter, exit, expand or collapse, reorder, panel open.
    - Occasional moments may be slower. Examples: first load, a finish celebration.
 
-   Joe judges motion slowed down and tends to pick the slower, more readable version. On
-   2026-10-27 he chose 4x the real-speed timings for a new-chat entrance. Propose structural
-   timings toward the top of their range.
+   Ship and preview at these real-speed (1x) values. On 2026-11-17 Joe approved the chat heads
+   board at 1x and said "stop doing speed 0.25, i want it speed 1x". A single 2026-10-27 pick of
+   4x-slowed timings for one entrance is not the default.
 2. **Every state change gets a transition.** That covers enter, exit, expand or collapse, reorder,
    selected, open or closed, loading to loaded, and count changes. Content that appears or
    disappears only through a `display` swap or a conditional render fails.
@@ -123,9 +123,9 @@ platform equivalents.
 20. Run `impeccable polish` and `impeccable animate` on the changed surface. Fix what they find in
     one bounded pass.
 21. **Joe sees the motion before merge.**
-    - A new surface or new motion gets a 0.25x clip and a real-speed clip of its key state changes,
-      one caption per clip. In Conductor, use the motion preview recipe in project memory;
-      elsewhere, use a Playwright video.
+    - A new surface or new motion gets a real-speed clip of its key state changes, one caption
+      per clip. Add a 0.25x clip only when Joe asks for one. In Conductor, use the motion
+      preview recipe in project memory; elsewhere, use a Playwright video.
     - A tweak to existing motion or styling needs only before and after stills.
 
     A sub cannot show Joe anything itself: it records the clips, and the parent chat shows them.
@@ -158,6 +158,6 @@ UI polish bar (~/.claude/refs/ui-polish.md, read it in full before building). Do
 - Styled like the most polished sibling surfaces (same tokens, radii, easing, row patterns); real
   items shown instead of bare counts where the user acts on them.
 - Run `impeccable polish` and `impeccable animate` on the diff and fix what they find.
-- Report: a 0.25x + real-speed clip of each new animated state change (stills for a tweak), and one
+- Report: a real-speed clip of each new animated state change (stills for a tweak), and one
   line per design item not built, with the reason.
 ```
