@@ -176,6 +176,29 @@ OUTBOUND-VERDICT: FAIL
   only FAIL was a verifier that couldn't reach the Shortcut API. When a claim needs an API the
   verifiers may be denied, snapshot the response to a file and point them at it.
 
+## Post it the turn Joe asks, never park it
+
+Incident, zng-app, 2026-11-16/17 (sc-56709): Joe asked for a comment; the verifiers FAILed twice and
+the text was parked unposted without telling him. The next day a sub posted a reworded version after
+the tester had already tested and commented, so "merged and ready to be tested" was stale and Joe
+deleted it.
+
+- **When Joe asks to post, it is posted in that same turn.** A verifier FAIL is fixed minimally and
+  re-verified right away, in the same session (the "Any FAIL" rule above). If it still cannot be
+  posted (round 9, a dead token, a refusal below), send Joe a blocker message that turn naming what
+  failed. Never park a requested post silently.
+- **Text approved earlier gets a fresh read first.** Before posting it, re-read the ticket's latest
+  comments and state (`kickoff.py story <id>`); if someone else added anything since, the text may
+  be moot, so rewrite and verify it again rather than post it as is.
+- **`kickoff.py comment|describe` enforce that read** (and `create` for each `--relates` story).
+  This hook writes `~/.claude/state/zng-kickoff/approvals/<sha256 of the whitespace-normalized text>.json`
+  whenever it passes a kickoff.py call: `approved_at` is the transcript time of the dispatch that
+  began the text's latest 3-verifier round. The script then refuses, exit 1, listing the newer
+  comment, state move or description edit, when anyone but the dev did one after that time. A new
+  verifier round (a later `approved_at`) is the only way past. A text with no record (under 25
+  characters, a bypassed or failed-open hook, a transcript without timestamps) needs
+  `--approved-at <ISO>` with the real verification time instead.
+
 ## Keeping the verify loop short
 
 Converged practice (zng-biller, 2026-10-21/22, a batch of 3 long tickets took 4 failed rounds):

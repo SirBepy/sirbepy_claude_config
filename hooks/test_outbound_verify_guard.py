@@ -11,6 +11,7 @@ three delivery shapes the harness actually uses (checked against live transcript
 a sync hand-back enqueued BEFORE the tool_result that names its agentId.
 """
 
+import hashlib
 import json
 import os
 import subprocess
@@ -266,6 +267,8 @@ def run_hook(tool_input: dict, entries: list | None, env_extra: dict | None = No
             transcript.write_text("\n".join(json.dumps(e) for e in entries) + "\n", encoding="utf-8")
             payload["transcript_path"] = str(transcript)
         env = {k: v for k, v in os.environ.items() if k != guard.OVERRIDE_ENV}
+        # Approval records land in the temp dir, never in the real ~/.claude/state.
+        env["ZNG_KICKOFF_STATE_DIR"] = str(Path(tmp) / "state")
         env.update(env_extra or {})
         proc = subprocess.run(
             [sys.executable, str(HOOK)], input=json.dumps(payload), capture_output=True,
@@ -389,6 +392,48 @@ def check_mcp_e2e() -> bool:
     blocked = run_hook(tool_input, [], tool_name="mcp__shortcut__stories-create-comment") == 2
     cleared = run_hook(tool_input, three_inline(CLAIM), tool_name="mcp__shortcut__stories-create-comment") == 0
     return _testlib.report(blocked and cleared, "MCP comment blocks, then clears after 3 PASS")
+
+
+def stamped(entries: list, times: list) -> list:
+    """Gives each verifier dispatch (in order) a transcript timestamp, like a real session has."""
+    it = iter(times)
+    for e in entries:
+        if e["type"] == "assistant":
+            e["timestamp"] = next(it)
+    return entries
+
+
+def check_kickoff_approval_record() -> bool:
+    """A passing kickoff.py call leaves the time its text was approved for kickoff.py's stale-ticket check."""
+    results = []
+    with tempfile.TemporaryDirectory() as tmp:
+        state = Path(tmp) / "state"
+        env = {"ZNG_KICKOFF_STATE_DIR": str(state)}
+        body = Path(tmp) / "reply.md"
+        body.write_text(CLAIM + "\n", encoding="utf-8")
+        cmd = {"command": f"python -I C:/Users/tecno/.claude/skills/zng-kickoff/scripts/kickoff.py comment 56709 --body-file {body.as_posix()}"}
+        record = state / "approvals" / (hashlib.sha256(guard.normalize(CLAIM).encode("utf-8")).hexdigest() + ".json")
+        t = ["2026-11-17T08:00:00.000Z", "2026-11-17T08:00:01.000Z", "2026-11-17T08:00:02.000Z"]
+        results.append(("a passing post exits 0", run_hook(cmd, stamped(three_inline(CLAIM), t), env) == 0))
+        results.append(("the record holds the third-latest verifier dispatch time",
+                        record.is_file() and json.loads(record.read_text(encoding="utf-8")) == {"approved_at": t[0]}))
+        later = ["2026-11-17T09:00:00.000Z", "2026-11-17T09:00:01.000Z", "2026-11-17T09:00:02.000Z"]
+        rerun = stamped(three_inline(CLAIM, start=1), t) + stamped(three_inline(CLAIM, start=4), later)
+        results.append(("a second round of the same text moves the time forward", run_hook(cmd, rerun, env) == 0
+                        and json.loads(record.read_text(encoding="utf-8")) == {"approved_at": later[0]}))
+        record.unlink()
+        results.append(("a transcript without timestamps passes and writes no record", run_hook(cmd, three_inline(CLAIM), env) == 0 and not record.exists()))
+        results.append(("a blocked post writes no record", run_hook(cmd, stamped(three_inline(CLAIM, ("PASS", "PASS", "FAIL")), t), env) == 2 and not record.exists()))
+        short = Path(tmp) / "short.md"
+        short.write_text("Thanks, merged.\n", encoding="utf-8")
+        short_cmd = {"command": cmd["command"].replace(body.as_posix(), short.as_posix())}
+        fresh = Path(tmp) / "fresh-state"
+        results.append(("a text under the verified-length floor passes and writes no record",
+                        run_hook(short_cmd, [], {"ZNG_KICKOFF_STATE_DIR": str(fresh)}) == 0 and not fresh.exists()))
+    ok = True
+    for label, passed in results:
+        ok = _testlib.report(passed, f"kickoff approval record: {label}") and ok
+    return ok
 
 
 def check_kickoff_e2e() -> bool:
@@ -616,7 +661,9 @@ def main() -> int:
     fails = _testlib.run_cases(DETECT_CASES, check_detect)
     if not check_kickoff_e2e():
         fails.append("kickoff e2e")
-    fails += _testlib.run_cases(REST_CASES, check_rest)
+    if not check_kickoff_approval_record():
+        fails.append("kickoff approval record")
+    fails +=_testlib.run_cases(REST_CASES, check_rest)
     fails += _testlib.run_cases(REQUIRES_CASES, check_requires)
     fails += _testlib.run_cases(E2E_CASES, check_e2e)
     if not check_body_file():

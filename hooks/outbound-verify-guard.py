@@ -37,6 +37,7 @@ PASS verdicts cover a given text) lives in the sibling `_outbound_verify_transcr
 imported below alongside `_hooklib`.
 """
 
+import hashlib
 import json
 import os
 import re
@@ -52,6 +53,7 @@ try:
     import _hookboot  # retries a shared module another session is mid-way through writing
     from _hooklib import read_payload, deny, basename, strip_quotes, tokenize_command, without_display_segments
     from _outbound_verify_transcript import (
+        DRAFT_RE,
         MIN_PROSE_CHARS,
         REQUIRED_PASSES,
         load_verdicts,
@@ -154,7 +156,8 @@ class Unverifiable(Exception):
 
 
 class Outbound:
-    def __init__(self, label: str, values: list, requires_prose: bool, found_any: bool, groups: list | None = None):
+    def __init__(self, label: str, values: list, requires_prose: bool, found_any: bool, groups: list | None = None,
+                 kickoff_bodies: list | None = None):
         self.label = label
         self.values = values
         self.requires_prose = requires_prose
@@ -162,6 +165,8 @@ class Outbound:
         # Each group is the texts of ONE posting (a story's title and body): all of them, of any
         # length, must sit inside the same cleared draft, not each in some draft.
         self.groups = groups or []
+        # The --body-file texts of kickoff.py calls: once cleared, each gets an approval record.
+        self.kickoff_bodies = kickoff_bodies or []
 
 
 def collect_prose(obj, out: list) -> bool:
@@ -718,6 +723,7 @@ def detect_kickoff(tokens: list, cwd: str | None, posix: bool = True, shell_fed:
     values: list = []
     labels: list = []
     groups: list = []
+    kickoff_bodies: list = []
     every_call_has_a_file = True
     calls = list(kickoff_calls(tokens, posix, shell_fed))
     if raw_tokens is not None:
@@ -740,6 +746,7 @@ def detect_kickoff(tokens: list, cwd: str | None, posix: bool = True, shell_fed:
         )
         bodies = [t for p in files for t in kickoff_body_texts(p, cwd)]
         values += bodies
+        kickoff_bodies += bodies
         every_call_has_a_file = every_call_has_a_file and bool(files) and not abbreviated
         if sub == "create" or re.search(r"[$`*?\[{]", sub):
             # `create` carries a title as well; a variable subcommand could be it, so it needs one too.
@@ -754,7 +761,7 @@ def detect_kickoff(tokens: list, cwd: str | None, posix: bool = True, shell_fed:
                 groups.append(titles + bodies)
     if not labels:
         return None
-    return Outbound(" + ".join(labels), values, True, every_call_has_a_file, groups)
+    return Outbound(" + ".join(labels), values, True, every_call_has_a_file, groups, kickoff_bodies)
 
 
 def merge_outbound(hits: list) -> Outbound | None:
@@ -769,6 +776,7 @@ def merge_outbound(hits: list) -> Outbound | None:
         any(h.requires_prose for h in hits),
         all(h.found_any or not h.requires_prose for h in hits),
         [g for h in hits for g in h.groups],
+        [b for h in hits for b in h.kickoff_bodies],
     )
 
 
@@ -829,6 +837,51 @@ def uncovered_together(groups: list, tally: dict) -> list:
     return misses
 
 
+def approval_time(transcript_path: str, tally: dict, text: str) -> str | None:
+    """Transcript timestamp of the dispatch that completed the text's latest 3-verifier round, or None.
+    The dispatch time, not the report time: the verifiers read the ticket from that moment on, so
+    anything newer than it may be something they never saw. A re-run round moves it forward."""
+    norm = normalize(text)
+    cleared = {d for d, c in tally.items() if c["PASS"] >= REQUIRED_PASSES and c["FAIL"] == 0 and norm in d}
+    stamps = []
+    with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            try:
+                entry = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(entry, dict) or entry.get("type") != "assistant" or entry.get("isSidechain") or not entry.get("timestamp"):
+                continue
+            content = (entry.get("message") or {}).get("content")
+            if not isinstance(content, list):
+                continue
+            for block in content:
+                if not (isinstance(block, dict) and block.get("type") == "tool_use" and block.get("name") in ("Agent", "Task")):
+                    continue
+                tool_input = block.get("input") or {}
+                if tool_input.get("subagent_type") != "fork" and cleared & {normalize(d) for d in DRAFT_RE.findall(tool_input.get("prompt") or "")}:
+                    stamps.append(entry["timestamp"])
+    stamps.sort()
+    return stamps[-REQUIRED_PASSES] if len(stamps) >= REQUIRED_PASSES else None
+
+
+def record_kickoff_approvals(outbound: Outbound, transcript_path: str, tally: dict) -> None:
+    """kickoff.py reads these (`approvals/<sha256 of the normalized text>.json`) to refuse a post when
+    anyone but the dev touched the ticket after the approval. A text with no timestamp here (under
+    MIN_PROSE_CHARS, a transcript without timestamps) leaves no record, so kickoff.py asks for --approved-at."""
+    base = Path(os.environ.get("ZNG_KICKOFF_STATE_DIR") or Path.home() / ".claude" / "state" / "zng-kickoff") / "approvals"
+    for text in outbound.kickoff_bodies:
+        norm = normalize(text)
+        stamp = approval_time(transcript_path, tally, text) if len(norm) >= MIN_PROSE_CHARS else None
+        if not stamp:
+            continue
+        base.mkdir(parents=True, exist_ok=True)
+        key = hashlib.sha256(norm.encode("utf-8")).hexdigest()
+        tmp = base / f"{key}.tmp"
+        tmp.write_text(json.dumps({"approved_at": stamp}), encoding="utf-8")
+        os.replace(tmp, base / f"{key}.json")
+
+
 def main() -> None:
     payload = read_payload()
     tool_name = payload.get("tool_name", "") or ""
@@ -870,6 +923,10 @@ def main() -> None:
     tally = load_verdicts(transcript_path)
     misses = uncovered(checked, tally) + uncovered_together(outbound.groups, tally)
     if not misses:
+        try:
+            record_kickoff_approvals(outbound, transcript_path, tally)
+        except OSError as e:
+            sys.stderr.write(f"[outbound-verify-guard] could not record the approval time ({e}); kickoff.py will ask for --approved-at.\n")
         sys.exit(0)
 
     lines = "\n".join(f'  - "{snippet}": {reason}' for snippet, reason in misses)

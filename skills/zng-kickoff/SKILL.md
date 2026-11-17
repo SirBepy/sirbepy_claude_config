@@ -51,7 +51,7 @@ already finished:
 
 Never edit these files by hand. Use `handle`, `answered`, `todo-verdict` and `ticket-dismiss`.
 
-Shortcut writes (the script reads the token, Claude never reads `.env`): `kickoff.py comment <id> --body-file <absolute path> [--parent <comment-id>]`, `kickoff.py describe <id> --body-file <absolute path>` (both need the 3/3 verified text first, `refs/outbound-verify.md`), `kickoff.py move <id>... --state <state id or exact name>`.
+Shortcut writes (the script reads the token, Claude never reads `.env`): `kickoff.py comment <id> --body-file <absolute path> [--parent <comment-id>]`, `kickoff.py describe <id> --body-file <absolute path>` (both need the 3/3 verified text first, `refs/outbound-verify.md`), `kickoff.py move <id>... --state <state id or exact name>`. A post Joe asks for goes out that same turn, a verifier FAIL is fixed and re-verified at once, and one that still cannot post gets a blocker message to Joe, never a silent park; the script refuses when anyone but the dev touched the ticket after the approval, so re-read it first (`refs/outbound-verify.md`, "Post it the turn Joe asks").
 
 New story: `kickoff.py create --title <text> --body-file <absolute path> [--owner <mention name>] [--state <id|exact name>] [--epic <id>] [--type feature|bug|chore] [--label <name>]... [--relates <story-id>]...` (title and body need one 3/3 verified draft; prints the id and URL; ENG team, To Do and `feature` unless set; no custom fields, so set Skill Set and Priority in the app).
 

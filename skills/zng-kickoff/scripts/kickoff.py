@@ -16,9 +16,14 @@ Subcommands:
   ticket-dismiss <story_id>... --reason T
   story <story_id>...               read-only: print each ticket with named state, owners, requester,
                                     epic, links, description and every comment with author and date
-  comment <story_id> --body-file P [--parent <comment_id>]
+  comment <story_id> --body-file P [--parent <comment_id>] [--approved-at ISO]
                                     post P (UTF-8, sent as is) as a comment; prints the new comment id
-  describe <story_id> --body-file P replace the description with P; prints the story id and updated_at
+  describe <story_id> --body-file P [--approved-at ISO]
+                                    replace the description with P; prints the story id and updated_at
+                                    comment, describe and create (per --relates story) refuse, exit 1, when anyone but the
+                                    dev commented, moved or re-described the story after the text was approved.
+                                    The approval time is the outbound-verify hook's record for the text;
+                                    --approved-at only fills in when there is none. No bypass: verify again.
   move <story_id>... --state <id|exact name>
                                     set the workflow state; prints old -> new per story
   create --title T --body-file P [--owner MENTION] [--state <id|exact name>] [--epic ID]
@@ -44,7 +49,8 @@ import urllib.request
 
 PROJECTS = 'C:/Users/tecno/Desktop/Projects'
 REPOS = ['zng-app', 'zng-admin', 'zng-api', 'zng-biller']
-STATE_DIR = os.path.expanduser('~/.claude/state/zng-kickoff')
+# The env override lets the hook tests point the approval records at a temp dir.
+STATE_DIR = os.environ.get('ZNG_KICKOFF_STATE_DIR') or os.path.expanduser('~/.claude/state/zng-kickoff')
 ENV_PATH = os.path.expanduser('~/.claude/.env')
 # Identity and state ids: ~/.claude/refs/shortcut-api.md
 DEV_UUID = '699c76fe-9076-4424-ba22-2bb3534f417e'
@@ -719,22 +725,101 @@ def write_or_fail(method, path, token, payload):
         fail(f'{method} {path}: no answer ({e}); check the story before retrying, the write may have gone through')
 
 
+# ---------------------------------------------------------------- stale-text guard
+
+# Approved text goes stale when someone else comments or moves the ticket after the verifiers read it
+# (2026-11-17: a "merged, ready to test" comment was posted after the tester had already tested and
+# commented). The outbound-verify hook records when it passed the text, keyed by the text's hash;
+# a post is refused when anyone but the dev touched the ticket after that moment.
+
+def body_key(text):
+    return hashlib.sha256(' '.join(text.split()).encode('utf-8')).hexdigest()
+
+
+def parse_ts(s):
+    t = dt.datetime.fromisoformat(s.strip().replace('Z', '+00:00'))
+    return t if t.tzinfo else t.replace(tzinfo=dt.timezone.utc)
+
+
+def approval_time(text, flag):
+    """When the text was approved: the hook's record for it, else --approved-at (a hook that failed
+    open, was bypassed, or skipped a text under 25 characters leaves no record)."""
+    try:
+        raw = (load(f'approvals/{body_key(text)}.json', None) or {}).get('approved_at') or flag
+    except (OSError, ValueError):
+        raw = flag
+    if not raw:
+        fail('no record of when this text was approved (the outbound-verify hook writes one when it passes the text). '
+             'Pass --approved-at <ISO time> with the moment the text was verified, or verify it again; nothing posted.')
+    try:
+        return parse_ts(raw)
+    except ValueError:
+        fail(f'--approved-at {raw!r} is not an ISO time, nothing posted')
+
+
+def newer_activity(story, history, approved, members, states):
+    """[(time, line)] for every non-dev comment, state move or description edit after `approved`."""
+    found = []
+    for c in story.get('comments') or []:
+        if c.get('deleted') or c.get('author_id') == DEV_UUID:
+            continue
+        when_ = max(c.get('created_at') or '', c.get('updated_at') or '')
+        if when_ and parse_ts(when_) > approved:
+            who = members.get(c.get('author_id')) or '?'
+            found.append((when_, f"comment by {who} at {when_[:16].replace('T', ' ')}: {clip(c.get('text'), 300)!r}"))
+    for e in history if isinstance(history, list) else []:
+        when_ = e.get('changed_at') or ''
+        if e.get('member_id') == DEV_UUID or not when_ or parse_ts(when_) <= approved:
+            continue
+        who = members.get(e.get('member_id')) or e.get('actor_name') or 'automation'
+        for a in e.get('actions') or []:
+            ch = a.get('changes') or {}
+            if a.get('entity_type') == 'story' and ch.get('workflow_state_id'):
+                new, old = ch['workflow_state_id'].get('new'), ch['workflow_state_id'].get('old')
+                found.append((when_, f"state move by {who} at {when_[:16].replace('T', ' ')}: "
+                                     f"{states.get(old, old)} -> {states.get(new, new)}"))
+            if a.get('entity_type') == 'story' and 'description' in ch:
+                found.append((when_, f"description edit by {who} at {when_[:16].replace('T', ' ')}"))
+    return sorted(found)
+
+
+def refuse_if_stale(story_id, approved, token):
+    """Exits 1, printing what happened, when anyone but the dev commented on, moved or re-described
+    the story after `approved`. No flag skips it: a new verification (a later approval time) does."""
+    try:
+        story = api_get(f'/stories/{story_id}', token)
+        history = api_get(f'/stories/{story_id}/history', token)
+        members, states = member_names(token), state_names(token)
+    except (urllib.error.HTTPError, OSError) as e:
+        fail(f'#{story_id}: cannot read the ticket to check it for newer activity ({e}), nothing posted')
+    found = newer_activity(story, history, approved, members, states)
+    if found:
+        lines = '\n'.join(f'   {line}' for _, line in found)
+        fail(f"REFUSED: #{story_id} changed after this text was approved ({approved.strftime('%Y-%m-%d %H:%M')} UTC):\n{lines}\n"
+             'Re-read the ticket with `story`, fix the text if it is now wrong or redundant, then run a new verifier '
+             'round (refs/outbound-verify.md); a later approval lets the post through. Nothing posted.')
+
+
 def cmd_comment(args):
     require_digits([args.story_id])
     if args.parent is not None:
         require_digits([args.parent], 'comment ids')
     text = read_body(args.body_file)
+    token = env()['SHORTCUT_API_TOKEN']
+    refuse_if_stale(args.story_id, approval_time(text, getattr(args, 'approved_at', None)), token)
     payload = {'text': text}
     if args.parent is not None:
         payload['parent_id'] = int(args.parent)
-    c = write_or_fail('POST', f'/stories/{args.story_id}/comments', env()['SHORTCUT_API_TOKEN'], payload)
+    c = write_or_fail('POST', f'/stories/{args.story_id}/comments', token, payload)
     print(f"comment {c['id']} on #{args.story_id}")
 
 
 def cmd_describe(args):
     require_digits([args.story_id])
     text = read_body(args.body_file)
-    s = write_or_fail('PUT', f'/stories/{args.story_id}', env()['SHORTCUT_API_TOKEN'], {'description': text})
+    token = env()['SHORTCUT_API_TOKEN']
+    refuse_if_stale(args.story_id, approval_time(text, getattr(args, 'approved_at', None)), token)
+    s = write_or_fail('PUT', f'/stories/{args.story_id}', token, {'description': text})
     print(f"#{s['id']} description updated, updated_at {s.get('updated_at')}")
 
 
@@ -807,6 +892,7 @@ def cmd_create(args):
             state = resolve_state(args.state, state_names(token))
         except (urllib.error.HTTPError, OSError) as e:
             fail(f'cannot read the workflow states: {e}')
+    approved = approval_time(text, getattr(args, 'approved_at', None)) if args.relates else None
     for rel in args.relates:
         # A bad id found after the POST would leave the story created and only partly linked.
         try:
@@ -815,6 +901,7 @@ def cmd_create(args):
             fail(f'--relates #{rel}: HTTP {e.code}, nothing created')
         except OSError as e:
             fail(f'--relates #{rel}: no answer ({e}), nothing created')
+        refuse_if_stale(rel, approved, token)
     payload = {'name': title, 'description': text, 'story_type': args.type, 'group_id': ENG_TEAM_ID,
                'workflow_state_id': state}
     if args.owner:
@@ -869,15 +956,18 @@ def main():
     st = sub.add_parser('story')
     st.add_argument('story_ids', nargs='+')
     st.set_defaults(fn=cmd_story)
+    approved_help = 'ISO time the text was verified; used only when the hook left no approval record for it'
     # allow_abbrev=False: the outbound hook only sees the exact `--body-file`, so `--body` must not alias it.
     c = sub.add_parser('comment', allow_abbrev=False)
     c.add_argument('story_id')
     c.add_argument('--body-file', required=True)
     c.add_argument('--parent', help='id of the comment to reply under')
+    c.add_argument('--approved-at', help=approved_help)
     c.set_defaults(fn=cmd_comment)
     de = sub.add_parser('describe', allow_abbrev=False)
     de.add_argument('story_id')
     de.add_argument('--body-file', required=True)
+    de.add_argument('--approved-at', help=approved_help)
     de.set_defaults(fn=cmd_describe)
     mv = sub.add_parser('move', allow_abbrev=False)
     mv.add_argument('story_ids', nargs='+')
@@ -892,6 +982,7 @@ def main():
     cr.add_argument('--type', choices=['feature', 'bug', 'chore'], default='feature')
     cr.add_argument('--label', action='append', default=[], help='label name, repeatable')
     cr.add_argument('--relates', action='append', default=[], help='story id to link with "relates to", repeatable')
+    cr.add_argument('--approved-at', help=approved_help)
     cr.set_defaults(fn=cmd_create)
     d =sub.add_parser('ticket-dismiss')
     d.add_argument('story_ids', nargs='+')

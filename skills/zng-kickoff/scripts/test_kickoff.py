@@ -439,12 +439,21 @@ class StoryCommand(unittest.TestCase):
         self.assertEqual(fn.call_args[0][0].story_ids, ['1', '2'])
 
 
+def skip_stale_guard(case):
+    """The posting tests below are about payloads; StaleGuard covers the refusal with the real functions."""
+    for name in ('approval_time', 'refuse_if_stale'):
+        patcher = mock.patch.object(kickoff, name)
+        patcher.start()
+        case.addCleanup(patcher.stop)
+
+
 class WriteCommands(unittest.TestCase):
     """comment / describe / move, with urlopen mocked: nothing here reaches Shortcut."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.sent = []
+        skip_stale_guard(self)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -583,6 +592,7 @@ class CreateCommand(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.sent = []
+        skip_stale_guard(self)
         self.body = os.path.join(self.tmp.name, 'body.md')
         with open(self.body, 'wb') as f:
             f.write('Opis → č\n'.encode('utf-8'))
@@ -683,6 +693,136 @@ class CreateCommand(unittest.TestCase):
         with mock.patch.object(sys, 'argv', ['kickoff.py', 'create', '--title', 'T', '--body-file', 'b.md', '--type', 'epic']), \
                 contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
             kickoff.main()
+
+
+class StaleGuard(unittest.TestCase):
+    """comment / describe / create refuse to post text approved before someone else touched the ticket."""
+    BOB = 'uuid-bob'
+    APPROVED = '2026-11-17T08:00:00.000Z'
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.sent = []
+        self.orig_state = kickoff.STATE_DIR
+        kickoff.STATE_DIR = os.path.join(self.tmp.name, 'state')
+        self.body = os.path.join(self.tmp.name, 'body.md')
+        with open(self.body, 'wb') as f:
+            f.write(b'Merged and ready to be tested.\n')
+        self.story = {'workflow_state_id': 1, 'comments': []}
+        self.history = []
+
+    def tearDown(self):
+        kickoff.STATE_DIR = self.orig_state
+        self.tmp.cleanup()
+
+    def approve(self, at, text='Merged and ready to be tested.'):
+        os.makedirs(os.path.join(kickoff.STATE_DIR, 'approvals'), exist_ok=True)
+        kickoff.save(f'approvals/{kickoff.body_key(text)}.json', {'approved_at': at})
+
+    def comment(self, by, at, text='tested, it fails'):
+        return {'author_id': by, 'created_at': at, 'updated_at': at, 'text': text}
+
+    def call(self, fn, **kw):
+        def urlopen(req, timeout=None):
+            self.sent.append((req.get_method(), req.full_url.replace(kickoff.API, '')))
+            return FakeResponse(json.dumps({'id': 99001, 'updated_at': 'x'}).encode())
+
+        def api_get(path, token):
+            if path == '/workflows':
+                return [{'states': [{'id': 1, 'name': 'To Do'}, {'id': 2, 'name': 'Testing'}]}]
+            if path == '/members':
+                return [{'id': self.BOB, 'profile': {'mention_name': 'lenar'}},
+                        {'id': kickoff.DEV_UUID, 'profile': {'mention_name': 'josipmui'}}]
+            if path.endswith('/history'):
+                return self.history
+            return self.story
+        args = dict(story_id='56709', parent=None, body_file=self.body, approved_at=None)
+        args.update(kw)
+        buf = io.StringIO()
+        with mock.patch.object(kickoff.urllib.request, 'urlopen', urlopen), mock.patch.object(kickoff, 'api_get', api_get), \
+                mock.patch.object(kickoff, 'env', lambda: {'SHORTCUT_API_TOKEN': 't'}), contextlib.redirect_stdout(buf):
+            try:
+                fn(types.SimpleNamespace(**args))
+            except SystemExit as e:
+                return f'EXIT {e.code}: {buf.getvalue()}'
+        return buf.getvalue()
+
+    def test_a_comment_by_someone_else_after_approval_refuses_the_post_and_names_it(self):
+        self.approve(self.APPROVED)
+        self.story['comments'] = [self.comment(self.BOB, '2026-11-17T09:30:00Z', 'Tested: modal is off on desktop')]
+        out = self.call(kickoff.cmd_comment)
+        self.assertIn('EXIT 1', out)
+        self.assertIn('REFUSED', out)
+        self.assertIn('lenar', out)
+        self.assertIn('2026-11-17 09:30', out)
+        self.assertIn('modal is off on desktop', out)
+        self.assertEqual(self.sent, [])
+
+    def test_the_same_comment_posts_when_it_came_before_the_approval(self):
+        self.approve(self.APPROVED)
+        self.story['comments'] = [self.comment(self.BOB, '2026-11-17T07:59:00Z')]
+        self.assertIn('comment 99001 on #56709', self.call(kickoff.cmd_comment))
+        self.assertEqual(self.sent, [('POST', '/stories/56709/comments')])
+
+    def test_a_later_approval_lets_the_post_through(self):
+        self.story['comments'] = [self.comment(self.BOB, '2026-11-17T09:30:00Z')]
+        self.approve('2026-11-17T09:31:00.000Z')
+        self.assertIn('comment 99001', self.call(kickoff.cmd_comment))
+
+    def test_the_dev_own_comment_and_a_deleted_one_do_not_count(self):
+        self.approve(self.APPROVED)
+        self.story['comments'] = [self.comment(kickoff.DEV_UUID, '2026-11-17T09:30:00Z'),
+                                  dict(self.comment(self.BOB, '2026-11-17T09:40:00Z'), deleted=True)]
+        self.assertIn('comment 99001', self.call(kickoff.cmd_comment))
+
+    def test_a_state_move_by_someone_else_refuses_describe_with_the_old_and_new_state(self):
+        self.approve(self.APPROVED)
+        self.history = [{'changed_at': '2026-11-17T09:00:00Z', 'member_id': self.BOB, 'actions': [
+            {'entity_type': 'story', 'changes': {'workflow_state_id': {'old': 1, 'new': 2}}}]}]
+        out = self.call(kickoff.cmd_describe)
+        self.assertIn('state move by lenar', out)
+        self.assertIn('To Do -> Testing', out)
+        self.assertEqual(self.sent, [])
+
+    def test_a_state_move_by_the_dev_does_not_count(self):
+        self.approve(self.APPROVED)
+        self.history = [{'changed_at': '2026-11-17T09:00:00Z', 'member_id': kickoff.DEV_UUID, 'actions': [
+            {'entity_type': 'story', 'changes': {'workflow_state_id': {'old': 1, 'new': 2}}}]}]
+        self.assertIn('description updated', self.call(kickoff.cmd_describe))
+
+    def test_no_record_and_no_flag_refuses_and_the_flag_supplies_the_time(self):
+        self.story['comments'] = [self.comment(self.BOB, '2026-11-17T09:30:00Z')]
+        out = self.call(kickoff.cmd_comment)
+        self.assertIn('EXIT 1', out)
+        self.assertIn('--approved-at', out)
+        self.assertIn('EXIT 1', self.call(kickoff.cmd_comment, approved_at='2026-11-17T08:00:00Z'))
+        self.assertIn('EXIT 1', self.call(kickoff.cmd_comment, approved_at='not a time'))
+        self.assertIn('comment 99001', self.call(kickoff.cmd_comment, approved_at='2026-11-17T10:00:00Z'))
+
+    def test_an_unreadable_ticket_refuses_instead_of_posting_blind(self):
+        self.approve(self.APPROVED)
+        with mock.patch.object(kickoff, 'api_get', side_effect=http_error(500)), \
+                mock.patch.object(kickoff, 'env', lambda: {'SHORTCUT_API_TOKEN': 't'}), \
+                mock.patch.object(kickoff.urllib.request, 'urlopen', side_effect=AssertionError('posted')), \
+                contextlib.redirect_stdout(io.StringIO()) as buf, self.assertRaises(SystemExit):
+            kickoff.cmd_comment(types.SimpleNamespace(story_id='5', parent=None, body_file=self.body, approved_at=None))
+        self.assertIn('nothing posted', buf.getvalue())
+
+    def test_create_checks_each_relates_story_before_creating(self):
+        self.approve(self.APPROVED)
+        self.story['comments'] = [self.comment(self.BOB, '2026-11-17T09:30:00Z')]
+        out = self.call(kickoff.cmd_create, title='T', owner=None, state=None, epic=None, type='feature', label=[],
+                        relates=['56709'])
+        self.assertIn('REFUSED', out)
+        self.assertEqual(self.sent, [])
+
+    def test_cli_accepts_approved_at_on_the_three_posting_commands(self):
+        for argv, fn in ((['comment', '5', '--body-file', 'b.md', '--approved-at', 'T'], 'cmd_comment'),
+                         (['describe', '5', '--body-file', 'b.md', '--approved-at', 'T'], 'cmd_describe'),
+                         (['create', '--title', 'T', '--body-file', 'b.md', '--approved-at', 'T'], 'cmd_create')):
+            with mock.patch.object(sys, 'argv', ['kickoff.py'] + argv), mock.patch.object(kickoff, fn) as called:
+                kickoff.main()
+            self.assertEqual(called.call_args[0][0].approved_at, 'T')
 
 
 class Leftovers(unittest.TestCase):
