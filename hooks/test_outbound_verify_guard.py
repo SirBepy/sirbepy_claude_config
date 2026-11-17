@@ -572,6 +572,21 @@ def check_kickoff_e2e() -> bool:
         for title in ("Why does it fail?", "[FE] Fix x"):
             results.append((f"create: --title=\"{title}\" (the = form) with a glob character clears", run_hook(
                 {"command": f'{script} create --title="{title}" --body-file {path}'}, three_inline(f"{title}\n\n{CLAIM}")) == 0))
+        for label, command, tool in (
+            ("a redirect where the title value should be", f"{script} create --title 2>&1 '{TITLE}' --body-file {path}", "Bash"),
+            ("a /dev/null redirect as the title", f"{script} create --title >/dev/null {TITLE} --body-file {path}", "Bash"),
+            ("a brace expansion as the title", f"{script} create --body-file {path} --title {{{TITLE},--body-file,{tmp}/evil.md}}", "Bash"),
+            ("a stop-parsing token as the title", f"{ps_script} create --title --% {TITLE} --body-file {path}", "PowerShell"),
+            ("a splat as the title", f"{ps_script} create --body-file {path} --title @a", "PowerShell"),
+            ("a doubled apostrophe that PowerShell reads as a quote", f"{ps_script} create --title 'Validate biller'' EVIL ''x' --body-file {path}", "PowerShell"),
+        ):
+            results.append((f"create: {label} is blocked even with the real text verified", run_hook(
+                {"command": command}, three_inline(f"{TITLE}\n\n{CLAIM}\n2>&1 >/dev/null --% @a Validate biller' EVIL 'x"), tool_name=tool) == 2))
+        results.append(("create: a title starting with ( clears in both forms", all(run_hook(
+            {"command": f'{script} create {form} --body-file {path}'}, three_inline(f"(WIP) Fix biller\n\n{CLAIM}")) == 0
+            for form in ('--title "(WIP) Fix biller"', '--title="(WIP) Fix biller"'))))
+        results.append(("create --help | head sends nothing", run_hook({"command": f"{script} create --help | head"}, []) == 0))
+        results.append(("comment -h | head sends nothing", run_hook({"command": f"{script} comment -h | head"}, []) == 0))
         results.append(("comment: a < input redirect with a variable clears", run_hook(
             {"command": f"{script} comment 1 --body-file {path} < $IN"}, three_inline(CLAIM)) == 0))
         results.append(("comment: a quoted ; cannot hide a later --body-file", run_hook(

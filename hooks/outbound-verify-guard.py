@@ -642,7 +642,7 @@ def kickoff_args(tokens: list, j: int):
             # Only for a call that could carry prose: `feed --show-answered | head` is a plain read.
             head = re.split(r"[;|&()<>]", tokens[j])[0]
             gated = head in KICKOFF_PROSE_COMMANDS or bool(re.search(r"[$`*?\[{@]", head))
-            if gated and ((k and rest[k - 1].startswith("-")) or (k + 1 < len(rest) and rest[k + 1].startswith("-"))):
+            if gated and ((k and rest[k - 1].startswith("-") and rest[k - 1] not in ("-h", "--help")) or (k + 1 < len(rest) and rest[k + 1].startswith("-"))):
                 raise Unverifiable(f"a {t!r} argument sits next to a flag, which could hide later flags from the hook")
             break
         args.append(t)
@@ -671,15 +671,26 @@ def kickoff_body_texts(path: str, cwd: str | None) -> list:
 REDIRECT_RE = re.compile(r"^(?:\d|\*|&)?(?:>>?|<)")
 
 
+# A title value starting with one of these, or holding a brace, is rewritten by the shell into other
+# arguments (a redirect that vanishes, `--%`, a splat, a brace expansion) before argparse sees it.
+TITLE_BAD_RE = re.compile(r"^(?:[-{<>&%|]|[0-9*]>)|^@\S*$|[{}$`]")
+PLAIN_FLAG_RE = re.compile(r"-{1,2}[A-Za-z][A-Za-z0-9-]*(?:=.*)?", re.DOTALL)
+
+
 def reject_opaque_args(sub: str, args: list) -> None:
-    """argparse takes the LAST `--title`/`--body-file`, so a variable, array or splat that expands
-    to one after the literal flags would override what this hook read. A redirect target and a
-    variable story id (`comment $id ...`) cannot, so they pass; a title value is the one place an
-    `@` is fine, but a `$` or backtick there would still be expanded by the shell."""
+    """argparse takes the LAST `--title`/`--body-file`, so a variable, array, splat or brace
+    expansion that turns into one after the literal flags would override what this hook read.
+    A redirect target and a variable story id (`comment $id ...`) cannot, so they pass. A title
+    value is free text, so only what the shell would rewrite is refused (TITLE_BAD_RE)."""
     after_title = after_redirect = after_flag = False
     for k, t in enumerate(args):
-        at_ok, after_title = after_title, t == "--title"
+        is_title, after_title = after_title, t == "--title"
         value_of_flag, after_flag = after_flag, t.startswith("-")
+        if is_title or t.startswith("--title="):
+            value = t.split("=", 1)[1] if t.startswith("--title=") else t
+            if TITLE_BAD_RE.search(value):
+                raise Unverifiable(f"the kickoff.py title {value} would be rewritten by the shell (a redirect, splat, brace or variable)")
+            continue
         if after_redirect:
             after_redirect = False
             continue
@@ -690,18 +701,10 @@ def reject_opaque_args(sub: str, args: list) -> None:
         if k == 0 and sub != "create" and VARIABLE_REF_RE.fullmatch(t):
             continue
         # A flag name that is not plain (`--ti""tle`, `--ti''tle`) is spliced into a real one by the shell.
-        if t.startswith("-") and not at_ok and not re.fullmatch(r"-{1,2}[A-Za-z][A-Za-z0-9-]*(?:=.*)?", t, re.DOTALL):
+        if t.startswith("-") and not PLAIN_FLAG_RE.fullmatch(t):
             raise Unverifiable(f"the kickoff.py argument {t} is not a plain flag the hook can read")
-        if t.startswith("--title="):
-            # The `=` form is a title value: exempt from the glob and `@` checks like the spaced form.
-            if re.search(r"[$`]", t):
-                raise Unverifiable(f"the kickoff.py title {t} holds a variable or substitution")
-            continue
-        if t.startswith("("):
-            raise Unverifiable(f"the kickoff.py argument {t} is an expression the hook cannot evaluate")
-        # Brace and glob patterns expand to extra flags too; a title value must match a draft anyway.
-        if re.search(r"[$`]", t) or (not at_ok and (t.startswith("@") or re.search(r"[{*?\[]", t))):
-            raise Unverifiable(f"the kickoff.py argument {t} is a variable, substitution or splat the hook cannot expand")
+        if t.startswith("(") or re.search(r"[$`]", t) or t.startswith("@") or re.search(r"[{*?\[]", t):
+            raise Unverifiable(f"the kickoff.py argument {t} is a variable, expression or splat the hook cannot expand")
 
 
 def detect_kickoff(tokens: list, cwd: str | None, posix: bool = True, shell_fed: bool = False,
@@ -791,6 +794,10 @@ def detect_shell(command: str, cwd: str | None, posix: bool) -> Outbound | None:
         split_tokens(without_display_segments(joined), posix), cwd, posix,
         shell_fed=bool(PIPE_TO_SHELL_RE.search(command)), raw_tokens=tokens,
     )
+    if kickoff and not posix and re.search(r"''|\"\"", command):
+        # PowerShell reads a doubled quote inside a quoted word as one literal quote; the hook's
+        # tokenizer ends the word there, so it would read a different title or path than is sent.
+        raise Unverifiable("the PowerShell command holds a doubled quote, which the hook and PowerShell tokenize differently")
     if any(gh_hits):
         return merge_outbound(gh_hits + [kickoff])
     return merge_outbound([kickoff, detect_rest(command, tokens, cwd, posix)])
