@@ -76,6 +76,10 @@ SHELL_PREFILTER_RE = re.compile(
 # zng-kickoff subcommands (skills/zng-kickoff/scripts/kickoff.py) that send no prose; any other one is gated.
 KICKOFF_PROSE_COMMANDS = {"comment", "describe"}
 # What precedes a string that a shell then runs: `bash -c`, `-ec`, `/c`, eval, iex, -ArgumentList.
+INTERPRETERS_RE = re.compile(r"python[\d.]*w?|py|uv|pipx")
+VARIABLE_REF_RE = re.compile(r"[\"']?\$(?:\w+|\{\w+\})[\"']?")
+ASSIGNMENT_RE = re.compile(r"\w+=")
+SUBSTITUTION_RE = re.compile(r"\$\(|`")
 SHELL_STRING_PREV_RE = re.compile(r"-[a-z]*c|-command|-encodedcommand|-argumentlist|/c|/k|eval|iex|invoke-expression")
 PIPE_TO_SHELL_RE = re.compile(r"\|\s*&?\s*(?:\S*[\\/])?(?:bash|sh|zsh|pwsh|powershell|iex|invoke-expression)(?:\.exe)?\b", re.IGNORECASE)
 KICKOFF_PROSE_FREE_COMMANDS = {
@@ -564,14 +568,39 @@ def detect_rest(command: str, tokens: list, cwd: str | None, posix: bool = True)
     return Outbound(label, values, requires, found)
 
 
-def is_shell_string(tokens: list, i: int, shell_fed: bool) -> bool:
-    """Whether the whitespace-holding token tokens[i] is run as a command rather than being prose
-    (a commit message, a grep pattern) that happens to name kickoff.py."""
+def shell_string_kind(tokens: list, i: int, shell_fed: bool) -> str:
+    """How the whitespace-holding token tokens[i] is run, or "" when it is prose (a commit
+    message, a grep pattern) that happens to name kickoff.py: "flag" for a string handed to a
+    shell (`bash -c`, eval, a pipe into a shell), "subst" for a `$(...)` or backtick span."""
     prev = tokens[i - 1].lower() if i else ""
-    return shell_fed or bool(SHELL_STRING_PREV_RE.fullmatch(prev)) or bool(re.search(r"\$\(|`", tokens[i]))
+    if shell_fed or SHELL_STRING_PREV_RE.fullmatch(prev):
+        return "flag"
+    return "subst" if re.search(r"\$\(|`", tokens[i]) else ""
 
 
-def kickoff_calls(tokens: list, posix: bool, shell_fed: bool = False, substitutions_only: bool = False):
+def run_by_interpreter(tokens: list, i: int) -> bool:
+    """Whether tokens[i] sits in a statement that starts an interpreter (`python -I <script>`).
+    Inside a quoted string this is what tells a command from prose that names the script."""
+    k = i - 1
+    while k >= 0 and tokens[k] not in SEPARATORS:
+        # `r=$(python` and a backtick substitution glue the interpreter to its opener.
+        if INTERPRETERS_RE.fullmatch(re.sub(r"\.exe$", "", basename(re.split(r"[=(`]", tokens[k])[-1]))):
+            return True
+        k -= 1
+    return False
+
+
+def looks_like_call(tokens: list, i: int, nested: str) -> bool:
+    """Inside a quoted string, `kickoff.py` is a call when an interpreter starts its statement,
+    when it is written as a path, or when it starts a statement of a string handed to a shell;
+    a bare `kickoff.py` in the middle of a sentence is prose."""
+    if run_by_interpreter(tokens, i) or re.search(r"[\\/]", tokens[i]):
+        return True
+    return nested == "flag" and (i == 0 or tokens[i - 1] in SEPARATORS)
+
+
+def kickoff_calls(tokens: list, posix: bool, shell_fed: bool = False, substitutions_only: bool = False,
+                  nested: str = ""):
     """Yield (subcommand, args) for each `kickoff.py <sub> ...`, args stopping at a separator.
     A token that is itself a shell string (`bash -c '... kickoff.py ...'`, `eval "..."`, a `$(...)`,
     or any string when the command pipes into a shell) is read too. `substitutions_only` reads
@@ -579,32 +608,39 @@ def kickoff_calls(tokens: list, posix: bool, shell_fed: bool = False, substituti
     runs the substitution."""
     for i, tok in enumerate(tokens):
         if re.search(r"\s", tok) and "kickoff.py" in tok.lower():
-            if substitutions_only:
-                run = bool(re.search(r"\$\(|`", tok))
-            else:
-                run = is_shell_string(tokens, i, shell_fed)
-            if run:
-                yield from kickoff_calls(split_tokens(tok, posix), posix)
+            kind = shell_string_kind(tokens, i, shell_fed)
+            if substitutions_only and kind != "subst":
+                kind = ""
+            if kind:
+                yield from kickoff_calls(split_tokens(tok, posix), posix, nested=kind)
         elif substitutions_only:
             continue
-        elif basename(tok) == "kickoff.py":
+        elif VARIABLE_REF_RE.fullmatch(tok) and i + 1 < len(tokens) and tokens[i + 1] in KICKOFF_PROSE_COMMANDS and run_by_interpreter(tokens, i):
+            # `K=.../kickoff.py; python $K comment ...`: the script is named by a variable, and a
+            # prose subcommand right after one is treated as the call.
+            yield from kickoff_args(tokens, i + 1)
+        elif basename(tok) == "kickoff.py" and not (ASSIGNMENT_RE.match(tok) and not SUBSTITUTION_RE.search(tok)) and not (nested and not looks_like_call(tokens, i, nested)):
             j = i + 1
             while j < len(tokens) and tokens[j].startswith("-"):  # `--` ends the options, `-h` sends nothing
                 j += 1
-            if j >= len(tokens):
-                continue
-            args = []
-            for t in tokens[j + 1:]:
-                if t in SEPARATORS:
-                    break
-                args.append(t)
-            yield tokens[j], args
+            if j < len(tokens):
+                yield from kickoff_args(tokens, j)
+
+
+def kickoff_args(tokens: list, j: int):
+    """Yield (subcommand, args) for the subcommand at tokens[j], args stopping at a separator."""
+    args = []
+    for t in tokens[j + 1:]:
+        if t in SEPARATORS:
+            break
+        args.append(t)
+    yield tokens[j], args
 
 
 def kickoff_body_texts(path: str, cwd: str | None) -> list:
     """The script opens a relative path from its own cwd, which a `cd` earlier in the same
     command changes, so only an absolute path is something this hook can read the same way."""
-    if path.startswith("~") or not (Path(path).is_absolute() or MSYS_DRIVE_RE.match(path)):
+    if path.startswith("~") or re.search(r"[$`*?\[\]{}]", path) or not (Path(path).is_absolute() or MSYS_DRIVE_RE.match(path)):
         raise Unverifiable(f"the kickoff.py --body-file path {path} is not absolute (no ~ or relative form)")
     # Statement punctuation or a redirect can stay glued to an unquoted path, and the token no longer
     # says whether it was quoted, so each reading that names a file is read and every text must be verified.

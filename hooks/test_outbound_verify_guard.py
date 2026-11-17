@@ -465,7 +465,33 @@ def check_kickoff_e2e() -> bool:
             ("a command substitution inside an echo", f'echo "$({inner})"'),
         ):
             results.append((f"{label} is gated", run_hook({"command": command}, []) == 2))
+        for label, command in (
+            ("bash -c with the script as a path", f"bash -c '{script.split(' ')[-1]} comment 1 --body-file {path}'"),
+            ("bash -c with a statement-leading bare script", f"bash -c 'cd /c/x && ./kickoff.py comment 1 --body-file {path}'"),
+            ("Start-Process -ArgumentList", f"Start-Process python -ArgumentList '{script.split(' ')[-1]} comment 1 --body-file {path}'"),
+            ("a versioned interpreter", f"bash -c 'python3.12 {script.split(' ')[-1]} comment 1 --body-file {path}'"),
+        ):
+            results.append((f"{label} is gated", run_hook({"command": command}, []) == 2))
+        results.append(("a direct script call inside an assignment substitution is gated", run_hook(
+            {"command": f"r=$({script.split(' ')[-1]} comment 1 --body-file {path})"}, []) == 2))
+        for label, command in (
+            ("git describe with a variable", 'git -C "$R" describe --tags; gh run list'),
+            ("gh issue with a variable", "gh issue $A comment 1"),
+        ):
+            results.append((f"{label} is not a kickoff call", run_hook({"command": command}, []) == 0))
         results.append(("a nested call clears with verified text", run_hook({"command": f'eval "{inner}"'}, verified) == 0))
+        for label, command in (
+            ("a heredoc commit message naming the command", "git commit -m \"$(cat <<'EOF'\nFIX: kickoff.py describe now rejects an empty body\nEOF\n)\""),
+            ("a single-quoted message with backticks", "git commit -m 'FIX: kickoff.py comment now prints `id`'"),
+            ("a PR body with a code span naming the command", "gh pr create --title Fix --body 'kickoff.py comment now `works`'"),
+        ):
+            results.append((f"{label} is prose, not a call", run_hook({"command": command}, three_inline("kickoff.py comment now `works`")) == 0))
+        for label, command in (
+            ("a script path held in a variable", f"K={script.split(' ')[-1]}; python $K comment 1 --body-file {path}"),
+            ("a quoted variable", f'export K={script.split(" ")[-1]} && python "$K" describe 1 --body-file {path}'),
+        ):
+            results.append((f"{label} is gated", run_hook({"command": command}, []) == 2))
+        results.append(("a $ in the body path is refused", run_hook({"command": f"{script} comment 1 --body-file {tmp}/$X.md"}, verified) == 2))
         results.append(("--help on a gated subcommand sends nothing", run_hook({"command": f"{script} comment --help"}, []) == 0))
         results.append(("a glued redirect cannot hide the subcommand", run_hook({"command": f"{script} comment>/dev/null 1 --body-file {path}"}, []) == 2))
         results.append(("move passes untouched", run_hook({"command": f"{script} move 56709 56710 --state 500018257"}, []) == 0))

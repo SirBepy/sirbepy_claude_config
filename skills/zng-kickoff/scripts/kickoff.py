@@ -731,7 +731,10 @@ def resolve_state(wanted, names):
 def cmd_move(args):
     require_digits(args.story_ids)
     token = env()['SHORTCUT_API_TOKEN']
-    names = state_names(token)
+    try:
+        names = state_names(token)
+    except (urllib.error.HTTPError, OSError) as e:
+        fail(f'cannot read the workflow states: {e}')
     new = resolve_state(args.state, names)
     failed = False
     for sid_ in args.story_ids:

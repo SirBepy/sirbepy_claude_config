@@ -11,7 +11,9 @@ Covers everything Claude itself posts to a tracker or a PR:
   `kickoff.py comment|describe <id> --body-file <path>` (token read inside the script): the
   `--body-file` text (absolute path only) is what must match a verified draft; `kickoff.py move` passes.
   Not caught, like any script: a renamed or globbed copy of it, a `python -c` that imports it or runs it through `subprocess`,
-  a body file swapped after the hook read it.
+  a body file swapped after the hook read it, a whole command or the subcommand held in a variable.
+  A commit message or PR body that names `kickoff.py comment` as a path or after the word python,
+  or in a backtick code span, reads as a call and is denied: reword it.
 - **GitHub PRs** (`gh pr create`, `gh pr edit` with a title/body, `gh pr comment`, `gh pr review`
   with a body, `gh api` writes to `pulls`/`issues/<n>/comments`, the GitHub MCP equivalents).
   `gh api .../issues/<n>/comments` is the PR conversation endpoint too, so a plain issue comment
