@@ -52,7 +52,7 @@
   can pass every id it ever claimed. Refuses (exit 2) when CLAUDE_CODE_SESSION_ID is unset,
   because the fallback session label is the throwaway claim script's own pid and could match
   nothing the caller wrote. Needed because only complete-todo.ps1 removed claims, so a
-  /loop-todos run left a claim on every todo it did not finish.
+  run that claims a whole backlog up front left a claim on every todo it did not finish.
 
 .PARAMETER AllMine
   With -Release: release every claim in .claims/ written by this session, no -Id needed.

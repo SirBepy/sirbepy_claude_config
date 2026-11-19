@@ -1,7 +1,7 @@
 """Self-test for claim-todo.ps1 -Release (todo 1323).
 
-A /loop-todos run claims the whole backlog up front and only complete-todo.ps1 removed claims,
-so every todo the loop left open kept a claim that blocked peers. -Release deletes only claims
+A run that claims the whole backlog up front only had complete-todo.ps1 to remove claims,
+so every todo it left open kept a claim that blocked peers. -Release deletes only claims
 whose recorded session id is the current session's; a peer's claim must survive.
 
 Run directly: python tools/test_claim_release.py (exit 0 on all-pass). Drives the real

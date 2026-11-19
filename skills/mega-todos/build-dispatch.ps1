@@ -41,7 +41,7 @@ mode <STAGING_LINE>'s "Leave all changes unstaged..." variant is simply true
 same line would be a lie the injected block immediately overrides.
 
 -NoCommitBlock (todo 1028) is the generalization: any orchestrator other
-than /mega-todos itself - /loop-todos, /auto-do-todos, an ad-hoc dispatch -
+than /mega-todos itself - /auto-do-todos, an ad-hoc dispatch -
 gets a compliant preamble-based prompt from -Owned/-OffLimits/-Task alone,
 with no -CommitMessage/-ExpectedBranch and no read of
 skills/mega-todos/SKILL.md at all. Chosen over teaching -CommitMode a third

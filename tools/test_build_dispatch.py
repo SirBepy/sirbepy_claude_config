@@ -64,7 +64,7 @@ def check(cond: bool, label: str) -> None:
 
 def main() -> int:
     # Case 1: -NoCommitBlock, no -CommitMessage/-ExpectedBranch at all - the
-    # shape /loop-todos or /auto-do-todos would use. Must succeed and must
+    # shape /auto-do-todos would use. Must succeed and must
     # carry all three guard markers from the preamble alone.
     r1 = run_script(
         "-Owned", "foo/bar.ts",
