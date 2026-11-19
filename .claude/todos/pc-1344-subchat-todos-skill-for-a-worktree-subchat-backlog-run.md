@@ -38,3 +38,4 @@ Memory: `reference_conductor_subchats_orchestration_mechanics`.
 ## Notes
 
 - Filed by /close on 2026-11-08 from the subchat run's retrospective.
+- 2026-11-19: Joe chose a new `/subchat-todos` that replaces `/loop-todos` outright (deleted; all references repointed). Built `skills/subchat-todos/SKILL.md` and `templates.md`; `check_skill_frontmatter.py` passes (100 skills). Acceptance 1 (a `--plan-only` dry run on a 3-5 todo backlog) is NOT yet run: the skill is slash-only, so the first real invocation is the check. Joe also floated a Backlog-panel button in the Conductor app that starts the run; that is a Conductor-repo todo, not filed here.

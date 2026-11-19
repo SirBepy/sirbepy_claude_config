@@ -223,8 +223,7 @@ Step 2's dedupe pairs.
    group where every member is `ai`/absent-origin is eligible for Step 7 Pass A to execute without
    asking. A group containing even one `dev`-origin member goes on Step 6's confirm list and waits -
    this step never merges on its own judgement.
-6. **Execution-run skip.** When this run's caller is `/auto-do-todos` Step 2 or `/loop-todos`
-   (which calls `/auto-do-todos` Step 2 each cycle) - i.e. this `/cleanup-todos` pass is the first
+6. **Execution-run skip.** When this run's caller is `/auto-do-todos` Step 2 - i.e. this `/cleanup-todos` pass is the first
    step of an execution run, not a standalone one - drop from Step 7's write queue any group that
    is already origin-gate-eligible (step 5 above) AND whose every member's Step 4 `complexity` is
    `EASY`: that same execution run's own queue (`/batch-todos`'s EASY batch, or `/auto-do-todos`'s

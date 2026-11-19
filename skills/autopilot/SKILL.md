@@ -97,7 +97,7 @@ these ... i think this could have been more helpful if it was moreso using this 
 visualizing for me (the steps mcp)". Answered 2026-10-07.)
 
 This overrides the Conductor harness's own general guidance that a commit landing is a
-`send_message` trigger: under `/autopilot` and `/loop-todos`, a commit landing is a `write_plan`
+`send_message` trigger: under `/autopilot` and `/subchat-todos`, a commit landing is a `write_plan`
 update, not a bubble, unless that same commit also IS one of the five bubble-earning events above.
 
 The `hooks/send-message-stop-guard.py` Stop guard (main-agent-side, not this skill's to enforce)

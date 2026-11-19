@@ -1,18 +1,18 @@
 ---
 name: review-unpushed
-description: Reviews unpushed commits for correctness bugs via sliced sonnet fan-out; called by /commit and /loop-todos before push.
+description: Reviews unpushed commits for correctness bugs via sliced sonnet fan-out; called by /commit and /subchat-todos.
 argument-hint: "[range, default @{u}..HEAD]"
 ---
 
 # /review-unpushed
 
 > Per-commit correctness review fan-out over unpushed commits. Called from /commit's Pre-push gate
-> and from /loop-todos, not typed standalone in the normal case.
+> and from /subchat-todos, not typed standalone in the normal case.
 
 ## Trigger
 
 Called from another skill's procedure, not typed directly in the normal case: `/commit`'s Pre-push
-gate runs it when the unpushed stack is long (roughly 10+ commits), and `/loop-todos`'s final review
+gate runs it when the unpushed stack is long (roughly 10+ commits), and `/subchat-todos`'s review
 phase always does; both invoke this file's steps rather than restating them. Takes one optional range argument, default `@{u}..HEAD`.
 
 ## Why this exists, not /code-check

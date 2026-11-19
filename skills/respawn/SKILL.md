@@ -46,7 +46,7 @@ decides the other.
 
 | | **Attended** (default) | **Unattended** (`/respawn unattended`) |
 |---|---|---|
-| Used by | Joe typing `/respawn`; `/brainstorm`'s greenfield design-to-build hand-off | `/auto-respawn` and `/loop-todos`, the automatic respawns |
+| Used by | Joe typing `/respawn`; `/brainstorm`'s greenfield design-to-build hand-off | `/auto-respawn` and `/subchat-todos`, the automatic respawns |
 | Save step | `refs/save-step.md` | the same step; an unfinished item only Joe can unblock is filed as a `task` todo, never asked |
 
 A leading `unattended` token selects Unattended. Any other argument is a freeform note or a model
@@ -151,7 +151,7 @@ This is the successor's first message, and Joe reads it too, so the first six li
 alone as a summary he can skim. Use the template for the shape picked in Modes. Neither has a
 length cap: add every section that has content and drop a section only when it is genuinely empty.
 
-A caller that needs a slash command re-run (`/auto-respawn`, `/loop-todos ... --resumed`) puts it
+A caller that needs a slash command re-run (`/auto-respawn`, `/subchat-todos`) puts it
 as the prompt's literal FIRST characters, above everything below, since a slash command only
 expands at the very start of a turn. Handing off a build phase after a design session, the prompt
 may likewise open with `/autopilot`, since nothing else carries the intended mode forward.
@@ -193,7 +193,7 @@ We're continuing <one line: the original ask, not the last subtask>.
 The previous work gets one line, saying it is closed, so the successor does not resume it.
 Everything else about the old work stays in the detail file.
 
-The "Joe's words" field is for a Joe-invoked respawn only. An automatic caller (for example `/loop-todos` Phase 4) has no words of Joe's for the next task, so it must not leave the quote empty or invent one: replace the whole field (heading and quote) with one line naming the caller skill and its trigger, such as `**Started by:** /loop-todos Phase 4, context at or above HARD_STOP_AT; the next cycle takes fresh todos.`
+The "Joe's words" field is for a Joe-invoked respawn only. An automatic caller (for example `/auto-respawn`) has no words of Joe's for the next task, so it must not leave the quote empty or invent one: replace the whole field (heading and quote) with one line naming the caller skill and its trigger, such as `**Started by:** /auto-respawn, context at or above its threshold; the next task is the one named below.`
 
 ```
 Next task: <one line: the task the instruction names>.

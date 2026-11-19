@@ -74,7 +74,7 @@ after 9 hours with zero connections.
   question card for Joe never self-closes, since the answer has nowhere to land; a chat whose own
   background work is still running (a `run_in_background` command or agent, a `/loop`, a pending
   `ScheduleWakeup`) waits for it or files it as a todo first; a long run
-  (`/loop-todos`, `/autopilot`, `/auto-do-todos`) closes only after its final report, never between
+  (`/subchat-todos`, `/autopilot`, `/auto-do-todos`) closes only after its final report, never between
   cycles; and a chat Joe is actively talking to stays open until the conversation is clearly
   finished.
 
