@@ -73,11 +73,12 @@ and which files other lanes own.
 Your todos, in this order: <ids and titles>. Your files: <owned paths>. Everything else belongs to
 another lane.
 
-For each todo: claim it (`~/.claude/tools/claim-todo.ps1 -Id <id> -RepoRoot <main checkout path>`,
-so the claim lands where peers and the orchestrator look), build it, run the checks its files need,
-commit via /commit, then close it with
-`~/.claude/tools/complete-todo.ps1 -Id <id> -Note "<what happened>"`. A todo that advanced but did
-not finish is not archived: leave it open with the reason in its Notes.
+For each todo (the orchestrator already claimed it in the main checkout; a "no claim on record"
+warning from complete-todo is expected, ignore it): build it, run the checks its files need, close
+it with `~/.claude/tools/complete-todo.ps1 -Id <id> -Note "<what happened>"` BEFORE the commit, then
+commit via /commit with `--todo <id>` so the archive move rides in the same commit and reaches
+master on merge. A todo that advanced but did not finish is not archived: leave it open with the
+reason in its Notes.
 
 Joe is away. Never call ask_user_question. Decide a fork that has a defensible answer and record it
 in the todo's `## Decided` block; park one with none in `## Open questions` and move on. A denied
@@ -89,7 +90,10 @@ Finish with one line: ids archived with shas, ids parked and why, the checks you
 ```
 
 A fix-lane sub (Phase 6) gets the same brief with "Your todos" replaced by "Your findings:
-<numbers> in <main checkout path>/.for_bepy/subchat-<date>/review-findings.md" and no claim step.
+<numbers> in <main checkout path>/.for_bepy/subchat-<date>/review-findings.md", with no claim,
+`complete-todo` or `--todo` step. It commits each fix via /commit, sets that finding's Status line in
+the file to `fixed <sha>` (or `filed <todo id>` for a residual it files as an `**Origin:** ai` todo),
+and finishes with one line: finding numbers fixed with shas, numbers filed, the checks it ran.
 
 ## review-findings.md
 

@@ -94,8 +94,8 @@ spawn nothing.
 ## Phase 4 - Run
 
 1. Spawn up to 5 first subs: `writes: true`, `files` = the lane's owned paths, `report_back: true`,
-   Sonnet at high. Brief shape in `templates.md`. Every brief names `triage.md`, the claim and
-   archive commands, `/commit` for every commit, and "never call ask_user_question: park a fork in
+   Sonnet at high. Brief shape in `templates.md`. Every brief names `triage.md`, the archive
+   command (todos arrive already claimed), `/commit` for every commit, and "never call ask_user_question: park a fork in
    the todo's `## Open questions`".
 2. On each report_back wake-up, in this order:
    - Confirm the merge landed (`git log`, not the sub's word) and that its ids are archived.
@@ -103,7 +103,8 @@ spawn nothing.
      list. Red: stop this routine here, keep the worktree (`continue_from` needs it), and spawn one
      fix sub with `continue_from` the old one; its report_back re-enters this routine from the top,
      before the lane's next follower. A second red parks the lane's remaining todos: release their
-     claims and write the reason into each todo's Notes. Never revert or reset master.
+     claims and write the reason into each todo's Notes, then continue this routine from the
+     worktree-removal step so the slot refills. Never revert or reset master.
    - Remove the merged worktree: `git merge-base --is-ancestor sub/<id> <EXPECTED_BRANCH>`, then
      `~/.claude/tools/safe-remove-worktree.ps1 -WorktreePath <path> -RepoRoot <repo root>`.
    - Append one log line to `queue.md` (shas, archived ids, what is left for Joe).
@@ -112,9 +113,13 @@ spawn nothing.
    - Update `write_plan` with the lane's result. The send-message stop guard exempts a turn that
      updated `write_plan`, so no per-wake bubble is needed (same cadence as `/autopilot`).
 3. Never schedule a prompt to poll subs. The app wakes this chat when a sub stalls or dies.
-4. Claims live in the MAIN checkout's `.claude/todos/.claims/`: a worktree sub's default repo root is
-   its own worktree, where a claim is invisible to peers and dies with the worktree. Re-read the main
-   directory at each wake-up and drop a newly claimed todo from lanes not yet started.
+4. The ORCHESTRATOR claims each sub's todo ids (`claim-todo.ps1 -Id <id>`, run in the main checkout)
+   just before spawning that sub, and releases them (`claim-todo.ps1 -Release -Id <id>`, same
+   session, so the release is accepted) when the sub reports back, whether the todo was archived or
+   parked. A sub cannot claim: its default repo root is its own worktree, where a claim is invisible
+   to peers and dies with the worktree, and a claim a sub wrote could not be released by the
+   orchestrator. Re-read the main `.claims/` at each wake-up and drop a todo a peer claimed from
+   lanes not yet started.
 
 ## Phase 5 - Closing question round
 
