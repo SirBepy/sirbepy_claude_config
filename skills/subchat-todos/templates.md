@@ -65,15 +65,17 @@ prompt: <see the sub brief below>
 ## Sub brief (the `prompt` field)
 
 ```text
-You are one lane of a /subchat-todos run. Repo: <repo>. Read
-.for_bepy/subchat-<date>/triage.md first: it has the settled decisions, the baseline failures and
-which files other lanes own.
+You are one lane of a /subchat-todos run. Repo: <repo>, main checkout <main checkout path>. Read
+<main checkout path>/.for_bepy/subchat-<date>/triage.md first (an absolute path: that folder is
+gitignored, so your worktree does not have it): it has the settled decisions, the baseline failures
+and which files other lanes own.
 
 Your todos, in this order: <ids and titles>. Your files: <owned paths>. Everything else belongs to
 another lane.
 
-For each todo: claim it (`~/.claude/tools/claim-todo.ps1 -Id <id>`), build it, run the checks its
-files need, commit via /commit, then close it with
+For each todo: claim it (`~/.claude/tools/claim-todo.ps1 -Id <id> -RepoRoot <main checkout path>`,
+so the claim lands where peers and the orchestrator look), build it, run the checks its files need,
+commit via /commit, then close it with
 `~/.claude/tools/complete-todo.ps1 -Id <id> -Note "<what happened>"`. A todo that advanced but did
 not finish is not archived: leave it open with the reason in its Notes.
 
@@ -84,4 +86,24 @@ tool call is a stop, not an obstacle to route around: park that todo.
 A bug you find outside your files becomes a new todo (`**Origin:** ai`), not an edit.
 
 Finish with one line: ids archived with shas, ids parked and why, the checks you ran.
+```
+
+A fix-lane sub (Phase 6) gets the same brief with "Your todos" replaced by "Your findings:
+<numbers> in <main checkout path>/.for_bepy/subchat-<date>/review-findings.md" and no claim step.
+
+## review-findings.md
+
+```md
+# /subchat-todos <date> - independent review findings (orchestrator scratch)
+
+Range: <START_SHA>..<HEAD>. Reviewed by /review-unpushed on <date>: <N> commits, <S> slices.
+
+## Lane <area> (files: <paths>)
+
+1. <sha> <file:line> - <what is wrong and why>. Fix: <one line>. Status: open | fixed <sha> | filed <todo id>
+2. ...
+
+## Per-commit verdicts
+
+- <sha> <subject>: OK | NEEDS-IMPROVEMENT (<finding numbers>)
 ```

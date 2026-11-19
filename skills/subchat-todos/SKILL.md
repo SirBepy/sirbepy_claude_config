@@ -33,10 +33,14 @@ that mode, stop and tell Joe; there is no in-chat fallback.
 
 The run's state is `.for_bepy/subchat-<YYYY-MM-DD>/` in the repo (gitignored scratch):
 `triage.md`, `queue.md`, `review-findings.md`. Shapes are in `skills/subchat-todos/templates.md`.
-A `/respawn` mid-run resumes from `queue.md`; the orchestrator holds nothing the files do not.
+A run is resumed by re-invoking `/subchat-todos` after a `/respawn`: when today's `queue.md` already
+exists, skip to Phase 4 and continue from its Log; never restart Phase 0. The orchestrator holds
+nothing the files do not.
 
 ## Phase 0 - The one question round
 
+0. `git status` first. Every dirty file that is not this run's to commit (see Phase 1 step 1) becomes
+   a question in the card below, so the dev is asked once, before work starts.
 1. Collect every unchecked item in `## Open questions` blocks and, if any `## Deferred questions`
    blocks exist (each has a `<!-- loop-skip: dev deferred <date> -->` comment above it), ask ONE
    coarse card first: answer the N deferred questions now, or leave them deferred.
@@ -57,11 +61,14 @@ A worktree sub branches from HEAD, so it cannot see uncommitted or untracked fil
 back over a dirty one. Before any spawn:
 
 1. `git status`. Commit every dirty tracked file and every untracked `.claude/todos/*.md` via
-   `/commit`. A dirty file that is not this run's to commit: ask Joe in Phase 0's card, never
-   sweep it in.
+   `/commit`. A dirty file that is not this run's to commit was asked about in Phase 0's card: leave
+   it uncommitted, never sweep it in, and name it in the final report. A worktree sub never sees it.
 2. Record `START_SHA` and `EXPECTED_BRANCH` in `queue.md`.
-3. `list_peers`: if another session is active, `post_message` the run's scope once.
-4. Exclusions per mega-todos Step B, each with a reason.
+3. Run `/test` on master at `START_SHA` and write each failing check into `triage.md`'s "Known
+   baseline failures". Phase 4 compares a merged lane's failures against that list by identity, so
+   a suite that was already red never parks a lane it did not break.
+4. `list_peers`: if another session is active, `post_message` the run's scope once.
+5. Exclusions per mega-todos Step B, each with a reason.
 
 ## Phase 2 - Scout
 
@@ -72,7 +79,8 @@ todos' Notes. The orchestrator writes that into `triage.md`; the scout cannot, b
 
 ## Phase 3 - Lanes and queue
 
-Partition by the transitive closure of file overlap (mega-todos Step C): two todos sharing any file
+When todo ids were passed as arguments, only those todos enter the scout and the lanes; every other
+todo is out of scope for this run. Partition by the transitive closure of file overlap (mega-todos Step C): two todos sharing any file
 share a lane and run in order. Cut each lane into subs of 3-5 todos, sized to fit about half a sub's
 context window. A todo with an unverified path does not dispatch.
 
@@ -91,24 +99,30 @@ spawn nothing.
    the todo's `## Open questions`".
 2. On each report_back wake-up, in this order:
    - Confirm the merge landed (`git log`, not the sub's word) and that its ids are archived.
-   - Run the merged lane's own tests on master. Red: spawn one fix sub with `continue_from` the old
-     one, before the lane's next follower. A second red parks the lane's remaining todos. Never
-     revert or reset master.
+   - Run the merged lane's own tests on master and compare failures against triage.md's baseline
+     list. Red: stop this routine here, keep the worktree (`continue_from` needs it), and spawn one
+     fix sub with `continue_from` the old one; its report_back re-enters this routine from the top,
+     before the lane's next follower. A second red parks the lane's remaining todos: release their
+     claims and write the reason into each todo's Notes. Never revert or reset master.
    - Remove the merged worktree: `git merge-base --is-ancestor sub/<id> <EXPECTED_BRANCH>`, then
      `~/.claude/tools/safe-remove-worktree.ps1 -WorktreePath <path> -RepoRoot <repo root>`.
    - Append one log line to `queue.md` (shas, archived ids, what is left for Joe).
-   - Spawn the lane's next follower from `queue.md`.
-   - Send a one-line status bubble; with report_back on, the send-message stop guard demands one
-     after 3 quiet wake turns.
+   - Spawn the lane's next follower from `queue.md`. A lane with no follower left frees its slot:
+     spawn the first sub of the next lane that has not started, so more than 5 lanes all run.
+   - Update `write_plan` with the lane's result. The send-message stop guard exempts a turn that
+     updated `write_plan`, so no per-wake bubble is needed (same cadence as `/autopilot`).
 3. Never schedule a prompt to poll subs. The app wakes this chat when a sub stalls or dies.
-4. Re-read `.claude/todos/.claims/` at each wake-up; drop a newly claimed todo from lanes not yet
-   started.
+4. Claims live in the MAIN checkout's `.claude/todos/.claims/`: a worktree sub's default repo root is
+   its own worktree, where a claim is invisible to peers and dies with the worktree. Re-read the main
+   directory at each wake-up and drop a newly claimed todo from lanes not yet started.
 
 ## Phase 5 - Closing question round
 
 When every lane is done, run Phase 0's steps 2-5 over the `## Open questions` blocks the subs wrote.
-If an answer moved a todo into the AUTO queue, run Phases 2-4 once more over only those todos. After
-that second pass, leave anything still open for the next run.
+If an answer moved a todo into the AUTO queue, commit the write-back and any other dirty todo files
+(Phase 1 step 1, since worktree subs branch from HEAD), then run Phases 2-4 once more over only those
+todos, appending their lanes and Log lines to the same `queue.md` and setting `START_SHA` for the
+review to the ORIGINAL value. After that second pass, leave anything still open for the next run.
 
 ## Phase 6 - Independent review
 
@@ -116,7 +130,7 @@ A sub's own "reviewer: ran" is not enough: the 2026-11-07 run's separate pass fo
 two of them false auto-approves in live guards.
 
 1. Run `skills/review-unpushed/SKILL.md` over `START_SHA..HEAD` (its Steps 1-3) and write the
-   findings to `review-findings.md` grouped into lanes by area.
+   findings to `review-findings.md` (shape in `templates.md`), numbered, grouped into lanes by area.
 2. Fix lanes: spawn subs per lane exactly as in Phase 4 (briefs name the finding numbers and
    `review-findings.md`), 5 concurrent at most, same wake-up routine. Residuals a fix lane cannot
    finish become `**Origin:** ai` todos.

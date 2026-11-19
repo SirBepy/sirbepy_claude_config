@@ -46,7 +46,7 @@ decides the other.
 
 | | **Attended** (default) | **Unattended** (`/respawn unattended`) |
 |---|---|---|
-| Used by | Joe typing `/respawn`; `/brainstorm`'s greenfield design-to-build hand-off | `/auto-respawn` and `/subchat-todos`, the automatic respawns |
+| Used by | Joe typing `/respawn`; `/brainstorm`'s greenfield design-to-build hand-off | `/auto-respawn`, the automatic respawn |
 | Save step | `refs/save-step.md` | the same step; an unfinished item only Joe can unblock is filed as a `task` todo, never asked |
 
 A leading `unattended` token selects Unattended. Any other argument is a freeform note or a model
@@ -151,7 +151,7 @@ This is the successor's first message, and Joe reads it too, so the first six li
 alone as a summary he can skim. Use the template for the shape picked in Modes. Neither has a
 length cap: add every section that has content and drop a section only when it is genuinely empty.
 
-A caller that needs a slash command re-run (`/auto-respawn`, `/subchat-todos`) puts it
+A caller that needs a slash command re-run (`/auto-respawn`) puts it
 as the prompt's literal FIRST characters, above everything below, since a slash command only
 expands at the very start of a turn. Handing off a build phase after a design session, the prompt
 may likewise open with `/autopilot`, since nothing else carries the intended mode forward.
